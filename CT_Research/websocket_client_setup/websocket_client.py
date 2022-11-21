@@ -1,11 +1,5 @@
 # =============================================================================
-# =============================================================================
 # Access HOPR Node and Compute Latancy and Network Bandwidth 
-# =============================================================================
-# =============================================================================
-
-# =============================================================================
-# Import Packages and Basic Setup  
 # =============================================================================
 
 import pandas as pd
@@ -41,7 +35,7 @@ websocket.enableTrace(True)
 # Requests of Rest API using python   
 # =============================================================================
 
-# Set Parameters: Note that api_key, api_url and message_recipient change when seting up a new cluster 
+# Set Parameters: Note that api_key, api_url and message_recipient change when setting up a new cluster 
 api_key = 'adb01Cd949aC1b24c7CC4Da8#'
 api_url = "https://zero_mekong_silver_phobos.playground.hoprnet.org:3001/api/v2/"
 message_recipient = "16Uiu2HAmNcQGFqkoPQzfAEpp4u94YipRnyKGV5ckgpN9CiaZfkSu"
