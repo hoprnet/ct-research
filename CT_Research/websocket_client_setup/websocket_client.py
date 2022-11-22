@@ -31,6 +31,10 @@ if __name__ == "__main__":
     api_host = _getenvvar('HOPR_API_HOST')
     api_key  = _getenvvar('HOPR_API_KEY')
 
+    #
+    # TODO: add code to validate that the API host is working
+    #
+    
     # get channel Information 
     channel_url = "https://{}:3001/api/v2/channels/".format(api_host)
     headers     = {
