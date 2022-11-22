@@ -1,6 +1,6 @@
 #!/bin/sh
 
-export HOPR_API_URL='https://zero_mekong_silver_phobos.playground.hoprnet.org:3001/api/v2/'
-export HOPR_API_KEY='adb01Cd949aC1b24c7CC4Da8#'
+export HOPR_API_HOST='zero_moon_maroon_mekong.playground.hoprnet.org'
+export HOPR_API_KEY='7BBEc99aAc13F3EDAD3d214F#'
 
 python websocket_client.py

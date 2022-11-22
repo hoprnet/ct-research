@@ -2,26 +2,14 @@
 # Access HOPR Node and Compute Latency and Network Bandwidth 
 # =============================================================================
 
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
+import json
 import os 
 import requests
-import websocket
-import json
 import ssl
+import sys
+import websocket
 
-# Disable default warnings 
-pd.options.mode.chained_assignment = None  # default='warn'
-
-# Set print options (i.e. no scientific notation)
-np.set_printoptions(suppress=True) 
-
-# Specifications for axis and title labels 
-font1 = {'family':'sans-serif','color':'black','size':20}
-font2 = {'family':'sans-serif','color':'black','size':20}
-
-# Get a data report (can be disabled if sure about the origin) 
+# set debugging mode for all websocket connection
 websocket.enableTrace(True)
 
 
@@ -32,51 +20,63 @@ def _getenvvar(name: str) -> str:
     ret_value = None
     if os.getenv(name) is None:
         print("Environment variable", name, "not found")
+        sys.exit(1)
     else:
         ret_value = os.getenv(name)
     return ret_value
 
 
 if __name__ == "__main__":
-    # =============================================================================
-    # Requests of Rest API using python   
-    # =============================================================================
     # read parameters from environment variables
-    api_key = _getenvvar('HOPR_API_KEY')
-    api_url = _getenvvar('HOPR_API_URL')
-    channel_info = api_url + "channels"
-    send_message = api_url + "messages"
-    message_recipient = "16Uiu2HAmNcQGFqkoPQzfAEpp4u94YipRnyKGV5ckgpN9CiaZfkSu"
+    api_host = _getenvvar('HOPR_API_HOST')
+    api_key  = _getenvvar('HOPR_API_KEY')
 
-    # Get Channel Information 
-    # -----------------------
-
-    payload={}
-    headers = {
-      'x-auth-token': api_key
+    # get channel Information 
+    channel_url = "https://{}:3001/api/v2/channels/".format(api_host)
+    headers     = {
+      'X-Auth-Token': api_key
     }
+    response = requests.request("GET",
+                                channel_url,
+                                headers=headers)
+    print(">>> Channel information <<<")
+    print(json.dumps(response.json(),
+                     indent=4))
 
-    response = requests.request("GET", channel_info, headers=headers, data=payload)
-    print(response.text)
+    # send a message to ourselves
+    send_url  = "https://{}:3001/api/v2/messages/".format(api_host)
+    recv_peer = "16Uiu2HAm5uMqLGcezWvdrZCxK5jCNaqLUXWfTUovbtrGSg2Qx3P9"
 
-    # Send Message to yourself  
-    # -----------------------
-
-    payload = json.dumps({
-      "body": "Hello Ben",
-      "recipient": message_recipient
-    })
     headers = {
-      'x-auth-token': api_key,
+      'X-Auth-Token': api_key,
       'Content-Type': 'application/json'
     }
 
-    response = requests.request("POST", send_message, headers=headers, data=payload)
+    payload = json.dumps({
+      "body": "Hello Ben",
+      "recipient": recv_peer
+    })
 
+    response = requests.request("POST",
+                                send_url,
+                                headers=headers,
+                                data=payload)
+    print(response.status_code)
+    sys.exit(1)
 
     # =============================================================================
     # Stream incomming messages for a node     
     # =============================================================================
+    # An example from Kraken documentation:
+    #
+    #    # Connect to WebSocket API and subscribe to trade feed for XBT/USD and XRP/USD
+    #    ws = create_connection("wss://ws.kraken.com/")
+    #    ws.send('{"event":"subscribe", "subscription":{"name":"trade"}, "pair":["XBT/USD","XRP/USD"]}')
+    #
+    #    # Infinite loop waiting for WebSocket data
+    #    while True:
+    #        print(ws.recv())
+    #
 
     # Set-up websocket client   
     ws = websocket.WebSocket(sslopt={"cert_reqs": ssl.CERT_NONE})
