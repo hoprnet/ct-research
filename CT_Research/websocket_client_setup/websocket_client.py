@@ -44,12 +44,22 @@ if __name__ == "__main__":
                                 channel_url,
                                 headers=headers)
     print(">>> Channel information <<<")
-    print(json.dumps(response.json(),
-                     indent=4))
+    print(json.dumps(response.json(), indent=4))
+    
+    # get peer ID of api_host 
+    address_url = "https://{}:3001/api/v2/account/addresses".format(api_host)
+    headers     = {
+      'X-Auth-Token': api_key
+    }
+    response = requests.request("GET",
+                                address_url,
+                                headers=headers)
+    print(">>> account peer ID information <<<")
+    print(json.dumps(response.json(), indent=4))
 
     # send a message to ourselves
     send_url  = "https://{}:3001/api/v2/messages/".format(api_host)
-    recv_peer = "16Uiu2HAm5uMqLGcezWvdrZCxK5jCNaqLUXWfTUovbtrGSg2Qx3P9"
+    recv_peer = response.json()['hoprAddress']
 
     headers = {
       'X-Auth-Token': api_key,
