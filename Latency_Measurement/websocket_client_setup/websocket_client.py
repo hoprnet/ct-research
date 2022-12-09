@@ -72,7 +72,7 @@ if __name__ == "__main__":
     
     # Create list of peer id's
     api_host_peers = []
-    for i in range(3):
+    for i in range(4):
         peer = json.dumps(peer_response.json()['connected'][i]['peerId'], indent=4)
         api_host_peers.append(peer.strip('\"')) # strip: Remove double quotes from string
     
@@ -83,7 +83,7 @@ if __name__ == "__main__":
     
     send_url  = "https://{}:3001/api/v2/messages/".format(api_host)
     #recv_peer = address_response.json()['hoprAddress']
-    recv_peer = api_host_peers[3]
+    recv_peer = api_host_peers[1]
     print("Message Recipient:", recv_peer)
 
     headers = {
