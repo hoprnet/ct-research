@@ -78,12 +78,20 @@ if __name__ == "__main__":
     
     print("Peers:", api_host_peers)
     
+    # Define message path 
+    # =========================================================================
+    
+    # Select between 1 HOP, 2 HOP, or 3 HOP message 
+    path = [api_host_peers[0]]                                       # 1 HOP Message
+    #path = [api_host_peers[0], api_host_peers[1]]                    # 2 HOP Message
+    #path = [api_host_peers[0], api_host_peers[1], api_host_peers[2]] # 3 HOP Message
+    
     # Send a meesage to a peer  
     # =========================================================================
     
     send_url  = "https://{}:3001/api/v2/messages/".format(api_host)
-    #recv_peer = address_response.json()['hoprAddress']
-    recv_peer = api_host_peers[1]
+    recv_peer = address_response.json()['hoprAddress'] # sets api host as recipient 
+    #recv_peer = api_host_peers[1] # set other peer as the recipient 
     print("Message Recipient:", recv_peer)
 
     headers = {
@@ -93,15 +101,22 @@ if __name__ == "__main__":
 
     payload = json.dumps({
       "body": "Hello Ben",
-      "recipient": recv_peer
+      "recipient": recv_peer,
+      "path": path
     })
 
-    response = requests.request("POST",
+    send_response = requests.request("POST",
                                 send_url,
                                 headers=headers,
                                 data=payload)
     
-    print("Status code:", response.status_code) # 202: message sent successfully 
+    if (send_response.status_code == 202): # 202: message sent successfully 
+        print("Message sent successfully, ",
+              "Status code:", send_response.status_code)       
+    else:
+        print("Could not send message, ", 
+              "Status code:", send_response.status_code)
+        sys.exit(1)
     
     sys.exit(1)
     
