@@ -8,6 +8,7 @@ import requests
 import ssl
 import sys
 import websocket
+from datetime import datetime
 
 # set debugging mode for all websocket connection
 websocket.enableTrace(True)
@@ -100,7 +101,7 @@ if __name__ == "__main__":
     }
 
     payload = json.dumps({
-      "body": "Hello Ben",
+      "body": str(datetime.now()), # send current time stamp as message content 
       "recipient": recv_peer,
       "path": path
     })
@@ -119,6 +120,8 @@ if __name__ == "__main__":
         sys.exit(1)
     
     sys.exit(1)
+    
+    #print(str(datetime.now()))
     
     # Get payment channel Information 
     # =========================================================================
