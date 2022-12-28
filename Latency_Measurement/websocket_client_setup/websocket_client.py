@@ -144,5 +144,3 @@ if __name__ == "__main__":
     # ws.connect("wss://zero_mekong_silver_phobos.playground.hoprnet.org:3001/api/v2/messages/websocket?apiToken=adb01Cd949aC1b24c7CC4Da8%23")
     # record  = ws.recv()
     # print(record)
-
-else: sys.exit(1)
