@@ -7,18 +7,16 @@ import logging
 import os 
 import random
 import requests
-import ssl
 import sys
-import websocket
 from datetime import datetime
 
 # set logging level
 logging.basicConfig(filename='websocket_client.log',
-                    level=logging.INFO,
+                    level=logging.DEBUG,
                     format='%(levelname)s:%(asctime)s:%(message)s')
 
-# set debugging mode for all websocket connection
-websocket.enableTrace(True)
+## set debugging mode for all websocket connection
+#websocket.enableTrace(True)
 
 
 
@@ -37,11 +35,12 @@ def _getenvvar(name: str) -> str:
 
 if __name__ == "__main__":
     # read parameters from environment variables
-    api_host = _getenvvar('HOPR_API_HOST')
-    api_key  = _getenvvar('HOPR_API_KEY')
+    api_host = _getenvvar('HOPR_NODE_1')
+    api_key  = _getenvvar('HOPR_NODE_1_API_KEY')
 
     # get address id of api host and verify that the api host is still available
     address_url = "https://{}:3001/api/v2/account/addresses".format(api_host)
+    print(address_url)
     headers     = {
       'X-Auth-Token': api_key
     }
