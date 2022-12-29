@@ -1,0 +1,100 @@
+DEBUG:2022-12-29 11:50:04,305:Starting new HTTPS connection (1): zero_silver_chenab_amalthea.playground.hoprnet.org:3001
+DEBUG:2022-12-29 11:50:04,446:https://zero_silver_chenab_amalthea.playground.hoprnet.org:3001 "GET /api/v2/account/addresses HTTP/1.1" 200 249
+INFO:2022-12-29 11:50:04,446:Host available (PID 16Uiu2HAmABto9XvGg4zpSjwXzSpHpdh5ejrvat3gDjTT6ckGswbB)
+DEBUG:2022-12-29 11:50:04,446:Starting new HTTPS connection (1): zero_silver_chenab_amalthea.playground.hoprnet.org:3001
+DEBUG:2022-12-29 11:50:04,587:https://zero_silver_chenab_amalthea.playground.hoprnet.org:3001 "GET /api/v2/node/peers HTTP/1.1" 200 2181
+INFO:2022-12-29 11:50:04,587:Sending message to self through: ['16Uiu2HAmBtXZ5MiV8cipUPma1HdwHjv7QCPBAqtPv9VKR4iq3V9P']
+DEBUG:2022-12-29 11:50:04,602:Starting new HTTPS connection (1): zero_silver_chenab_amalthea.playground.hoprnet.org:3001
+DEBUG:2022-12-29 11:50:04,774:https://zero_silver_chenab_amalthea.playground.hoprnet.org:3001 "POST /api/v2/messages/ HTTP/1.1" 202 70
+DEBUG:2022-12-29 12:19:18,022:Starting new HTTPS connection (1): zero_silver_chenab_amalthea.playground.hoprnet.org:3001
+DEBUG:2022-12-29 12:19:18,158:https://zero_silver_chenab_amalthea.playground.hoprnet.org:3001 "GET /api/v2/account/addresses HTTP/1.1" 404 None
+ERROR:2022-12-29 12:19:18,166:Host is NOT available: start a new cluster. Status code: 404
+DEBUG:2022-12-29 12:23:50,433:Starting new HTTPS connection (1): zero_silver_chenab_amalthea.playground.hoprnet.org:3001
+DEBUG:2022-12-29 12:23:50,576:https://zero_silver_chenab_amalthea.playground.hoprnet.org:3001 "GET /api/v2/account/addresses HTTP/1.1" 404 None
+ERROR:2022-12-29 12:23:50,576:Host is NOT available: start a new cluster. Status code: 404
+DEBUG:2022-12-29 12:37:09,807:Starting new HTTPS connection (1): zero_silver_chenab_amalthea.playground.hoprnet.org:3001
+DEBUG:2022-12-29 12:37:09,943:https://zero_silver_chenab_amalthea.playground.hoprnet.org:3001 "GET /api/v2/account/addresses HTTP/1.1" 404 None
+ERROR:2022-12-29 12:37:09,945:Host is NOT available: start a new cluster. Status code: 404
+DEBUG:2022-12-29 12:52:20,160:Starting new HTTPS connection (1): zero_silver_chenab_amalthea.playground.hoprnet.org:3001
+DEBUG:2022-12-29 12:52:20,311:https://zero_silver_chenab_amalthea.playground.hoprnet.org:3001 "GET /api/v2/account/addresses HTTP/1.1" 404 None
+ERROR:2022-12-29 12:52:20,311:Host is NOT available: start a new cluster. Status code: 404
+DEBUG:2022-12-29 14:58:30,513:Starting new HTTPS connection (1): https:443
+DEBUG:2022-12-29 15:00:15,998:Starting new HTTPS connection (1): zero_red_chenab_deimos.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:00:16,148:https://zero_red_chenab_deimos.playground.hoprnet.org:3001 "GET /api/v2/account/addresses HTTP/1.1" 200 249
+INFO:2022-12-29 15:00:16,148:Host available (PID 16Uiu2HAmC5TW8NXWFWrSVCfpWQeJQzjgdDSEmVMAZZXLgUv1spw3)
+DEBUG:2022-12-29 15:00:16,148:Starting new HTTPS connection (1): zero_red_chenab_deimos.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:00:16,291:https://zero_red_chenab_deimos.playground.hoprnet.org:3001 "GET /api/v2/node/peers HTTP/1.1" 200 2165
+DEBUG:2022-12-29 15:01:37,041:Starting new HTTPS connection (1): zero_red_chenab_deimos.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:01:37,183:https://zero_red_chenab_deimos.playground.hoprnet.org:3001 "GET /api/v2/account/addresses HTTP/1.1" 200 249
+INFO:2022-12-29 15:01:37,183:Host available (PID 16Uiu2HAmC5TW8NXWFWrSVCfpWQeJQzjgdDSEmVMAZZXLgUv1spw3)
+DEBUG:2022-12-29 15:01:37,183:Starting new HTTPS connection (1): zero_red_chenab_deimos.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:01:37,326:https://zero_red_chenab_deimos.playground.hoprnet.org:3001 "GET /api/v2/node/peers HTTP/1.1" 200 2165
+DEBUG:2022-12-29 15:01:37,335:Starting new HTTPS connection (1): zero_red_chenab_deimos.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:01:37,499:https://zero_red_chenab_deimos.playground.hoprnet.org:3001 "GET /api/v2/channels/ HTTP/1.1" 200 1731
+DEBUG:2022-12-29 15:03:52,172:Starting new HTTPS connection (1): zero_red_chenab_deimos.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:03:52,334:https://zero_red_chenab_deimos.playground.hoprnet.org:3001 "GET /api/v2/account/addresses HTTP/1.1" 200 249
+INFO:2022-12-29 15:03:52,334:Host available (PID 16Uiu2HAmC5TW8NXWFWrSVCfpWQeJQzjgdDSEmVMAZZXLgUv1spw3)
+DEBUG:2022-12-29 15:03:52,334:Starting new HTTPS connection (1): zero_red_chenab_deimos.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:03:52,476:https://zero_red_chenab_deimos.playground.hoprnet.org:3001 "GET /api/v2/node/peers HTTP/1.1" 200 2165
+DEBUG:2022-12-29 15:03:52,485:Starting new HTTPS connection (1): zero_red_chenab_deimos.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:03:52,632:https://zero_red_chenab_deimos.playground.hoprnet.org:3001 "GET /api/v2/channels/ HTTP/1.1" 200 1731
+DEBUG:2022-12-29 15:05:53,089:Starting new HTTPS connection (1): zero_red_chenab_deimos.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:05:53,230:https://zero_red_chenab_deimos.playground.hoprnet.org:3001 "GET /api/v2/account/addresses HTTP/1.1" 200 249
+INFO:2022-12-29 15:05:53,230:Host available (PID 16Uiu2HAmC5TW8NXWFWrSVCfpWQeJQzjgdDSEmVMAZZXLgUv1spw3)
+DEBUG:2022-12-29 15:05:53,230:Starting new HTTPS connection (1): zero_red_chenab_deimos.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:05:53,365:https://zero_red_chenab_deimos.playground.hoprnet.org:3001 "GET /api/v2/node/peers HTTP/1.1" 200 2165
+DEBUG:2022-12-29 15:05:53,381:Starting new HTTPS connection (1): zero_red_chenab_deimos.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:05:53,524:https://zero_red_chenab_deimos.playground.hoprnet.org:3001 "GET /api/v2/channels/ HTTP/1.1" 200 1731
+DEBUG:2022-12-29 15:11:35,747:Starting new HTTPS connection (1): zero_red_chenab_deimos.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:11:35,941:https://zero_red_chenab_deimos.playground.hoprnet.org:3001 "GET /api/v2/account/addresses HTTP/1.1" 200 249
+INFO:2022-12-29 15:11:35,941:Host available (PID 16Uiu2HAmC5TW8NXWFWrSVCfpWQeJQzjgdDSEmVMAZZXLgUv1spw3)
+DEBUG:2022-12-29 15:11:35,941:Starting new HTTPS connection (1): zero_red_chenab_deimos.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:11:36,099:https://zero_red_chenab_deimos.playground.hoprnet.org:3001 "GET /api/v2/node/peers HTTP/1.1" 200 2165
+DEBUG:2022-12-29 15:14:50,327:Starting new HTTPS connection (1): zero_red_chenab_deimos.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:14:50,503:https://zero_red_chenab_deimos.playground.hoprnet.org:3001 "GET /api/v2/account/addresses HTTP/1.1" 200 249
+INFO:2022-12-29 15:14:50,503:Host available (PID 16Uiu2HAmC5TW8NXWFWrSVCfpWQeJQzjgdDSEmVMAZZXLgUv1spw3)
+DEBUG:2022-12-29 15:14:50,503:Starting new HTTPS connection (1): zero_red_chenab_deimos.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:14:50,628:https://zero_red_chenab_deimos.playground.hoprnet.org:3001 "GET /api/v2/node/peers/quality=0.5 HTTP/1.1" 404 168
+ERROR:2022-12-29 15:14:50,640:Could not fetch peer information. Status code: 404
+DEBUG:2022-12-29 15:15:57,955:Starting new HTTPS connection (1): zero_red_chenab_deimos.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:15:58,128:https://zero_red_chenab_deimos.playground.hoprnet.org:3001 "GET /api/v2/account/addresses HTTP/1.1" 200 249
+INFO:2022-12-29 15:15:58,128:Host available (PID 16Uiu2HAmC5TW8NXWFWrSVCfpWQeJQzjgdDSEmVMAZZXLgUv1spw3)
+DEBUG:2022-12-29 15:15:58,128:Starting new HTTPS connection (1): zero_red_chenab_deimos.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:15:58,271:https://zero_red_chenab_deimos.playground.hoprnet.org:3001 "GET /api/v2/node/peers HTTP/1.1" 200 2165
+DEBUG:2022-12-29 15:18:58,734:Starting new HTTPS connection (1): zero_red_chenab_deimos.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:18:58,891:https://zero_red_chenab_deimos.playground.hoprnet.org:3001 "GET /api/v2/account/addresses HTTP/1.1" 404 None
+ERROR:2022-12-29 15:18:58,891:Host is NOT available: start a new cluster. Status code: 404
+DEBUG:2022-12-29 15:26:40,634:Starting new HTTPS connection (1): zero_phobos_danube_purple.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:26:40,792:https://zero_phobos_danube_purple.playground.hoprnet.org:3001 "GET /api/v2/account/addresses HTTP/1.1" 200 249
+INFO:2022-12-29 15:26:40,792:Host available (PID 16Uiu2HAmGL8e9nkF2jG7wrY5c6jeKgWfiaC2Pe7MCvpbzztJyAoc)
+DEBUG:2022-12-29 15:26:40,792:Starting new HTTPS connection (1): zero_phobos_danube_purple.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:26:40,932:https://zero_phobos_danube_purple.playground.hoprnet.org:3001 "GET /api/v2/node/peers HTTP/1.1" 200 2197
+DEBUG:2022-12-29 15:29:39,785:Starting new HTTPS connection (1): zero_phobos_danube_purple.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:29:39,929:https://zero_phobos_danube_purple.playground.hoprnet.org:3001 "GET /api/v2/account/addresses HTTP/1.1" 200 249
+INFO:2022-12-29 15:29:39,943:Host available (PID 16Uiu2HAmGL8e9nkF2jG7wrY5c6jeKgWfiaC2Pe7MCvpbzztJyAoc)
+DEBUG:2022-12-29 15:29:39,946:Starting new HTTPS connection (1): zero_phobos_danube_purple.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:29:40,073:https://zero_phobos_danube_purple.playground.hoprnet.org:3001 "GET /api/v2/node/peers/0.5 HTTP/1.1" 404 160
+ERROR:2022-12-29 15:29:40,073:Could not fetch peer information. Status code: 404
+DEBUG:2022-12-29 15:30:17,922:Starting new HTTPS connection (1): zero_phobos_danube_purple.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:30:18,271:https://zero_phobos_danube_purple.playground.hoprnet.org:3001 "GET /api/v2/account/addresses HTTP/1.1" 200 249
+INFO:2022-12-29 15:30:18,271:Host available (PID 16Uiu2HAmGL8e9nkF2jG7wrY5c6jeKgWfiaC2Pe7MCvpbzztJyAoc)
+DEBUG:2022-12-29 15:30:18,271:Starting new HTTPS connection (1): zero_phobos_danube_purple.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:30:18,540:https://zero_phobos_danube_purple.playground.hoprnet.org:3001 "GET /api/v2/node/peers?quality=0.5 HTTP/1.1" 200 2197
+DEBUG:2022-12-29 15:31:05,289:Starting new HTTPS connection (1): zero_phobos_danube_purple.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:31:05,436:https://zero_phobos_danube_purple.playground.hoprnet.org:3001 "GET /api/v2/account/addresses HTTP/1.1" 200 249
+INFO:2022-12-29 15:31:05,436:Host available (PID 16Uiu2HAmGL8e9nkF2jG7wrY5c6jeKgWfiaC2Pe7MCvpbzztJyAoc)
+DEBUG:2022-12-29 15:31:05,451:Starting new HTTPS connection (1): zero_phobos_danube_purple.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:31:05,580:https://zero_phobos_danube_purple.playground.hoprnet.org:3001 "GET /api/v2/node/peers?quality=1 HTTP/1.1" 200 2197
+DEBUG:2022-12-29 15:31:24,914:Starting new HTTPS connection (1): zero_phobos_danube_purple.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:31:25,103:https://zero_phobos_danube_purple.playground.hoprnet.org:3001 "GET /api/v2/account/addresses HTTP/1.1" 200 249
+INFO:2022-12-29 15:31:25,103:Host available (PID 16Uiu2HAmGL8e9nkF2jG7wrY5c6jeKgWfiaC2Pe7MCvpbzztJyAoc)
+DEBUG:2022-12-29 15:31:25,103:Starting new HTTPS connection (1): zero_phobos_danube_purple.playground.hoprnet.org:3001
+DEBUG:2022-12-29 15:31:25,260:https://zero_phobos_danube_purple.playground.hoprnet.org:3001 "GET /api/v2/node/peers?quality=2 HTTP/1.1" 400 74
+ERROR:2022-12-29 15:31:25,260:Could not fetch peer information. Status code: 400
+DEBUG:2022-12-29 16:09:29,642:Starting new HTTPS connection (1): zero_godavari_europa_acqua.playground.hoprnet.org:3001
+DEBUG:2022-12-29 16:09:29,841:https://zero_godavari_europa_acqua.playground.hoprnet.org:3001 "GET /api/v2/account/addresses HTTP/1.1" 200 249
+INFO:2022-12-29 16:09:29,842:Host available (PID 16Uiu2HAmUfzaiQJBKfh21PAvi4UgfpqWDWZqPp68tbtKS7pG8JAm)
+DEBUG:2022-12-29 16:09:29,842:Starting new HTTPS connection (1): zero_godavari_europa_acqua.playground.hoprnet.org:3001
+DEBUG:2022-12-29 16:09:30,035:https://zero_godavari_europa_acqua.playground.hoprnet.org:3001 "GET /api/v2/node/peers?quality=0.5 HTTP/1.1" 200 2165
+DEBUG:2022-12-29 16:09:30,043:Starting new HTTPS connection (1): zero_godavari_europa_acqua.playground.hoprnet.org:3001
+DEBUG:2022-12-29 16:09:30,238:https://zero_godavari_europa_acqua.playground.hoprnet.org:3001 "GET /api/v2/channels/ HTTP/1.1" 200 1731
