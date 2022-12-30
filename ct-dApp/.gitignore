@@ -1,3 +1,4 @@
 __pycache__/
 ct.py.log
 websocket_client.log
+run.sh
