@@ -5,10 +5,10 @@
 import json
 import logging
 import os 
-import random
 import requests
 import sys
-from datetime import datetime
+import pandas as pd
+import numpy as np
 
 # set logging level
 logging.basicConfig(filename='peer_viz.log',
@@ -68,7 +68,6 @@ if __name__ == "__main__":
 
     # double check that the number of connected peers is not greater than the announced ones
     connected_peers = peer_response.json()['connected']
-    print(connected_peers)
     announced_peers = peer_response.json()['announced']
     assert(len(connected_peers) <= len(announced_peers))
 
@@ -81,8 +80,6 @@ if __name__ == "__main__":
     # my PID should never appear as one of my peers
     assert(my_pid not in api_host_peers)
     
-    print(api_host_peers)
-    
     # Get payment channel Information 
     channel_url = "https://{}:3001/api/v2/channels/".format(api_host)
     headers     = {
@@ -91,9 +88,28 @@ if __name__ == "__main__":
     channel_response = requests.request("GET",
                                 channel_url,
                                 headers=headers)
-    print(">>> Channel information <<<")
-    print(channel_response.status_code)
-    print(json.dumps(channel_response.json(), indent=4))
+    
+    if (channel_response.status_code != 200):
+        logging.error("Could not fetch channel information. Status code: {}".format(channel_response.status_code))
+        sys.exit(1)
+    
+    # convert channel response to dataframe 
+    d = channel_response.json()
+    df_edges = pd.concat([pd.DataFrame(v) for k,v in d.items()], keys=d)
+    
+    # create edge-dataframe by adding sender and receiver columns 
+    df_edges.insert(0, 'sender', my_pid)
+    df_edges = df_edges.rename(columns={'peerId': 'receiver'})
+    df_edges = df_edges[['sender', 'receiver', 'type', 'channelId', 'status', 'balance']]
+    df_edges["sender"] = np.where(df_edges['type'] == 'incoming', df_edges['receiver'], df_edges['sender'])
+    df_edges["receiver"] = np.where(df_edges['type'] == 'incoming', my_pid, df_edges['receiver'])
+    
+    # create node-dataframe listing all unique peer id's including self 
+    df_nodes=pd.DataFrame({'nodes':np.unique(df_edges[['sender', 'receiver']].values)})
+    
+    # save edge and node dataframe 
+    df_edges.to_csv("edges.txt", index = False)  
+    df_nodes.to_csv("nodes.txt", index = False)  
     
     sys.exit(1)
     

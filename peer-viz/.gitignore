@@ -1,2 +1,4 @@
 run.sh
 peer_viz.log
+edges.txt
+nodes.txt
