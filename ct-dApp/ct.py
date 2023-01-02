@@ -1,14 +1,14 @@
 import asyncio
 import logging
-import random
 import os, sys
 
 from hopr_node import HoprNode
 
 
 # configure and get logger handler
-logging.basicConfig(filename='{}.log'.format(sys.argv[0]),
-                    level=logging.DEBUG,
+LOGFILE = '{}.log'.format(sys.argv[0])
+logging.basicConfig(filename=LOGFILE,
+                    level=logging.INFO,
                     format='%(levelname)s:%(asctime)s:%(message)s')
 log = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 def _getenvvar(name: str) -> str:
     """
-    Returns the string contained in environment variable `name` or None.
+    Returns the string contained in environment variable 'name' or None.
     """
     ret_value = None
     if os.getenv(name) is None:
@@ -27,43 +27,30 @@ def _getenvvar(name: str) -> str:
     return ret_value
 
 
-async def measure_latency(node: HoprNode):
-    """
-    Pings some peer of 'node' and reports its latency back.
-    """
-    connected = False
-
-    try:
-        while not connected:
-            log.info("Waiting for node")
-            connected = await node.connect()
-            await asyncio.sleep(5)
-
-        peers = asyncio.ensure_future(node.get_peers(status='connected'))
-        if len(peers) > 0:
-            rnd_peer = random.choice(peers)
-            await node.start_pinging(rnd_peer, interval=1)
-            await asyncio.sleep(30)
-        else:
-            log.warning("No peers :-(")
-
-    except Exception as e:
-        msg = "Unhandled exception caught: {}".format(e)
-        log.error(msg)
-        print(msg)
-    finally:
-        await node.disconnect()
-        sys.exit(1)
-
-
 if __name__ == "__main__":
     # read parameters from environment variables
     api_host = _getenvvar('HOPR_NODE_1_HTTP_URL')
     api_key  = _getenvvar('HOPR_NODE_1_API_KEY')
 
-    # create a Hopr node instance with async support
-    node = HoprNode(api_host, api_key)
-    
+    print(">>> Program started. Open {} for logs.".format(LOGFILE))
+    print(">>> Press <ctrl+c> to end.")
+
     loop = asyncio.new_event_loop()
-    loop.run_until_complete(measure_latency(node))
-    loop.close()
+    node = HoprNode(api_host, api_key)
+
+    try:
+        node.connect()
+
+        # start asynchronous tasks
+        task0 = loop.create_task(node.gather_peers())
+        loop.run_until_complete(task0)
+
+    except KeyboardInterrupt:
+        pass
+
+    finally:
+        task0.cancel()
+        loop.run_until_complete(task0)
+        node.disconnect()
+        loop.close()
+        sys.exit(0)

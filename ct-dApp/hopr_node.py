@@ -1,8 +1,7 @@
 import asyncio
-import aiohttp
 import logging
-
-from aiohttp.client_exceptions import ClientConnectorError
+import requests
+import traceback
 
 
 log = logging.getLogger(__name__)
@@ -21,37 +20,21 @@ class HoprNode():
         self.url     = url
         self.peer_id = None
 
-        # client session is reusable, see:
-        # - https://stackoverflow.com/questions/51908915/how-to-manage-a-single-aiohttp-clientsession
-        # - https://github.com/aio-libs/aiohttp/blob/master/docs/faq.rst#why-is-creating-a-clientsession-outside-of-an-event-loop-dangerous
-        self.session = None
+        # a set to keep the peers of this node, see:
+        # - get_peers(...)
+        self.peers = set()
 
-        # a flag to indicate the pinging task is running, see:
+        # a dictionary to keep the last 100 latency measures {peer: [latency, latency, ...]}, see:
         # - start_pinging(...)
-        self.is_pinging = False
-
-        # a list to keep the last 100 latency measures
-        # - start_pinging(...)
-        self.latency = list()
+        # - stop_pinging(...)
+        self.latency = dict()
         log.debug("Created HOPR node instance")
 
 
-    async def _create_session(self):
-        """
-        :returns: nothing; throws an exception if the session was not created.
-        """
-        if (self.session is not None) and (type(self.session) == aiohttp.ClientSession):
-            log.warning("Tried to create a new session, but it already exists")
-        else:
-            self.session = aiohttp.ClientSession()
-            log.info("Opened new session")
-
-
-    async def _get(self, end_point: str, params: dict=None) -> dict:
+    def _get(self, end_point: str, params: dict=None) -> dict:
         """
         Connects to the 'end_point' of this node's REST API.
-        Optionally passes 'params' as key-value pairs, see
-        https://docs.aiohttp.org/en/stable/client_quickstart.html#passing-parameters-in-urls
+        Optionally passes 'params' as key-value pairs.
 
         :returns: a JSON dictionary; throws an exception if GET failed.
         """
@@ -60,136 +43,130 @@ class HoprNode():
         log.debug("Connecting to {}".format(target_url))
 
         try:
-            async with self.session.get(target_url,
+            response = requests.request("GET",
+                                        target_url,
                                         headers=self.headers,
-                                        params=params,
-                                        ssl=False) as response:
-                if response.status == 200:
-                    if response.content_type == "application/json":
-                        ret_value = await response.json()
-                    else:
-                        log.error("Expected application/json, but node returned {}".format(response.content_type))
+                                        params=params)
+            if response.status_code == 200:
+                content_type = response.headers.get("Content-Type", "")
+                if "application/json" in content_type:
+                    ret_value = response.json()
                 else:
-                    log.error("Node {} returned status code {}".format(self.url,
-                                                                       response.status))
-
-        except ClientConnectorError as e:
-            msg = "Cannot reach URL {}: {}".format(self.url,
-                                                   str(e))
-            log.error(msg)
+                    log.error("Expected application/json, but node returned {}".format(content_type))
+            else:
+                log.error("Node {} returned status code {}".format(self.url,
+                                                                   response.status_code))
+        except Exception as e:
+            log.error("Could GET from {}: exception ocurred".format(self.url))
+            log.error(traceback.format_exc())
         finally:
             return ret_value
 
 
-    async def connect(self) -> bool:
+    def connect(self) -> str:
         """
-        Connects to this HOPR node, saving its peer_id.
-        :returns: True if connection was successful; or throws an exception.
+        Connects to this HOPR node, returning its peer_id.
+        :returns: this node's peerId if connection was successful (or None).
         """
-        ret_value = False
+        ret_value = None
         end_point = "/account/addresses"
 
+        log.debug("Connecting to node")
         try:
-            # create a new session if needed
-            if not self.session:
-                await self._create_session()
-
             # gather the peerId
-            json_body = await self._get(end_point)
+            json_body = self._get(end_point)
             if len(json_body) > 0:
                 self.peer_id = json_body["hopr"]
-                ret_value    = True
-                log.debug("HOPR node has peerId {}".format(self.peer_id))
-                log.debug("Self is {}".format(self))
-            else:
-                log.warning("Could get peerId")
+                ret_value    = self.peer_id
+                log.info("Connected HOPR node has peerId {}".format(self.peer_id))
 
         except Exception as e:
-            log.warning("Could not connect: exception occurred {}".format(str(e)))
+            log.error("Node could not connect to {}: exception occurred.".format(end_point))
+            log.error(traceback.format_exc())
         finally:
             return ret_value
 
 
-    async def disconnect(self):
+    @property
+    def connected(self) -> bool:
         """
-        :returns: nothing; throws an exception if the session was not closed.
+        :returns: True if this node is connected, False otherwise.
         """
-        if self.is_pinging:
-            await self.stop_pinging()
-        if self.session and (not self.session.closed):
-            await self.session.close()
-            log.info("Session closed")
+        return self.peer_id is not None
 
 
-    async def get_peers(self, status: str='connected') -> set:
+    def disconnect(self):
         """
-        :returns: a set of peerIds with 'status', where 'status' can be one of 'connected' or 'announced'.
-        """
-        STATUS    = ('connected', 'announced')
-        ret_value = set()
+        Placeholder for class cleanup
 
-        if (status is not None) and (status not in STATUS):
-            log.error('Unknown status {}. Try {}'.format(status,
-                                                         STATUS))
-            return ret_value
-        try:
-            if not self.peer_id:
-                if not await self.connect():
-                    log.warning("Could not get peers")
-                else:
-                    end_point = "/node/peers"
-                    log.debug("Trying to get node's <{}> peers".format(status))
-                    json_body = await self._get(end_point)
-                    log.debug("get_peers JSON received: {}".format(json_body))
-                    for p in json_body[status]:
-                        ret_value.add(p["peerId"])
-            else:
-                log.error("PeerId is None")
-                log.debug("Self is {}".format(self))
-
-        except Exception as e:
-            log.warning("Could not get peers: exception occurred {}".format(str(e)))
-        finally:
-            return ret_value
-
-
-    async def start_pinging(self, other_peer_id: str, interval: int=5):
-        """
-        Long-running task that pings 'other_peer_id' every 'interval' seconds.
-        It saves the last 100 latency measures in 'self.latency'.
-        :returns: nothing; the recorded latency measures are kept in 'self.latency'.
-        """
-        if self.is_pinging:
-            log.warning("Tried to start pinging, but it's already running")
-            return
-        if not self.peer_id:
-            await self.connect()
-
-        log.info("Started pinging {}".format(other_peer_id))
-        end_point       = "/node/ping"
-        self.is_pinging = True
-        while self.is_pinging:
-            json_body = await self._get(end_point,
-                                        params={'peerId': other_peer_id})
-            latency   = int(json_body["latency"])
-            self.latency.append(latency)
-            log.debug("Saved latency measure ({} ms) from node {}".format(latency,
-                                                                          other_peer_id))
-            # keep the last 100 latency measures
-            if len(self.latency) > 100:
-                self.latency.pop(0)
-            # wait
-            await asyncio.sleep(interval)
-        log.info("Stopped pinging {}".format(other_peer_id))
-
-
-    async def stop_pinging(self):
-        """
-        Stops the long-running task that pings.
         :returns: nothing
         """
-        if not self.is_pinging:
-            log.warning("Tried to stop pinging, but it's not running")
-        else:
-            self.is_pinging = False
-            log.info("Trying to stop pinging")
+        log.info("Disconnected HOPR node")
+
+
+    async def gather_peers(self):
+        """
+        Long-running task that continously updates the set of peers connected to this node.
+
+        :returns: nothing; the set of connected peerIds is kept in self.peers.
+        """
+        status    = "connected"
+        end_point = "/node/peers"
+        
+        try:
+            log.info("Gathering connected peers")
+            while True:
+                if self.connected:
+                    json_body = self._get(end_point)
+                    if status in json_body:
+                        for p in json_body[status]:
+                            peer = p["peerId"]
+                            if peer not in self.peers:
+                                self.peers.add(peer)
+                                log.info("Found connected peer {}".format(peer))
+                else:
+                    log.error("Node not connected")
+                # sleep for a while
+                await asyncio.sleep(2)
+
+        except asyncio.CancelledError:
+            log.info("Stopped gathering connected peers")
+
+        except Exception as e:
+            log.error("Could not get peers from {}: exception occurred".format(end_point))
+            log.error(traceback.format_exc())
+
+
+    async def ping_peer(self, other_peer_id: str):
+        """
+        Long-running task that pings 'other_peer_id'.
+
+        :returns: nothing; the recorded latency measures are kept in dictionary 
+                  self.latency {otherPeerId: [latency, latency, ...]}
+        """
+        end_point = "/node/ping"
+
+        try:
+            log.info("Pinging peer {}".format(other_peer_id))
+            while True:
+                if self.connected:
+                    json_body = self._get(end_point,
+                                          params={'peerId': other_peer_id})
+                    latency   = int(json_body["latency"])
+                    self.latency[other_peer_id].append(latency)
+                    log.debug("Got latency measure ({} ms) from peer {}".format(latency,
+                                                                                other_peer_id))
+                    # keep the last 100 latency measures
+                    if len(self.latency[other_peer_id]) > 100:
+                        self.latency[other_peer_id].pop(0)
+                    # sleep for a while
+                    await asyncio.sleep(2)
+                else:
+                    log.error("Node not connected")
+        
+        except asyncio.CancelledError:
+            log.info("Stopped pinging peer {}".format(other_peer_id))
+
+        except Exception as e:
+            log.error("Could not get peers from {}: exception occurred".format(end_point))
+            log.error(traceback.format_exc())
