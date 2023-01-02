@@ -11,6 +11,7 @@ import pandas as pd
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
 
 # set logging level
@@ -134,7 +135,10 @@ if __name__ == "__main__":
 
     nx.draw_networkx_nodes(G, pos, node_color=color_map, node_size=200, edgecolors='black')
     nx.draw_networkx_edges(G, pos, width=0.5, connectionstyle="arc3,rad=0.1")
-    nx.draw_networkx_labels(G, pos, labels=degree, font_size=12)
+    nx.draw_networkx_labels(G, pos, labels=degree, font_size=10)
+    
+    label_patch = mpatches.Patch(color='none', label='Labels represent node degrees')
+    plt.legend(handles=[label_patch], loc='upper left', frameon=False)
 
     plt.axis('off')
     plt.tight_layout()
