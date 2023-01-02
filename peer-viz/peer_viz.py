@@ -1,5 +1,5 @@
 # =============================================================================
-# Access HOPR Node and Compute Latency and Network Bandwidth 
+# Visualize Peer Network of Api Host 
 # =============================================================================
 
 import json
@@ -9,6 +9,9 @@ import requests
 import sys
 import pandas as pd
 import numpy as np
+import networkx as nx
+import matplotlib.pyplot as plt
+
 
 # set logging level
 logging.basicConfig(filename='peer_viz.log',
@@ -111,5 +114,31 @@ if __name__ == "__main__":
     df_edges.to_csv("edges.txt", index = False)  
     df_nodes.to_csv("nodes.txt", index = False)  
     
+    # create a directed network graph 
+    G = nx.from_pandas_edgelist(df_edges, 'sender', 'receiver', edge_attr=True, create_using=nx.DiGraph())
+
+    # calculate degree and set as node attribute 
+    degree = dict(G.degree(G.nodes()))
+    in_degree = dict(G.in_degree(G.nodes()))
+    out_degree = dict(G.out_degree(G.nodes()))
+
+    nx.set_node_attributes(G, degree, 'degree')
+    nx.set_node_attributes(G, in_degree, 'in_degree')
+    nx.set_node_attributes(G, out_degree, 'out_degree')
+
+    # plot and save peer network 
+    plt.figure(figsize=(10, 10), dpi=100, frameon=True)
+
+    pos = nx.circular_layout(G)
+    color_map = ['red' if node == my_pid else 'yellow' for node in G]
+
+    nx.draw_networkx_nodes(G, pos, node_color=color_map, node_size=200, edgecolors='black')
+    nx.draw_networkx_edges(G, pos, width=0.5, connectionstyle="arc3,rad=0.1")
+    nx.draw_networkx_labels(G, pos, labels=degree, font_size=12)
+
+    plt.axis('off')
+    plt.tight_layout()
+    plt.savefig("peer_viz.pdf", pad_inches=0)
+
     sys.exit(1)
     
