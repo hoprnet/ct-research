@@ -13,7 +13,6 @@ logging.basicConfig(filename=LOGFILE,
 log = logging.getLogger(__name__)
 
 
-
 def _getenvvar(name: str) -> str:
     """
     Returns the string contained in environment variable 'name' or None.
@@ -35,22 +34,31 @@ if __name__ == "__main__":
     print(">>> Program started. Open {} for logs.".format(LOGFILE))
     print(">>> Press <ctrl+c> to end.")
 
-    loop = asyncio.new_event_loop()
+    loop  = asyncio.new_event_loop()
+    tasks = list()
+
     node = HoprNode(api_host, api_key)
 
     try:
         node.connect()
 
         # start asynchronous tasks
-        task0 = loop.create_task(node.gather_peers())
-        loop.run_until_complete(task0)
+        tasks.append(loop.create_task(node.gather_peers()))
+        loop.run_until_complete(asyncio.sleep(10))
 
+        for p in node.peers:
+            if p not in node.latency.keys():
+                tasks.append(loop.create_task(node.ping_peer(p)))
+
+        loop.run_forever()
+    
     except KeyboardInterrupt:
         pass
 
     finally:
-        task0.cancel()
-        loop.run_until_complete(task0)
+        for t in tasks:
+            t.cancel()
+        loop.run_until_complete(asyncio.gather(*tasks))
         node.disconnect()
         loop.close()
         sys.exit(0)

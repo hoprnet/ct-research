@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import requests
 import traceback
@@ -31,19 +32,19 @@ class HoprNode():
         log.debug("Created HOPR node instance")
 
 
-    def _get(self, end_point: str, params: dict=None) -> dict:
+    def _req(self, end_point: str, method: str="GET", params: dict=None) -> dict:
         """
-        Connects to the 'end_point' of this node's REST API.
+        Connects to the 'end_point' of this node's REST API, using 'method' (either GET or POST).
         Optionally passes 'params' as key-value pairs.
 
-        :returns: a JSON dictionary; throws an exception if GET failed.
+        :returns: a JSON dictionary; throws an exception if failed.
         """
         ret_value  = dict()
         target_url = "{}/api/v2{}".format(self.url, end_point)
         log.debug("Connecting to {}".format(target_url))
 
         try:
-            response = requests.request("GET",
+            response = requests.request(method,
                                         target_url,
                                         headers=self.headers,
                                         params=params)
@@ -54,10 +55,12 @@ class HoprNode():
                 else:
                     log.error("Expected application/json, but node returned {}".format(content_type))
             else:
-                log.error("Node {} returned status code {}".format(self.url,
-                                                                   response.status_code))
+                log.error("{} request {} returned status code {}".format(method,
+                                                                         self.url,
+                                                                         response.status_code))
         except Exception as e:
-            log.error("Could GET from {}: exception ocurred".format(self.url))
+            log.error("Could not {} from {}: exception ocurred".format(method,
+                                                                       self.url))
             log.error(traceback.format_exc())
         finally:
             return ret_value
@@ -74,7 +77,7 @@ class HoprNode():
         log.debug("Connecting to node")
         try:
             # gather the peerId
-            json_body = self._get(end_point)
+            json_body = self._req(end_point)
             if len(json_body) > 0:
                 self.peer_id = json_body["hopr"]
                 ret_value    = self.peer_id
@@ -117,7 +120,7 @@ class HoprNode():
             log.info("Gathering connected peers")
             while True:
                 if self.connected:
-                    json_body = self._get(end_point)
+                    json_body = self._req(end_point)
                     if status in json_body:
                         for p in json_body[status]:
                             peer = p["peerId"]
@@ -150,19 +153,27 @@ class HoprNode():
             log.info("Pinging peer {}".format(other_peer_id))
             while True:
                 if self.connected:
-                    json_body = self._get(end_point,
+                    json_body = self._req(end_point,
+                                          method="POST",
                                           params={'peerId': other_peer_id})
-                    latency   = int(json_body["latency"])
-                    self.latency[other_peer_id].append(latency)
-                    log.debug("Got latency measure ({} ms) from peer {}".format(latency,
-                                                                                other_peer_id))
-                    # keep the last 100 latency measures
-                    if len(self.latency[other_peer_id]) > 100:
-                        self.latency[other_peer_id].pop(0)
-                    # sleep for a while
-                    await asyncio.sleep(2)
+                    if "latency" in json_body:
+                        latency   = int(json_body["latency"])
+                        if other_peer_id not in self.latency.keys():
+                            self.latency[other_peer_id] = list()
+                        self.latency[other_peer_id].append(latency)
+
+                        # keep the last 100 latency measures
+                        if len(self.latency[other_peer_id]) > 100:
+                            self.latency[other_peer_id].pop(0)
+
+                        log.info("Got latency measure ({} ms) from peer {}".format(latency,
+                                                                                   other_peer_id))
+                    else:
+                        log.warning("No answer from peer {}".format(other_peer_id))
                 else:
                     log.error("Node not connected")
+                # sleep for a while
+                await asyncio.sleep(2)
         
         except asyncio.CancelledError:
             log.info("Stopped pinging peer {}".format(other_peer_id))
