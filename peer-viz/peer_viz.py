@@ -41,7 +41,7 @@ if __name__ == "__main__":
     api_key  = _getenvvar('HOPR_NODE_1_API_KEY')
 
     # get address id of api host and verify that the api host is still available
-    address_url = "https://{}:3001/api/v2/account/addresses".format(api_host)
+    address_url = "http://{}:3001/api/v2/account/addresses".format(api_host)
     print(address_url)
     headers     = {
       'X-Auth-Token': api_key
@@ -56,9 +56,10 @@ if __name__ == "__main__":
     else:
         logging.error("Host is NOT available: start a new cluster. Status code: {}".format(address_response.status_code))
         sys.exit(1)
-        
+    print(my_pid)
+    
     # get information about the api host's peers
-    peer_url = "https://{}:3001/api/v2/node/peers?quality=0.5".format(api_host)
+    peer_url = "http://{}:3001/api/v2/node/peers?quality=0.5".format(api_host)
     headers     = {
       'X-Auth-Token': api_key
     }
@@ -85,7 +86,7 @@ if __name__ == "__main__":
     assert(my_pid not in api_host_peers)
     
     # Get payment channel Information 
-    channel_url = "https://{}:3001/api/v2/channels/".format(api_host)
+    channel_url = "http://{}:3001/api/v2/channels/".format(api_host)
     headers     = {
       'X-Auth-Token': api_key
     }
@@ -142,7 +143,9 @@ if __name__ == "__main__":
 
     plt.axis('off')
     plt.tight_layout()
-    plt.savefig("peer_viz.pdf", pad_inches=0)
-
+    plt.savefig("peer_viz.png", pad_inches=0)
+    
     sys.exit(1)
+
+    
     

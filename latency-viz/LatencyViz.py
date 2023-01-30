@@ -38,9 +38,9 @@ font2 = {'family':'sans-serif','color':'black','size':20}
 # --------------------
 # --------------------
  
-data_0 = np.random.normal(1000, 500, 1000)
-data_1 = np.random.normal(3000, 1000, 1000)
-data_2 = np.random.normal(5000, 1500, 1000)
+data_0 = np.random.normal(100, 50, 100)
+data_1 = np.random.normal(300, 100, 100)
+data_2 = np.random.normal(500, 150, 100)
 
 data_0.mean(), data_1.mean(), data_2.mean() 
 
@@ -52,21 +52,21 @@ data = list([data_0, data_1, data_2])
 
 # Define lower and upper truncation bound
 # -------------------- 
-a, b = 0, 12000 
+a, b = 0, 1200 
 
 # Define mean and sd (in ms) for each hop case and calculate the distribution 
 # --------------------
 
 # 1 HOP
-mu_0, sigma_0 = 1000, 500 
+mu_0, sigma_0 = 100, 50 
 dist_0 = stats.truncnorm((a - mu_0) / sigma_0, (b - mu_0) / sigma_0, loc=mu_0, scale=sigma_0)
 
 # 2 HOP
-mu_1, sigma_1 = 3000, 1000 
+mu_1, sigma_1 = 300, 100 
 dist_1 = stats.truncnorm((a - mu_1) / sigma_1, (b - mu_1) / sigma_1, loc=mu_1, scale=sigma_1)
 
 # 3 HOP
-mu_2, sigma_2 = 5000, 1500 
+mu_2, sigma_2 = 500, 150 
 dist_2 = stats.truncnorm((a - mu_2) / sigma_2, (b - mu_2) / sigma_2, loc=mu_2, scale=sigma_2)
 
 
@@ -108,4 +108,4 @@ ax.boxplot(data, showmeans=True, meanline=False, notch=False,
 #ax.spines["top"].set_visible(False)
 xticklabels=['1 HOP', '2 HOP', '3 HOP']
 ax.set_xticklabels(xticklabels)
-#fig.savefig('Boxplot_latency.pdf')
+fig.savefig('Boxplot_latency.png')
