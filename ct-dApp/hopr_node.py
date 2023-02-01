@@ -147,7 +147,7 @@ class HoprNode():
         :returns: nothing; the recorded latency measures are kept in dictionary 
                   self.latency {otherPeerId: [latency, latency, ...]}
         """
-        end_point = "/node/ping"
+        end_point = "/node/ping/"
 
         try:
             log.info("Pinging peer {}".format(other_peer_id))
@@ -155,7 +155,7 @@ class HoprNode():
                 if self.connected:
                     json_body = self._req(end_point,
                                           method="POST",
-                                          params={'peerId': other_peer_id})
+                                          params={'peerId': other_peer_id}) 
                     if "latency" in json_body:
                         latency   = int(json_body["latency"])
                         if other_peer_id not in self.latency.keys():

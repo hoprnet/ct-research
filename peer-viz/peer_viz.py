@@ -12,6 +12,7 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import random
 
 
 # set logging level
@@ -84,6 +85,39 @@ if __name__ == "__main__":
 
     # my PID should never appear as one of my peers
     assert(my_pid not in api_host_peers)
+    
+    #print(api_host_peers)
+    print(len(api_host_peers))
+    
+    # send a meesage to ourselves through a random peer
+    peerId  = random.choice(api_host_peers)
+    send_url = "http://{}:3001/api/v2/node/ping/".format(api_host)
+    headers  = {
+      'X-Auth-Token': api_key,
+      'Content-Type': 'application/json'
+    }
+    logging.info("Ping: {}".format(peerId))
+
+    payload = json.dumps({ 
+      "peerId": peerId,
+    })
+
+    ping_response = requests.request("POST",
+                                     send_url,
+                                     headers=headers,
+                                     data=payload)
+    
+    print(ping_response.status_code)
+    latency = json.dumps(ping_response.json()['latency'])
+    print(latency)
+    logging.info("Latency: {}".format(latency))
+    
+    
+    if (ping_response.status_code != 200): # 202: message sent successfully
+        logging.error("Could not send message. Status code: {}".format(ping_response.status_code))
+        sys.exit(1)
+    
+    sys.exit(1)
     
     # Get payment channel Information 
     channel_url = "http://{}:3001/api/v2/channels/".format(api_host)
