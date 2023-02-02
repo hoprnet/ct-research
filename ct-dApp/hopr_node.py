@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-import requests
+import aiohttp
 import traceback
 
 
@@ -32,41 +32,35 @@ class HoprNode():
         log.debug("Created HOPR node instance")
 
 
-    def _req(self, end_point: str, method: str="GET", params: dict=None) -> dict:
+    async def _req(self, end_point: str, method: str="GET", params: dict=None) -> dict:
         """
         Connects to the 'end_point' of this node's REST API, using 'method' (either GET or POST).
         Optionally passes 'params' as key-value pairs.
-
         :returns: a JSON dictionary; throws an exception if failed.
         """
-        ret_value  = dict()
-        target_url = "{}/api/v2{}".format(self.url, end_point)
-        log.debug("Connecting to {}".format(target_url))
+        ret_value = dict()
+        target_url = f"{self.url}/api/v2{end_point}"
+        log.debug(f"Connecting to {target_url}")
 
         try:
-            response = requests.request(method,
-                                        target_url,
-                                        headers=self.headers,
-                                        params=params)
-            if response.status_code == 200:
-                content_type = response.headers.get("Content-Type", "")
-                if "application/json" in content_type:
-                    ret_value = response.json()
-                else:
-                    log.error("Expected application/json, but node returned {}".format(content_type))
-            else:
-                log.error("{} request {} returned status code {}".format(method,
-                                                                         self.url,
-                                                                         response.status_code))
+            async with aiohttp.ClientSession() as session:
+                async with session.request(method, target_url, headers=self.headers, params=params) as response:
+                    if response.status == 200:
+                        content_type = response.headers.get("Content-Type", "")
+                        if "application/json" in content_type:
+                            ret_value = await response.json()
+                        else:
+                            log.error(f"Expected application/json, but node returned {content_type}")
+                    else:
+                        log.error(f"{method} request {self.url} returned status code {response.status}")
         except Exception as e:
-            log.error("Could not {} from {}: exception ocurred".format(method,
-                                                                       self.url))
-            log.error(traceback.format_exc())
+            log.error(f"Could not {method} from {self.url}: exception occurred")
+            log.error(e)
         finally:
             return ret_value
 
 
-    def connect(self) -> str:
+    async def connect(self) -> str:
         """
         Connects to this HOPR node, returning its peer_id.
         :returns: this node's peerId if connection was successful (or None).
@@ -77,7 +71,7 @@ class HoprNode():
         log.debug("Connecting to node")
         try:
             # gather the peerId
-            json_body = self._req(end_point)
+            json_body = await self._req(end_point)
             if len(json_body) > 0:
                 self.peer_id = json_body["hopr"]
                 ret_value    = self.peer_id
@@ -86,6 +80,7 @@ class HoprNode():
         except Exception as e:
             log.error("Node could not connect to {}: exception occurred.".format(end_point))
             log.error(traceback.format_exc())
+            log.error(e)
         finally:
             return ret_value
 
@@ -120,7 +115,7 @@ class HoprNode():
             log.info("Gathering connected peers")
             while True:
                 if self.connected:
-                    json_body = self._req(end_point)
+                    json_body = await self._req(end_point)
                     if status in json_body:
                         for p in json_body[status]:
                             peer = p["peerId"]
@@ -133,11 +128,12 @@ class HoprNode():
                 await asyncio.sleep(2)
 
         except asyncio.CancelledError:
-            log.info("Stopped gathering connected peers")
+            log.info("Stopped gathering...")
 
         except Exception as e:
             log.error("Could not get peers from {}: exception occurred".format(end_point))
             log.error(traceback.format_exc())
+            log.error(e)
 
 
     async def ping_peer(self, other_peer_id: str):
@@ -181,3 +177,4 @@ class HoprNode():
         except Exception as e:
             log.error("Could not get peers from {}: exception occurred".format(end_point))
             log.error(traceback.format_exc())
+            log.error(e)
