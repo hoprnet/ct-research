@@ -1,6 +1,7 @@
 import asyncio
 import logging
-import os, sys
+import os
+import sys
 
 from hopr_node import HoprNode
 
@@ -26,6 +27,24 @@ def _getenvvar(name: str) -> str:
     return ret_value
 
 
+async def producer(node, queue):
+    peers_gathered = 0
+    max_peers = 10
+    while peers_gathered < max_peers:
+        await node.gather_peers()
+        for p in node.peers:
+            await queue.put(p)
+            peers_gathered += 1
+            
+async def consumer(node, queue):
+    while True:
+        p = await queue.get()
+        if p not in node.latency.keys():
+            await node.ping_peer(p)
+            log.info("Ping sent to peer: {}".format(p))
+        queue.task_done()
+
+
 if __name__ == "__main__":
     # read parameters from environment variables
     api_host = _getenvvar('HOPR_NODE_1_HTTP_URL')
@@ -34,23 +53,20 @@ if __name__ == "__main__":
     print(">>> Program started. Open {} for logs.".format(LOGFILE))
     print(">>> Press <ctrl+c> to end.")
 
-    loop  = asyncio.new_event_loop()
-    tasks = list()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 
     node = HoprNode(api_host, api_key)
 
     try:
-        node.connect()
+        loop.run_until_complete(node.connect())
 
-        # start asynchronous tasks
-        tasks.append(loop.create_task(node.gather_peers()))
-        loop.run_until_complete(asyncio.sleep(10))
-
-        for p in node.peers:
-            if p not in node.latency.keys():
-                tasks.append(loop.create_task(node.ping_peer(p)))
-
+        queue = asyncio.Queue()
+        tasks = [loop.create_task(producer(node, queue)),
+                 loop.create_task(consumer(node, queue))]
+        
         loop.run_forever()
+        loop.run_until_complete(asyncio.gather(*tasks))
     
     except KeyboardInterrupt:
         pass
