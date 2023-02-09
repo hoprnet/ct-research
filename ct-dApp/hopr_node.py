@@ -17,7 +17,8 @@ class HoprNode():
         :returns: a new instance of a HOPR node using 'url' and API 'key'
         """
         self.api_key = key
-        self.headers = {'X-Auth-Token': self.api_key}
+        self.headers = {'X-Auth-Token': self.api_key,
+                        'Content-Type': 'application/json'}
         self.url     = url
         self.peer_id = None
 
@@ -32,10 +33,10 @@ class HoprNode():
         log.debug("Created HOPR node instance")
 
 
-    def _req(self, end_point: str, method: str="GET", params: dict=None) -> dict:
+    def _req(self, end_point: str, method: str="GET", payload: dict=None) -> dict:
         """
         Connects to the 'end_point' of this node's REST API, using 'method' (either GET or POST).
-        Optionally passes 'params' as key-value pairs.
+        Optionally attaches 'payload' as JSON string to the request.
 
         :returns: a JSON dictionary; throws an exception if failed.
         """
@@ -44,11 +45,16 @@ class HoprNode():
         log.debug("Connecting to {}".format(target_url))
 
         try:
+            if payload:
+                data_payload = json.dumps(payload)
+            else:
+                data_payload = None
+
             # FIXME: using 'requests' blocks the event loop!
             response = requests.request(method,
                                         target_url,
                                         headers=self.headers,
-                                        params=params)
+                                        data=data_payload)
             if response.status_code == 200:
                 content_type = response.headers.get("Content-Type", "")
                 if "application/json" in content_type:
@@ -100,8 +106,9 @@ class HoprNode():
 
         :returns: nothing
         """
-        self.peer_id = None
-        log.info("Disconnected HOPR node")
+        if self.connected:
+            self.peer_id = None
+            log.info("Disconnected HOPR node")
 
 
     async def gather_peers(self):
@@ -157,7 +164,7 @@ class HoprNode():
                     log.info("Pinging peer {}".format(p))
                     json_body = self._req(end_point,
                                           method="POST",
-                                          params={'peerId': p})
+                                          payload={'peerId': p})
                     if "latency" in json_body:
                         latency = int(json_body["latency"])
                         self.latency[p].append(latency)
