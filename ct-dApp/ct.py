@@ -13,7 +13,7 @@ BACKGROUND_TASKS = set()
 # configure and get logger handler
 LOGFILE = '{}.log'.format(sys.argv[0])
 logging.basicConfig(filename=LOGFILE,
-                    level=logging.DEBUG,
+                    level=logging.INFO,
                     format='%(levelname)s:%(asctime)s:%(message)s')
 log = logging.getLogger(__name__)
 
