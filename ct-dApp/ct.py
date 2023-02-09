@@ -1,10 +1,14 @@
 import asyncio
 import logging
 import os
+import signal
 import sys
+import traceback
 
 from hopr_node import HoprNode
 
+
+BACKGROUND_TASKS = set()
 
 # configure and get logger handler
 LOGFILE = '{}.log'.format(sys.argv[0])
@@ -27,54 +31,40 @@ def _getenvvar(name: str) -> str:
     return ret_value
 
 
-async def producer(node, queue):
-    peers_gathered = 0
-    max_peers = 10
-    while peers_gathered < max_peers:
-        await node.gather_peers()
-        for p in node.peers:
-            await queue.put(p)
-            peers_gathered += 1
-            
-async def consumer(node, queue):
-    while True:
-        p = await queue.get()
-        if p not in node.latency.keys():
-            await node.ping_peer(p)
-            log.info("Ping sent to peer: {}".format(p))
-        queue.task_done()
-
+def stop(node, caught_signal):
+    """
+    Stops the running node
+    """
+    print(">>> Caught signal {} <<<".format(caught_signal))
+    print(">>> Stopping ...")
+    node.stop()
+    
 
 if __name__ == "__main__":
+    exit_code = 0
+
     # read parameters from environment variables
     api_host = _getenvvar('HOPR_NODE_1_HTTP_URL')
     api_key  = _getenvvar('HOPR_NODE_1_API_KEY')
 
-    print(">>> Program started. Open {} for logs.".format(LOGFILE))
+    print(">>> Program started. Open [ {} ] for logs.".format(LOGFILE))
     print(">>> Press <ctrl+c> to end.")
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
     node = HoprNode(api_host, api_key)
+    loop = asyncio.new_event_loop()
 
     try:
-        loop.run_until_complete(node.connect())
+        loop.add_signal_handler(signal.SIGINT, lambda: stop(node, signal.SIGINT))
+        loop.add_signal_handler(signal.SIGTERM, lambda: stop(node, signal.SIGTERM))
 
-        queue = asyncio.Queue()
-        tasks = [loop.create_task(producer(node, queue)),
-                 loop.create_task(consumer(node, queue))]
-        
-        loop.run_forever()
-        loop.run_until_complete(asyncio.gather(*tasks))
+        loop.run_until_complete(node.start())
     
-    except KeyboardInterrupt:
-        pass
+    except Exception:
+        log.error("Uncaught exception ocurred")
+        log.error(traceback.format_exc())
+        exit_code = 1
 
     finally:
-        for t in tasks:
-            t.cancel()
-        loop.run_until_complete(asyncio.gather(*tasks))
-        node.disconnect()
+        node.stop()
         loop.close()
-        sys.exit(0)
+        sys.exit(exit_code)
