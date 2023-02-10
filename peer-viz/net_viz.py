@@ -41,15 +41,16 @@ for i in range(1, num_dicts+1):
 # Combine a list of dictionaries into a single dictionary 
 combined = {k: v for d in dicts for k, v in d.items()}
 
-# Create a graph dictionary 
-graph = {'Network': combined}
+# Create a graph dictionary
+graph = {'Network': combined} 
+graph = dicts[0]
 print(graph)
 
 # Create an empty list to store the edge tuples
 edges = []
 
 # Extract the edge tuples and the edge attributes from the graph dictionary
-for node, connections in graph['Network'].items():
+for node, connections in graph.items():
     for connection, data in connections.items():
         # Compute the median value of the data
         median = statistics.median(data)
