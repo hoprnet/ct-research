@@ -8,7 +8,6 @@ import traceback
 from hopr_node import HoprNode
 
 
-
 # configure and get logger handler
 LOGFILE = '{}.log'.format(sys.argv[0])
 logging.basicConfig(filename=LOGFILE,
