@@ -86,9 +86,10 @@ if __name__ == "__main__":
     # my PID should never appear as one of my peers
     assert(my_pid not in api_host_peers)
     
-    #print(api_host_peers)
-    print(len(api_host_peers))
-    
+    # Log the length of api_host peers 
+    logging.info("Number of Peers: {}".format(len(api_host_peers)))
+    print("Number of Peers: {}".format(len(api_host_peers)))
+        
     # send a meesage to ourselves through a random peer
     peerId  = random.choice(api_host_peers)
     send_url = "http://{}:3001/api/v2/node/ping/".format(api_host)
@@ -107,9 +108,9 @@ if __name__ == "__main__":
                                      headers=headers,
                                      data=payload)
     
-    print(ping_response.status_code)
+    print("Ping Status Code: {}".format(ping_response.status_code))
     latency = json.dumps(ping_response.json()['latency'])
-    print(latency)
+    print("Latency: {}".format(latency))
     logging.info("Latency: {}".format(latency))
     
     

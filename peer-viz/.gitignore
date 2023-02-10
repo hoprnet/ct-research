@@ -2,3 +2,7 @@ run.sh
 peer_viz.log
 edges.txt
 nodes.txt
+net_viz.png
+net_viz.pdf
+peer_viz.pdf
+peer_viz.png
