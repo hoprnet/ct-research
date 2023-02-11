@@ -1,5 +1,6 @@
 __pycache__/
 ct.py.log
 net_viz-*.png
+out.mp4
 run.sh
 websocket_client.log
