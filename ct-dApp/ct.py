@@ -57,8 +57,8 @@ if __name__ == "__main__":
 
         loop.run_until_complete(node.start())
     
-    except Exception:
-        log.error("Uncaught exception ocurred")
+    except Exception as e:
+        log.error("Uncaught exception ocurred", str(e))
         log.error(traceback.format_exc())
         exit_code = 1
 

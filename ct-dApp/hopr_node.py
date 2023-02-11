@@ -4,6 +4,7 @@ import requests
 import traceback
 
 from http_req import send_async_req
+from viz import network_viz
 
 
 log = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ class HoprNode():
         # a set to keep the peers of this node, see:
         self.peers = set[str]()
 
-        # a dictionary to keep the last 100 latency measures {peer: [latency, latency, ...]}, see:
+        # a dictionary to keep the last 100 latency measures {peer: [latency, latency, ...]}
         self.latency = dict[str, list[int]]()
 
         # a set to keep track of the running tasks
@@ -48,13 +49,16 @@ class HoprNode():
 
         if response.status_code == 200:
             content_type = response.headers.get("Content-Type", "")
-            if "application/json" not in content_type:
+            if "application/json" in content_type:
+                return response.json()
+            else:
                 log.error("Expected application/json, but got {}".format(content_type))
+                return {'response': response.text}
         else:
             log.error("{} {} returned status code {}".format(method,
                                                              target_url,
                                                              response.status_code))
-        return response.json()
+            return {'': ''}
 
 
     async def connect(self):
@@ -68,21 +72,24 @@ class HoprNode():
             try:
                 # gather the peerId
                 json_body = await self._req(end_point)
-                if len(json_body) > 0:
+                if "hopr" in json_body:
                     self.peer_id = json_body["hopr"]
                     log.info("HOPR node {} is up".format(self.peer_id))
+                else:
+                    self.peer_id = None
+                    log.info("HOPR node is down")
 
             except requests.exceptions.ConnectionError:
                 self.peer_id = None
                 log.info("HOPR node is down")
                 
-            except Exception:
+            except Exception as e:
                 self.peer_id = None
-                log.error("Could not connect to {}".format(end_point))
+                log.error("Could not connect to {}: {}".format(end_point, str(e)))
                 log.error(traceback.format_exc())
 
             finally:
-                await asyncio.sleep(30)
+                await asyncio.sleep(45)
 
 
     @property
@@ -134,8 +141,28 @@ class HoprNode():
                 log.warning("No answer from peer {}".format(self.peer_id))
 
             except Exception as e:
-                log.error("Could not get peers from {}".format(end_point))
+                log.error("Could not get peers from {}: {}".format(end_point, str(e)))
                 log.error(traceback.format_exc())
+
+
+    async def plot(self):
+        """
+        Long-running task that regularly plots the network and latencies amont its nodes.
+
+        :returns: nothing; throws expection in case of error
+        """
+        i = 0
+        while self.started:
+            await asyncio.sleep(30)
+            if self.connected and self.latency is not None:
+                i += 1
+                file_name = "net_viz-{:04d}".format(i)
+                log.info("Creating visualization [ {} ]".format(file_name))
+                try:
+                    await asyncio.to_thread(network_viz, {self.peer_id: self.latency}, file_name)
+                except Exception as e:
+                    log.error("Could not create visualization [ {} ]: {}".format(file_name, str(e)))
+                    log.error(traceback.format_exc())
 
 
     async def ping_peers(self):
@@ -149,9 +176,9 @@ class HoprNode():
 
         while self.started:
             # check that we are still connected
+            await asyncio.sleep(1)
             if not self.connected:
                 log.debug("ping_peers() waiting for connection")
-                await asyncio.sleep(1)
                 continue
 
             for p in self.peers:
@@ -181,8 +208,8 @@ class HoprNode():
                 except requests.exceptions.ReadTimeout:
                     log.warning("No answer from peer {}".format(p))
 
-                except Exception:
-                    log.error("Could not ping using {}".format(end_point))
+                except Exception as e:
+                    log.error("Could not ping using {}: {}".format(end_point, str(e)))
                     log.error(traceback.format_exc())
 
                 finally:
@@ -203,6 +230,7 @@ class HoprNode():
             self.tasks.add(asyncio.create_task(self.connect()))
             self.tasks.add(asyncio.create_task(self.gather_peers()))
             self.tasks.add(asyncio.create_task(self.ping_peers()))
+            self.tasks.add(asyncio.create_task(self.plot()))
             await asyncio.gather(*self.tasks)
 
 

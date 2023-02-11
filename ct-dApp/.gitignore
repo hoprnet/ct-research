@@ -1,4 +1,5 @@
 __pycache__/
 ct.py.log
-websocket_client.log
+net_viz-*.png
 run.sh
+websocket_client.log
