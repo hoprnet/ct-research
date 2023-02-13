@@ -1,9 +1,11 @@
 import networkx as nx
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import matplotlib.cm as cm
 import matplotlib.colors as colors
 import statistics
 import numpy as np
+import datetime
 
 
 
@@ -40,30 +42,37 @@ def network_viz(graph: dict[str, dict[str, list[int]]], file_name: str):
     for u, v, data in G.edges.data():
         median = data['median']
         # Use a color map to map the median value to a color
-        color = plt.cm.RdYlGn(median / 1000.0) 
+        color = plt.cm.RdYlGn_r(median / 1000.0) 
         edge_colors.append(color)
     nx.set_edge_attributes(G, edge_colors, 'color')
 
     # plot and save peer network 
     plt.figure(figsize=(10, 10), dpi=100, frameon=True)
 
-    pos = nx.spring_layout(G)
+    pos = nx.spring_layout(G, seed=123)
     color_map = ['black' if node == 'api_host' else 'gray' for node in G]
 
     nx.draw_networkx_nodes(G, pos, node_color=color_map, node_size=200, edgecolors='black')
     nx.draw_networkx_edges(G, pos, width=1, connectionstyle="arc3,rad=0.1", edge_color=edge_colors)
     
     # Create a ScalarMappable to map the edge colors to a col
-    sm = cm.ScalarMappable(cmap=plt.cm.RdYlGn, norm=colors.Normalize(vmin=100, vmax=1000))
+    sm = cm.ScalarMappable(cmap=plt.cm.RdYlGn_r, norm=colors.Normalize(vmin=0, vmax=1000))
     sm.set_array([])
 
     # Add a colorbar to the plot
-    cbar = plt.colorbar(sm, ticks= np.linspace(100,1000,11)) 
+    cbar = plt.colorbar(sm, ticks= np.linspace(0,1000,11)) 
     cbar.set_label('Median Latency', rotation=270, labelpad=10)
+    
+    # Add Legend 
+    now = datetime.datetime.now()
+    label = "Timestamp: {}".format(now.strftime("%Y-%m-%d %H:%M:%S"))
+    label_patch = mpatches.Patch(color='none', label=label)
+    plt.legend(handles=[label_patch], loc='upper left', frameon=False)
            
     plt.axis('off')
     plt.tight_layout()
     plt.savefig(file_name, pad_inches=0)
+    
 
     #
     # discard the created image to save memory, see:
