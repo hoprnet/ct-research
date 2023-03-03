@@ -7,3 +7,5 @@ net_viz.pdf
 peer_viz.pdf
 peer_viz.png
 .coverage*
+__pycache__/
+
