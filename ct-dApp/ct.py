@@ -22,7 +22,7 @@ def _getenvvar(name: str) -> str:
     """
     ret_value = None
     if os.getenv(name) is None:
-        log.error("Environment variable [", name, "] not found")
+        log.error(f"Environment variable [{name}] not found")
         sys.exit(1)
     else:
         ret_value = os.getenv(name)
