@@ -18,7 +18,6 @@ def test_getenvvar_exit() -> None:
     """
     Test whether system exit is called when no environemnt variable is provided.
     """
-    os.environ.pop('HOPR_NODE_1_HTTP_URL')
     
     with pytest.raises(SystemExit) as exc_info:
         _getenvvar('NO_SUCH_ENV_VAR_EXISTS')
