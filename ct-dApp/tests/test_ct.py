@@ -21,7 +21,7 @@ def test_getenvvar_exit() -> None:
     os.environ.pop('HOPR_NODE_1_HTTP_URL')
     
     with pytest.raises(SystemExit) as exc_info:
-        _getenvvar('HOPR_NODE_1_HTTP_URL')
+        _getenvvar('NO_SUCH_ENV_VAR_EXISTS')
     
     assert exc_info.type == SystemExit
     assert exc_info.value.code == 1
