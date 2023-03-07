@@ -4,7 +4,7 @@ from ct import _getenvvar
 
 def test_getenvvar_load_envar() -> None:
     """
-    Test whether the global evironment variables are loaded correctly.
+    Test whether the global environment variables are loaded correctly.
     """
     os.environ['HOPR_NODE_1_HTTP_URL'] = 'http_url'
     os.environ['HOPR_NODE_1_API_KEY'] = 'api_key'
