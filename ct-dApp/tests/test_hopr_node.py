@@ -1,10 +1,58 @@
+import asyncio
 from hopr_node import HoprNode
 
-key = 'something'
-url = "some_url"
-end_point = "/account/addresses"
+def test_url_format():
+    """
+    Test whether the target url is returned correctly.
+    """
+    class MockHoprNode(HoprNode):
+        def __init__(self, url: str, key: str):
+            """
+            Patched url and api_key
+            """
+            super().__init__(url, key)
 
-def test_req():
-    node = HoprNode(url, key)  # Create an instance of the HoprNode class
-    request = node._req(end_point=end_point, method='GET', payload=None) 
-    assert request.target_url == "{}/api/v2{}".format(url, end_point)
+    node = MockHoprNode("some_url", "some_key")
+    end_point = "/node/some_endpoint"
+    target_url = "{}/api/v2{}".format(node.url, end_point)
+    assert target_url == "some_url/api/v2/node/some_endpoint"
+
+
+def test_adding_peers_while_pinging() -> None:
+    """
+    Changing the 'peers' set while pinging should not break.
+    """
+    class MockHoprNode(HoprNode):
+        def __init__(self, url: str, key: str):
+            """
+            Patched constructor: connected and started
+            """
+            super().__init__(url, key)
+            self.started = True
+
+        def _req(*args, **kwargs) -> dict[str, str]:
+            """
+            Patch HoprNode._req to return a valid JSON object.
+            """
+            return {'a': 'b'}
+
+        async def connect(self):
+            self.peer_id = "testing_peer_id"
+            while self.started:
+                await asyncio.sleep(45)
+
+        async def gather_peers(self):
+            """
+            Patched to discover one additional peer every couple of seconds
+            """
+            while self.started:
+                await asyncio.sleep(1)
+                peer = 'peer_{}'.format(len(self.peers))
+                self.peers.add(peer)
+
+    node = MockHoprNode("some_url", "some_key")
+    loop = asyncio.new_event_loop()
+
+    loop.call_later(10, lambda: node.stop())
+    loop.run_until_complete(node.start())
+    loop.close()
