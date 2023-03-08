@@ -4,3 +4,4 @@ ct.py.log
 net_viz-*.png
 out.mp4
 websocket_client.log
+.coverage*

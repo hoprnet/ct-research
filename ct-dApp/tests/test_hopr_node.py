@@ -5,17 +5,11 @@ def test_url_format():
     """
     Test whether the target url is returned correctly.
     """
-    class MockHoprNode(HoprNode):
-        def __init__(self, url: str, key: str):
-            """
-            Patched url and api_key
-            """
-            super().__init__(url, key)
-
-    node = MockHoprNode("some_url", "some_key")
+    node = HoprNode("some_url", "some_key")
     end_point = "/node/some_endpoint"
     target_url = "{}/api/v2{}".format(node.url, end_point)
     assert target_url == "some_url/api/v2/node/some_endpoint"
+    assert "/api/v2" in target_url, "Target URL does not contain '/api/v2'"
 
 
 def test_adding_peers_while_pinging() -> None:
