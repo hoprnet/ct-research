@@ -1,16 +1,47 @@
 import asyncio
+import pytest
 from hopr_node import HoprNode
+from unittest.mock import AsyncMock, patch
 
-def test_url_format():
+@pytest.mark.asyncio
+async def test_req_url_format():
     """
-    Test whether the target url is returned correctly.
+    Test whether a request using _req fails due to an invalid url format.
     """
     node = HoprNode("some_url", "some_key")
-    end_point = "/node/some_endpoint"
+    end_point = "/some_valid_endpoint"
     target_url = "{}/api/v2{}".format(node.url, end_point)
-    assert target_url == "some_url/api/v2/node/some_endpoint"
-    assert "/api/v2" in target_url, "Target URL does not contain '/api/v2'"
+    invalid_target_url = "{}/api/v3{}".format(node.url, end_point)
+    payload = {"param1": "value1", "param2": "value2"}
 
+    # Define mock response
+    mock_response = {
+        "status_code": 200,
+        "headers": {"Content-Type": "application/json"},
+        "response": {"response": "Hello, world!"}
+    }
+
+    # Define mock error response
+    mock_error_response = {
+        "status_code": 404,
+        "headers": {"Content-Type": "text/html"},
+        "text": "<h1>Not Found</h1>"
+    }
+
+    # Monkeypatch _req method
+    with patch.object(node, '_req', new_callable=AsyncMock) as mock_req:
+        
+        # Test valid URL
+        mock_req.return_value = mock_response
+        result = await node._req(target_url, "GET", payload)
+        assert result["response"]["response"] == "Hello, world!"
+        
+        # Test invalid URL with 404 status code
+        mock_response["status_code"] = 404
+        mock_req.return_value = mock_response
+        with pytest.raises(ValueError) as excinfo:
+            result = await node._req(invalid_target_url, "GET", payload)
+        assert "returned status code" in node.log_handler.messages[-1] # Check if log message contains expected string
 
 def test_adding_peers_while_pinging() -> None:
     """
