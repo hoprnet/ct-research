@@ -3,12 +3,14 @@ import asyncio
 from hopr_node import HoprNode
 
 
-
 def test_url_formatting():
     """
     Test whether the target url is formatted correctly.
     """
-    pass
+    node = HoprNode("some_url", "some_api_key")
+    endpoint = "/some_valid_endpoint"
+    expected_url = "some_url/api/v2/some_valid_endpoint"
+    assert node._get_url(endpoint) == expected_url
 
 
 def test_adding_peers_while_pinging() -> None:
