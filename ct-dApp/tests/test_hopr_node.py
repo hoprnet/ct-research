@@ -3,12 +3,33 @@ import asyncio
 from hopr_node import HoprNode
 
 
-
 def test_url_formatting():
     """
     Test whether the target url is formatted correctly.
     """
     pass
+
+def test_connected_property():
+    """
+    Test that the connected property returns false bz default. 
+    Test that the connected property returns true after setting a peer_id. 
+    """
+    node = HoprNode("some_url", "some_api_key")
+    assert not node.connected  
+
+    node.peer_id = "some_peer_id"
+    assert node.connected  
+
+def test_disconnect_method():
+    """
+    Test that the node is disconnected after calling disconnect method
+    Test that the peer_id attribute is set to None after calling disconnect method 
+    """
+    node = HoprNode("some_url", "some_api_key")
+    node.peer_id = "some_peer_id"
+    node.disconnect()
+    assert not node.connected 
+    assert node.peer_id is None  
 
 
 def test_adding_peers_while_pinging() -> None:
