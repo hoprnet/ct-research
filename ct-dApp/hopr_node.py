@@ -36,15 +36,20 @@ class HoprNode():
         log.debug("Created HOPR node instance")
 
 
-    async def _req(self, end_point: str, method: str="GET", payload: dict[str, str]=None) -> dict[str, str]:
+    def _get_url(self, end_point: str) -> str:
         """
-        Connects to the 'end_point' of this node's REST API, using 'method' (either GET or POST).
+        :returns: a valid HOPRd API endpoint.
+        """
+        return "{}/api/v2{}".format(self.url, end_point)
+
+
+    async def _req(self, target_url: str, method: str="GET", payload: dict[str, str]=None) -> dict[str, str]:
+        """
+        Connects to 'target_url' of this node's REST API, using 'method' (either GET or POST).
         Optionally attaches 'payload' as JSON string to the request.
 
         :returns: a JSON dictionary; throws an exception if failed.
         """
-        target_url = "{}/api/v2{}".format(self.url, end_point)
-
         response = await send_async_req(method, target_url, self.headers, payload)
 
         if response.status_code == 200:
@@ -65,13 +70,13 @@ class HoprNode():
         """
         Connects to this HOPR node, returning its peer_id.
         """
-        end_point = "/account/addresses"
+        url = self._get_url("/account/addresses")
 
         log.debug("Connecting to node")
         while self.started:
             try:
                 # gather the peerId
-                json_body = await self._req(end_point)
+                json_body = await self._req(url)
                 if "hopr" in json_body:
                     self.peer_id = json_body["hopr"]
                     log.info("HOPR node {} is up".format(self.peer_id))
@@ -85,7 +90,7 @@ class HoprNode():
                 
             except Exception as e:
                 self.peer_id = None
-                log.error("Could not connect to {}: {}".format(end_point, str(e)))
+                log.error("Could not connect to {}: {}".format(url, str(e)))
                 log.error(traceback.format_exc())
 
             finally:
@@ -117,8 +122,8 @@ class HoprNode():
 
         :returns: nothing; the set of connected peerIds is kept in self.peers.
         """
-        status    = "connected"
-        end_point = "/node/peers"
+        status = "connected"
+        url    = self._get_url("/node/peers")
         
         while self.started:
             # check that we are still connected
@@ -128,7 +133,7 @@ class HoprNode():
                 continue
 
             try:
-                json_body = await self._req(end_point)
+                json_body = await self._req(url)
                 if status in json_body:
                     for p in json_body[status]:
                         peer = p["peerId"]
@@ -141,7 +146,7 @@ class HoprNode():
                 log.warning("No answer from peer {}".format(self.peer_id))
 
             except Exception as e:
-                log.error("Could not get peers from {}: {}".format(end_point, str(e)))
+                log.error("Could not get peers from {}: {}".format(url, str(e)))
                 log.error(traceback.format_exc())
 
 
@@ -172,7 +177,7 @@ class HoprNode():
         :returns: nothing; the recorded latency measures are kept in dictionary 
                   self.latency {otherPeerId: [latency, latency, ...]}
         """
-        end_point = "/node/ping"
+        url = self._get_url("/node/ping")
 
         while self.started:
             # check that we are still connected
@@ -188,7 +193,7 @@ class HoprNode():
 
                 try:
                     log.debug("Pinging peer {}".format(p))
-                    json_body = await self._req(end_point,
+                    json_body = await self._req(url,
                                                 method="POST",
                                                 payload={'peerId': p})
                     if "latency" in json_body:
@@ -209,7 +214,7 @@ class HoprNode():
                     log.warning("No answer from peer {}".format(p))
 
                 except Exception as e:
-                    log.error("Could not ping using {}: {}".format(end_point, str(e)))
+                    log.error("Could not ping using {}: {}".format(url, str(e)))
                     log.error(traceback.format_exc())
 
                 finally:
