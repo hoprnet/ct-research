@@ -1,6 +1,10 @@
 import asyncio
+import requests
+import pytest
+
+import http_req
 from hopr_node import HoprNode
-from unittest.mock import patch 
+
 
 def test_url_formatting():
     """
@@ -12,7 +16,19 @@ def test_url_formatting():
     expected_url = f"{base_url}/api/v2{endpoint}"
     assert node._get_url(endpoint) == expected_url
 
-def test_req_returns_valid_json():
+@pytest.fixture
+def patched_http_req(monkeypatch):
+    async def patched_send_async_req(method: str, url: str, headers: dict[str, str], payload: dict[str, str]) -> requests.Response:
+        expected_result = {'result': 'success'}
+        expected_response = requests.Response()
+        expected_response.status_code = 200
+        expected_response.headers = {'Content-Type': 'application/json'}
+        expected_response.json = expected_result
+        return expected_response
+    monkeypatch.setattr(http_req, "send_async_req", patched_send_async_req)
+
+
+def test_req_returns_valid_json(patched_http_req: None) -> None:
     """
     Test that _req returns a valid json dictionary when the response status code is 200
     and the content type is 'application/json'.
@@ -21,15 +37,19 @@ def test_req_returns_valid_json():
     node = HoprNode(base_url, "some_api_key")
     endpoint = "/some_valid_endpoint"
     expected_url = f"{base_url}/api/v2{endpoint}"
-    
-    with patch('http_req.send_async_req', return_value={
-    'status_code': 200,
-    'headers': {'Content-Type': 'application/json'},
-    'json': {'result': 'success'}
-    }):
-        result = node._req(target_url=expected_url, method="Get")
-        assert result == {"result": "success"}
-    
+
+    async def test_response() -> None:
+        expected_result = {'result': 'success'}
+        result = await node._req(target_url=expected_url, method="GET")
+        assert result == expected_result
+
+    loop = asyncio.new_event_loop()
+    print("loop running ...")
+    loop.run_until_complete(test_response())
+    loop.close()
+    print("loop closed")
+
+
 def test_connected_property():
     """
     Test that the connected property returns false bz default. 
