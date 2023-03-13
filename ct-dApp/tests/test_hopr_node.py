@@ -1,7 +1,6 @@
 import asyncio
-
 from hopr_node import HoprNode
-
+from unittest.mock import patch 
 
 def test_url_formatting():
     """
@@ -13,6 +12,24 @@ def test_url_formatting():
     expected_url = f"{base_url}/api/v2{endpoint}"
     assert node._get_url(endpoint) == expected_url
 
+def test_req_returns_valid_json():
+    """
+    Test that _req returns a valid json dictionary when the response status code is 200
+    and the content type is 'application/json'.
+    """
+    base_url = "some_url"
+    node = HoprNode(base_url, "some_api_key")
+    endpoint = "/some_valid_endpoint"
+    expected_url = f"{base_url}/api/v2{endpoint}"
+    
+    with patch('http_req.send_async_req', return_value={
+    'status_code': 200,
+    'headers': {'Content-Type': 'application/json'},
+    'json': {'result': 'success'}
+    }):
+        result = node._req(target_url=expected_url, method="Get")
+        assert result == {"result": "success"}
+    
 def test_connected_property():
     """
     Test that the connected property returns false bz default. 
