@@ -7,7 +7,11 @@ def test_url_formatting():
     """
     Test whether the target url is formatted correctly.
     """
-    pass
+    base_url = "some_url"
+    node = HoprNode(base_url, "some_api_key")
+    endpoint = "/some_valid_endpoint"
+    expected_url = f"{base_url}/api/v2{endpoint}"
+    assert node._get_url(endpoint) == expected_url
 
 def test_connected_property():
     """
