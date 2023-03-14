@@ -1,8 +1,9 @@
 import asyncio
 import requests
 import pytest
+from unittest.mock import patch
 
-import http_req
+import http_req 
 from hopr_node import HoprNode
 
 
@@ -33,14 +34,14 @@ def test_req_returns_valid_json(patched_http_req: None) -> None:
     Test that _req returns a valid json dictionary when the response status code is 200
     and the content type is 'application/json'.
     """
-    base_url = "some_url"
-    node = HoprNode(base_url, "some_api_key")
+    node = HoprNode("some_url", "some_api_key")
     endpoint = "/some_valid_endpoint"
-    expected_url = f"{base_url}/api/v2{endpoint}"
+    expected_url = node._get_url(endpoint)
 
     async def test_response() -> None:
         expected_result = {'result': 'success'}
-        result = await node._req(target_url=expected_url, method="GET")
+        with patch.object(http_req, 'send_async_req', new=patched_http_req):
+            result = await node._req(target_url=expected_url, method="GET")
         assert result == expected_result
 
     loop = asyncio.new_event_loop()
