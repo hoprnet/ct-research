@@ -20,6 +20,7 @@ def test_url_formatting():
 @pytest.fixture
 def patched_http_req(monkeypatch):
     async def patched_send_async_req(method: str, url: str, headers: dict[str, str], payload: dict[str, str]) -> requests.Response:
+        print("Patched send_async_req called with URL:", url) # Verify whether the patch gets used 
         expected_result = {'result': 'success'}
         expected_response = requests.Response()
         expected_response.status_code = 200
@@ -29,16 +30,18 @@ def patched_http_req(monkeypatch):
     monkeypatch.setattr(http_req, "send_async_req", patched_send_async_req)
 
 
-def test_req_returns_valid_json(patched_http_req: None) -> None:
+def test_req_returns_valid_json(patched_http_req: pytest.fixture) -> None:
     """
     Test that _req returns a valid json dictionary when the response status code is 200
     and the content type is 'application/json'.
     """
-    node = HoprNode("some_url", "some_api_key")
-    endpoint = "/some_valid_endpoint"
-    expected_url = node._get_url(endpoint)
-
     async def test_response() -> None:
+
+        node = HoprNode("some_url", "some_api_key")
+        endpoint = "/some_valid_endpoint"
+        expected_url = node._get_url(endpoint)
+
+
         expected_result = {'result': 'success'}
         with patch.object(http_req, 'send_async_req', new=patched_http_req):
             result = await node._req(target_url=expected_url, method="GET")
