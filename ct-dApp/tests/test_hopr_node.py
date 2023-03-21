@@ -1,4 +1,7 @@
 import asyncio
+import requests
+import pytest
+import json
 
 from hopr_node import HoprNode
 
@@ -12,6 +15,48 @@ def test_url_formatting():
     endpoint = "/some_valid_endpoint"
     expected_url = f"{base_url}/api/v2{endpoint}"
     assert node._get_url(endpoint) == expected_url
+
+class http_req_mock():
+    
+    async def send_async_req(self, method: str, target_url: str, headers: dict[str, str], payload: dict[str, str]) -> requests.Response:
+            expected_result = {'result': 'success'}
+            expected_response = requests.Response()
+            expected_response.status_code = 200
+            expected_response.headers = {'Content-Type': 'application/json'}
+            expected_response._content = json.dumps(expected_result).encode('utf-8')
+            return expected_response
+       
+
+def test_req_returns_valid_json() -> None:
+    """
+    Test that _req returns a valid json dictionary when the response status code is 200
+    and the content type is 'application/json'.
+    """
+    class MockHoprNode(HoprNode):
+        def __init__(self, url: str, key: str):
+            """
+            Patched constructor: connected and started
+            """
+            super().__init__(url, key)
+            self.http_req = http_req_mock()
+
+
+    async def test_response() -> None:
+
+        node = MockHoprNode("some_url", "some_api_key")
+        endpoint = "/some_valid_endpoint"
+        expected_url = node._get_url(endpoint)
+
+        expected_result = {'result': 'success'}
+        result = await node._req(target_url=expected_url, method="GET")
+        assert result == expected_result
+
+    loop = asyncio.new_event_loop()
+    print("loop running ...")
+    loop.run_until_complete(test_response())
+    print("loop closed")
+    loop.close()
+    
 
 def test_connected_property():
     """
@@ -33,7 +78,7 @@ def test_disconnect_method():
     node.peer_id = "some_peer_id"
     node.disconnect()
     assert not node.connected 
-    assert node.peer_id is None  
+    assert node.peer_id is None 
 
 
 def test_adding_peers_while_pinging() -> None:
@@ -73,4 +118,4 @@ def test_adding_peers_while_pinging() -> None:
 
     loop.call_later(10, lambda: node.stop())
     loop.run_until_complete(node.start())
-    loop.close()
+    loop.close() 

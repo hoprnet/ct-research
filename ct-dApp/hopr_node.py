@@ -3,7 +3,7 @@ import logging
 import requests
 import traceback
 
-from http_req import send_async_req
+from http_req import Http_req
 from viz import network_viz
 
 
@@ -23,6 +23,9 @@ class HoprNode():
                         'Content-Type': 'application/json'}
         self.url     = url
         self.peer_id = None
+        
+        # Class that implements the functionallity of http requests
+        self.http_req = Http_req()
 
         # a set to keep the peers of this node, see:
         self.peers = set[str]()
@@ -50,7 +53,7 @@ class HoprNode():
 
         :returns: a JSON dictionary; throws an exception if failed.
         """
-        response = await send_async_req(method, target_url, self.headers, payload)
+        response = await self.http_req.send_async_req(method, target_url, self.headers, payload)
 
         if response.status_code == 200:
             content_type = response.headers.get("Content-Type", "")
