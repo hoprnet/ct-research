@@ -1,6 +1,10 @@
 import pytest
 import os
-from ct import _getenvvar 
+from unittest.mock import MagicMock 
+
+from hopr_node import HoprNode
+from ct import _getenvvar
+from ct import stop  
 
 def test_getenvvar_load_envar() -> None:
     """
@@ -25,3 +29,15 @@ def test_getenvvar_exit() -> None:
     assert exc_info.type == SystemExit
     assert exc_info.value.code == 1
  
+def test_stop():
+    """
+    Test whether the stop function correctly calls the stop method of the node object with the SIGINT signal. 
+    """
+    node = HoprNode("some_url", "some_key")
+    
+    # Create a mock object of the stop method of the HoprNode class to test whether the stop method calls the mock object.
+    node.stop = MagicMock()
+    
+    stop(node, "SIGINT")
+
+    node.stop.assert_called_once()
