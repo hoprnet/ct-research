@@ -2,6 +2,8 @@ import asyncio
 import requests
 import pytest
 import json
+import logging
+from unittest.mock import patch
 
 from hopr_node import HoprNode
 
@@ -16,7 +18,7 @@ def test_url_formatting():
     expected_url = f"{base_url}/api/v2{endpoint}"
     assert node._get_url(endpoint) == expected_url
 
-class http_req_mock():
+class http_req_mock_valid_json():
     
     async def send_async_req(self, method: str, target_url: str, headers: dict[str, str], payload: dict[str, str]) -> requests.Response:
             expected_result = {'result': 'success'}
@@ -38,7 +40,7 @@ def test_req_returns_valid_json() -> None:
             Patched constructor: connected and started
             """
             super().__init__(url, key)
-            self.http_req = http_req_mock()
+            self.http_req = http_req_mock_valid_json()
 
 
     async def test_response() -> None:
@@ -55,6 +57,48 @@ def test_req_returns_valid_json() -> None:
     print("loop running ...")
     loop.run_until_complete(test_response())
     print("loop closed")
+    loop.close()
+
+
+class http_req_mock_invalid_content_type():
+    
+    async def send_async_req(self, method: str, target_url: str, headers: dict[str, str], payload: dict[str, str]) -> requests.Response:
+            expected_response = requests.Response()
+            expected_response.status_code = 200
+            expected_response.headers = {'Content-Type': 'SOME_INVALID_CONTENT'}
+            return expected_response
+
+def test_req_returns_invalid_content_type(caplog) -> None:
+    """
+    Test that _req returns a log error with the correct message when the response status code is 200
+    but the content type is not 'application/json'.
+    """
+    class MockHoprNode(HoprNode):
+        def __init__(self, url: str, key: str):
+            """
+            Patched constructor: connected and started
+            """
+            super().__init__(url, key)
+            self.http_req = http_req_mock_invalid_content_type()
+
+
+    async def test_response(caplog) -> None:
+
+            node = MockHoprNode("some_url", "some_api_key")
+            endpoint = "/some_valid_endpoint"
+            expected_url = node._get_url(endpoint)
+
+            with caplog.at_level(logging.ERROR):
+            
+                result = await node._req(target_url=expected_url, method="GET")
+
+            # Check that the logger logs the correct message and return result to check whether {'response': response.text} gets called correctly
+            assert "Expected application/json, but got SOME_INVALID_CONTENT" in caplog.text
+            return result
+
+
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(test_response(caplog))
     loop.close()
     
 
