@@ -59,18 +59,17 @@ def test_req_returns_valid_json() -> None:
     loop.close()
 
 
-class http_req_mock_invalid_status_code():
-    
-    async def send_async_req(self, method: str, target_url: str, headers: dict[str, str], payload: dict[str, str]) -> requests.Response:
+def test_req_returns_invalid_status_code(caplog) -> None:
+    """
+    Test that _req method returns the correct log error message when the status code is invalid.
+    """
+    class http_req_mock_invalid_status_code():
+        async def send_async_req(self, method: str, target_url: str, headers: dict[str, str], payload: dict[str, str]) -> requests.Response:
             expected_response = requests.Response()
             expected_response.status_code = 'SOME_INVALID_STATUS_CODE' 
             return expected_response
 
 
-def test_req_returns_invalid_status_code(caplog) -> None:
-    """
-    Test that _req method returns the correct log error message when the status code is invalid.
-    """
     class MockHoprNode(HoprNode):
         def __init__(self, url: str, key: str):
             """
