@@ -60,19 +60,20 @@ def test_req_returns_valid_json() -> None:
     loop.close()
 
 
-class http_req_mock_invalid_content_type():
-    
-    async def send_async_req(self, method: str, target_url: str, headers: dict[str, str], payload: dict[str, str]) -> requests.Response:
-            expected_response = requests.Response()
-            expected_response.status_code = 200
-            expected_response.headers = {'Content-Type': 'SOME_INVALID_CONTENT'}
-            return expected_response
-
 def test_req_returns_invalid_content_type(caplog) -> None:
     """
     Test that _req returns a log error with the correct message when the response status code is 200
     but the content type is not 'application/json'.
     """
+    class http_req_mock_invalid_content_type():
+    
+        async def send_async_req(self, method: str, target_url: str, headers: dict[str, str], payload: dict[str, str]) -> requests.Response:
+            expected_response = requests.Response()
+            expected_response.status_code = 200
+            expected_response.headers = {'Content-Type': 'SOME_INVALID_CONTENT'}
+            return expected_response
+
+
     class MockHoprNode(HoprNode):
         def __init__(self, url: str, key: str):
             """
@@ -89,11 +90,12 @@ def test_req_returns_invalid_content_type(caplog) -> None:
             expected_url = node._get_url(endpoint)
 
             with caplog.at_level(logging.ERROR):
-            
+                
+                expected_response = await node.http_req.send_async_req(method="GET", target_url=expected_url, headers={}, payload={})
                 result = await node._req(target_url=expected_url, method="GET")
 
-            # Check that the logger logs the correct message and return result to check whether {'response': response.text} gets called correctly
-            assert "Expected application/json, but got SOME_INVALID_CONTENT" in caplog.text
+            assert "Expected application/json, but got {}".format(expected_response.headers['Content-Type']) in caplog.text
+            # return result to check whether {'response': response.text} gets called correctly
             return result
 
 
