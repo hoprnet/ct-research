@@ -65,8 +65,7 @@ def test_req_returns_invalid_content_type(caplog) -> None:
     Test that _req returns a log error with the correct message when the response status code is 200
     but the content type is not 'application/json'.
     """
-    class http_req_mock_invalid_content_type():
-    
+    class Http_req_mock_invalid_content_type():
         async def send_async_req(self, method: str, target_url: str, headers: dict[str, str], payload: dict[str, str]) -> requests.Response:
             expected_response = requests.Response()
             expected_response.status_code = 200
@@ -80,7 +79,7 @@ def test_req_returns_invalid_content_type(caplog) -> None:
             Patched constructor: connected and started
             """
             super().__init__(url, key)
-            self.http_req = http_req_mock_invalid_content_type()
+            self.http_req = Http_req_mock_invalid_content_type()
 
 
     async def test_response(caplog) -> None:
@@ -88,11 +87,12 @@ def test_req_returns_invalid_content_type(caplog) -> None:
             node = MockHoprNode("some_url", "some_api_key")
             endpoint = "/some_valid_endpoint"
             expected_url = node._get_url(endpoint)
+            method = "GET"
 
             with caplog.at_level(logging.ERROR):
                 
-                expected_response = await node.http_req.send_async_req(method="GET", target_url=expected_url, headers={}, payload={})
-                result = await node._req(target_url=expected_url, method="GET")
+                expected_response = await node.http_req.send_async_req(method=method, target_url=expected_url, headers={}, payload={})
+                result = await node._req(target_url=expected_url, method=method)
 
             assert "Expected application/json, but got {}".format(expected_response.headers['Content-Type']) in caplog.text
             # return result to check whether {'response': response.text} gets called correctly
