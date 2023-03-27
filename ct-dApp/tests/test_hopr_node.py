@@ -86,7 +86,6 @@ def test_req_returns_invalid_status_code(caplog) -> None:
             expected_url = node._get_url(endpoint)
 
             with caplog.at_level(logging.ERROR):
-
                 expected_response = await node.http_req.send_async_req(method="GET", target_url=expected_url, headers={}, payload={})
                 result = await node._req(target_url=expected_url, method="GET")
 
