@@ -132,7 +132,6 @@ def test_req_returns_invalid_content_type(caplog) -> None:
             # return result to check whether {'response': response.text} gets called correctly
             return result
 
-
     loop = asyncio.new_event_loop()
     loop.run_until_complete(test_response(caplog))
     loop.close()
