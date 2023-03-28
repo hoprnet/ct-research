@@ -122,7 +122,6 @@ def test_req_returns_invalid_content_type(caplog) -> None:
             method = "GET"
 
             with caplog.at_level(logging.ERROR):
-                
                 expected_response = await node.http_req.send_async_req(method=method, target_url=expected_url, headers={}, payload={})
                 result = await node._req(target_url=expected_url, method=method)
 
