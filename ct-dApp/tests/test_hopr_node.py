@@ -118,7 +118,6 @@ def test_req_returns_invalid_content_type(caplog) -> None:
 
 
     async def test_response(caplog) -> None:
-
             node = MockHoprNode("some_url", "some_api_key")
             endpoint = "/some_valid_endpoint"
             expected_url = node._get_url(endpoint)
