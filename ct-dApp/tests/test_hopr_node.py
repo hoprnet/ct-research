@@ -107,7 +107,6 @@ def test_req_returns_invalid_content_type(caplog) -> None:
             expected_response.headers = {'Content-Type': 'SOME_INVALID_CONTENT'}
             return expected_response
 
-
     class MockHoprNode(HoprNode):
         def __init__(self, url: str, key: str):
             """
