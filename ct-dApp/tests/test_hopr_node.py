@@ -77,7 +77,6 @@ def test_req_returns_invalid_status_code(caplog) -> None:
             super().__init__(url, key)
             self.http_req = Http_req_mock_invalid_status_code()
 
-
     async def test_response(caplog) -> None:
             node = MockHoprNode("some_url", "some_api_key")
             endpoint = "/some_valid_endpoint"
