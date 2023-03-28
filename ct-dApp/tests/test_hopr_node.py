@@ -40,7 +40,6 @@ def test_req_returns_valid_json() -> None:
             super().__init__(url, key)
             self.http_req = Http_req_mock()
 
-
     async def test_response() -> None:
 
         node = MockHoprNode("some_url", "some_api_key")
