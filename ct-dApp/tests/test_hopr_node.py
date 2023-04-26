@@ -142,7 +142,6 @@ async def test_connect_successful(mocker):
     """
     node = HoprNode("some_url", "some_api_key")
     node.started = True
-    node.url = "some_url"
     json_body = {"hopr": "some_peer_id"}
     mocker.patch.object(node, "_req", return_value=json_body)
      
@@ -163,7 +162,6 @@ async def test_connect_failed_request(mocker):
     """
     node = HoprNode("some_url", "some_api_key")
     node.started = True
-    node.url = "some_url"
     mocker.patch.object(node, "_req", side_effect=requests.exceptions.ConnectionError())
      
     asyncio.create_task(node.connect())
@@ -175,6 +173,48 @@ async def test_connect_failed_request(mocker):
 
     assert node.peer_id is None
 
+
+@pytest.mark.asyncio 
+async def test_connect_exception(mocker): 
+    """
+    Test that peer_id is set to None due to a network error other than failed HTTP request.
+    """
+    node = HoprNode("some_url", "some_api_key")
+    node.started = True
+    node.url = "some_url"
+    mocker.patch.object(node, "_req", side_effect=Exception())
+     
+    asyncio.create_task(node.connect())
+    await asyncio.sleep(2)
+
+    # avoid infinite while loop by setting node.started = False 
+    node.started = False 
+    await asyncio.sleep(2) 
+
+    assert node.peer_id is None
+
+
+@pytest.mark.asyncio 
+async def test_connect_exception_logging(mocker, caplog): 
+    """
+    Test that the correct log message is logged when an exception occurs during the connect method.
+    """
+    node = HoprNode("some_url", "some_api_key")
+    node.started = True
+    endpoint = "/account/addresses"
+    expected_url = node._get_url(endpoint)
+    
+    mocker.patch.object(node, "_req", side_effect=Exception())
+    
+    asyncio.create_task(node.connect())
+    await asyncio.sleep(2)
+
+    # avoid infinite while loop by setting node.started = False 
+    node.started = False 
+    await asyncio.sleep(2) 
+
+    assert "Could not connect to {}".format(expected_url) in caplog.text
+    
 
 def test_connected_property():
     """
