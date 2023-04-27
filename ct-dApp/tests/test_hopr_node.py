@@ -238,3 +238,30 @@ def test_adding_peers_while_pinging() -> None:
     loop.call_later(10, lambda: node.stop())
     loop.run_until_complete(node.start())
     loop.close() 
+
+
+@pytest.mark.asyncio
+async def test_gather_peers_retrieves_peers_from_response(mocker):
+    """
+    Test whether gather_peers retrieves the correct list of peers from the JSON response returned by the _req() method.
+    """
+    node = HoprNode("some_url", "some_api_key")
+    node.peer_id = "some_peer_id"
+
+    # Mock the _req() method to return a JSON response with two peers
+    json_response = {"connected": [{"peerId": "some_other_peer_id_1"},
+                                   {"peerId": "some_other_peer_id_2"}]} 
+    
+    mocker.patch.object(node, "_req", return_value=json_response)
+
+    node.started = True
+    task = asyncio.create_task(node.gather_peers())
+    await asyncio.sleep(1)
+
+    # avoid infinite while loop by setting node.started = False 
+    node.started = False 
+    await asyncio.sleep(1)
+
+    assert "some_other_peer_id_1" in node.peers
+    assert "some_other_peer_id_2" in node.peers
+    await asyncio.gather(task)
