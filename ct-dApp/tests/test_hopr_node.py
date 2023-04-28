@@ -77,7 +77,7 @@ def test_req_returns_invalid_status_code(caplog) -> None:
             super().__init__(url, key)
             self.http_req = Http_req_mock_invalid_status_code()
 
-    async def test_response(caplog) -> None:
+    async def test_response(caplog) -> dict[str, str]:
             node = MockHoprNode("some_url", "some_api_key")
             endpoint = "/some_valid_endpoint"
             expected_url = node._get_url(endpoint)
@@ -115,7 +115,7 @@ def test_req_returns_invalid_content_type(caplog) -> None:
             super().__init__(url, key)
             self.http_req = Http_req_mock_invalid_content_type()
 
-    async def test_response(caplog) -> None:
+    async def test_response(caplog) -> dict[str, str]:
             node = MockHoprNode("some_url", "some_api_key")
             endpoint = "/some_valid_endpoint"
             expected_url = node._get_url(endpoint)
@@ -153,7 +153,7 @@ async def test_connect_successful(mocker):
     await asyncio.sleep(1) 
 
     assert node.peer_id == json_body["hopr"]
-    # await asyncio.gather(task) # commented out as it will otherwise trigger asyncio.sleep(45) from connect_method()
+    await asyncio.gather(task)
 
 
 @pytest.mark.asyncio 
@@ -173,7 +173,7 @@ async def test_connect_failed_request(mocker):
     await asyncio.sleep(1) 
 
     assert node.peer_id is None
-    # await asyncio.gather(task) # commented out as it will otherwise trigger asyncio.sleep(45) from connect_method()
+    await asyncio.gather(task)
 
 
 @pytest.mark.asyncio 
@@ -193,7 +193,7 @@ async def test_connect_exception(mocker):
     await asyncio.sleep(1) 
 
     assert node.peer_id is None
-    # await asyncio.gather(task) # commented out as it will otherwise trigger asyncio.sleep(45) from connect_method()
+    await asyncio.gather(task)
 
 
 @pytest.mark.asyncio 
@@ -216,7 +216,7 @@ async def test_connect_exception_logging(mocker, caplog):
     await asyncio.sleep(2) 
 
     assert "Could not connect to {}".format(expected_url) in caplog.text
-    # await asyncio.gather(task) # commented out as it will otherwise trigger asyncio.sleep(45) from connect_method()
+    await asyncio.gather(task)
 
 
 def test_connected_property():
@@ -264,7 +264,7 @@ def test_adding_peers_while_pinging() -> None:
         async def connect(self):
             self.peer_id = "testing_peer_id"
             while self.started:
-                await asyncio.sleep(45)
+                await asyncio.sleep(5)
 
         async def gather_peers(self):
             """
@@ -280,4 +280,4 @@ def test_adding_peers_while_pinging() -> None:
 
     loop.call_later(10, lambda: node.stop())
     loop.run_until_complete(node.start())
-    loop.close() 
+    loop.close()

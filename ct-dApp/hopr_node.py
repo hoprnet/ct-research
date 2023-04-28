@@ -97,7 +97,7 @@ class HoprNode():
                 log.error(traceback.format_exc())
 
             finally:
-                await asyncio.sleep(45)
+                await asyncio.sleep(5)
 
 
     @property
@@ -143,7 +143,7 @@ class HoprNode():
                         if peer not in self.peers:
                             self.peers.add(peer)
                             log.info("Found new peer {}".format(peer))
-                await asyncio.sleep(10)
+                await asyncio.sleep(5)
 
             except requests.exceptions.ReadTimeout:
                 log.warning("No answer from peer {}".format(self.peer_id))
