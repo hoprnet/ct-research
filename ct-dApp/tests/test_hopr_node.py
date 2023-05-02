@@ -134,89 +134,81 @@ def test_req_returns_invalid_content_type(caplog) -> None:
     loop.close()
 
 
+@pytest.fixture
+def get_mock_node_for_connect():
+    class MockHoprNode(HoprNode):
+        def __init__(self, url: str, key: str):
+            super().__init__(url, key)
+
+        async def start(self):
+            """
+            Starts the tasks of this node
+            """
+            if len(self.tasks) == 0:
+                self.started = True
+                self.tasks.add(asyncio.create_task(self.connect()))
+                await asyncio.gather(*self.tasks)
+    return MockHoprNode("some_url", "some_api_key")
+
+
 @pytest.mark.asyncio 
-async def test_connect_successful(mocker): 
+async def test_connect_successful(mocker, event_loop, caplog, get_mock_node_for_connect):
     """
     Test that the method connects successfully to the HOPR node and sets the correct peer_id
     attribute value.
     """
-    node = HoprNode("some_url", "some_api_key")
+    def assert_expression():
+        assert node.peer_id == json_body["hopr"]
+
+    caplog.set_level(logging.DEBUG)
+    node = get_mock_node_for_connect
     json_body = {"hopr": "some_peer_id"}
     mocker.patch.object(node, "_req", return_value=json_body)
 
-    node.started = True 
-    task = asyncio.create_task(node.connect())
-    await asyncio.sleep(1)
-
-    # avoid infinite while loop by setting node.started = False 
-    node.started = False 
-    await asyncio.sleep(1) 
-
-    assert node.peer_id == json_body["hopr"]
-    await asyncio.gather(task)
+    event_loop.call_later(1, lambda: assert_expression())
+    event_loop.call_later(2, lambda: node.stop())
+    await node.start()
 
 
 @pytest.mark.asyncio 
-async def test_connect_failed_request(mocker): 
+async def test_connect_failed_request(mocker, event_loop, get_mock_node_for_connect):
     """
     When the HTTP request fails due to a network error even though the node is started test that peer_id is set to None.
     """
-    node = HoprNode("some_url", "some_api_key")
+    node = get_mock_node_for_connect
     mocker.patch.object(node, "_req", side_effect=requests.exceptions.ConnectionError())
     
-    node.started = True
-    task = asyncio.create_task(node.connect())
-    await asyncio.sleep(1)
-
-    # avoid infinite while loop by setting node.started = False 
-    node.started = False 
-    await asyncio.sleep(1) 
-
+    event_loop.call_later(1, lambda: node.stop())
+    await node.start()
     assert node.peer_id is None
-    await asyncio.gather(task)
 
 
 @pytest.mark.asyncio 
-async def test_connect_exception(mocker): 
+async def test_connect_exception(mocker, event_loop, get_mock_node_for_connect):
     """
     Test that peer_id is set to None due to a network error other than failed HTTP request.
     """
-    node = HoprNode("some_url", "some_api_key")
+    node = get_mock_node_for_connect
     mocker.patch.object(node, "_req", side_effect=Exception())
-    
-    node.started = True
-    task = asyncio.create_task(node.connect())
-    await asyncio.sleep(1)
 
-    # avoid infinite while loop by setting node.started = False 
-    node.started = False 
-    await asyncio.sleep(1) 
-
+    event_loop.call_later(1, lambda: node.stop())
+    await node.start()
     assert node.peer_id is None
-    await asyncio.gather(task)
 
 
 @pytest.mark.asyncio 
-async def test_connect_exception_logging(mocker, caplog): 
+async def test_connect_exception_logging(mocker, caplog, event_loop, get_mock_node_for_connect):
     """
     Test that the correct log message is logged when an exception occurs during the connect method.
     """
-    node = HoprNode("some_url", "some_api_key")
+    node = get_mock_node_for_connect
     endpoint = "/account/addresses"
     expected_url = node._get_url(endpoint)
-    
     mocker.patch.object(node, "_req", side_effect=Exception())
     
-    node.started = True
-    task = asyncio.create_task(node.connect())
-    await asyncio.sleep(2)
-
-    # avoid infinite while loop by setting node.started = False 
-    node.started = False 
-    await asyncio.sleep(2) 
-
+    event_loop.call_later(1, lambda: node.stop())
+    await node.start()
     assert "Could not connect to {}".format(expected_url) in caplog.text
-    await asyncio.gather(task)
 
 
 def test_connected_property():
@@ -278,7 +270,7 @@ def test_adding_peers_while_pinging() -> None:
     node = MockHoprNode("some_url", "some_key")
     loop = asyncio.new_event_loop()
 
-    loop.call_later(10, lambda: node.stop())
+    loop.call_later(2, lambda: node.stop())
     loop.run_until_complete(node.start())
     loop.close()
 
