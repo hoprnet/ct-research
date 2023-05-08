@@ -300,4 +300,31 @@ async def test_gather_peers_retrieves_peers_from_response(mocker):
     assert "some_other_peer_id_1" in node.peers
     assert "some_other_peer_id_2" in node.peers
     await asyncio.gather(task)
-    
+
+
+@pytest.mark.asyncio
+async def test_ping_peers_adds_new_peer_to_latency():
+    """
+    Test that a new entry gets created for a new peer in the latency dictionary with an empty list. 
+    """
+    node = HoprNode("some_url", "some_api_key")
+    node.peer_id = "some_peer_id" 
+    node.peers = {'some_other_peer_id_1', 'some_other_peer_id_2'}
+    node.latency = {'some_other_peer_id_1': [10, 15]}
+
+    node.started = True
+    task = asyncio.create_task(node.ping_peers())
+    await asyncio.sleep(1)
+
+    # Wait until len(node.latency) == len(node.peers)
+    while len(node.latency) != len(node.peers):
+        await asyncio.sleep(0.1)
+
+    node.started = False 
+    await asyncio.sleep(1)
+
+    assert 'some_other_peer_id_1' in node.latency.keys()
+    assert 'some_other_peer_id_2' in node.latency.keys()
+    assert len(node.latency['some_other_peer_id_2']) == 0
+
+    await asyncio.gather(task)
