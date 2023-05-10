@@ -325,3 +325,5 @@ async def test_start(mock_node_for_test_start):
     assert node.gather_peers.called
     assert node.ping_peers.called
     assert node.plot.called
+    assert len(node.tasks) == 4
+    assert node.started == True
