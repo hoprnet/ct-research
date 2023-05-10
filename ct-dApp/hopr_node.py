@@ -2,6 +2,7 @@ import asyncio
 import logging
 import requests
 import traceback
+import random
 
 from http_req import Http_req
 from viz import network_viz
@@ -189,7 +190,11 @@ class HoprNode():
                 log.debug("ping_peers() waiting for connection")
                 continue
 
-            for p in self.peers:
+            peers = list(self.peers)  
+            # shuffel self.peers each time a new peer gets added to ensure an equal distribution of pings among in expectation
+            random.shuffle(peers) 
+
+            for p in peers:
                 # create a list to keep the latency measures of new peers
                 if p not in self.latency.keys():
                     self.latency[p] = list()
