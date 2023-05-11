@@ -2,6 +2,7 @@ import asyncio
 import logging
 import requests
 import traceback
+from hoprd import wrapper
 
 from http_req import Http_req
 from viz import network_viz
@@ -23,6 +24,9 @@ class HoprNode():
                         'Content-Type': 'application/json'}
         self.url     = url
         self.peer_id = None
+
+        # Create an instance of HoprdAPI
+        self.hoprd_api = wrapper.HoprdAPI(api_url=url, api_token=key)
         
         # Class that implements the functionallity of http requests
         self.http_req = Http_req()
@@ -73,13 +77,12 @@ class HoprNode():
         """
         Connects to this HOPR node, returning its peer_id.
         """
-        url = self._get_url("/account/addresses")
-
         log.debug("Connecting to node")
         while self.started:
             try:
                 # gather the peerId
-                json_body = await self._req(url)
+                response = await self.hoprd_api.get_address()
+                json_body = response.json()
                 if "hopr" in json_body:
                     self.peer_id = json_body["hopr"]
                     log.info("HOPR node {} is up".format(self.peer_id))
@@ -93,7 +96,7 @@ class HoprNode():
                 
             except Exception as e:
                 self.peer_id = None
-                log.error("Could not connect to {}: {}".format(url, str(e)))
+                log.error("Could not connect to {}: {}".format(self.hoprd_api.api_url, str(e)))
                 log.error(traceback.format_exc())
 
             finally:
