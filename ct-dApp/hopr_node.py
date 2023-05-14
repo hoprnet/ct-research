@@ -190,11 +190,11 @@ class HoprNode():
                 log.debug("ping_peers() waiting for connection")
                 continue
 
-            peers = list(self.peers)  
-            # shuffel self.peers each time a new peer gets added to ensure an equal distribution of pings among in expectation
-            random.shuffle(peers) 
-
-            for p in peers:
+            # randomly sample the peer set to converge towards
+            # a uniform distribution of pings among peers
+            sampled_peers = random.sample(sorted(self.peers),
+                                          len(self.peers))
+            for p in sampled_peers:
                 # create a list to keep the latency measures of new peers
                 if p not in self.latency.keys():
                     self.latency[p] = list()
@@ -212,17 +212,16 @@ class HoprNode():
                         if len(self.latency[p]) > 100:
                             self.latency[p].pop(0)
 
-                        log.info("Got latency measure ({} ms) from peer {}".format(latency,
-                                                                                   p))
+                        log.info(f"Got latency measure ({latency} ms) from peer {p}")
                     else:
                         self.latency[p].append(-1)
-                        log.warning("No answer from peer {}".format(p))
+                        log.warning(f"No answer from peer {p}")
 
                 except requests.exceptions.ReadTimeout:
-                    log.warning("No answer from peer {}".format(p))
+                    log.warning(f"No answer from peer {p}")
 
                 except Exception as e:
-                    log.error("Could not ping using {}: {}".format(url, str(e)))
+                    log.error(f"Could not ping using {url}: {e}")
                     log.error(traceback.format_exc())
 
                 finally:
