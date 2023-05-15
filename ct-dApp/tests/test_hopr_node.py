@@ -318,21 +318,21 @@ async def test_ping_peers_adds_new_peer_to_latency():
 
     node.started = True
     task = asyncio.create_task(node.ping_peers())
-    await asyncio.sleep(1)
 
     try:
         await asyncio.wait_for(
             _wait_for_latency_to_match_peers(),
-            timeout=15.0
+            timeout=15
         )
     except asyncio.TimeoutError:
         raise AssertionError("Timed out waiting for latency to match peers")
+    
+    finally:
+        node.started = False 
+        await asyncio.sleep(1)
 
-    node.started = False 
-    await asyncio.sleep(1)
+        assert 'some_other_peer_id_1' in node.latency.keys()
+        assert 'some_other_peer_id_2' in node.latency.keys()
+        assert len(node.latency['some_other_peer_id_2']) == 0
 
-    assert 'some_other_peer_id_1' in node.latency.keys()
-    assert 'some_other_peer_id_2' in node.latency.keys()
-    assert len(node.latency['some_other_peer_id_2']) == 0
-
-    await asyncio.gather(task)
+        await asyncio.gather(task)
