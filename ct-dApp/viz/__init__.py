@@ -7,7 +7,9 @@ import statistics
 import numpy as np
 import datetime
 
-
+import matplotlib
+# use the Matplotlib non-interactive backend, which allows Matplotlib to run without a GUI
+matplotlib.use('Agg')
 
 def network_viz(graph: dict[str, dict[str, list[int]]], file_name: str):
     """
