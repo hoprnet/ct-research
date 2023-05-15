@@ -3,6 +3,7 @@ import logging
 import requests
 import traceback
 import random
+from hoprd import wrapper
 
 from http_req import Http_req
 from viz import network_viz
@@ -24,7 +25,10 @@ class HoprNode():
                         'Content-Type': 'application/json'}
         self.url     = url
         self.peer_id = None
-        
+
+        # Create an instance of HoprdAPI
+        self.hoprd_api = wrapper.HoprdAPI(api_url=url, api_token=key)
+
         # Class that implements the functionallity of http requests
         self.http_req = Http_req()
 
@@ -123,12 +127,8 @@ class HoprNode():
     async def gather_peers(self):
         """
         Long-running task that continously updates the set of peers connected to this node.
-
         :returns: nothing; the set of connected peerIds is kept in self.peers.
         """
-        status = "connected"
-        url    = self._get_url("/node/peers")
-        
         while self.started:
             # check that we are still connected
             if not self.connected:
@@ -137,9 +137,10 @@ class HoprNode():
                 continue
 
             try:
-                json_body = await self._req(url)
-                if status in json_body:
-                    for p in json_body[status]:
+                response = await self.hoprd_api.peers()
+                json_body = response.json()
+                if "connected" in json_body:
+                    for p in json_body["connected"]:
                         peer = p["peerId"]
                         if peer not in self.peers:
                             self.peers.add(peer)
@@ -150,7 +151,7 @@ class HoprNode():
                 log.warning("No answer from peer {}".format(self.peer_id))
 
             except Exception as e:
-                log.error("Could not get peers from {}: {}".format(url, str(e)))
+                log.error("Could not get peers from {}: {}".format(self.hoprd_api.api_url, str(e)))
                 log.error(traceback.format_exc())
 
 
