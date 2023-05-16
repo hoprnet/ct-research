@@ -300,4 +300,67 @@ async def test_gather_peers_retrieves_peers_from_response(mocker):
     assert "some_other_peer_id_1" in node.peers
     assert "some_other_peer_id_2" in node.peers
     await asyncio.gather(task)
+
+
+@pytest.mark.asyncio
+async def test_ping_peers_adds_new_peer_to_latency():
+    """
+    Test that a new entry gets created for a new peer in the latency dictionary with an empty list. 
+    """
+    async def _wait_for_latency_to_match_peers():
+        while len(node.latency) < len(node.peers):
+            await asyncio.sleep(0.1)
+
+    node = HoprNode("some_url", "some_api_key")
+    node.peer_id = "some_peer_id" 
+    node.peers = {'some_other_peer_id_1', 'some_other_peer_id_2'}
+    node.latency = {'some_other_peer_id_1': [10, 15]}
+
+    node.started = True
+    task = asyncio.create_task(node.ping_peers())
+
+    try:
+        await asyncio.wait_for(
+            _wait_for_latency_to_match_peers(),
+            timeout=15
+        )
+    except asyncio.TimeoutError:
+        raise AssertionError("Timed out waiting for latency to match peers")
     
+    finally:
+        node.started = False 
+        await asyncio.sleep(1)
+
+        assert 'some_other_peer_id_1' in node.latency.keys()
+        assert 'some_other_peer_id_2' in node.latency.keys()
+        assert len(node.latency['some_other_peer_id_2']) == 0
+
+        await asyncio.gather(task)
+    
+
+@pytest.fixture
+def mock_node_for_test_start(mocker):
+    # create a mock for each coroutine that should be executed
+    mocker.patch.object(HoprNode, "connect", return_value=None)
+    mocker.patch.object(HoprNode, "gather_peers", return_value=None)
+    mocker.patch.object(HoprNode, "ping_peers", return_value=None)
+    mocker.patch.object(HoprNode, "plot", return_value=None)
+
+    return HoprNode("some_url", "some_api_key")
+
+
+@pytest.mark.asyncio
+async def test_start(mock_node_for_test_start):
+    """
+    Test whether all coroutines were called with the expected arguments.
+    """
+    node = mock_node_for_test_start
+    await node.start()
+
+    assert node.connect.called
+    assert node.gather_peers.called
+    assert node.ping_peers.called
+    assert node.plot.called
+    assert len(node.tasks) == 4
+    assert node.started == True
+
