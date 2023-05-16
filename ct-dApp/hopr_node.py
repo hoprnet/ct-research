@@ -26,7 +26,7 @@ class HoprNode():
         self.url     = url
         self.peer_id = None
 
-        # Create an instance of HoprdAPI
+        # access the functionality of the hoprd python api 
         self.hoprd_api = wrapper.HoprdAPI(api_url=url, api_token=key)
 
         # Class that implements the functionallity of http requests
