@@ -152,22 +152,26 @@ def get_mock_node_for_connect():
 
 
 @pytest.mark.asyncio 
-async def test_connect_successful(mocker, event_loop, caplog, get_mock_node_for_connect):
+async def test_connect_successful(mocker):
     """
     Test that the method connects successfully to the HOPR node and sets the correct peer_id
     attribute value.
     """
-    def assert_expression():
-        assert node.peer_id == json_body["hopr"]
-
-    caplog.set_level(logging.DEBUG)
-    node = get_mock_node_for_connect
+    node = HoprNode("some_url", "some_api_key")
     json_body = {"hopr": "some_peer_id"}
     mocker.patch.object(node, "_req", return_value=json_body)
 
-    event_loop.call_later(1, lambda: assert_expression())
-    event_loop.call_later(2, lambda: node.stop())
-    await node.start()
+    node.started = True
+    task = asyncio.create_task(node.connect())
+    await asyncio.sleep(1)
+
+    # avoid infinite while loop by setting node.started = False 
+    node.started = False 
+    await asyncio.sleep(1)
+
+    assert node.peer_id == "some_peer_id"
+    await asyncio.gather(task)
+    
 
 
 @pytest.mark.asyncio 
@@ -205,6 +209,14 @@ async def test_connect_exception_logging(mocker, caplog, event_loop, get_mock_no
     endpoint = "/account/addresses"
     expected_url = node._get_url(endpoint)
     mocker.patch.object(node, "_req", side_effect=Exception())
+
+    node.started = True
+    task = asyncio.create_task(node.gather_peers())
+    await asyncio.sleep(1)
+
+    # avoid infinite while loop by setting node.started = False 
+    node.started = False 
+    await asyncio.sleep(1)
     
     event_loop.call_later(1, lambda: node.stop())
     await node.start()
