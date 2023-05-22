@@ -25,10 +25,10 @@ class HoprNode():
                         'Content-Type': 'application/json'}
         self.url     = url
         self.peer_id = None
-
-        # Create an instance of HoprdAPI
-        self.hoprd_api = wrapper.HoprdAPI(api_url=url, api_token=key)
         
+        # access the functionality of the hoprd python api
+        self.hoprd_api = wrapper.HoprdAPI(api_url=url, api_token=key)
+    
         # Class that implements the functionallity of http requests
         self.http_req = Http_req()
 
@@ -94,7 +94,7 @@ class HoprNode():
             except requests.exceptions.ConnectionError:
                 self.peer_id = None
                 log.info("HOPR node is down")
-                
+
             except Exception as e:
                 self.peer_id = None
                 log.error("Could not connect to {}: {}".format(self.hoprd_api.api_url, str(e)))
@@ -126,12 +126,10 @@ class HoprNode():
     async def gather_peers(self):
         """
         Long-running task that continously updates the set of peers connected to this node.
-
         :returns: nothing; the set of connected peerIds is kept in self.peers.
         """
-        status = "connected"
-        url    = self._get_url("/node/peers")
-        
+        status= "connected"
+
         while self.started:
             # check that we are still connected
             if not self.connected:
@@ -140,7 +138,8 @@ class HoprNode():
                 continue
 
             try:
-                json_body = await self._req(url)
+                response = await self.hoprd_api.peers()
+                json_body = response.json()
                 if status in json_body:
                     for p in json_body[status]:
                         peer = p["peerId"]
@@ -153,7 +152,7 @@ class HoprNode():
                 log.warning("No answer from peer {}".format(self.peer_id))
 
             except Exception as e:
-                log.error("Could not get peers from {}: {}".format(url, str(e)))
+                log.error("Could not get peers from {}: {}".format(self.hoprd_api.api_url, str(e)))
                 log.error(traceback.format_exc())
 
 
@@ -181,7 +180,7 @@ class HoprNode():
         """
         Long-running task that pings the peers of this node.
 
-        :returns: nothing; the recorded latency measures are kept in dictionary 
+        :returns: nothing; the recorded latency measures are kept in dictionary
                   self.latency {otherPeerId: [latency, latency, ...]}
         """
         url = self._get_url("/node/ping")
