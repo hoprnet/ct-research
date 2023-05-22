@@ -152,22 +152,26 @@ def get_mock_node_for_connect():
 
 
 @pytest.mark.asyncio 
-async def test_connect_successful(mocker, event_loop, caplog, get_mock_node_for_connect):
+async def test_connect_successful(mocker):
     """
     Test that the method connects successfully to the HOPR node and sets the correct peer_id
     attribute value.
     """
-    def assert_expression():
-        assert node.peer_id == json_body["hopr"]
-
-    caplog.set_level(logging.DEBUG)
-    node = get_mock_node_for_connect
+    node = HoprNode("some_url", "some_api_key")
     json_body = {"hopr": "some_peer_id"}
     mocker.patch.object(node, "_req", return_value=json_body)
 
-    event_loop.call_later(1, lambda: assert_expression())
-    event_loop.call_later(2, lambda: node.stop())
-    await node.start()
+    node.started = True
+    task = asyncio.create_task(node.connect())
+    await asyncio.sleep(1)
+
+    # avoid infinite while loop by setting node.started = False 
+    node.started = False 
+    await asyncio.sleep(1)
+
+    assert node.peer_id == "some_peer_id"
+    await asyncio.gather(task)
+    
 
 
 @pytest.mark.asyncio 
@@ -205,6 +209,14 @@ async def test_connect_exception_logging(mocker, caplog, event_loop, get_mock_no
     endpoint = "/account/addresses"
     expected_url = node._get_url(endpoint)
     mocker.patch.object(node, "_req", side_effect=Exception())
+
+    node.started = True
+    task = asyncio.create_task(node.gather_peers())
+    await asyncio.sleep(1)
+
+    # avoid infinite while loop by setting node.started = False 
+    node.started = False 
+    await asyncio.sleep(1)
     
     event_loop.call_later(1, lambda: node.stop())
     await node.start()
@@ -300,6 +312,42 @@ async def test_gather_peers_retrieves_peers_from_response(mocker):
     assert "some_other_peer_id_1" in node.peers
     assert "some_other_peer_id_2" in node.peers
     await asyncio.gather(task)
+
+
+@pytest.mark.asyncio
+async def test_ping_peers_adds_new_peer_to_latency():
+    """
+    Test that a new entry gets created for a new peer in the latency dictionary with an empty list. 
+    """
+    async def _wait_for_latency_to_match_peers():
+        while len(node.latency) < len(node.peers):
+            await asyncio.sleep(0.1)
+
+    node = HoprNode("some_url", "some_api_key")
+    node.peer_id = "some_peer_id" 
+    node.peers = {'some_other_peer_id_1', 'some_other_peer_id_2'}
+    node.latency = {'some_other_peer_id_1': [10, 15]}
+
+    node.started = True
+    task = asyncio.create_task(node.ping_peers())
+
+    try:
+        await asyncio.wait_for(
+            _wait_for_latency_to_match_peers(),
+            timeout=15
+        )
+    except asyncio.TimeoutError:
+        raise AssertionError("Timed out waiting for latency to match peers")
+    
+    finally:
+        node.started = False 
+        await asyncio.sleep(1)
+
+        assert 'some_other_peer_id_1' in node.latency.keys()
+        assert 'some_other_peer_id_2' in node.latency.keys()
+        assert len(node.latency['some_other_peer_id_2']) == 0
+
+        await asyncio.gather(task)
     
 
 @pytest.fixture
@@ -327,3 +375,4 @@ async def test_start(mock_node_for_test_start):
     assert node.plot.called
     assert len(node.tasks) == 4
     assert node.started == True
+
