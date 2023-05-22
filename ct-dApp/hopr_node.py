@@ -26,7 +26,7 @@ class HoprNode():
         self.url     = url
         self.peer_id = None
 
-        # access the functionality of the hoprd python api 
+        # access the functionality of the hoprd python api
         self.hoprd_api = wrapper.HoprdAPI(api_url=url, api_token=key)
 
         # Class that implements the functionallity of http requests
@@ -95,7 +95,7 @@ class HoprNode():
             except requests.exceptions.ConnectionError:
                 self.peer_id = None
                 log.info("HOPR node is down")
-                
+
             except Exception as e:
                 self.peer_id = None
                 log.error("Could not connect to {}: {}".format(url, str(e)))
@@ -129,6 +129,8 @@ class HoprNode():
         Long-running task that continously updates the set of peers connected to this node.
         :returns: nothing; the set of connected peerIds is kept in self.peers.
         """
+        status= "connected"
+
         while self.started:
             # check that we are still connected
             if not self.connected:
@@ -139,8 +141,8 @@ class HoprNode():
             try:
                 response = await self.hoprd_api.peers()
                 json_body = response.json()
-                if "connected" in json_body:
-                    for p in json_body["connected"]:
+                if status in json_body:
+                    for p in json_body[status]:
                         peer = p["peerId"]
                         if peer not in self.peers:
                             self.peers.add(peer)
@@ -179,7 +181,7 @@ class HoprNode():
         """
         Long-running task that pings the peers of this node.
 
-        :returns: nothing; the recorded latency measures are kept in dictionary 
+        :returns: nothing; the recorded latency measures are kept in dictionary
                   self.latency {otherPeerId: [latency, latency, ...]}
         """
         url = self._get_url("/node/ping")
