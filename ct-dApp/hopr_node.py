@@ -223,10 +223,11 @@ class HoprNode():
                     log.error(traceback.format_exc())
 
                 finally:
-                    # throttle the API requests towards the node
+                    # check that we are still connected
                     if not self.connected:
                         break
                     else:
+                        # throttle the API requests towards the node
                         await asyncio.sleep(5)
 
 
