@@ -79,26 +79,23 @@ class HoprNode():
         """
         Connects to this HOPR node, returning its peer_id.
         """
+        address = "hopr"
+
         log.debug("Connecting to node")
         while self.started:
             try:
-                # gather the peerId
                 response = await self.hoprd_api.get_address()
                 json_body = response.json()
-                if "hopr" in json_body:
-                    self.peer_id = json_body["hopr"]
+                if address in json_body:
+                    self.peer_id = json_body[address]
                     log.info("HOPR node {} is up".format(self.peer_id))
                 else:
                     self.peer_id = None
                     log.info("HOPR node is down")
 
-            except requests.exceptions.ConnectionError:
+            except Exception as exception:
                 self.peer_id = None
-                log.info("HOPR node is down")
-
-            except Exception as e:
-                self.peer_id = None
-                log.error("Could not connect to {}: {}".format(self.hoprd_api.api_url, str(e)))
+                log.error("Could not connect to {}: {}".format(self.hoprd_api._api_url, str(exception)))
                 log.error(traceback.format_exc())
 
             finally:
