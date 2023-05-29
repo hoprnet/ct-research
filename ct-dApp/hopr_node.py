@@ -183,7 +183,7 @@ class HoprNode():
         :returns: nothing; the recorded latency measures are kept in dictionary
                   self.latency {otherPeerId: [latency, latency, ...]}
         """
-        variable_name= "latency"
+        ping_latency= "latency"
 
         while self.started:
             # check that we are still connected
@@ -206,8 +206,8 @@ class HoprNode():
                     response = await self.hoprd_api.ping(peer_id= peer_id)
                     json_body = response.json()
 
-                    if variable_name in json_body:
-                        latency = int(json_body[variable_name])
+                    if ping_latency in json_body:
+                        latency = int(json_body[ping_latency])
                         self.latency[peer_id].append(latency)
 
                         # keep the last 100 latency measures
