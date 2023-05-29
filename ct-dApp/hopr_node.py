@@ -8,6 +8,7 @@ from hoprd import wrapper
 from http_req import Http_req
 from viz import network_viz
 
+# pylint: disable=logging-format-interpolation,consider-using-f-string
 
 log = logging.getLogger(__name__)
 
@@ -78,26 +79,23 @@ class HoprNode():
         """
         Connects to this HOPR node, returning its peer_id.
         """
+        address = "hopr"
+
         log.debug("Connecting to node")
         while self.started:
             try:
-                # gather the peerId
                 response = await self.hoprd_api.get_address()
                 json_body = response.json()
-                if "hopr" in json_body:
-                    self.peer_id = json_body["hopr"]
+                if address in json_body:
+                    self.peer_id = json_body[address]
                     log.info("HOPR node {} is up".format(self.peer_id))
                 else:
                     self.peer_id = None
                     log.info("HOPR node is down")
 
-            except requests.exceptions.ConnectionError:
+            except Exception as exception:
                 self.peer_id = None
-                log.info("HOPR node is down")
-
-            except Exception as e:
-                self.peer_id = None
-                log.error("Could not connect to {}: {}".format(self.hoprd_api._api_url, str(e)))
+                log.error("Could not connect to {}: {}".format(self.hoprd_api._api_url, str(exception)))
                 log.error(traceback.format_exc())
 
             finally:
@@ -129,6 +127,7 @@ class HoprNode():
         :returns: nothing; the set of connected peerIds is kept in self.peers.
         """
         status= "connected"
+        connection_quality= 1
 
         while self.started:
             # check that we are still connected
@@ -138,21 +137,18 @@ class HoprNode():
                 continue
 
             try:
-                response = await self.hoprd_api.peers()
+                response = await self.hoprd_api.peers(quality=connection_quality)
                 json_body = response.json()
                 if status in json_body:
-                    for p in json_body[status]:
-                        peer = p["peerId"]
-                        if peer not in self.peers:
-                            self.peers.add(peer)
-                            log.info("Found new peer {}".format(peer))
+                    for peer in json_body[status]:
+                        peer_id = peer["peerId"]
+                        if peer_id not in self.peers:
+                            self.peers.add(peer_id)
+                            log.info("Found new peer {}".format(peer_id))
                 await asyncio.sleep(5)
 
-            except requests.exceptions.ReadTimeout:
-                log.warning("No answer from peer {}".format(self.peer_id))
-
-            except Exception as e:
-                log.error("Could not get peers from {}: {}".format(self.hoprd_api._api_url, str(e)))
+            except Exception as exception:
+                log.error("Could not get peers from {}: {}".format(self.hoprd_api._api_url, str(exception)))
                 log.error(traceback.format_exc())
 
 
