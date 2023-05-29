@@ -186,7 +186,7 @@ class HoprNode():
         ping_latency= "latency"
 
         while self.started:
-            # check that we are still connected
+            # check that we are still connected, avoiding full CPU usage
             await asyncio.sleep(1)
             if not self.connected:
                 log.debug("ping_peers() waiting for connection")
