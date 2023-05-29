@@ -179,10 +179,10 @@ class HoprNode():
         :returns: nothing; the recorded latency measures are kept in dictionary
                   self.latency {otherPeerId: [latency, latency, ...]}
         """
-        url = self._get_url("/node/ping")
+        ping_latency= "latency"
 
         while self.started:
-            # check that we are still connected
+            # check that we are still connected, avoiding full CPU usage
             await asyncio.sleep(1)
             if not self.connected:
                 log.debug("ping_peers() waiting for connection")
@@ -192,34 +192,30 @@ class HoprNode():
             # a uniform distribution of pings among peers
             sampled_peers = random.sample(sorted(self.peers),
                                           len(self.peers))
-            for p in sampled_peers:
+            for peer_id in sampled_peers:
                 # create a list to keep the latency measures of new peers
-                if p not in self.latency.keys():
-                    self.latency[p] = list()
+                if peer_id not in self.latency.keys():
+                    self.latency[peer_id] = list()
 
                 try:
-                    log.debug("Pinging peer {}".format(p))
-                    json_body = await self._req(url,
-                                                method="POST",
-                                                payload={'peerId': p})
-                    if "latency" in json_body:
-                        latency = int(json_body["latency"])
-                        self.latency[p].append(latency)
+                    log.debug(f"Pinging peer {peer_id}")
+                    response = await self.hoprd_api.ping(peer_id= peer_id)
+                    json_body = response.json()
+
+                    if ping_latency in json_body:
+                        latency = int(json_body[ping_latency])
+                        self.latency[peer_id].append(latency)
 
                         # keep the last 100 latency measures
-                        if len(self.latency[p]) > 100:
-                            self.latency[p].pop(0)
-
-                        log.info(f"Got latency measure ({latency} ms) from peer {p}")
+                        if len(self.latency[peer_id]) > 100:
+                            self.latency[peer_id].pop(0)
+                        log.info(f"Got latency measure ({latency} ms) from peer {peer_id}")
                     else:
-                        self.latency[p].append(-1)
-                        log.warning(f"No answer from peer {p}")
+                        self.latency[peer_id].append(-1)
+                        log.warning(f"No answer from peer {peer_id}")
 
-                except requests.exceptions.ReadTimeout:
-                    log.warning(f"No answer from peer {p}")
-
-                except Exception as e:
-                    log.error(f"Could not ping using {url}: {e}")
+                except Exception as exception:
+                    log.error(f"Could not ping using {self.hoprd_api._api_url}: {exception}")
                     log.error(traceback.format_exc())
 
                 finally:
@@ -227,6 +223,7 @@ class HoprNode():
                     if not self.connected:
                         break
                     else:
+                        # throttle the API requests towards the node
                         await asyncio.sleep(5)
 
 
