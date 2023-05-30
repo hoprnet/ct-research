@@ -1,11 +1,9 @@
 import asyncio
 import logging
-import requests
 import traceback
 import random
-from hoprd import wrapper
 
-from http_req import Http_req
+from hoprd import wrapper
 from viz import network_viz
 
 # pylint: disable=logging-format-interpolation,consider-using-f-string
@@ -22,16 +20,11 @@ class HoprNode():
         :returns: a new instance of a HOPR node using 'url' and API 'key'
         """
         self.api_key = key
-        self.headers = {'X-Auth-Token': self.api_key,
-                        'Content-Type': 'application/json'}
         self.url     = url
         self.peer_id = None
 
         # access the functionality of the hoprd python api
         self.hoprd_api = wrapper.HoprdAPI(api_url=url, api_token=key)
-
-        # Class that implements the functionallity of http requests
-        self.http_req = Http_req()
 
         # a set to keep the peers of this node, see:
         self.peers = set[str]()
@@ -43,36 +36,6 @@ class HoprNode():
         self.tasks = set()
         self.started = False
         log.debug("Created HOPR node instance")
-
-
-    def _get_url(self, end_point: str) -> str:
-        """
-        :returns: a valid HOPRd API endpoint.
-        """
-        return "{}/api/v2{}".format(self.url, end_point)
-
-
-    async def _req(self, target_url: str, method: str="GET", payload: dict[str, str]=None) -> dict[str, str]:
-        """
-        Connects to 'target_url' of this node's REST API, using 'method' (either GET or POST).
-        Optionally attaches 'payload' as JSON string to the request.
-
-        :returns: a JSON dictionary; throws an exception if failed.
-        """
-        response = await self.http_req.send_async_req(method, target_url, self.headers, payload)
-
-        if response.status_code == 200:
-            content_type = response.headers.get("Content-Type", "")
-            if "application/json" in content_type:
-                return response.json()
-            else:
-                log.error("Expected application/json, but got {}".format(content_type))
-                return {'response': response.text}
-        else:
-            log.error("{} {} returned status code {}".format(method,
-                                                             target_url,
-                                                             response.status_code))
-            return {'': ''}
 
 
     async def connect(self):
