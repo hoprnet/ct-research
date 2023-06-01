@@ -6,28 +6,40 @@ The goal of the ct-dapp is to distribute cover traffic in the monte rosa network
 
 However, the fist version of the ct-dapp has the sole purpose to replace the staking rewards users earn in the current staking season beyond its discontinuation.
 
-## How to install and run local development cluster on Ubuntu
+## Development Requirements
+
+1. [Install Docker](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository)
+
+2. Install python >=3.9.10
+
+3. Visual Studio Code >= 1.78.2
+
+4. Ubuntu >= 20.04 (if windows use WSL)
+
+5. Linting: We use ruff >= v0.0.270 (to be implemented)
+
+6. Code formating: We use  black (to be implemented)
+
+## How to install and run a local development cluster on Ubuntu
 
 HOPR uses a local development cluster called `Pluto` which allows you to interact with a fully interconnected cluster of HOPR nodes on your local machine.
 
-1. if you dont have docker use this guide to install it: [Install Docker](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository)
-
-2. Install HOPR Admin (optional). HOPR Admin is a visual interface of a HOPR node that can be used to visualize each node in your local cluster.
+1. Install HOPR Admin (optional). HOPR Admin is a visual interface of a HOPR node that can be used to visualize each node in your local cluster.
 ```bash
 sudo docker run -d --name hopr_admin -p 3000:3000 gcr.io/hoprassociation/hopr-admin
 ```
 
-3. Start docker:
+2. Start docker:
 ```bash
 sudo systemctl enable docker.service
 ```
 
-4. Use a seperate terminal create your local cluster of HOPR nodes:
+3. Use a seperate terminal create your local cluster of HOPR nodes:
 ```bash
 sudo docker run -ti -p 13301-13305:13301-13305  gcr.io/hoprassociation/hopr-pluto:1.93.7
 ```
 
-5. Use a seperate terminal to start HOPR Admin (optional):
+4. Use a seperate terminal to start HOPR Admin (optional):
 ```bash
 sudo docker start hopr_admin
 ```
@@ -39,7 +51,7 @@ sudo docker start hopr_admin
 To execute the script called "ct.py" you need to:
 
 1. Setup a virtual environment
-2. Install python >=3.9.10
+
 2. Install dependencies:
 ```bash
 pip install -r requirements.txt
