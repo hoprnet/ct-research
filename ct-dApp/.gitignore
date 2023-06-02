@@ -1,6 +1,5 @@
 .coverage
 __pycache__/
-run.sh
 run_play.sh
 ct.py.log
 net_viz-*.png

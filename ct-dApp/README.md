@@ -4,17 +4,17 @@ This folder contains the cover traffic dApp.
 
 The goal of the ct-dapp is to distribute cover traffic in the monte rosa network to keep the annoymity set of nodes sufficiently large at all times.
 
-However, the fist version of the ct-dapp has the sole purpose to replace the staking rewards users earn in the current staking season beyond its discontinuation.
+However, the fist version of the ct-dapp has the sole purpose of replacing the staking rewards users earn in the current staking season beyond its discontinuation.
 
 ## Development Requirements
 
-1. [Install Docker](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository)
+1. Ubuntu >= 20.04 (if windows use WSL)
 
-2. Install python >=3.9.10
+2. [Docker](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository)
 
-3. Visual Studio Code >= 1.78.2
+3. Python >=3.9.10
 
-4. Ubuntu >= 20.04 (if windows use WSL)
+4. Visual Studio Code >= 1.78.2
 
 5. Linting: We use ruff >= v0.0.270 (to be implemented)
 
@@ -56,7 +56,7 @@ To execute the script called "ct.py" you need to:
 ```bash
 pip install -r requirements.txt
 ```
-3. Set up a run.sh file:
+3. Adapt the values in `run.sh` file:
 ```bash
 #!/bin/sh
 
@@ -66,7 +66,6 @@ export HOPR_NODE_1_WS_URL="ws://${HOPR_NODE_1}:13305"
 export HOPR_NODE_1_API_KEY='%th1s-IS-a-S3CR3T-ap1-PUSHING-b1ts-TO-you%'
 
 python ct.py
-
 ```
 
 ### Configuration of Environment Variables
