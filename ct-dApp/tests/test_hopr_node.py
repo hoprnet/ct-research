@@ -34,6 +34,7 @@ def get_mock_node_for_connect():
     """Fixture that returns a mock instance of a started MockHoprNode
     with a given peer_id
     """
+
     class MockHoprNode(HoprNode):
         def __init__(self, url: str, key: str):
             super().__init__(url, key)
@@ -46,6 +47,7 @@ def get_mock_node_for_connect():
                 self.started = True
                 self.tasks.add(asyncio.create_task(self.connect()))
                 await asyncio.gather(*self.tasks)
+
     return MockHoprNode("some_url", "some_api_key")
 
 
@@ -64,7 +66,9 @@ async def test_connect_exception(mocker, event_loop, get_mock_node_for_connect):
 
 
 @pytest.mark.asyncio
-async def test_connect_exception_logging(mocker, caplog, event_loop, get_mock_node_for_connect):
+async def test_connect_exception_logging(
+    mocker, caplog, event_loop, get_mock_node_for_connect
+):
     """
     Test that the correct log message is logged when an exception occurs
     during the connect method.
@@ -88,12 +92,14 @@ async def test_connected_property(mocker, event_loop, get_mock_node_for_connect)
     assert not node.connected
 
     # Mock the HOPRd API to return a JSON response with two peers
-    class MockedResponse():
+    class MockedResponse:
         def json(self):
             return {"hopr": "some_other_peer_id_1"}
-    class MockedHoprdAPI():
+
+    class MockedHoprdAPI:
         async def get_address(self):
             return MockedResponse()
+
     node.hoprd_api = MockedHoprdAPI()
 
     # helper function to assert from the event loop
@@ -122,6 +128,7 @@ def test_adding_peers_while_pinging() -> None:
     """
     Changing the 'peers' set while pinging should not break.
     """
+
     class MockHoprNode(HoprNode):
         def __init__(self, url: str, key: str):
             """
@@ -141,7 +148,7 @@ def test_adding_peers_while_pinging() -> None:
             """
             while self.started:
                 await asyncio.sleep(1)
-                peer = 'peer_{}'.format(len(self.peers))
+                peer = "peer_{}".format(len(self.peers))
                 self.peers.add(peer)
 
     node = MockHoprNode("some_url", "some_key")
@@ -162,14 +169,20 @@ async def test_gather_peers_retrieves_peers_from_response():
     node.peer_id = "some_peer_id"
 
     # Mock the HOPRd API to return a JSON response with two peers
-    class MockedResponse():
+    class MockedResponse:
         def json(self):
-            return {"connected": [{"peerId": "some_other_peer_id_1"},
-                                  {"peerId": "some_other_peer_id_2"}]}
-    class MockedHoprdAPI():
+            return {
+                "connected": [
+                    {"peerId": "some_other_peer_id_1"},
+                    {"peerId": "some_other_peer_id_2"},
+                ]
+            }
+
+    class MockedHoprdAPI:
         async def peers(self, quality):
             assert quality == 1
             return MockedResponse()
+
     node.hoprd_api = MockedHoprdAPI()
 
     node.started = True
@@ -191,23 +204,21 @@ async def test_ping_peers_adds_new_peer_to_latency():
     Test that a new entry gets created for a new peer in the latency dictionary
     with an empty list.
     """
+
     async def _wait_for_latency_to_match_peers():
         while len(node.latency) < len(node.peers):
             await asyncio.sleep(0.1)
 
     node = HoprNode("some_url", "some_api_key")
     node.peer_id = "some_peer_id"
-    node.peers = {'some_other_peer_id_1', 'some_other_peer_id_2'}
-    node.latency = {'some_other_peer_id_1': [10, 15]}
+    node.peers = {"some_other_peer_id_1", "some_other_peer_id_2"}
+    node.latency = {"some_other_peer_id_1": [10, 15]}
 
     node.started = True
     task = asyncio.create_task(node.ping_peers())
 
     try:
-        await asyncio.wait_for(
-            _wait_for_latency_to_match_peers(),
-            timeout=15
-        )
+        await asyncio.wait_for(_wait_for_latency_to_match_peers(), timeout=15)
     except asyncio.TimeoutError:
         raise AssertionError("Timed out waiting for latency to match peers")
 
@@ -215,9 +226,9 @@ async def test_ping_peers_adds_new_peer_to_latency():
         node.started = False
         await asyncio.sleep(1)
 
-        assert 'some_other_peer_id_1' in node.latency.keys()
-        assert 'some_other_peer_id_2' in node.latency.keys()
-        assert len(node.latency['some_other_peer_id_2']) == 0
+        assert "some_other_peer_id_1" in node.latency.keys()
+        assert "some_other_peer_id_2" in node.latency.keys()
+        assert len(node.latency["some_other_peer_id_2"]) == 0
 
         await asyncio.gather(task)
 
@@ -247,4 +258,3 @@ async def test_start(mock_node_for_test_start):
     assert node.plot.called
     assert len(node.tasks) == 4
     assert node.started
-

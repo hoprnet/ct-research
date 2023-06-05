@@ -9,10 +9,10 @@ from hopr_node import HoprNode
 
 
 # configure and get logger handler
-LOGFILE = '{}.log'.format(sys.argv[0])
-logging.basicConfig(filename=LOGFILE,
-                    level=logging.INFO,
-                    format='%(levelname)s:%(asctime)s:%(message)s')
+LOGFILE = "{}.log".format(sys.argv[0])
+logging.basicConfig(
+    filename=LOGFILE, level=logging.INFO, format="%(levelname)s:%(asctime)s:%(message)s"
+)
 log = logging.getLogger(__name__)
 
 
@@ -36,14 +36,14 @@ def stop(node, caught_signal):
     print(">>> Caught signal {} <<<".format(caught_signal))
     print(">>> Stopping ...")
     node.stop()
-    
+
 
 if __name__ == "__main__":
     exit_code = 0
 
     # read parameters from environment variables
-    api_host = _getenvvar('HOPR_NODE_1_HTTP_URL')
-    api_key  = _getenvvar('HOPR_NODE_1_API_KEY')
+    api_host = _getenvvar("HOPR_NODE_1_HTTP_URL")
+    api_key = _getenvvar("HOPR_NODE_1_API_KEY")
 
     print(">>> Program started. Open [ {} ] for logs.".format(LOGFILE))
     print(">>> Press <ctrl+c> to end.")
@@ -56,7 +56,7 @@ if __name__ == "__main__":
         loop.add_signal_handler(signal.SIGTERM, lambda: stop(node, signal.SIGTERM))
 
         loop.run_until_complete(node.start())
-    
+
     except Exception as e:
         log.error("Uncaught exception ocurred", str(e))
         log.error(traceback.format_exc())

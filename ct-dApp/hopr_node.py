@@ -10,16 +10,17 @@ from viz import network_viz
 log = logging.getLogger(__name__)
 
 
-class HoprNode():
+class HoprNode:
     """
     Implements the functionality of a HOPR node through its REST API and WebSocket
     """
+
     def __init__(self, url: str, key: str):
         """
         :returns: a new instance of a HOPR node using 'url' and API 'key'
         """
         self.api_key = key
-        self.url     = url
+        self.url = url
         self.peer_id = None
 
         # access the functionality of the hoprd python api
@@ -35,7 +36,6 @@ class HoprNode():
         self.tasks = set()
         self.started = False
         log.debug("Created HOPR node instance")
-
 
     async def connect(self):
         """
@@ -57,12 +57,15 @@ class HoprNode():
 
             except Exception as exception:
                 self.peer_id = None
-                log.error("Could not connect to {}: {}".format(self.hoprd_api._api_url, str(exception)))
+                log.error(
+                    "Could not connect to {}: {}".format(
+                        self.hoprd_api._api_url, str(exception)
+                    )
+                )
                 log.error(traceback.format_exc())
 
             finally:
                 await asyncio.sleep(5)
-
 
     @property
     def connected(self) -> bool:
@@ -70,7 +73,6 @@ class HoprNode():
         :returns: True if this node is connected, False otherwise.
         """
         return self.peer_id is not None
-
 
     def disconnect(self):
         """
@@ -82,14 +84,13 @@ class HoprNode():
             self.peer_id = None
             log.info("Disconnected HOPR node")
 
-
     async def gather_peers(self):
         """
         Long-running task that continously updates the set of peers connected to this node.
         :returns: nothing; the set of connected peerIds is kept in self.peers.
         """
-        status= "connected"
-        connection_quality= 1
+        status = "connected"
+        connection_quality = 1
 
         while self.started:
             # check that we are still connected
@@ -110,9 +111,12 @@ class HoprNode():
                 await asyncio.sleep(5)
 
             except Exception as exception:
-                log.error("Could not get peers from {}: {}".format(self.hoprd_api._api_url, str(exception)))
+                log.error(
+                    "Could not get peers from {}: {}".format(
+                        self.hoprd_api._api_url, str(exception)
+                    )
+                )
                 log.error(traceback.format_exc())
-
 
     async def plot(self):
         """
@@ -128,11 +132,16 @@ class HoprNode():
                 file_name = "net_viz-{:04d}".format(i)
                 log.info("Creating visualization [ {} ]".format(file_name))
                 try:
-                    await asyncio.to_thread(network_viz, {self.peer_id: self.latency}, file_name)
+                    await asyncio.to_thread(
+                        network_viz, {self.peer_id: self.latency}, file_name
+                    )
                 except Exception as e:
-                    log.error("Could not create visualization [ {} ]: {}".format(file_name, str(e)))
+                    log.error(
+                        "Could not create visualization [ {} ]: {}".format(
+                            file_name, str(e)
+                        )
+                    )
                     log.error(traceback.format_exc())
-
 
     async def ping_peers(self):
         """
@@ -141,7 +150,7 @@ class HoprNode():
         :returns: nothing; the recorded latency measures are kept in dictionary
                   self.latency {otherPeerId: [latency, latency, ...]}
         """
-        ping_latency= "latency"
+        ping_latency = "latency"
 
         while self.started:
             # check that we are still connected, avoiding full CPU usage
@@ -152,8 +161,7 @@ class HoprNode():
 
             # randomly sample the peer set to converge towards
             # a uniform distribution of pings among peers
-            sampled_peers = random.sample(sorted(self.peers),
-                                          len(self.peers))
+            sampled_peers = random.sample(sorted(self.peers), len(self.peers))
             for peer_id in sampled_peers:
                 # create a list to keep the latency measures of new peers
                 if peer_id not in self.latency.keys():
@@ -161,7 +169,7 @@ class HoprNode():
 
                 try:
                     log.debug(f"Pinging peer {peer_id}")
-                    response = await self.hoprd_api.ping(peer_id= peer_id)
+                    response = await self.hoprd_api.ping(peer_id=peer_id)
                     json_body = response.json()
 
                     if ping_latency in json_body:
@@ -171,13 +179,17 @@ class HoprNode():
                         # keep the last 100 latency measures
                         if len(self.latency[peer_id]) > 100:
                             self.latency[peer_id].pop(0)
-                        log.info(f"Got latency measure ({latency} ms) from peer {peer_id}")
+                        log.info(
+                            f"Got latency measure ({latency} ms) from peer {peer_id}"
+                        )
                     else:
                         self.latency[peer_id].append(-1)
                         log.warning(f"No answer from peer {peer_id}")
 
                 except Exception as exception:
-                    log.error(f"Could not ping using {self.hoprd_api._api_url}: {exception}")
+                    log.error(
+                        f"Could not ping using {self.hoprd_api._api_url}: {exception}"
+                    )
                     log.error(traceback.format_exc())
 
                 finally:
@@ -187,7 +199,6 @@ class HoprNode():
                     else:
                         # throttle the API requests towards the node
                         await asyncio.sleep(5)
-
 
     async def start(self):
         """
@@ -201,7 +212,6 @@ class HoprNode():
             self.tasks.add(asyncio.create_task(self.ping_peers()))
             self.tasks.add(asyncio.create_task(self.plot()))
             await asyncio.gather(*self.tasks)
-
 
     def stop(self):
         """
