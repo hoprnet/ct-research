@@ -1,12 +1,11 @@
 import asyncio
 import logging
-import traceback
 import random
+import traceback
 
 from hoprd import wrapper
-from viz import network_viz
 
-# pylint: disable=logging-format-interpolation,consider-using-f-string
+from viz import network_viz
 
 log = logging.getLogger(__name__)
 
