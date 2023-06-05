@@ -8,17 +8,55 @@ However, the fist version of the ct-dapp has the sole purpose of replacing the s
 
 ## Development Requirements
 
-1. Ubuntu >= 20.04 (if windows use WSL)
+1. Any modern Linux distribution, e.g., Ubuntu >= 20.04.
+If you are on Windows use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install)
 
-2. [Docker](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository)
+2. Docker for running software containers
+Instructions for installation can be found [here](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository)
 
-3. Python >=3.9.10
+3. Install Python >=3.9.10 and related packages
+```
+$ sudo apt install python3 python3-pip
+$ pip3 install virtualenv
+```
 
 4. Visual Studio Code >= 1.78.2
+To install it using `apt`:
+```
+$ sudo apt update
+$ sudo apt install software-properties-common apt-transport-https wget
+$ wget -q https://packages.microsoft.com/keys/microsoft.asc -O- | sudo apt-key add -
+$ sudo add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main"
+$ sudo apt update
+$ sudo apt install code
+```
+Alternatively, download the `deb` package [here](https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64) and install it manually.
 
-5. Linting: We use ruff >= v0.0.270 (to be implemented)
+5. Formatting and linting: Black + Ruff combo is used.
+Settings are found under `pyproject.toml`.
+VSCode specific settings are found in `.vscode/settings.json`.
+These should be automatically picked up by VSCode when using workspace settings.
 
-6. Code formating: We use  black (to be implemented)
+6. Install [Black extension for VSCode](https://marketplace.visualstudio.com/items?itemName=ms-python.black-formatter)
+
+7. Install [Ruff extension for VSCode](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff)
+
+8. Clone, create virtual environment, install dependencies and launch VSCode:
+```
+$ git clone https://github.com/hoprnet/ct-research
+$ cd ct-research/ct-dApp
+$ python3 -m virtualenv /tmp/env
+$ . /tmp/env/bin/activate
+(env) $ pip install -r requirements_dev.txt
+(...)
+Successfully installed black-23.3.0 ...
+(env) $ code .
+```
+
+9. Validate that everything is running correctly by launching the test cases
+```
+(env) $ pytest 
+```
 
 ## How to install and run a local development cluster on Ubuntu
 
