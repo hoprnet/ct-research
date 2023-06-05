@@ -7,8 +7,6 @@ from hoprd import wrapper
 
 from viz import network_viz
 
-# pylint: disable=logging-format-interpolation,consider-using-f-string
-
 log = logging.getLogger(__name__)
 
 

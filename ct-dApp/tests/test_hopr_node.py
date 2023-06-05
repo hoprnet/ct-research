@@ -1,15 +1,13 @@
 import asyncio
-
 import pytest
-
 from hopr_node import HoprNode
 
 
 @pytest.mark.asyncio
 async def test_connect_successful(mocker):
     """
-    Test that the method connects successfully to the HOPR node and sets the correct peer_id
-    attribute value.
+    Test that the method connects successfully to the HOPR node and sets the correct
+    peer_id attribute value.
     """
     node = HoprNode("some_url", "some_api_key")
     expected_response_body = {"hopr": "some_peer_id"}
@@ -33,7 +31,9 @@ async def test_connect_successful(mocker):
 
 @pytest.fixture
 def get_mock_node_for_connect():
-    """Fixture that returns a mock instance of a started MockHoprNode with a given peer_id"""
+    """Fixture that returns a mock instance of a started MockHoprNode
+    with a given peer_id
+    """
     class MockHoprNode(HoprNode):
         def __init__(self, url: str, key: str):
             super().__init__(url, key)
@@ -66,7 +66,8 @@ async def test_connect_exception(mocker, event_loop, get_mock_node_for_connect):
 @pytest.mark.asyncio
 async def test_connect_exception_logging(mocker, caplog, event_loop, get_mock_node_for_connect):
     """
-    Test that the correct log message is logged when an exception occurs during the connect method.
+    Test that the correct log message is logged when an exception occurs
+    during the connect method.
     """
     node = get_mock_node_for_connect
     mocker.patch.object(node.hoprd_api, "get_address", side_effect=Exception())
@@ -85,7 +86,7 @@ async def test_connected_property(mocker, event_loop, get_mock_node_for_connect)
     """
     node = get_mock_node_for_connect
     assert not node.connected
-    
+
     # Mock the HOPRd API to return a JSON response with two peers
     class MockedResponse():
         def json(self):
@@ -98,7 +99,7 @@ async def test_connected_property(mocker, event_loop, get_mock_node_for_connect)
     # helper function to assert from the event loop
     def assert_node_connected():
         assert node.connected
-    
+
     event_loop.call_later(0.5, lambda: assert_node_connected())
     event_loop.call_later(1.0, lambda: node.stop())
     await node.start()
@@ -129,12 +130,6 @@ def test_adding_peers_while_pinging() -> None:
             super().__init__(url, key)
             self.started = True
 
-        def _req(*args, **kwargs) -> dict[str, str]:
-            """
-            Patch HoprNode._req to return a valid JSON object.
-            """
-            return {'a': 'b'}
-
         async def connect(self):
             self.peer_id = "testing_peer_id"
             while self.started:
@@ -158,9 +153,10 @@ def test_adding_peers_while_pinging() -> None:
 
 
 @pytest.mark.asyncio
-async def test_gather_peers_retrieves_peers_from_response(mocker):
+async def test_gather_peers_retrieves_peers_from_response():
     """
-    Test whether gather_peers retrieves the correct list of peers from the JSON response returned by the _req() method.
+    Test whether gather_peers retrieves the correct list of peers
+    from the JSON response returned by the _req() method.
     """
     node = HoprNode("some_url", "some_api_key")
     node.peer_id = "some_peer_id"
@@ -172,6 +168,7 @@ async def test_gather_peers_retrieves_peers_from_response(mocker):
                                   {"peerId": "some_other_peer_id_2"}]}
     class MockedHoprdAPI():
         async def peers(self, quality):
+            assert quality == 1
             return MockedResponse()
     node.hoprd_api = MockedHoprdAPI()
 
@@ -191,7 +188,8 @@ async def test_gather_peers_retrieves_peers_from_response(mocker):
 @pytest.mark.asyncio
 async def test_ping_peers_adds_new_peer_to_latency():
     """
-    Test that a new entry gets created for a new peer in the latency dictionary with an empty list.
+    Test that a new entry gets created for a new peer in the latency dictionary
+    with an empty list.
     """
     async def _wait_for_latency_to_match_peers():
         while len(node.latency) < len(node.peers):
