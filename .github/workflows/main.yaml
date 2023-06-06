@@ -2,9 +2,7 @@ name: Main
 
 on:
   push:
-    branches: [main]
   pull_request:
-    types: [opened, synchronize]
 
 concurrency:
   # find the branch name for 'pull_request' or on 'push' events
@@ -13,24 +11,46 @@ concurrency:
 
 jobs:
   test:
-    name: Test the code
+    name: Lint and test code
     timeout-minutes: 10
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout the code
+      - name: Check out code
         uses: actions/checkout@v3
 
-      - name: Test the code
-        run: pytest -s ./ct-dApp
+      - name: Set up python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        working-directory: ct-dApp
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest -r requirements.txt
+
+      - name: Lint with ruff
+        working-directory: ct-dApp
+        run: |
+          # default set of ruff rules with GitHub Annotations
+          ruff --format=github --target-version=py39 .
+
+      - name: Test with pytest
+        working-directory: ct-dApp
+        run: |
+          pytest
 
   image:
-    name: Build and push the container image
+    name: Build and push container image
     timeout-minutes: 10
     runs-on: ubuntu-latest
 
+    needs:
+      - test
+
     steps:
-      - name: Checkout the code
+      - name: Check out code
         uses: actions/checkout@v3
 
       - name: Calculate environment variables
@@ -43,13 +63,13 @@ jobs:
         with:
           account_key: ${{ secrets.GOOGLE_CREDENTIALS }}
 
-      - name: Build and push the container image
+      - name: Build and push container image
         uses: elgohr/Publish-Docker-Github-Action@v5
         with:
-          dockerfile: "./${{ matrix.directory }}/${{ matrix.project }}/Dockerfile"
-          name: ${{ secrets.GOOGLE_PROJECT }}/${{ secrets.GOOGLE_REPOSITORY }}/${{ matrix.project }}
+          workdir: "ct-dApp"
+          dockerfile: "./Dockerfile"
+          name: ${{ secrets.GOOGLE_PROJECT }}/${{ secrets.GOOGLE_REPOSITORY }}/cover-traffic
           registry: ${{ secrets.GOOGLE_REGION }}-docker.pkg.dev
           username: ${{ steps.gcloud.outputs.username }}
           password: ${{ steps.gcloud.outputs.password }}
           tags: "${{ env.SHORT_SHA }}"
-          
