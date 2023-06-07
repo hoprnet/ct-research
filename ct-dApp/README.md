@@ -9,18 +9,29 @@ However, the fist version of the ct-dapp has the sole purpose of replacing the s
 ## Development Requirements
 
 1. Any modern Linux distribution, e.g., Ubuntu >= 20.04.
-If you are on Windows use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install)
+    - If you are on Windows use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install)
+    - If you are on macOS (Intel/Apple Silicon) you are all fine
 
 2. Docker for running software containers
 Instructions for installation can be found [here](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository)
+ *Notice: on macOS, simply isntall the desktop client from [here](https://docs.docker.com/desktop/install/mac-install/)*
 
 3. Install Python >=3.9.10 and related packages
+    - Ubuntu / WSL:
+    ```
+    $ sudo apt install python3 python3-pip
+    ```
+    - macOS: from the [official installer](https://www.python.org/downloads/) or using Homebrew:
+    ```
+    $ brew install python
+    ```
+
+4. Install the virtual environment manager:
 ```
-$ sudo apt install python3 python3-pip
 $ pip3 install virtualenv
 ```
 
-4. Visual Studio Code >= 1.78.2
+5. Visual Studio Code >= 1.78.2
 To install it using `apt`:
 ```
 $ sudo apt update
@@ -32,16 +43,18 @@ $ sudo apt install code
 ```
 Alternatively, download the `deb` package [here](https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64) and install it manually.
 
-5. Formatting and linting: Black + Ruff combo is used.
+***Notice:** On macOS, install it following these [instructions](https://code.visualstudio.com/docs/setup/mac)*
+
+6. Formatting and linting: Black + Ruff combo is used.
 Settings are found under `pyproject.toml`.
 VSCode specific settings are found in `.vscode/settings.json`.
 These should be automatically picked up by VSCode when using workspace settings.
 
-6. Install [Black extension for VSCode](https://marketplace.visualstudio.com/items?itemName=ms-python.black-formatter)
+7. Install [Black extension for VSCode](https://marketplace.visualstudio.com/items?itemName=ms-python.black-formatter)
 
-7. Install [Ruff extension for VSCode](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff)
+8. Install [Ruff extension for VSCode](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff)
 
-8. Clone, create virtual environment, install dependencies and launch VSCode:
+9. Clone, create virtual environment, install dependencies and launch VSCode:
 ```
 $ git clone https://github.com/hoprnet/ct-research
 $ cd ct-research/ct-dApp
@@ -53,7 +66,7 @@ Successfully installed black-23.3.0 ...
 (env) $ code .
 ```
 
-9. Validate that everything is running correctly by launching the test cases
+10. Validate that everything is running correctly by launching the test cases
 ```
 (env) $ pytest 
 ```
@@ -71,6 +84,7 @@ sudo docker run -d --name hopr_admin -p 3000:3000 gcr.io/hoprassociation/hopr-ad
 ```bash
 sudo systemctl enable docker.service
 ```
+***Notice:** This step is not necessary on macOS. Simply be sure that the Docker daemon is running by launching it from your Application folder*
 
 3. Use a seperate terminal create your local cluster of HOPR nodes:
 ```bash
