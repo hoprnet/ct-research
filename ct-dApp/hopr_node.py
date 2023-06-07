@@ -15,6 +15,8 @@ class HoprNode:
     Implements the functionality of a HOPR node through its REST API and WebSocket
     """
 
+    MAX_LATENCY_COUNT = 100
+
     def __init__(self, url: str, key: str):
         """
         :returns: a new instance of a HOPR node using 'url' and API 'key'
@@ -29,7 +31,7 @@ class HoprNode:
         # a set to keep the peers of this node, see:
         self.peers = set[str]()
 
-        # a dictionary to keep the last 100 latency measures {peer: [latency, latency, ...]}
+        # a dictionary to keep the last MAX_LATENCY_COUNT latency measures {peer: [latency, latency, ...]}
         self.latency = dict[str, list[int]]()
 
         # a set to keep track of the running tasks
@@ -170,27 +172,29 @@ class HoprNode:
                 try:
                     log.debug(f"Pinging peer {peer_id}")
                     response = await self.hoprd_api.ping(peer_id=peer_id)
-                    json_body = response.json()
-
-                    if ping_latency in json_body:
-                        latency = int(json_body[ping_latency])
-                        self.latency[peer_id].append(latency)
-
-                        # keep the last 100 latency measures
-                        if len(self.latency[peer_id]) > 100:
-                            self.latency[peer_id].pop(0)
-                        log.info(
-                            f"Got latency measure ({latency} ms) from peer {peer_id}"
-                        )
-                    else:
-                        self.latency[peer_id].append(-1)
-                        log.warning(f"No answer from peer {peer_id}")
-
+                   
                 except Exception as exception:
                     log.error(
                         f"Could not ping using {self.hoprd_api._api_url}: {exception}"
                     )
                     log.error(traceback.format_exc())
+                else:
+                    json_body = response.json()
+
+                    if ping_latency in json_body:
+                        latency = int(json_body[ping_latency])
+                        log.info(
+                            f"Got latency measure ({latency} ms) from peer {peer_id}"
+                        )                        
+                    else:
+                        latency = -1
+                        log.warning(f"No answer from peer {peer_id}")
+
+                    self.latency[peer_id].append(latency)
+
+                    # keep the last MAX_LATENCY_COUNT latency measures
+                    if len(self.latency[peer_id]) > HoprNode.MAX_LATENCY_COUNT:
+                        self.latency[peer_id].pop(0)
 
                 finally:
                     # check that we are still connected
