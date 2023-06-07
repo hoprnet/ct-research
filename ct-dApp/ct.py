@@ -8,12 +8,21 @@ import traceback
 from hopr_node import HoprNode
 
 
-# configure and get logger handler
-LOGFILE = f"{sys.argv[0]}.log"
-FORMAT = "%(levelname)s:%(asctime)s:%(message)s"
+def _getlogger() -> tuple[logging.Logger, str]:
+    """
+    Returns a logger instance and the name of the log file.
+    --
+    In future PR, the function will accept a folder name to store logs to.
+    """
+        
+    # configure and get logger handler
+    logfile = f"{sys.argv[0]}.log"
+    format = "%(levelname)s:%(asctime)s:%(message)s"
 
-logging.basicConfig(filename=LOGFILE, level=logging.INFO, format=FORMAT)
-log = logging.getLogger(__name__)
+    logging.basicConfig(filename=logfile, level=logging.INFO, format=format)
+    logger = logging.getLogger(__name__)
+
+    return logger, logfile
 
 
 def _getenvvar(name: str) -> str:
@@ -36,9 +45,10 @@ def stop(node: HoprNode, caught_signal):
 
 
 if __name__ == "__main__":
+    log, logfile = _getlogger()
     exit_code = 0
 
-    print(f">>> Program started. Open [ {LOGFILE} ] for logs.")
+    print(f">>> Program started. Open [ {logfile} ] for logs.")
     print(">>> Press <ctrl+c> to end.")
 
     # read parameters from environment variables
