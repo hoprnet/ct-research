@@ -49,23 +49,18 @@ class HoprNode:
         while self.started:
             try:
                 response = await self.hoprd_api.get_address()
+            except Exception as e:
+                self.peer_id = None
+                log.error(f"Could not connect to {self.hoprd_api._api_url}: {e}")
+                log.error(traceback.format_exc())
+            else:
                 json_body = response.json()
                 if address in json_body:
                     self.peer_id = json_body[address]
-                    log.info("HOPR node {} is up".format(self.peer_id))
+                    log.info(f"HOPR node {self.peer_id} is up")
                 else:
                     self.peer_id = None
                     log.info("HOPR node is down")
-
-            except Exception as exception:
-                self.peer_id = None
-                log.error(
-                    "Could not connect to {}: {}".format(
-                        self.hoprd_api._api_url, str(exception)
-                    )
-                )
-                log.error(traceback.format_exc())
-
             finally:
                 await asyncio.sleep(5)
 
@@ -103,22 +98,21 @@ class HoprNode:
 
             try:
                 response = await self.hoprd_api.peers(quality=connection_quality)
+
+            except Exception as e:
+                log.error(f"Could not get peers from {self.hoprd_api._api_url}: {e}")
+                log.error(traceback.format_exc())
+            else:
                 json_body = response.json()
                 if status in json_body:
                     for peer in json_body[status]:
                         peer_id = peer["peerId"]
                         if peer_id not in self.peers:
                             self.peers.add(peer_id)
-                            log.info("Found new peer {}".format(peer_id))
-                await asyncio.sleep(5)
+                            log.info(f"Found new peer {peer_id}")
 
-            except Exception as exception:
-                log.error(
-                    "Could not get peers from {}: {}".format(
-                        self.hoprd_api._api_url, str(exception)
-                    )
-                )
-                log.error(traceback.format_exc())
+
+                await asyncio.sleep(5)
 
     async def plot(self):
         """
@@ -131,18 +125,14 @@ class HoprNode:
             await asyncio.sleep(30)
             if self.connected and self.latency is not None:
                 i += 1
-                file_name = "net_viz-{:04d}".format(i)
-                log.info("Creating visualization [ {} ]".format(file_name))
+                file_name = f"net_viz-{i:04d}"
+                log.info(f"Creating visualization [ {file_name} ]")
                 try:
                     await asyncio.to_thread(
                         network_viz, {self.peer_id: self.latency}, file_name
                     )
                 except Exception as e:
-                    log.error(
-                        "Could not create visualization [ {} ]: {}".format(
-                            file_name, str(e)
-                        )
-                    )
+                    log.error(f"Could not create visualization [ {file_name} ]: {e}")
                     log.error(traceback.format_exc())
 
     async def ping_peers(self):
@@ -173,11 +163,9 @@ class HoprNode:
                     log.debug(f"Pinging peer {peer_id}")
                     response = await self.hoprd_api.ping(peer_id=peer_id)
                    
-                except Exception as exception:
+                except Exception as e:
                     latency = -1 # no answer
-                    log.error(
-                        f"Could not ping using {self.hoprd_api._api_url}: {exception}"
-                    )
+                    log.error(f"Could not ping using {self.hoprd_api._api_url}: {e}")
                     log.error(traceback.format_exc())
                 else:
                     json_body = response.json()
@@ -210,13 +198,15 @@ class HoprNode:
         Starts the tasks of this node
         """
         log.info("Starting node")
-        if len(self.tasks) == 0:
-            self.started = True
-            self.tasks.add(asyncio.create_task(self.connect()))
-            self.tasks.add(asyncio.create_task(self.gather_peers()))
-            self.tasks.add(asyncio.create_task(self.ping_peers()))
-            self.tasks.add(asyncio.create_task(self.plot()))
-            await asyncio.gather(*self.tasks)
+        if len(self.tasks) != 0:
+            return
+    
+        self.started = True
+        self.tasks.add(asyncio.create_task(self.connect()))
+        self.tasks.add(asyncio.create_task(self.gather_peers()))
+        self.tasks.add(asyncio.create_task(self.ping_peers()))
+        self.tasks.add(asyncio.create_task(self.plot()))
+        await asyncio.gather(*self.tasks)
 
     def stop(self):
         """
@@ -224,7 +214,10 @@ class HoprNode:
         """
         log.info("Stopping node")
         self.started = False
+
         self.disconnect()
+
         for t in self.tasks:
             t.add_done_callback(self.tasks.discard)
+
         asyncio.gather(*self.tasks)
