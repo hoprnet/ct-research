@@ -199,9 +199,7 @@ class HoprNode:
                         log.warning(f"No answer from peer {peer_id}")
 
                 finally:
-                    existing_array = self.latency[peer_id]
-                    new_array = np.append(existing_array, latency)
-                    self.latency[peer_id] = new_array
+                    self.latency[peer_id] = np.append(self.latency[peer_id], latency)
 
                     # keep the last MAX_LATENCY_COUNT latency measures
                     if len(self.latency[peer_id]) > HoprNode.MAX_LATENCY_COUNT:
