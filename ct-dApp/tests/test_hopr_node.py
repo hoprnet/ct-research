@@ -1,5 +1,6 @@
 import asyncio
 import pytest
+import numpy as np
 from hopr_node import HoprNode
 
 
@@ -212,7 +213,7 @@ async def test_ping_peers_adds_new_peer_to_latency():
     node = HoprNode("some_url", "some_api_key")
     node.peer_id = "some_peer_id"
     node.peers = {"some_other_peer_id_1", "some_other_peer_id_2"}
-    node.latency = {"some_other_peer_id_1": [10, 15]}
+    node.latency = {"some_other_peer_id_1": np.array([10, 15])}
 
     node.started = True
     task = asyncio.create_task(node.ping_peers())
@@ -228,7 +229,7 @@ async def test_ping_peers_adds_new_peer_to_latency():
 
         assert "some_other_peer_id_1" in node.latency.keys()
         assert "some_other_peer_id_2" in node.latency.keys()
-        assert len(node.latency["some_other_peer_id_2"]) == 0
+        assert len(node.latency["some_other_peer_id_2"]) == 1  # initialized with np.nan
 
         await asyncio.gather(task)
 

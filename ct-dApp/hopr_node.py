@@ -2,6 +2,7 @@ import asyncio
 import logging
 import random
 import traceback
+import numpy as np
 
 from hoprd import wrapper
 
@@ -32,7 +33,7 @@ class HoprNode:
         self.peers = set[str]()
 
         # a dictionary to keep the last MAX_LATENCY_COUNT latency measures {peer: [latency, latency, ...]}
-        self.latency = dict[str, list[int]]()
+        self.latency = dict[str, np.ndarray]()
 
         # a set to keep track of the running tasks
         self.tasks = set()
@@ -147,10 +148,15 @@ class HoprNode:
 
     async def ping_peers(self):
         """
-        Long-running task that pings the peers of this node.
+        Long-running task that pings the peers of this node and
+        records latency measures.
 
-        :returns: nothing; the recorded latency measures are kept in dictionary
-                  self.latency {otherPeerId: [latency, latency, ...]}
+        The recorded latency measures are kept in the dictionary `self.latency`,
+        where each peer ID is associated with a NumPy array of latency values.
+        Only the most recent `MAX_LATENCY_COUNT` latency measures are stored
+        for each peer.
+
+        :returns: nothing
         """
         ping_latency = "latency"
 
@@ -165,16 +171,17 @@ class HoprNode:
             # a uniform distribution of pings among peers
             sampled_peers = random.sample(sorted(self.peers), len(self.peers))
             for peer_id in sampled_peers:
-                # create a list to keep the latency measures of new peers
+                # create an array to keep the latency measures of new peers
                 if peer_id not in self.latency.keys():
-                    self.latency[peer_id] = list()
+                    self.latency[peer_id] = np.array([])
 
+                latency = np.nan  # Initialize with default value
                 try:
                     log.debug(f"Pinging peer {peer_id}")
                     response = await self.hoprd_api.ping(peer_id=peer_id)
-                   
+
                 except Exception as exception:
-                    latency = -1 # no answer
+                    latency = np.nan  # no answer
                     log.error(
                         f"Could not ping using {self.hoprd_api._api_url}: {exception}"
                     )
@@ -183,20 +190,24 @@ class HoprNode:
                     json_body = response.json()
 
                     if ping_latency in json_body:
-                        latency = int(json_body[ping_latency]) # latency in body
+                        latency = int(json_body[ping_latency])  # latency in body
                         log.info(
                             f"Got latency measure ({latency} ms) from peer {peer_id}"
-                        )                        
+                        )
                     else:
-                        latency = -1 # latency NOT in body
+                        latency = np.nan  # latency NOT in body
                         log.warning(f"No answer from peer {peer_id}")
 
                 finally:
-                    self.latency[peer_id].append(latency)
+                    existing_array = self.latency[peer_id]
+                    new_array = np.append(existing_array, latency)
+                    self.latency[peer_id] = new_array
 
                     # keep the last MAX_LATENCY_COUNT latency measures
                     if len(self.latency[peer_id]) > HoprNode.MAX_LATENCY_COUNT:
-                        self.latency[peer_id].pop(0)
+                        self.latency[peer_id] = self.latency[peer_id][
+                            -HoprNode.MAX_LATENCY_COUNT :
+                        ]
 
                     # check that we are still connected
                     if not self.connected:
