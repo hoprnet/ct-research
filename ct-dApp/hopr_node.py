@@ -174,6 +174,7 @@ class HoprNode:
                     response = await self.hoprd_api.ping(peer_id=peer_id)
                    
                 except Exception as exception:
+                    latency = -1 # no answer
                     log.error(
                         f"Could not ping using {self.hoprd_api._api_url}: {exception}"
                     )
@@ -182,21 +183,21 @@ class HoprNode:
                     json_body = response.json()
 
                     if ping_latency in json_body:
-                        latency = int(json_body[ping_latency])
+                        latency = int(json_body[ping_latency]) # latency in body
                         log.info(
                             f"Got latency measure ({latency} ms) from peer {peer_id}"
                         )                        
                     else:
-                        latency = -1
+                        latency = -1 # latency NOT in body
                         log.warning(f"No answer from peer {peer_id}")
 
+                finally:
                     self.latency[peer_id].append(latency)
 
                     # keep the last MAX_LATENCY_COUNT latency measures
                     if len(self.latency[peer_id]) > HoprNode.MAX_LATENCY_COUNT:
                         self.latency[peer_id].pop(0)
 
-                finally:
                     # check that we are still connected
                     if not self.connected:
                         break
