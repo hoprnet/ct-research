@@ -11,8 +11,6 @@ from viz import network_viz
 
 log = logging.getLogger(__name__)
 
-#TODO: change vizualisation folder to log
-
 class HOPRNode:
     """
     Implements the functionality of a HOPR node through its REST API and WebSocket
