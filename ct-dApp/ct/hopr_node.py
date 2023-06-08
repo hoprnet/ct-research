@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 class HOPRNode:
     """
-    Implements the functionality of a HOPR node through its REST API and WebSocket
+    Implements the functionality of a HOPR node through the hoprd-api-python and WebSocket
     """
 
     def __init__(self, url: str, key: str, max_lat_count: int = 100, log_folder: str = "."):
@@ -30,7 +30,7 @@ class HOPRNode:
         # a set to keep the peers of this node, see:
         self.peers = set[str]()
 
-        # a dictionary to keep the self.max_lat_count latency measures {peer: [latency, latency, ...]}
+        # a dictionary to keep the self.max_lat_count latency measures {peer: np.array([latency, latency, ...])}
         self.latency = dict[str, np.ndarray]()
         self.max_lat_count = max_lat_count
 
