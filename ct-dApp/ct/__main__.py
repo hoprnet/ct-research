@@ -1,10 +1,11 @@
 import asyncio
 import logging
 import os
-from signal import Signals, SIGINT, SIGTERM
 import sys
 import traceback
 from pathlib import Path
+from signal import SIGINT, SIGTERM, Signals
+
 import click
 
 from .exit_codes import ExitCode
@@ -13,17 +14,15 @@ from .hopr_node import HOPRNode
 
 def _getlogger(folder: str, filename: str) -> tuple[logging.Logger, str]:
     """
-    Returns a logger instance and the name of the log file.
+    Generate a logger instance based on folder and name.
     :param folder: folder to store the log file
     :param filename: name of the log file (without extension)
+    :returns: a tuple with the logger instance and the name of the log file
     """
         
     # configure and get logger handler
     logpath = Path(folder).joinpath(f"{filename}.log")
     logpath.parent.mkdir(parents=True, exist_ok=True)
-
-
-    # logfile = f"{sys.argv[0]}.log"
     format = "%(levelname)s:%(asctime)s:%(message)s"
 
     logging.basicConfig(filename=logpath, level=logging.INFO, format=format)
@@ -34,7 +33,10 @@ def _getlogger(folder: str, filename: str) -> tuple[logging.Logger, str]:
 
 def _getenvvar(name: str) -> str:
     """
-    Returns the string contained in environment variable 'name' or None.
+    Gets the string contained in environment variable 'name'.
+    :param name: name of the environment variable
+    :returns: the string contained in the environment variable
+    :raises ValueError: if the environment variable is not found
     """
     if os.getenv(name) is None:
         raise ValueError(f"Environment variable [{name}] not found")
@@ -44,16 +46,17 @@ def _getenvvar(name: str) -> str:
 
 def stop(node: HOPRNode, caught_signal: Signals):
     """
-    Stops the running node
+    Stops the running node.
+    :param node: the HOPR node to stop
+    :param caught_signal: the signal that triggered the stop
     """
     click.echo(f">>> Caught signal {caught_signal.name} <<<")
     click.echo(">>> Stopping ...")
     node.stop()
 
-
 @click.command()
 @click.option("--logf", "logfolder", default=".", help="Folder to store the log file")
-@click.option("--logn", "logname", default="ct-dApp", help="Name of the log file (w/o ext)")
+@click.option("--logn", "logname", default="ct-dApp", help="Name of the log file")
 def main(logfolder: str, logname: str):
     # logger and state variables
     log, logfile = _getlogger(logfolder, logname)
@@ -70,12 +73,15 @@ def main(logfolder: str, logname: str):
         log.error(str(e))
         sys.exit(ExitCode.ERROR_BAD_ARGUMENTS)
 
+    # create the HOPR node instance
     node = HOPRNode(API_host, API_key)
 
+    # create the event loop and register the signal handlers
     loop = asyncio.new_event_loop()
     loop.add_signal_handler(SIGINT, stop, node, SIGINT)
     loop.add_signal_handler(SIGTERM, stop, node, SIGTERM)
 
+    # start the node and run the event loop until the node stops
     try:
         loop.run_until_complete(node.start())
 
