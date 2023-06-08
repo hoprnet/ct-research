@@ -8,7 +8,7 @@ import datetime
 
 import matplotlib
 
-# use the Matplotlib non-interactive backend, which allows Matplotlib to run without a GUI
+# use the Matplotlib non-interactive backend, which allows Matplotlib to run without GUI
 matplotlib.use("Agg")
 
 
