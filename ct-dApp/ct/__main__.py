@@ -12,7 +12,7 @@ from .exit_codes import ExitCode
 from .hopr_node import HOPRNode
 
 
-def _getlogger(folder: str, filename: str) -> tuple[logging.Logger, str]:
+def _getlogger(folder: str, filename: str) -> logging.Logger:
     """
     Generate a logger instance based on folder and name.
     :param folder: folder to store the log file
@@ -28,7 +28,7 @@ def _getlogger(folder: str, filename: str) -> tuple[logging.Logger, str]:
     logging.basicConfig(filename=logpath, level=logging.INFO, format=format)
     logger = logging.getLogger(__name__)
 
-    return logger, logpath
+    return logger
 
 
 def _getenvvar(name: str) -> str:
@@ -57,13 +57,13 @@ def stop(node: HOPRNode, caught_signal: Signals):
 @click.command()
 @click.option("--logf", "logfolder", default=".", help="Folder to store the log file")
 @click.option("--logn", "logname", default="ct-dApp", help="Name of the log file")
-@click.option("--latcount", default=100, help="Nb of latency measures to store")
-def main(logfolder: str, logname: str, latcount: int):
+@click.option("--latcount", "latency_count", default=100, help="Nb of latency measures to store")
+def main(logfolder: str, logname: str, latency_count: int):
     # logger and state variables
-    log, logfile = _getlogger(logfolder, logname)
+    log = _getlogger(logfolder, logname)
     exit_code = ExitCode.OK
 
-    click.echo(f">>> Program started. Open [ {logfile} ] for logs.")
+    click.echo(f">>> Program started. Open [ {logfolder} ] for logs.")
     click.echo(">>> Press <ctrl+c> to end.")
 
     # read parameters from environment variables
@@ -75,7 +75,7 @@ def main(logfolder: str, logname: str, latcount: int):
         sys.exit(ExitCode.ERROR_BAD_ARGUMENTS)
 
     # create the HOPR node instance
-    node = HOPRNode(API_host, API_key, latcount)
+    node = HOPRNode(API_host, API_key, latency_count, logfolder)
 
     # create the event loop and register the signal handlers
     loop = asyncio.new_event_loop()

@@ -5,6 +5,7 @@ import traceback
 import numpy as np
 
 from hoprd import wrapper
+from pathlib import Path
 
 from viz import network_viz
 
@@ -17,7 +18,7 @@ class HOPRNode:
     Implements the functionality of a HOPR node through its REST API and WebSocket
     """
 
-    def __init__(self, url: str, key: str, max_lat_count: int = 100):
+    def __init__(self, url: str, key: str, max_lat_count: int = 100, log_folder: str = "."):
         """
         :returns: a new instance of a HOPR node using 'url' and API 'key'
         """
@@ -34,6 +35,10 @@ class HOPRNode:
         # a dictionary to keep the self.max_lat_count latency measures {peer: [latency, latency, ...]}
         self.latency = dict[str, np.ndarray]()
         self.max_lat_count = max_lat_count
+
+        # a folder to store the logs
+        self.log_folder = Path(log_folder)
+        self.log_folder.mkdir(parents=True, exist_ok=True)
 
         # a set to keep track of the running tasks
         self.tasks = set()
@@ -132,7 +137,7 @@ class HOPRNode:
                 continue
         
             i += 1
-            file_name = f"net_viz-{i:04d}"
+            file_name = self.log_folder.joinpath(f"net_viz-{i:04d}")
             log.info(f"Creating visualization [ {file_name} ]")
             try:
                 await asyncio.to_thread(

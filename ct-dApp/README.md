@@ -14,7 +14,7 @@ However, the fist version of the ct-dapp has the sole purpose of replacing the s
 
 2. Docker for running software containers
 Instructions for installation can be found [here](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository)
- *Notice: on macOS, simply isntall the desktop client from [here](https://docs.docker.com/desktop/install/mac-install/)*
+ *Notice: on macOS, simply install the [desktop client](https://docs.docker.com/desktop/install/mac-install/)*
 
 3. Install Python >=3.9.10 and related packages
     - Ubuntu / WSL:
@@ -120,7 +120,9 @@ export HOPR_NODE_1_API_KEY='%th1s-IS-a-S3CR3T-ap1-PUSHING-b1ts-TO-you%'
 python -m ct --logf <log-folder> --logn log-filename --latcount <max_latency_count>
 ```
 
-*Tip: ```python -m ct --help``` provide a descrition of each parameter*
+#### Comments:
+- ```python -m ct --help``` provide a descrition of each parameter.
+- The ```log-folder``` is the place where all text logs and images are generated. It has a default value that is ```.```. It is highly recommanded to specify a different folder. At runtime, the specified folder will be created if necessary.
 
 ### Configuration of Environment Variables
 This program requires two environment variables to be set. If either of these environment variables is not set, the program will exit with an error.
