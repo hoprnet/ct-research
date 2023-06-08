@@ -200,9 +200,9 @@ class HoprNode:
                     # check that we are still connected
                     if not self.connected:
                         break
-                        
-                    # throttle the API requests towards the node
-                    await asyncio.sleep(5)
+                    else:
+                        # throttle the API requests towards the node
+                        await asyncio.sleep(5)
 
     async def start(self):
         """
