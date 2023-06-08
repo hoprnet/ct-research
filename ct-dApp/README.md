@@ -68,7 +68,7 @@ Successfully installed black-23.3.0 ...
 
 10. Validate that everything is running correctly by launching the test cases
 ```
-(env) $ pytest 
+(env) $ pytest tests
 ```
 
 ## How to install and run a local development cluster on Ubuntu

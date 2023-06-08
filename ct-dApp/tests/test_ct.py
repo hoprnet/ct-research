@@ -1,13 +1,10 @@
 import pytest
 import os
 from unittest.mock import MagicMock
+from signal import SIGINT
 
-from ct import HOPRNode
-from ct import _getenvvar
-from ct import stop
+from ct import HOPRNode, _getenvvar, stop
 
-# TODO: Modify the tests to fit the new code.
-# TODO: Create tests for the python API wrapper.
 
 def test_getenvvar_load_envar() -> None:
     """
@@ -18,6 +15,7 @@ def test_getenvvar_load_envar() -> None:
 
     envvar_0 = _getenvvar("HOPR_NODE_1_HTTP_URL")
     envvar_1 = _getenvvar("HOPR_NODE_1_API_KEY")
+    
     assert envvar_0 == "http_url"
     assert envvar_1 == "api_key"
 
@@ -27,11 +25,8 @@ def test_getenvvar_exit() -> None:
     Test whether system exit is called when no environemnt variable is provided.
     """
 
-    with pytest.raises(SystemExit) as exc_info:
+    with pytest.raises(ValueError):
         _getenvvar("NO_SUCH_ENV_VAR_EXISTS")
-
-    assert exc_info.type == SystemExit
-    assert exc_info.value.code == 1
 
 
 def test_stop():
@@ -45,6 +40,6 @@ def test_stop():
     # stop method calls the mock object.
     node.stop = MagicMock()
 
-    stop(node, "SIGINT")
+    stop(node, SIGINT)
 
     node.stop.assert_called_once()
