@@ -11,7 +11,7 @@ from viz import network_viz
 log = logging.getLogger(__name__)
 
 
-class HoprNode:
+class HOPRNode:
     """
     Implements the functionality of a HOPR node through its REST API and WebSocket
     """
@@ -105,13 +105,16 @@ class HoprNode:
                 log.error(traceback.format_exc())
             else:
                 json_body = response.json()
-                if status in json_body:
-                    for peer in json_body[status]:
-                        peer_id = peer["peerId"]
-                        if peer_id not in self.peers:
-                            self.peers.add(peer_id)
-                            log.info(f"Found new peer {peer_id}")
+                if status not in json_body:
+                    continue
+            
+                for peer in json_body[status]:
+                    peer_id = peer["peerId"]
+                    if peer_id in self.peers:
+                        continue
 
+                    self.peers.add(peer_id)
+                    log.info(f"Found new peer {peer_id}")
 
                 await asyncio.sleep(5)
 
@@ -124,17 +127,20 @@ class HoprNode:
         i = 0
         while self.started:
             await asyncio.sleep(30)
-            if self.connected and self.latency is not None:
-                i += 1
-                file_name = f"net_viz-{i:04d}"
-                log.info(f"Creating visualization [ {file_name} ]")
-                try:
-                    await asyncio.to_thread(
-                        network_viz, {self.peer_id: self.latency}, file_name
-                    )
-                except Exception as e:
-                    log.error(f"Could not create visualization [ {file_name} ]: {e}")
-                    log.error(traceback.format_exc())
+            
+            if not self.connected or self.latency is None:
+                continue
+        
+            i += 1
+            file_name = f"net_viz-{i:04d}"
+            log.info(f"Creating visualization [ {file_name} ]")
+            try:
+                await asyncio.to_thread(
+                    network_viz, {self.peer_id: self.latency}, file_name
+                )
+            except Exception as e:
+                log.error(f"Could not create visualization [ {file_name} ]: {e}")
+                log.error(traceback.format_exc())
 
     async def ping_peers(self):
         """
@@ -192,9 +198,9 @@ class HoprNode:
                     self.latency[peer_id] = np.append(self.latency[peer_id], latency)
 
                     # keep the last MAX_LATENCY_COUNT latency measures
-                    if len(self.latency[peer_id]) > HoprNode.MAX_LATENCY_COUNT:
+                    if len(self.latency[peer_id]) > HOPRNode.MAX_LATENCY_COUNT:
                         self.latency[peer_id] = self.latency[peer_id][
-                            -HoprNode.MAX_LATENCY_COUNT :
+                            -HOPRNode.MAX_LATENCY_COUNT :
                         ]
 
                     # check that we are still connected
@@ -217,6 +223,7 @@ class HoprNode:
         self.tasks.add(asyncio.create_task(self.gather_peers()))
         self.tasks.add(asyncio.create_task(self.ping_peers()))
         self.tasks.add(asyncio.create_task(self.plot()))
+
         await asyncio.gather(*self.tasks)
 
     def stop(self):
