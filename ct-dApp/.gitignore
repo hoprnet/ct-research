@@ -1,7 +1,9 @@
 .coverage
 __pycache__/
 run_play.sh
-ct.py.log
 net_viz-*.png
 out.mp4
 websocket_client.log
+env/
+.pytest_cache/
+logs/
