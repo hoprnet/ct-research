@@ -117,8 +117,10 @@ export HOPR_NODE_1_HTTP_URL="http://${HOPR_NODE_1}:13305"
 export HOPR_NODE_1_WS_URL="ws://${HOPR_NODE_1}:13305"
 export HOPR_NODE_1_API_KEY='%th1s-IS-a-S3CR3T-ap1-PUSHING-b1ts-TO-you%'
 
-python -m ct --logf logs
+python -m ct --logf <log-folder> --logn log-filename --latcount <max_latency_count>
 ```
+
+*Tip: ```python -m ct --help``` provide a descrition of each parameter*
 
 ### Configuration of Environment Variables
 This program requires two environment variables to be set. If either of these environment variables is not set, the program will exit with an error.
