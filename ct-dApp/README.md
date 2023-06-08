@@ -139,10 +139,10 @@ To execute the program, run the following command:
 ./run.sh
 ```
 
-The program will execute the ct-dapp.
+The program will execute the ct-dApp.
 
 ### Logging
-This program logs to the file ct.log. The log level is set to INFO by default.
+This program logs to the file ct-dApp.log. The log level is set to INFO by default.
 
 ## Contact
 
