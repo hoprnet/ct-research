@@ -100,7 +100,7 @@ sudo docker start hopr_admin
 
 ### Requirements
 
-To execute the script called "ct.py" you need to:
+To execute the module called "ct" you need to:
 
 1. Setup a virtual environment
 
@@ -117,7 +117,7 @@ export HOPR_NODE_1_HTTP_URL="http://${HOPR_NODE_1}:13305"
 export HOPR_NODE_1_WS_URL="ws://${HOPR_NODE_1}:13305"
 export HOPR_NODE_1_API_KEY='%th1s-IS-a-S3CR3T-ap1-PUSHING-b1ts-TO-you%'
 
-python ct.py
+python -m ct --logf logs
 ```
 
 ### Configuration of Environment Variables
