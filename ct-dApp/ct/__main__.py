@@ -57,7 +57,8 @@ def stop(node: HOPRNode, caught_signal: Signals):
 @click.command()
 @click.option("--logf", "logfolder", default=".", help="Folder to store the log file")
 @click.option("--logn", "logname", default="ct-dApp", help="Name of the log file")
-def main(logfolder: str, logname: str):
+@click.option("--latcount", default=100, help="Nb of latency measures to store")
+def main(logfolder: str, logname: str, latcount: int):
     # logger and state variables
     log, logfile = _getlogger(logfolder, logname)
     exit_code = ExitCode.OK
@@ -74,7 +75,7 @@ def main(logfolder: str, logname: str):
         sys.exit(ExitCode.ERROR_BAD_ARGUMENTS)
 
     # create the HOPR node instance
-    node = HOPRNode(API_host, API_key)
+    node = HOPRNode(API_host, API_key, latcount)
 
     # create the event loop and register the signal handlers
     loop = asyncio.new_event_loop()
