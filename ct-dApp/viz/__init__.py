@@ -3,13 +3,12 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.cm as cm
 import matplotlib.colors as colors
-import statistics
 import numpy as np
 import datetime
 
 import matplotlib
 
-# use the Matplotlib non-interactive backend, which allows Matplotlib to run without a GUI
+# use the Matplotlib non-interactive backend, which allows Matplotlib to run without GUI
 matplotlib.use("Agg")
 
 

@@ -14,7 +14,7 @@ However, the fist version of the ct-dapp has the sole purpose of replacing the s
 
 2. Docker for running software containers
 Instructions for installation can be found [here](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository)
- *Notice: on macOS, simply isntall the desktop client from [here](https://docs.docker.com/desktop/install/mac-install/)*
+ *Notice: on macOS, simply install the [desktop client](https://docs.docker.com/desktop/install/mac-install/)*
 
 3. Install Python >=3.9.10 and related packages
     - Ubuntu / WSL:
@@ -68,7 +68,7 @@ Successfully installed black-23.3.0 ...
 
 10. Validate that everything is running correctly by launching the test cases
 ```
-(env) $ pytest 
+(env) $ pytest tests
 ```
 
 ## How to install and run a local development cluster on Ubuntu
@@ -100,7 +100,7 @@ sudo docker start hopr_admin
 
 ### Requirements
 
-To execute the script called "ct.py" you need to:
+To execute the module called "ct" you need to:
 
 1. Setup a virtual environment
 
@@ -117,8 +117,12 @@ export HOPR_NODE_1_HTTP_URL="http://${HOPR_NODE_1}:13305"
 export HOPR_NODE_1_WS_URL="ws://${HOPR_NODE_1}:13305"
 export HOPR_NODE_1_API_KEY='%th1s-IS-a-S3CR3T-ap1-PUSHING-b1ts-TO-you%'
 
-python ct.py
+python -m ct --logf <log-folder> --logn log-filename --latcount <max_latency_count>
 ```
+
+#### Comments:
+- ```python -m ct --help``` provide a descrition of each parameter.
+- The ```log-folder``` is the place where all text logs and images are generated. It has a default value that is ```.```. It is highly recommanded to specify a different folder. At runtime, the specified folder will be created if necessary.
 
 ### Configuration of Environment Variables
 This program requires two environment variables to be set. If either of these environment variables is not set, the program will exit with an error.
@@ -135,10 +139,10 @@ To execute the program, run the following command:
 ./run.sh
 ```
 
-The program will execute the ct-dapp.
+The program will execute the ct-dApp.
 
 ### Logging
-This program logs to the file ct.log. The log level is set to INFO by default.
+This program logs to the file ct-dApp.log. The log level is set to INFO by default.
 
 ## Contact
 
