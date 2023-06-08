@@ -2,10 +2,12 @@ import pytest
 import os
 from unittest.mock import MagicMock
 
-from hopr_node import HoprNode
+from ct import HOPRNode
 from ct import _getenvvar
 from ct import stop
 
+# TODO: Modify the tests to fit the new code.
+# TODO: Create tests for the python API wrapper.
 
 def test_getenvvar_load_envar() -> None:
     """
@@ -34,11 +36,13 @@ def test_getenvvar_exit() -> None:
 
 def test_stop():
     """
-    Test whether the stop function correctly calls the stop method of the node object with the SIGINT signal.
+    Test whether the stop function correctly calls the stop method of the node object 
+    with the SIGINT signal.
     """
-    node = HoprNode("some_url", "some_key")
+    node = HOPRNode("some_url", "some_key")
 
-    # Create a mock object of the stop method of the HoprNode class to test whether the stop method calls the mock object.
+    # Create a mock object of the stop method of the HOPRNode class to test whether the 
+    # stop method calls the mock object.
     node.stop = MagicMock()
 
     stop(node, "SIGINT")

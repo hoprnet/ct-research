@@ -1,7 +1,7 @@
 import asyncio
 import pytest
 import numpy as np
-from hopr_node import HoprNode
+from ct import HOPRNode
 
 
 @pytest.mark.asyncio
@@ -10,7 +10,7 @@ async def test_connect_successful(mocker):
     Test that the method connects successfully to the HOPR node and sets the correct
     peer_id attribute value.
     """
-    node = HoprNode("some_url", "some_api_key")
+    node = HOPRNode("some_url", "some_api_key")
     expected_response_body = {"hopr": "some_peer_id"}
 
     mock_response = mocker.Mock()
@@ -36,7 +36,7 @@ def get_mock_node_for_connect():
     with a given peer_id
     """
 
-    class MockHoprNode(HoprNode):
+    class MockHoprNode(HOPRNode):
         def __init__(self, url: str, key: str):
             super().__init__(url, key)
 
@@ -118,7 +118,7 @@ def test_disconnect_method():
     Test that the node is disconnected after calling disconnect method
     Test that the peer_id attribute is set to None after calling disconnect method
     """
-    node = HoprNode("some_url", "some_api_key")
+    node = HOPRNode("some_url", "some_api_key")
     node.peer_id = "some_peer_id"
     node.disconnect()
     assert not node.connected
@@ -130,7 +130,7 @@ def test_adding_peers_while_pinging() -> None:
     Changing the 'peers' set while pinging should not break.
     """
 
-    class MockHoprNode(HoprNode):
+    class MockHoprNode(HOPRNode):
         def __init__(self, url: str, key: str):
             """
             Patched constructor: connected and started
@@ -166,7 +166,7 @@ async def test_gather_peers_retrieves_peers_from_response():
     Test whether gather_peers retrieves the correct list of peers
     from the JSON response returned by the _req() method.
     """
-    node = HoprNode("some_url", "some_api_key")
+    node = HOPRNode("some_url", "some_api_key")
     node.peer_id = "some_peer_id"
 
     # Mock the HOPRd API to return a JSON response with two peers
@@ -210,7 +210,7 @@ async def test_ping_peers_adds_new_peer_to_latency():
         while len(node.latency) < len(node.peers):
             await asyncio.sleep(0.1)
 
-    node = HoprNode("some_url", "some_api_key")
+    node = HOPRNode("some_url", "some_api_key")
     node.peer_id = "some_peer_id"
     node.peers = {"some_other_peer_id_1", "some_other_peer_id_2"}
     node.latency = {"some_other_peer_id_1": np.array([10, 15])}
@@ -237,12 +237,12 @@ async def test_ping_peers_adds_new_peer_to_latency():
 @pytest.fixture
 def mock_node_for_test_start(mocker):
     # create a mock for each coroutine that should be executed
-    mocker.patch.object(HoprNode, "connect", return_value=None)
-    mocker.patch.object(HoprNode, "gather_peers", return_value=None)
-    mocker.patch.object(HoprNode, "ping_peers", return_value=None)
-    mocker.patch.object(HoprNode, "plot", return_value=None)
+    mocker.patch.object(HOPRNode, "connect", return_value=None)
+    mocker.patch.object(HOPRNode, "gather_peers", return_value=None)
+    mocker.patch.object(HOPRNode, "ping_peers", return_value=None)
+    mocker.patch.object(HOPRNode, "plot", return_value=None)
 
-    return HoprNode("some_url", "some_api_key")
+    return HOPRNode("some_url", "some_api_key")
 
 
 @pytest.mark.asyncio

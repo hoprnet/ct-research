@@ -10,6 +10,7 @@ from viz import network_viz
 
 log = logging.getLogger(__name__)
 
+#TODO: change vizualisation folder to log
 
 class HOPRNode:
     """
