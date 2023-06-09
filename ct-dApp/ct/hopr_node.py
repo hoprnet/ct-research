@@ -4,10 +4,11 @@ import random
 import traceback
 import numpy as np
 
-from hoprd import wrapper
 from pathlib import Path
 
 from viz import network_viz
+
+from .throttle_api import ThrottledHoprdAPI
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class HOPRNode:
         self.peer_id = None
 
         # access the functionality of the hoprd python api
-        self.hoprd_api = wrapper.HoprdAPI(api_url=url, api_token=key)
+        self.hoprd_api = ThrottledHoprdAPI(url=url, token=key)
 
         # a set to keep the peers of this node, see:
         self.peers = set[str]()
