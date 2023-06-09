@@ -16,7 +16,7 @@ async def test_connect_successful(mocker):
     mock_response = mocker.Mock()
     mock_response.json.return_value = expected_response_body
 
-    mocker.patch.object(node.hoprd_api, "get_address", return_value=mock_response)
+    mocker.patch.object(node.api, "get_address", return_value=mock_response)
 
     node.started = True
     task = asyncio.create_task(node.connect())
@@ -59,7 +59,7 @@ async def test_connect_exception(mocker, event_loop, get_mock_node_for_connect):
     """
     node = get_mock_node_for_connect
     assert node.peer_id is None
-    mocker.patch.object(node.hoprd_api, "get_address", side_effect=Exception())
+    mocker.patch.object(node.api, "get_address", side_effect=Exception())
 
     event_loop.call_later(1, lambda: node.stop())
     await node.start()
@@ -75,7 +75,7 @@ async def test_connect_exception_logging(
     during the connect method.
     """
     node = get_mock_node_for_connect
-    mocker.patch.object(node.hoprd_api, "get_address", side_effect=Exception())
+    mocker.patch.object(node.api, "get_address", side_effect=Exception())
 
     event_loop.call_later(1, lambda: node.stop())
     await node.start()
@@ -184,7 +184,7 @@ async def test_gather_peers_retrieves_peers_from_response():
             assert quality == 1
             return MockedResponse()
 
-    node.hoprd_api = MockedHoprdAPI()
+    node.api = MockedHoprdAPI()
 
     node.started = True
     task = asyncio.create_task(node.gather_peers())

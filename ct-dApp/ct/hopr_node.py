@@ -26,7 +26,7 @@ class HOPRNode:
         self.peer_id = None
 
         # access the functionality of the hoprd python api
-        self.hoprd_api = ThrottledHoprdAPI(url=url, token=key)
+        self.api = ThrottledHoprdAPI(url=url, token=key)
 
         # a set to keep the peers of this node, see:
         self.peers = set[str]()
@@ -53,10 +53,10 @@ class HOPRNode:
         log.debug("Connecting to node")
         while self.started:
             try:
-                response = await self.hoprd_api.get_address()
+                response = await self.api.get_address()
             except Exception as e:
                 self.peer_id = None
-                log.error(f"Could not connect to {self.hoprd_api._api_url}: {e}")
+                log.error(f"Could not connect to {self.api.url}: {e}")
                 log.error(traceback.format_exc())
             else:
                 json_body = response.json()
@@ -102,10 +102,10 @@ class HOPRNode:
                 continue
 
             try:
-                response = await self.hoprd_api.peers(quality=connection_quality)
+                response = await self.api.peers(quality=connection_quality)
 
             except Exception as e:
-                log.error(f"Could not get peers from {self.hoprd_api._api_url}: {e}")
+                log.error(f"Could not get peers from {self.api.url}: {e}")
                 log.error(traceback.format_exc())
             else:
                 json_body = response.json()
@@ -178,12 +178,12 @@ class HOPRNode:
                 latency = np.nan  # Initialize with default value
                 try:
                     log.debug(f"Pinging peer {peer_id}")
-                    response = await self.hoprd_api.ping(peer_id=peer_id)
+                    response = await self.api.ping(peer_id=peer_id)
 
                 except Exception as e:
                     latency = np.nan  # no answer
                     log.error(
-                        f"Could not ping using {self.hoprd_api._api_url}: {e}"
+                        f"Could not ping using {self.api.url}: {e}"
                     )
                     log.error(traceback.format_exc())
                 else:
