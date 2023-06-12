@@ -2,7 +2,6 @@ import asyncio
 import logging
 import random
 import traceback
-import numpy as np
 
 from pathlib import Path
 
@@ -32,7 +31,7 @@ class HOPRNode:
         self.peers = set[str]()
 
         # a dictionary to keep the self.max_lat_count latency measures {peer: np.array([latency, latency, ...])}
-        self.latency = dict[str, np.ndarray]()
+        self.latency = dict[str, list]()
         self.max_lat_count = max_lat_count
 
         # a folder to store the logs
@@ -40,7 +39,7 @@ class HOPRNode:
         self.log_folder.mkdir(parents=True, exist_ok=True)
 
         # a set to keep track of the running tasks
-        self.tasks = set()
+        self.tasks = set[asyncio.Task]()
         self.started = False
         log.debug("Created HOPR node instance")
 
@@ -91,7 +90,6 @@ class HOPRNode:
         Long-running task that continously updates the set of peers connected to this node.
         :returns: nothing; the set of connected peerIds is kept in self.peers.
         """
-        status = "connected"
         connection_quality = 1
 
         while self.started:
@@ -101,26 +99,40 @@ class HOPRNode:
                 await asyncio.sleep(1)
                 continue
 
-            try:
-                response = await self.api.peers(quality=connection_quality)
+            found_peers = await self.api.peers(param="peerId", quality=connection_quality)
 
-            except Exception as e:
-                log.error(f"Could not get peers from {self.api.url}: {e}")
-                log.error(traceback.format_exc())
-            else:
-                json_body = response.json()
-                if status not in json_body:
+            if found_peers is None:
+                continue
+
+            for peer in found_peers:
+                if peer in self.peers:
                     continue
+                
+                self.peers.add(peer)
+                log.info(f"Found new peer {peer}")
+
+            await asyncio.sleep(5)
+
+            # try:
+            #     response = await self.api.peers(quality=connection_quality)
+
+            # except Exception as e:
+            #     log.error(f"Could not get peers from {self.api.url}: {e}")
+            #     log.error(traceback.format_exc())
+            # else:
+            #     json_body = response.json()
+            #     if status not in json_body:
+            #         continue
             
-                for peer in json_body[status]:
-                    peer_id = peer["peerId"]
-                    if peer_id in self.peers:
-                        continue
+            #     for peer in json_body[status]:
+            #         peer_id = peer["peerId"]
+            #         if peer_id in self.peers:
+            #             continue
 
-                    self.peers.add(peer_id)
-                    log.info(f"Found new peer {peer_id}")
+            #         self.peers.add(peer_id)
+            #         log.info(f"Found new peer {peer_id}")
 
-                await asyncio.sleep(5)
+            #     await asyncio.sleep(5)
 
     async def plot(self):
         """
@@ -155,8 +167,6 @@ class HOPRNode:
         where each peer ID is associated with a NumPy array of latency values.
         Only the most recent `self.max_lat_count` latency measures are stored
         for each peer.
-
-        :returns: nothing
         """
 
         while self.started:
@@ -168,22 +178,17 @@ class HOPRNode:
 
             # randomly sample the peer set to converge towards
             # a uniform distribution of pings among peers
-            sampled_peers = random.sample(sorted(self.peers), len(self.peers)) 
-            # TODO; Necessary ?
+            sampled_peers = random.sample(sorted(self.peers), len(self.peers))
             
             # create an array to keep the latency measures of new peers
             for peer_id in sampled_peers:
                 if peer_id not in self.latency.keys():
-                    self.latency[peer_id] = np.array([])
-            # TODO: necessary ?
-            
+                    self.latency[peer_id] = []
+
             for peer_id in sampled_peers:
+                latency = await self.api.ping(peer_id, "latency")
 
-                measured_latency = await self.api.ping(peer_id)
-                latency = measured_latency if measured_latency is not None else np.nan
-
-                # add the latency measure to the array of the peer
-                self.latency[peer_id] = np.append(self.latency[peer_id], latency)
+                self.latency[peer_id].append(latency)
                 self.latency[peer_id] = self.latency[peer_id][-self.max_lat_count:]
                 
                 # throttle the API requests towards the node

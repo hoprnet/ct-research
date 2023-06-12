@@ -1,6 +1,5 @@
 import asyncio
 import pytest
-import numpy as np
 from ct import HOPRNode
 
 
@@ -169,20 +168,10 @@ async def test_gather_peers_retrieves_peers_from_response():
     node = HOPRNode("some_url", "some_api_key")
     node.peer_id = "some_peer_id"
 
-    # Mock the HOPRd API to return a JSON response with two peers
-    class MockedResponse:
-        def json(self):
-            return {
-                "connected": [
-                    {"peerId": "some_other_peer_id_1"},
-                    {"peerId": "some_other_peer_id_2"},
-                ]
-            }
-
     class MockedHoprdAPI:
-        async def peers(self, quality):
+        async def peers(self, param, quality):
             assert quality == 1
-            return MockedResponse()
+            return ["some_other_peer_id_1", "some_other_peer_id_2"]
 
     node.api = MockedHoprdAPI()
 
@@ -213,7 +202,7 @@ async def test_ping_peers_adds_new_peer_to_latency():
     node = HOPRNode("some_url", "some_api_key")
     node.peer_id = "some_peer_id"
     node.peers = {"some_other_peer_id_1", "some_other_peer_id_2"}
-    node.latency = {"some_other_peer_id_1": np.array([10, 15])}
+    node.latency = {"some_other_peer_id_1": [10, 15]}
 
     node.started = True
     task = asyncio.create_task(node.ping_peers())

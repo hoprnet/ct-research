@@ -92,7 +92,7 @@ class ThrottledHoprdAPI:
         method = self.wrapper.redeem_tickets
         return await self._safe_call(method)
     
-    async def ping(self, peer_id):
+    async def ping(self, peer_id, metric="latency"):
         method = self.wrapper.ping
         args = [peer_id]
 
@@ -110,17 +110,31 @@ class ThrottledHoprdAPI:
                 log.error(f"Peer {peer_id} not reachable using {self.api.url}")
                 return None
             
-            if "latency" not in json_body:
-                log.error(f"No latency measure from peer {peer_id}")
+            if metric not in json_body:
+                log.error(f"No {metric} measure from peer {peer_id}")
                 return None
             
-            log.info(f"Measured {json_body['latency']}ms latency from peer {peer_id}")
-            return json_body["latency"]
+            log.info(f"Measured {json_body[metric]}({metric}) from peer {peer_id}")
+            return json_body[metric]
    
-    async def peers(self, **kwargs):
+    async def peers(self, param="peerId", **kwargs):
         method = self.wrapper.peers
+        status = "connected"
 
-        return await self._safe_call(method, **kwargs)
+        try:
+            log.debug("Getting peers")
+            response = await self._safe_call(method, **kwargs)
+        except Exception as e:
+            log.error(f"Could not get peers from {self.api.url}: {e}")
+            return None
+        else:
+            json_body = response.json()
+
+            if status not in json_body:
+                return None
+            
+            return [peer[param] for peer in json_body[status]]
+ 
     
     async def get_address(self):
         method = self.wrapper.get_address
