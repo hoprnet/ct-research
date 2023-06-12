@@ -158,7 +158,6 @@ class HOPRNode:
 
         :returns: nothing
         """
-        ping_latency = "latency"
 
         while self.started:
             # check that we are still connected, avoiding full CPU usage
@@ -169,50 +168,29 @@ class HOPRNode:
 
             # randomly sample the peer set to converge towards
             # a uniform distribution of pings among peers
-            sampled_peers = random.sample(sorted(self.peers), len(self.peers))
+            sampled_peers = random.sample(sorted(self.peers), len(self.peers)) 
+            # TODO; Necessary ?
+            
+            # create an array to keep the latency measures of new peers
             for peer_id in sampled_peers:
-                # create an array to keep the latency measures of new peers
                 if peer_id not in self.latency.keys():
                     self.latency[peer_id] = np.array([])
+            # TODO: necessary ?
+            
+            for peer_id in sampled_peers:
 
-                latency = np.nan  # Initialize with default value
-                try:
-                    log.debug(f"Pinging peer {peer_id}")
-                    response = await self.api.ping(peer_id=peer_id)
+                measured_latency = await self.api.ping(peer_id)
+                latency = measured_latency if measured_latency is not None else np.nan
 
-                except Exception as e:
-                    latency = np.nan  # no answer
-                    log.error(
-                        f"Could not ping using {self.api.url}: {e}"
-                    )
-                    log.error(traceback.format_exc())
+                # add the latency measure to the array of the peer
+                self.latency[peer_id] = np.append(self.latency[peer_id], latency)
+                self.latency[peer_id] = self.latency[peer_id][-self.max_lat_count:]
+                
+                # throttle the API requests towards the node
+                if not self.connected:
+                    break
                 else:
-                    json_body = response.json()
-
-                    if ping_latency in json_body:
-                        latency = int(json_body[ping_latency])  # latency in body
-                        log.info(
-                            f"Got latency measure ({latency} ms) from peer {peer_id}"
-                        )
-                    else:
-                        latency = np.nan  # latency NOT in body
-                        log.warning(f"No answer from peer {peer_id}")
-
-                finally:
-                    self.latency[peer_id] = np.append(self.latency[peer_id], latency)
-
-                    # keep the last self.max_lat_count latency measures
-                    if len(self.latency[peer_id]) > self.max_lat_count:
-                        self.latency[peer_id] = self.latency[peer_id][
-                            -self.max_lat_count :
-                        ]
-
-                    # check that we are still connected
-                    if not self.connected:
-                        break
-                    else:
-                        # throttle the API requests towards the node
-                        await asyncio.sleep(5)
+                    await asyncio.sleep(5)
 
     async def start(self):
         """

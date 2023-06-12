@@ -1,5 +1,10 @@
+import traceback
 from hoprd import wrapper
-import httpx
+from typing import Callable
+
+import logging
+
+log = logging.getLogger(__name__)
 
 class ThrottledHoprdAPI:
     def __init__(self, url: str, token: str):
@@ -16,15 +21,12 @@ class ThrottledHoprdAPI:
     def token(self) -> str:
         return self._token
     
-    async def _safe_call(self, func, *args, **kwargs):
+    async def _safe_call(self, func: Callable, *args, **kwargs):
         try:
             response = await func(*args, **kwargs)
             response.raise_for_status()
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 400:
-                raise ValueError(e.response.json()['error'])
-            else:
-                raise e
+        except Exception as e:
+            raise e
         else:
             return response
             
@@ -55,7 +57,7 @@ class ThrottledHoprdAPI:
         method = self.wrapper.remove_alias
         args = [alias]
 
-        return await self._safe_call(method, *args)
+        return await self._safe_call(method, *args).json()
     
     async def get_settings(self):
         method = self.wrapper.get_settings
@@ -94,8 +96,27 @@ class ThrottledHoprdAPI:
         method = self.wrapper.ping
         args = [peer_id]
 
-        return await self._safe_call(method, *args)
-    
+        try:
+            log.debug(f"Pinging peer {peer_id}")
+            response = await self._safe_call(method, *args)
+        except Exception as e:
+            log.error(f"Error pinging peer {peer_id}: {e}")
+            log.error(traceback.format_exc())
+            return None
+        else:
+            json_body = response.json()
+
+            if json_body is None:
+                log.error(f"Peer {peer_id} not reachable using {self.api.url}")
+                return None
+            
+            if "latency" not in json_body:
+                log.error(f"No latency measure from peer {peer_id}")
+                return None
+            
+            log.info(f"Measured {json_body['latency']}ms latency from peer {peer_id}")
+            return json_body["latency"]
+   
     async def peers(self, **kwargs):
         method = self.wrapper.peers
 
