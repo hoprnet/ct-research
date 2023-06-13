@@ -2,7 +2,9 @@ name: Main
 
 on:
   push:
+    branches: [main]
   pull_request:
+    types: [opened, synchronize]
 
 concurrency:
   # find the branch name for 'pull_request' or on 'push' events
