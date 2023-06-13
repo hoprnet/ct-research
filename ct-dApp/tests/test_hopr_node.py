@@ -10,12 +10,10 @@ async def test_connect_successful(mocker):
     peer_id attribute value.
     """
     node = HOPRNode("some_url", "some_api_key")
-    expected_response_body = {"hopr": "some_peer_id"}
+    expected_response = "some_peer_id"
 
-    mock_response = mocker.Mock()
-    mock_response.json.return_value = expected_response_body
-
-    mocker.patch.object(node.api, "get_address", return_value=mock_response)
+    mocker.Mock()
+    mocker.patch.object(node.api, "get_address", return_value=expected_response)
 
     node.started = True
     task = asyncio.create_task(node.connect())
@@ -60,7 +58,7 @@ async def test_connect_exception(mocker, event_loop, get_mock_node_for_connect):
     assert node.peer_id is None
     mocker.patch.object(node.api, "get_address", side_effect=Exception())
 
-    event_loop.call_later(1, lambda: node.stop())
+    event_loop.call_later(2, lambda: node.stop())
     await node.start()
     assert node.peer_id is None
 
@@ -76,7 +74,7 @@ async def test_connect_exception_logging(
     node = get_mock_node_for_connect
     mocker.patch.object(node.api, "get_address", side_effect=Exception())
 
-    event_loop.call_later(1, lambda: node.stop())
+    event_loop.call_later(2, lambda: node.stop())
     await node.start()
     assert "Could not connect to" in caplog.text
 
@@ -97,10 +95,10 @@ async def test_connected_property(mocker, event_loop, get_mock_node_for_connect)
             return {"hopr": "some_other_peer_id_1"}
 
     class MockedHoprdAPI:
-        async def get_address(self):
-            return MockedResponse()
+        async def get_address(self, address: str):
+            return "some_other_peer_id_1"
 
-    node.hoprd_api = MockedHoprdAPI()
+    node.api = MockedHoprdAPI()
 
     # helper function to assert from the event loop
     def assert_node_connected():
@@ -127,6 +125,9 @@ def test_disconnect_method():
 def test_adding_peers_while_pinging() -> None:
     """
     Changing the 'peers' set while pinging should not break.
+    NOTE: Incoherence here with the test dealing with Exception: here nothing should 
+    break even if the peer accessed via the API is not existing (should raise), while 
+    in the other tests exception are raised and the node is stopped.
     """
 
     class MockHoprNode(HOPRNode):
@@ -137,7 +138,7 @@ def test_adding_peers_while_pinging() -> None:
             super().__init__(url, key)
             self.started = True
 
-        async def connect(self):
+        async def connect(self, address: str = "hopr"):
             self.peer_id = "testing_peer_id"
             while self.started:
                 await asyncio.sleep(5)
@@ -148,7 +149,7 @@ def test_adding_peers_while_pinging() -> None:
             """
             while self.started:
                 await asyncio.sleep(1)
-                peer = "peer_{}".format(len(self.peers))
+                peer = f"peer_{len(self.peers)}"
                 self.peers.add(peer)
 
     node = MockHoprNode("some_url", "some_key")
