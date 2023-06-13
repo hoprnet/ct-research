@@ -7,20 +7,14 @@ import click
 
 from .hopr_node import HOPRNode
 
-def _getlogger(folder: str, filename: str) -> logging.Logger:
+def _getlogger() -> logging.Logger:
     """
     Generate a logger instance based on folder and name.
-    :param folder: folder to store the log file
-    :param filename: name of the log file (without extension)
     :returns: a tuple with the logger instance and the name of the log file
     """
         
     # configure and get logger handler
-    logpath = Path(folder).joinpath(f"{filename}.log")
-    logpath.parent.mkdir(parents=True, exist_ok=True)
-    format = "%(levelname)s:%(asctime)s:%(message)s"
-
-    logging.basicConfig(filename=logpath, level=logging.INFO, format=format)
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(asctime)s:%(message)s")
     logger = logging.getLogger(__name__)
 
     return logger

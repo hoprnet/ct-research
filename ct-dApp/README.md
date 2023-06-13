@@ -108,6 +108,7 @@ To execute the module called "ct" you need to:
 ```bash
 pip install -r requirements.txt
 ```
+
 3. Adapt the values in `run.sh` file:
 ```bash
 #!/bin/sh
@@ -117,12 +118,12 @@ export HOPR_NODE_1_HTTP_URL="http://${HOPR_NODE_1}:13305"
 export HOPR_NODE_1_WS_URL="ws://${HOPR_NODE_1}:13305"
 export HOPR_NODE_1_API_KEY='%th1s-IS-a-S3CR3T-ap1-PUSHING-b1ts-TO-you%'
 
-python -m ct --logf <log-folder> --logn log-filename --latcount <max_latency_count>
+python -m ct --plotf <plot-folder> --latcount <max_latency_count>
 ```
 
 #### Comments:
 - ```python -m ct --help``` provide a descrition of each parameter.
-- The ```log-folder``` is the place where all text logs and images are generated. It has a default value that is ```.```. It is highly recommanded to specify a different folder. At runtime, the specified folder will be created if necessary.
+- The ```plot-folder``` is the place where all the generated plots are stored. It has a default value that is ```.```. It is highly recommended to specify a different folder. At runtime, the specified folder will be created if necessary.
 
 ### Configuration of Environment Variables
 This program requires two environment variables to be set. If either of these environment variables is not set, the program will exit with an error.
@@ -142,7 +143,7 @@ To execute the program, run the following command:
 The program will execute the ct-dApp.
 
 ### Logging
-This program logs to the file ct-dApp.log. The log level is set to INFO by default.
+This program logs to STDOUT. The log level is set to INFO by default.
 
 ## Contact
 

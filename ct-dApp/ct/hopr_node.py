@@ -16,7 +16,7 @@ class HOPRNode:
     Implements the functionality of a HOPR node through the hoprd-api-python and WebSocket
     """
 
-    def __init__(self, url: str, key: str, max_lat_count: int = 100, log_folder: str = "."):
+    def __init__(self, url: str, key: str, max_lat_count: int = 100, plot_folder: str = "."):
         """
         :returns: a new instance of a HOPR node using 'url' and API 'key'
         """
@@ -34,9 +34,9 @@ class HOPRNode:
         self.latency = dict[str, np.ndarray]()
         self.max_lat_count = max_lat_count
 
-        # a folder to store the logs
-        self.log_folder = Path(log_folder)
-        self.log_folder.mkdir(parents=True, exist_ok=True)
+        #a folder to store the plots
+        self.plot_folder = Path(plot_folder)
+        self.plot_folder.mkdir(parents=True, exist_ok=True)
 
         # a set to keep track of the running tasks
         self.tasks = set()
@@ -135,7 +135,7 @@ class HOPRNode:
                 continue
         
             i += 1
-            file_name = self.log_folder.joinpath(f"net_viz-{i:04d}")
+            file_name = self.plot_folder.joinpath(f"net_viz-{i:04d}")
             log.info(f"Creating visualization [ {file_name} ]")
             try:
                 await asyncio.to_thread(

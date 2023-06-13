@@ -11,15 +11,14 @@ from .utils import _getenvvar, _getlogger, stop
 
 
 @click.command()
-@click.option("--logf", "logfolder", default=".", help="Folder to store the log file")
-@click.option("--logn", "logname", default="ct-dApp", help="Name of the log file")
+@click.option("--plotf", "plotfolder", default=".", help="Folder to store the plots")
 @click.option("--latcount", "latency_count", default=100, help="Nb of latency measures to store")
-def main(logfolder: str, logname: str, latency_count: int):
+def main(plotfolder: str, latency_count: int):
     # logger and state variables
-    log = _getlogger(logfolder, logname)
+    log = _getlogger()
     exit_code = ExitCode.OK
 
-    click.echo(f">>> Program started. Open [ {logfolder} ] for logs.")
+    click.echo(f">>> Program started.")
     click.echo(">>> Press <ctrl+c> to end.")
 
     # read parameters from environment variables
@@ -31,7 +30,7 @@ def main(logfolder: str, logname: str, latency_count: int):
         sys.exit(ExitCode.ERROR_BAD_ARGUMENTS)
 
     # create the HOPR node instance
-    node = HOPRNode(API_host, API_key, latency_count, logfolder)
+    node = HOPRNode(API_host, API_key, latency_count, plotfolder)
 
     # create the event loop and register the signal handlers
     loop = asyncio.new_event_loop()
