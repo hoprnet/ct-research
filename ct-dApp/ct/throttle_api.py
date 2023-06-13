@@ -6,7 +6,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-class ThrottledHoprdAPI:
+class HoprdAPIHelper:
     def __init__(self, url: str, token: str):
         self.wrapper = wrapper.HoprdAPI(api_url=url, api_token=token)
 
@@ -117,7 +117,7 @@ class ThrottledHoprdAPI:
             log.info(f"Measured {json_body[metric]}({metric}) from peer {peer_id}")
             return json_body[metric]
    
-    async def peers(self, param="peerId", **kwargs):
+    async def peers(self, param: str="peerId", **kwargs):
         method = self.wrapper.peers
         status = "connected"
 
@@ -126,20 +126,34 @@ class ThrottledHoprdAPI:
             response = await self._safe_call(method, **kwargs)
         except Exception as e:
             log.error(f"Could not get peers from {self.api.url}: {e}")
-            return None
+            log.error(traceback.format_exc())
+            raise e
         else:
             json_body = response.json()
 
             if status not in json_body:
+                log.error(f"No {status} from {self.api.url}")
                 return None
             
             return [peer[param] for peer in json_body[status]]
  
     
-    async def get_address(self):
+    async def get_address(self, address: str):
         method = self.wrapper.get_address
 
-        return await self._safe_call(method)
+        try:
+            log.debug("Getting address")
+            response = await self._safe_call(method)
+        except Exception as e:
+            raise e
+        else:
+            json_body = response.json()
+
+            if address not in json_body:
+                log.error(f"No {address} from {self.api.url}")
+                return None
+            
+            return json_body.get(address, None)
     
     async def send_message(self, destination, message, hops):
         method = self.wrapper.send_message
