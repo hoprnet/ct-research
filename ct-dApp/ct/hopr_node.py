@@ -113,27 +113,6 @@ class HOPRNode:
 
             await asyncio.sleep(5)
 
-            # try:
-            #     response = await self.api.peers(quality=connection_quality)
-
-            # except Exception as e:
-            #     log.error(f"Could not get peers from {self.api.url}: {e}")
-            #     log.error(traceback.format_exc())
-            # else:
-            #     json_body = response.json()
-            #     if status not in json_body:
-            #         continue
-            
-            #     for peer in json_body[status]:
-            #         peer_id = peer["peerId"]
-            #         if peer_id in self.peers:
-            #             continue
-
-            #         self.peers.add(peer_id)
-            #         log.info(f"Found new peer {peer_id}")
-
-            #     await asyncio.sleep(5)
-
     async def plot(self):
         """
         Long-running task that regularly plots the network and latencies amont its nodes.
@@ -182,9 +161,10 @@ class HOPRNode:
             
             # create an array to keep the latency measures of new peers
             for peer_id in sampled_peers:
-                if peer_id not in self.latency.keys():
-                    self.latency[peer_id] = []
-
+                if peer_id in self.latency:
+                    continue
+                self.latency[peer_id] = []
+            
             for peer_id in sampled_peers:
                 latency = await self.api.ping(peer_id, "latency")
 
@@ -194,15 +174,15 @@ class HOPRNode:
                 # throttle the API requests towards the node
                 if not self.connected:
                     break
-                else:
-                    await asyncio.sleep(5)
+
+                await asyncio.sleep(1)
 
     async def start(self):
         """
         Starts the tasks of this node
         """
         log.info("Starting node")
-        if len(self.tasks) != 0:
+        if not self.tasks:
             return
     
         self.started = True
@@ -224,5 +204,5 @@ class HOPRNode:
 
         for t in self.tasks:
             t.add_done_callback(self.tasks.discard)
-
+        
         asyncio.gather(*self.tasks)
