@@ -7,3 +7,9 @@ websocket_client.log
 env/
 .pytest_cache/
 logs/
+.vscode
+.pytest_cache
+.ruff_cache
+tmp
+http_req
+venv
