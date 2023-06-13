@@ -18,7 +18,7 @@ def main(plotfolder: str, latency_count: int):
     log = _getlogger()
     exit_code = ExitCode.OK
 
-    click.echo(f">>> Program started.")
+    click.echo(">>> Program started.")
     click.echo(">>> Press <ctrl+c> to end.")
 
     # read parameters from environment variables
