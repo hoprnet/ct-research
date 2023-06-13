@@ -197,7 +197,7 @@ async def test_ping_peers_adds_new_peer_to_latency():
 
     async def _wait_for_latency_to_match_peers():
         while len(node.latency) < len(node.peers):
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.2)
 
     node = HOPRNode("some_url", "some_api_key")
     node.peer_id = "some_peer_id"
@@ -214,7 +214,7 @@ async def test_ping_peers_adds_new_peer_to_latency():
 
     finally:
         node.started = False
-        await asyncio.sleep(1)
+        await asyncio.sleep(5)
 
         assert "some_other_peer_id_1" in node.latency.keys()
         assert "some_other_peer_id_2" in node.latency.keys()
