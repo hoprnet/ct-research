@@ -33,7 +33,7 @@ def network_viz(graph: dict[str, dict[str, np.ndarray]], file_name: str):
             if len(data) == 0:
                 median = np.nan
             else:
-                median = np.nanmedian(data)
+                median = np.median([d for d in data if d is not None])
             edges.append((node, connection, {"latency": data, "median": median}))
 
     # Create a directed graph
