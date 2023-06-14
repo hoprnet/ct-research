@@ -16,16 +16,17 @@ def network_viz(graph: dict[str, dict[str, np.ndarray]], file_name: str):
     """
     Plots the received network graph, e.g.:
 
-    graph = {'api_host': {'peerid_1': np.array([50, 75, 100, 50, 75]),
-                        'peerid_2': np.array([999, 900]),
-                        'peerid_3': np.array([500, 500, 300, 400]),
-                        'peerid_4': np.array([]),
-                        'peerid_5': np.array([300, 400]),
-                        'peerid_6': np.array([600])}}
+    graph = {'api_host': {'peerid_1': [50, 75, 100, 50, 75],
+                        'peerid_2': [999, 900],
+                        'peerid_3': [500, 500, 300, 400],
+                        'peerid_4': [],
+                        'peerid_5': [300, 400],
+                        'peerid_6': [600]}}
 
     Optionally generated PNG called 'filename'.
     """
     edges = []
+    max_val = 200.0
 
     # Extract the edge tuples and the edge attributes from the graph dictionary
     for node, connections in graph.items():
@@ -44,8 +45,9 @@ def network_viz(graph: dict[str, dict[str, np.ndarray]], file_name: str):
     edge_colors = []
     for u, v, data in G.edges.data():
         median = data["median"]
+
         # Use a color map to map the median value to a color
-        color = plt.cm.RdYlGn_r(median / 1000.0)
+        color = plt.cm.RdYlGn_r(median / max_val)
         edge_colors.append(color)
     nx.set_edge_attributes(G, edge_colors, "color")
 
@@ -64,12 +66,12 @@ def network_viz(graph: dict[str, dict[str, np.ndarray]], file_name: str):
 
     # Create a ScalarMappable to map the edge colors to a col
     sm = cm.ScalarMappable(
-        cmap=plt.cm.RdYlGn_r, norm=colors.Normalize(vmin=0, vmax=1000)
+        cmap=plt.cm.RdYlGn_r, norm=colors.Normalize(vmin=0, vmax=max_val)
     )
     sm.set_array([])
 
     # Add a colorbar to the plot
-    cbar = plt.colorbar(sm, ticks=np.linspace(0, 1000, 11))
+    cbar = plt.colorbar(sm, ticks=np.linspace(0, max_val, 11))
     cbar.set_label("Median Latency", rotation=270, labelpad=10)
 
     # Add Legend
