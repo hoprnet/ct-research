@@ -111,10 +111,10 @@ class HoprdAPIHelper:
                 return None
             
             if metric not in json_body:
-                log.error(f"No {metric} measure from peer {peer_id}")
+                log.error(f"No {metric} measure from peer {peer_id[-5:]}")
                 return None
             
-            log.info(f"Measured {json_body[metric]}({metric}) from peer {peer_id}")
+            log.info(f"Measured {json_body[metric]:3d}({metric}) from peer {peer_id[-5:]}")
             return json_body[metric]
    
     async def peers(self, param: str="peerId", **kwargs):
