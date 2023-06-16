@@ -38,23 +38,48 @@ class HoprdAPIHelper:
             return response
             
     async def withdraw(self, currency, amount, address):
+        # TODO: check return value
         method = self.wrapper.withdraw
         args = [currency, amount, address]
 
-        return await self._safe_call(method, *args)
+        try:
+            log.debug("Withdrawing")
+            response = await self._safe_call(method, *args)
+        except httpx.HTTPError as e:
+            log.error(f"Error withdrawing: {e}")
+            return None
+        else:
+            return response.json()
     
     async def balance(self):
-         method = self.wrapper.balance
+        # TODO: check return value
+        method = self.wrapper.balance
 
-         return await self._safe_call(method)
+        try:
+            log.debug("Getting balance")
+            response = await self._safe_call(method)
+        except httpx.HTTPError as e:
+            log.error(f"Error getting balance: {e}")
+            return None
+        else:
+            return response.json()
     
     async def set_alias(self, peer_id, alias):
+        # TODO: check return value
         method = self.wrapper.set_alias
         args = [peer_id, alias]
-
-        return await self._safe_call(method, *args)
+        
+        try:
+            log.debug("Setting alias")
+            response = await self._safe_call(method, *args)
+        except httpx.HTTPError as e:
+            log.error(f"Error setting alias: {e}")
+            return None
+        else:
+            return response.json()
     
     async def get_alias(self, alias):
+        # TODO: check return value
         method = self.wrapper.get_alias
         args = [alias]
 
@@ -68,6 +93,7 @@ class HoprdAPIHelper:
             return response.json()
             
     async def remove_alias(self, alias):
+        # TODO: check return value
         method = self.wrapper.remove_alias
         args = [alias]
 
@@ -83,6 +109,7 @@ class HoprdAPIHelper:
 
     
     async def get_settings(self):
+        # TODO: check return value
         method = self.wrapper.get_settings
 
         try:
@@ -96,6 +123,7 @@ class HoprdAPIHelper:
 
     
     async def get_all_channels(self, include_closed: bool):
+        # TODO: check return value
         method = self.wrapper.get_all_channels
         args = [include_closed]
 
@@ -110,6 +138,7 @@ class HoprdAPIHelper:
 
     
     async def get_channel_topology(self, full_topology: bool):
+        # TODO: check return value
         method = self.wrapper.get_channel_topology
         args = [full_topology]
 
@@ -123,6 +152,7 @@ class HoprdAPIHelper:
             return response.json()
     
     async def get_tickets_in_channel(self, include_closed: bool):
+        # TODO: check return value
         method = self.wrapper.get_tickets_in_channel
         args = [include_closed]
 
@@ -135,45 +165,55 @@ class HoprdAPIHelper:
         else:
             return response.json()
     
-    async def redeem_tickets_in_channel(self, peer_id):
+    async def redeem_tickets_in_channel(self, id: str):
+        # TODO: check return value
         method = self.wrapper.redeem_tickets_in_channel
-        args = [peer_id]
+        args = [id]
 
         try:
-            log.debug(f"Redeeming tickets in channel with peer {peer_id}")
+            log.debug(f"Redeeming tickets in channel with peer {id}")
             response = await self._safe_call(method, *args)
         except httpx.HTTPError as e:
-            log.error(f"Error redeeming tickets in channel with peer {peer_id[-5:]}: {e}")
+            log.error(f"Error redeeming tickets in channel with peer {id[-5:]}: {e}")
             return None
         else:
             return response.json()
     
     async def redeem_tickets(self):
+        # TODO: check return value
         method = self.wrapper.redeem_tickets
-        return await self._safe_call(method)
+        
+        try:
+            log.debug("Redeeming tickets")
+            response = await self._safe_call(method)
+        except httpx.HTTPError as e:
+            log.error(f"Error redeeming tickets: {e}")
+            return None
+        else:
+            return response.json()
     
-    async def ping(self, peer_id, metric="latency"):
+    async def ping(self, id, metric="latency"):
         method = self.wrapper.ping
-        args = [peer_id]
+        args = [id]
 
         try:
-            log.debug(f"Pinging peer {peer_id[-5:]}")
+            log.debug(f"Pinging peer {id[-5:]}")
             response = await self._safe_call(method, *args)
         except httpx.HTTPError as e:
-            log.error(f"Error pinging peer {peer_id[-5:]}: {e}")
+            log.error(f"Error pinging peer {id[-5:]}: {e}")
             return None
         else:
             json_body = response.json()
 
             if json_body is None:
-                log.error(f"Peer {peer_id[-5:]} not reachable using {self.api.url}")
+                log.error(f"Peer {id[-5:]} not reachable using {self.api.url}")
                 return None
             
             if metric not in json_body:
-                log.error(f"No {metric} measure from peer {peer_id[-5:]}")
+                log.error(f"No {metric} measure from peer {id[-5:]}")
                 return None
             
-            log.info(f"Measured {json_body[metric]:3d}({metric}) from peer {peer_id[-5:]}")
+            log.info(f"Measured {json_body[metric]:3d}({metric}) from peer {id[-5:]}")
             return json_body[metric]
    
     async def peers(self, param: str="peerId", **kwargs):
@@ -185,7 +225,7 @@ class HoprdAPIHelper:
             response = await self._safe_call(method, **kwargs)
         except httpx.HTTPError as e:
             log.error(f"Could not get peers from {self.api.url}: {e}")
-            raise e
+            return None
         else:
             json_body = response.json()
 
@@ -204,7 +244,7 @@ class HoprdAPIHelper:
             response = await self._safe_call(method)
         except httpx.HTTPError as e:
             log.error(f"Could not connect to {self.api.url}: {e}")
-            raise e
+            return None
         else:
             json_body = response.json()
 
@@ -215,6 +255,8 @@ class HoprdAPIHelper:
             return json_body.get(address, None)
     
     async def send_message(self, destination, message, hops):
+        # TODO: check return value
+
         method = self.wrapper.send_message
         args = [destination, message, hops]
         
