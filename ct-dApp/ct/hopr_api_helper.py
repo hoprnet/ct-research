@@ -28,6 +28,7 @@ class HoprdAPIHelper:
         """
         Wrapper around each API call to handle exceptions
         """
+        # TODO: check exceptions
         try:
             response = await func(*args, **kwargs)
             response.raise_for_status()
@@ -37,7 +38,7 @@ class HoprdAPIHelper:
         else:
             return response
             
-    async def withdraw(self, currency, amount, address):
+    async def withdraw(self, currency:str, amount:str, address:str):
         # TODO: check return value
         method = self.wrapper.withdraw
         args = [currency, amount, address]
@@ -64,10 +65,10 @@ class HoprdAPIHelper:
         else:
             return response.json()
     
-    async def set_alias(self, peer_id, alias):
+    async def set_alias(self, id:str, alias:str):
         # TODO: check return value
         method = self.wrapper.set_alias
-        args = [peer_id, alias]
+        args = [id, alias]
         
         try:
             log.debug("Setting alias")
@@ -78,7 +79,7 @@ class HoprdAPIHelper:
         else:
             return response.json()
     
-    async def get_alias(self, alias):
+    async def get_alias(self, alias:str):
         # TODO: check return value
         method = self.wrapper.get_alias
         args = [alias]
@@ -92,7 +93,7 @@ class HoprdAPIHelper:
         else:
             return response.json()
             
-    async def remove_alias(self, alias):
+    async def remove_alias(self, alias:str):
         # TODO: check return value
         method = self.wrapper.remove_alias
         args = [alias]
@@ -192,7 +193,7 @@ class HoprdAPIHelper:
         else:
             return response.json()
     
-    async def ping(self, id, metric="latency"):
+    async def ping(self, id, metric:str="latency"):
         method = self.wrapper.ping
         args = [id]
 
@@ -216,7 +217,7 @@ class HoprdAPIHelper:
             log.info(f"Measured {json_body[metric]:3d}({metric}) from peer {id[-5:]}")
             return json_body[metric]
    
-    async def peers(self, param: str="peerId", **kwargs):
+    async def peers(self, param:str="peerId", **kwargs):
         method = self.wrapper.peers
         status = "connected"
 
@@ -236,7 +237,7 @@ class HoprdAPIHelper:
             return [peer[param] for peer in json_body[status]]
  
     
-    async def get_address(self, address: str):
+    async def get_address(self, address:str):
         method = self.wrapper.get_address
 
         try:
@@ -254,7 +255,7 @@ class HoprdAPIHelper:
             
             return json_body.get(address, None)
     
-    async def send_message(self, destination, message, hops):
+    async def send_message(self, destination:str, message:str, hops:int):
         # TODO: check return value
 
         method = self.wrapper.send_message
