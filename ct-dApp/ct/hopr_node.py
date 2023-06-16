@@ -157,11 +157,10 @@ class HOPRNode:
 
         id = f"{time.time():.2f}".replace(".", "_")
         file_name = self.plot_folder.joinpath(f"net_viz-{id}")
-
+        data = {self.peer_id: self.latency}
+        
         try:
-            await asyncio.to_thread(
-                network_viz, {self.peer_id: self.latency}, file_name
-            )
+            await asyncio.to_thread(network_viz, data, file_name)
         except Exception as e:
             log.error(f"Could not create visualization [ {file_name} ]: {e}")
             log.error(traceback.format_exc())
