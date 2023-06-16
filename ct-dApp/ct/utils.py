@@ -1,6 +1,7 @@
 import logging
 import os
 from signal import Signals
+import logging.config
 
 import click
 
@@ -14,7 +15,10 @@ def _getlogger() -> logging.Logger:
         
     # configure and get logger handler
     logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(asctime)s:%(message)s")
+    
     logger = logging.getLogger(__name__)
+    logging.getLogger("httpx").setLevel(logging.WARNING) # logs were flooded by httpx 
+
 
     return logger
 

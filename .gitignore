@@ -1,15 +1,19 @@
-.coverage
+# cache
 __pycache__/
-run_play.sh
+.pytest_cache/
+
+# envs
+env/
+
+# logs
 net_viz-*.png
 out.mp4
 websocket_client.log
-env/
-.pytest_cache/
 logs/
-.vscode
-.pytest_cache
-.ruff_cache
-tmp
-http_req
-venv
+
+#misc
+.coverage
+run_play.sh
+foo.py
+
+
