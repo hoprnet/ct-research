@@ -2,11 +2,12 @@ import logging
 import aiohttp
 
 import asyncio
+import uuid
+
+import json
 from ct.hopr_node import HOPRNode, formalin, connectguard
 
 log = logging.getLogger(__name__)
-
-
 
 class NetWatcher(HOPRNode):
     """ Class description."""
@@ -14,6 +15,8 @@ class NetWatcher(HOPRNode):
         """
         Initialisation of the class.
         """
+        # assign unique uuid as a string
+        self.id = str(uuid.uuid4())
         super().__init__(url, key, 10, '.')
     
 
@@ -24,17 +27,18 @@ class NetWatcher(HOPRNode):
         Sends the detected peers to the Aggregator
         """
         log.info("Transmitting peers to Aggregator")
-        url = "http://localhost:8080/lists"
+        url = "http://localhost:8080/aggregator/list"
+        short_list = [p[-5:] for p in self.peers]
 
         if not mocked:
             async with aiohttp.ClientSession() as session:
-                data = {"foo": ["0x12", 12]}
-                async with session.post(url, data) as response:
+                data = {"id": self.id, "list": list(short_list)}
+                async with session.post(url, data=json.dumps(data),
+                  headers={'Content-Type': 'application/json'},) as response:
                     data = await response.text()
                     print(data)
 
-        sent_list = [p[-5:] for p in self.peers]
-        log.info(f"Transmisted peers: {', '.join(sent_list)}")
+        log.info(f"Transmisted peers: {', '.join(short_list)}")
         self.peers.clear()
         
 
@@ -49,7 +53,7 @@ class NetWatcher(HOPRNode):
         self.started = True
         self.tasks.add(asyncio.create_task(self.connect(address="hopr")))
         self.tasks.add(asyncio.create_task(self.gather_peers()))
-        self.tasks.add(asyncio.create_task(self.transmit_peers()))
+        self.tasks.add(asyncio.create_task(self.transmit_peers(mocked=False)))
         await asyncio.gather(*self.tasks)
 
     def __str__(self):

@@ -16,9 +16,9 @@ class Aggregator(metaclass=Singleton):
         self._list = []
         self._lock = threading.Lock() # thread-safe list
     
-    def add(self, item):
+    def add(self, items):
         with self._lock:
-            self._list.append(item)
+            self._list.append(items)
     
     def get(self):
         with self._lock:
