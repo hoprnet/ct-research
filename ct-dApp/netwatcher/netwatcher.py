@@ -4,21 +4,44 @@ import aiohttp
 import asyncio
 import uuid
 
-import json
 from ct.hopr_node import HOPRNode, formalin, connectguard
 
 log = logging.getLogger(__name__)
 
 class NetWatcher(HOPRNode):
     """ Class description."""
-    def __init__(self, url: str, key: str):
+    def __init__(self, url: str, key: str, posturl: str):
         """
         Initialisation of the class.
         """
         # assign unique uuid as a string
         self.id = str(uuid.uuid4())
+        self.posturl = posturl
+        self.session = aiohttp.ClientSession()
+        
         super().__init__(url, key, 10, '.')
     
+
+    def wipe_peers(self):
+        """
+        Wipes the list of peers
+        """
+        log.info("Wiping peers")
+
+        self.peers.clear()
+
+    async def _post_list(self, session, peer_list: list):
+        """
+        Sends the detected peers to the Aggregator
+        """
+        short_list = [p[-5:] for p in peer_list]
+        data = {"id": self.id, "list": list(short_list)}
+
+        async with session.post(self.posturl, json=data) as response:
+            if response.status == 200:
+                log.info(f"Transmisted peers: {', '.join(short_list)}")
+            else:
+                log.error(f"Error transmitting peers: {response.status}")
 
     @formalin(sleep=20)
     @connectguard
@@ -26,27 +49,18 @@ class NetWatcher(HOPRNode):
         """
         Sends the detected peers to the Aggregator
         """
-        log.info("Transmitting peers to Aggregator")
-        url = "http://localhost:8080/aggregator/list"
-        short_list = [p[-5:] for p in self.peers]
+        log.info("Transmitting peers")
 
-        if not mocked:
-            async with aiohttp.ClientSession() as session:
-                data = {"id": self.id, "list": list(short_list)}
-                async with session.post(url, data=json.dumps(data),
-                  headers={'Content-Type': 'application/json'},) as response:
-                    data = await response.text()
-                    print(data)
+        async with aiohttp.ClientSession() as session:
+            await self._post_list(session, self.peers)
 
-        log.info(f"Transmisted peers: {', '.join(short_list)}")
-        self.peers.clear()
+        self.wipe_peers()
         
-
     async def start(self):
         """
         Starts the tasks of this node
         """
-        log.info("Starting node")
+        log.info(f"Starting instance '{self.id}'")
         if self.tasks:
             return
     
