@@ -1,7 +1,4 @@
-
-# singleton metaclass
 import threading
-
 
 class Singleton(type):
     _instances = {}
