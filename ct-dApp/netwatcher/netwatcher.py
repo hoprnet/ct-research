@@ -1,3 +1,4 @@
+import functools
 import logging
 import aiohttp
 
@@ -7,6 +8,29 @@ import uuid
 from ct.hopr_node import HOPRNode, formalin, connectguard
 
 log = logging.getLogger(__name__)
+
+
+def wakeupcall(message:str=None, h:int=None, m:int=None, s:int=None):
+    """
+    Decorator to log the start of a function, make it run until stopped, and delay the
+    next iteration
+    :param message: the message to log when the function starts
+    :param sleep: the duration to sleep after an interation
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(self, *args, **kwargs):
+            if message is not None:
+                log.info(message)
+
+            while self.started:
+                await func(self, *args, **kwargs)
+
+                if h or m or s:
+                    # add waitupcall logic
+
+        return wrapper
+    return decorator
 
 class NetWatcher(HOPRNode):
     """ Class description."""
