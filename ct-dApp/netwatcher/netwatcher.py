@@ -60,11 +60,11 @@ class NetWatcher(HOPRNode):
         Sends the detected peers to the Aggregator
         """
         log.info("Transmitting peers to Aggregator")
-        url = "http://localhost:3000/ct/fin_dist/aggregator/send_list"
+        url = "http://localhost:8080/lists"
 
         if not mocked:
             async with aiohttp.ClientSession() as session:
-                data = {"terms": 1, "captcha": 1}
+                data = {"foo": ["0x12", 12]}
                 async with session.post(url, data) as response:
                     data = await response.text()
                     print(data)
