@@ -1,48 +1,12 @@
-import functools
 import logging
 import aiohttp
 
 import asyncio
-from ct.hopr_node import HOPRNode
+from ct.hopr_node import HOPRNode, formalin, connectguard
 
 log = logging.getLogger(__name__)
 
 
-def formalin(message: str = None, sleep: int = None):
-    """
-    Decorator to log the start of a function, make it run until stopped, and delay the
-    next iteration
-    :param message: the message to log when the function starts
-    :param sleep: the duration to sleep after an interation
-    """
-    def decorator(func):
-        @functools.wraps(func)
-        async def wrapper(self, *args, **kwargs):
-            if message is not None:
-                log.info(message)
-
-            while self.started:
-                await func(self, *args, **kwargs)
-
-                if sleep is not None:
-                    await asyncio.sleep(sleep)
-
-        return wrapper
-    return decorator
-
-def connectguard(func):
-    """
-    Decorator to check if the node is connected before running anything
-    """
-    @functools.wraps(func)
-    async def wrapper(self, *args, **kwargs):
-        if not self.connected:
-            log.warning("Node not connected, skipping")
-            return
-
-        await func(self, *args, **kwargs)
-
-    return wrapper
 
 class NetWatcher(HOPRNode):
     """ Class description."""
