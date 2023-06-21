@@ -1,23 +1,32 @@
-from sanic import Sanic
-from sanic.response import text as sanic_text
-from sanic.views import HTTPMethodView
 
-app = Sanic("__name__")
-
-class Aggregator(HTTPMethodView):
-    async def post(self, request):
-        if "list" not in request.json:
-            return sanic_text("Bad content")
-        
-        data_list = request.json["list"]
-        return sanic_text(f"Received information for {len(data_list)} peers")
+# singleton metaclass
+import threading
 
 
-app.add_route(Aggregator.as_view(), "/list")
+class Singleton(type):
+    _instances = {}
 
-if __name__ == '__main__':
-    app.run(dev=True)
-
-# send post request:
-# curl -X POST http://localhost:8000/list -H "Content-Type: application/json" -d '{"list": [["0x12", 41],["0xF5",95]]}' 
-
+    def __call__(cls, *args, **kwargs):
+        # if instance exists, return it
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        # otherwise, create it and return it
+        return cls._instances[cls]
+    
+# aggregator class
+class Aggregator(metaclass=Singleton):
+    def __init__(self):
+        self._list = []
+        self._lock = threading.Lock() # thread-safe list
+    
+    def add(self, item):
+        with self._lock:
+            self._list.append(item)
+    
+    def get(self):
+        with self._lock:
+            return self._list
+    
+    def clear(self):
+        with self._lock:
+            self._list = []
