@@ -34,6 +34,8 @@ def wakeupcall(message:str=None, minutes:int=0, seconds:int=0):
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(self, *args, **kwargs):
+            await asyncio.sleep(5)
+            
             if message is not None:
                 log.info(message)
 
