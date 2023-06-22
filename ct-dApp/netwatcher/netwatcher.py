@@ -1,22 +1,36 @@
+import asyncio
 import functools
 import logging
+import uuid
+from datetime import datetime, timedelta
+
 import aiohttp
 
-import asyncio
-import uuid
-
-from ct.hopr_node import HOPRNode, formalin, connectguard
+from ct.hopr_node import HOPRNode, connectguard
 
 log = logging.getLogger(__name__)
 
 
-def wakeupcall(message:str=None, h:int=None, m:int=None, s:int=None):
+def wakeupcall(message:str=None, minutes:int=0, seconds:int=0):
     """
     Decorator to log the start of a function, make it run until stopped, and delay the
-    next iteration
+    next iteration. The delay is calculated so that the function is triggered every 
+    whole `minutes`min and `seconds`sec.
     :param message: the message to log when the function starts
-    :param sleep: the duration to sleep after an interation
+    :param minutes: next whole minute to trigger the function
+    :param seconds: next whole second to trigger the function
     """
+
+    def next_delay_in_seconds(minutes: int = 0, seconds: int = 0):
+        delta = timedelta(minutes=minutes, seconds=seconds)
+        if delta.seconds == 0:
+            return 0
+        
+        dt = datetime.now()
+        min_date = datetime.min
+        next_time = min_date + round((dt - min_date) / delta + 0.5) * delta
+        return round((next_time - dt).total_seconds())
+
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(self, *args, **kwargs):
@@ -26,8 +40,9 @@ def wakeupcall(message:str=None, h:int=None, m:int=None, s:int=None):
             while self.started:
                 await func(self, *args, **kwargs)
 
-                if h or m or s:
-                    # add waitupcall logic
+                sleep = next_delay_in_seconds(minutes=minutes, seconds=seconds)
+                if sleep != 0:
+                    await asyncio.sleep(sleep)
 
         return wrapper
     return decorator
@@ -67,9 +82,9 @@ class NetWatcher(HOPRNode):
             else:
                 log.error(f"Error transmitting peers: {response.status}")
 
-    @formalin(sleep=20)
+    @wakeupcall(seconds=30)
     @connectguard
-    async def transmit_peers(self, mocked: str = True):
+    async def transmit_peers(self):
         """
         Sends the detected peers to the Aggregator
         """
@@ -91,7 +106,7 @@ class NetWatcher(HOPRNode):
         self.started = True
         self.tasks.add(asyncio.create_task(self.connect(address="hopr")))
         self.tasks.add(asyncio.create_task(self.gather_peers()))
-        self.tasks.add(asyncio.create_task(self.transmit_peers(mocked=False)))
+        self.tasks.add(asyncio.create_task(self.transmit_peers()))
         await asyncio.gather(*self.tasks)
 
     def __str__(self):
