@@ -15,15 +15,18 @@ class Singleton(type):
 class Aggregator(metaclass=Singleton):
     def __init__(self):
         self._dict: dict = {}
-        self._update: datetime = None
+        self._update_dict: dict = {}
         self._dict_lock = threading.Lock() # thread-safe list
         self._update_lock = threading.Lock() # thread-safe lastupdate
     
-    def add(self, pod_id:str, items: list):
+    def add(self, pod_id : str, items: list):
+        print(f"items {items=}")
         with self._dict_lock:
             if pod_id not in self._dict:
-                self._dict[pod_id] = set()
-            self._dict[pod_id].update(items)
+                self._dict[pod_id] = {}
+
+            for peer, lat in items.items():
+                self._dict[pod_id][peer] = lat
 
     def get(self):
         with self._dict_lock:
@@ -33,10 +36,12 @@ class Aggregator(metaclass=Singleton):
         with self._dict_lock:
             self._dict = {}
 
-    def set_update(self, timestamp:datetime):
+    def set_update(self, pod_id: str, timestamp: datetime):
         with self._update_lock:
-            self._update = timestamp
+            self._update_dict[pod_id] = timestamp
 
-    def get_update(self):
+    def get_update(self, pod_id: str):
         with self._update_lock:
-            return self._update
+            if pod_id not in self._update_dict:
+                return None
+            return self._update_dict[pod_id]

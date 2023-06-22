@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime, timedelta
 
 import aiohttp
+from aiohttp.client_exceptions import ClientConnectorError
 
 from ct.hopr_node import HOPRNode, connectguard
 
@@ -23,29 +24,36 @@ def wakeupcall(message:str=None, minutes:int=0, seconds:int=0):
 
     def next_delay_in_seconds(minutes: int = 0, seconds: int = 0):
         delta = timedelta(minutes=minutes, seconds=seconds)
-        if delta.seconds == 0:
-            return 0
+
         
         dt = datetime.now()
         min_date = datetime.min
-        next_time = min_date + round((dt - min_date) / delta + 0.5) * delta
-        return round((next_time - dt).total_seconds())
+        try:
+            next_time = min_date + round((dt - min_date) / delta + 0.5) * delta
+        except ZeroDivisionError:
+            log.error("Next sleep is 0 seconds..")
+            return 1
+        
+        delay = int((next_time - dt).total_seconds())
+        if delay == 0:
+            return delta.seconds
+        return delay
 
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(self, *args, **kwargs):
-            await asyncio.sleep(5)
-            
             if message is not None:
                 log.info(message)
+
+            sleep = next_delay_in_seconds(minutes=minutes, seconds=seconds)
+            await asyncio.sleep(sleep)            
 
             while self.started:
                 await func(self, *args, **kwargs)
 
                 sleep = next_delay_in_seconds(minutes=minutes, seconds=seconds)
-                if sleep != 0:
-                    await asyncio.sleep(sleep)
-
+                await asyncio.sleep(sleep)
+                
         return wrapper
     return decorator
 
@@ -71,32 +79,42 @@ class NetWatcher(HOPRNode):
 
         self.peers.clear()
 
-    async def _post_list(self, session, peer_list: list):
+    async def _post_list(self, session, peers: list, latencies: list):
         """
         Sends the detected peers to the Aggregator
         """
-        short_list = [p[-5:] for p in peer_list]
-        data = {"id": self.id, "list": list(short_list)}
+        short_list = [p[-5:] for p in peers]
+        long_list = [p for p in peers]
 
-        async with session.post(self.posturl, json=data) as response:
-            if response.status == 200:
-                log.info(f"Transmisted peers: {', '.join(short_list)}")
+
+        latency_dict = {}
+        for i in range(len(short_list)):
+            if long_list[i] in latencies:
+                latency = latencies[long_list[i]][-1]
             else:
-                log.error(f"Error transmitting peers: {response.status}")
+                latency = None
+            latency_dict[short_list[i]] = latency
 
-    @wakeupcall(seconds=30)
+        data = {"id": self.id, "list": latency_dict}
+
+        try:
+            async with session.post(self.posturl, json=data) as response:
+                if response.status == 200:
+                    log.info(f"Transmisted peers: {', '.join(short_list)}")
+        except ClientConnectorError as e:
+            log.error(f"Error transmitting peers: {e}")
+
+    @wakeupcall(message="Initiated peers transmission", minutes=1)
     @connectguard
     async def transmit_peers(self):
         """
         Sends the detected peers to the Aggregator
         """
-        log.info("Transmitting peers")
-
         async with aiohttp.ClientSession() as session:
-            await self._post_list(session, self.peers)
+            await self._post_list(session, self.peers, self.latency)
 
         self.wipe_peers()
-        
+    
     async def start(self):
         """
         Starts the tasks of this node
@@ -108,7 +126,9 @@ class NetWatcher(HOPRNode):
         self.started = True
         self.tasks.add(asyncio.create_task(self.connect(address="hopr")))
         self.tasks.add(asyncio.create_task(self.gather_peers()))
+        self.tasks.add(asyncio.create_task(self.ping_peers()))
         self.tasks.add(asyncio.create_task(self.transmit_peers()))
+
         await asyncio.gather(*self.tasks)
 
     def __str__(self):
