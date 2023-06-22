@@ -1,7 +1,8 @@
+from middlewares import setup_middlewares
+from routes import setup_routes
 from sanic import Sanic
 from settings import Settings
-from routes import setup_routes
-from middlewares import setup_middlewares
+
 from aggregator import Aggregator
 
 app = Sanic("Aggregator")

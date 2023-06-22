@@ -14,10 +14,11 @@ def main():
     try:
         API_host = _getenvvar("HOPR_NODE_1_HTTP_URL")
         API_key = _getenvvar("HOPR_NODE_1_API_KEY")
+        AGG_post_route = _getenvvar("AGG_HTTP_POST_URL")
     except ValueError:
         exit(ExitCode.ERROR_BAD_ARGUMENTS)
         
-    nw = NetWatcher(API_host, API_key)
+    nw = NetWatcher(API_host, API_key, AGG_post_route)
 
     loop = asyncio.new_event_loop()
     loop.add_signal_handler(SIGINT, stop, nw, SIGINT)

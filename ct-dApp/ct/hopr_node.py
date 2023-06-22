@@ -104,7 +104,7 @@ class HOPRNode:
         log.info("Disconnected HOPR node")
 
     
-    @formalin(message="Connecting to node", sleep=5)
+    @formalin(message="Connecting to node", sleep=20)
     async def connect(self, address: str = "hopr"):
         """
         Connects to this HOPR node and sets the peer_id of this instance.
@@ -122,7 +122,7 @@ class HOPRNode:
         else:
             log.info(f"HOPR node {self.peer_id[-5:]} is up")
 
-    @formalin(message="Gathering peers", sleep=5.0)
+    @formalin(message="Gathering peers", sleep=10)
     @connectguard
     async def gather_peers(self, quality: float = 1.0):
         """
