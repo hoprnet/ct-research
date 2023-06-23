@@ -1,7 +1,4 @@
-from sanic_envconfig import EnvConfig
-
-
-class Settings(EnvConfig):
+class Settings:
     """
     Settings for running the Sanic app.
     """
