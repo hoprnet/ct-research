@@ -1,6 +1,4 @@
 import logging
-import json
-import networkx as nx
 
 from ct.hopr_api_helper import HoprdAPIHelper
 
@@ -25,66 +23,110 @@ class EconomicHandler():
         self.started = False
         log.debug("Created EconomicHandler instance")
 
-    async def channel_topology(self, full_topology: bool = True):
+    async def channel_topology(self, full_topology: bool = True, channels: str = "all"):
         """
-        Retrieves the channel topology of the monte rosa 1.0 network
+        :param: full_topology: bool indicating whether to retrieve the full topology.
+        :param: channels: indicating "all" channels ("incoming" and "outgoing").
+        :returns: unique_peerId_address: dict containing all unique
+                source_peerId-source_address links
         """
         response = await self.api.get_channel_topology(full_topology=full_topology)
-        return response
 
-    def create_channel_graph(response: dict, channels: str = "all"):
+        unique_peerId_address = {}
+        all_items = response[channels]
+
+        for item in all_items:
+            try:
+                source_peer_id = item['sourcePeerId']
+                source_address = item['sourceAddress']
+            except KeyError as e:
+                raise KeyError(f"Missing key in item dictionary: {str(e)}")
+
+            if source_peer_id not in unique_peerId_address:
+                unique_peerId_address[source_peer_id] = source_address
+
+        return unique_peerId_address
+
+    def mock_data_metrics_db(self):
         """
-        :param response: the response containing the channel topology data as a dict.
-        :param channels: the channels to include in the graph. default is "all".
-        :returns: the payment channel graph based on the provided response.
+        Generates a mock metrics dictionary that mimics the metrics database output.
+        :returns: a dictionary containing mock metrics data with peer IDs and network
+        watcher IDs odered by a statistical measure computed on latency
         """
-        try:
-            response_data = json.loads(response)
-            logging.info("Successfully loaded response data")
-        except json.JSONDecodeError as e:
-            logging.error("Failed to load response data. Error: {}".format(e))
-            raise
+        metrics_dict = {
+            "peer_id_1": {
+                "netw": ["nw_1", "nw_3"]
+            },
+            "peer_id_2": {
+                "netw": ["nw_1", "nw_2", "nw_4"]
+            },
+            "peer_id_3": {
+                "netw": ["nw_2", "nw_3", "nw_4"]
+            },
+            "peer_id_4": {
+                "netw": ["nw_1", "nw_2", "nw_3"]
+            },
+            "peer_id_5": {
+                "netw": ["nw_1", "nw_2", "nw_3", "nw_4"]
+            }
+        }
+        return metrics_dict
 
-        # Create a directed network graph
-        graph = nx.DiGraph()
+    def mock_data_subgraph(self):
+        """
+        Generates a dictionary that mocks the metrics received form the subgraph.
+        :returns: a dictionary containing the data with safe stake addresses as key
+                  and stake as value.
+        """
+        subgraph_dict = {
+            "safe_1": {
+                "stake": 10
+            },
+            "safe_2": {
+                "stake": 55
+            },
+            "safe_3": {
+                "stake": 23
+            },
+            "safe_4": {
+                "stake": 85
+            },
+            "safe_5": {
+                "stake": 62
+            }
+        }
+        return subgraph_dict
 
-        try:
-            for data in response_data[channels]:
-                # node
-                source_peer_id = data["sourcePeerId"]
-                destination_peer_id = data["destinationPeerId"]
+    def replace_keys_in_mock_data(self, unique_peerId_address: dict):
+        """
+        Just a helper function that allows me to replace my invented peerID's
+        with the peerId's from Pluto.
+        This function will be deleted when working with the real data.
+        [NO NEED TO CHECK CODING STYLE NOR EFFICIENCY OF THE FUNCTION]
+        """
+        metrics_dict = self.mock_data_metrics_db()
+        channel_topology_keys = list(unique_peerId_address.keys())
 
-                # edge attributes
-                destination_address = data["destinationAddress"]
-                channel_id = data["channelId"]
-                balance = float(data["balance"]) / 1e18
-                status = data["status"]
-                commitment = data["commitment"]
-                ticket_epoch = int(data["ticketEpoch"])
-                ticket_index = int(data["ticketIndex"])
-                channel_epoch = int(data["channelEpoch"])
-                closure_time = data["closureTime"]
+        new_metrics_dict = {}
+        for i, key in enumerate(metrics_dict.keys()):
+            new_key = channel_topology_keys[i]
+            new_metrics_dict[new_key] = metrics_dict[key]
 
-                graph.add_edge(
-                    source_peer_id,
-                    destination_peer_id,
-                    destination_address = destination_address,
-                    channel_id=channel_id,
-                    balance=balance,
-                    status=status,
-                    commitment=commitment,
-                    ticket_epoch=ticket_epoch,
-                    ticket_index=ticket_index,
-                    channel_epoch=channel_epoch,
-                    closure_time=closure_time,
-                )
+        return new_metrics_dict
 
-                # node attributes
-                graph.nodes[source_peer_id]["source_address"] = data["sourceAddress"]
+    def replace_keys_in_mock_data_subgraph(self, channel_topology_result):
+        """
+        Just a helper function that allows me to replace my invented safe_addresses
+        with the safe addresses from Pluto.
+        This function will be deleted when working with the real data.
+        [NO NEED TO CHECK CODING STYLE NOR EFFICIENCY OF THE FUNCTION]
+        """
+        subgraph_dict = self.mock_data_subgraph()
+        channel_topology_values = list(channel_topology_result.values())
 
-            logging.info("Channel graph successfully generated")
-        except KeyError as e:
-            logging.error("Failed to generate channel graph. Missing key: {}".format(e))
-            raise
+        new_subgraph_dict = {}
+        for i, data in enumerate(subgraph_dict.values()):
+            new_key = channel_topology_values[i]
+            new_subgraph_dict[new_key] = data
 
-        return graph
+        return new_subgraph_dict
