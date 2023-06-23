@@ -1,0 +1,19 @@
+# Parameter format: (parameter, name, value)
+
+# Parameter a: slope coefficient of linear equation f(x)
+parameter, a, 1
+
+# Parameter b: denominator of the exponent of nonlinear function g(x)
+parameter, b, 1
+
+# Parameter c: threshold value defining the cuttof for when f(x) ends and g(x) starts
+parameter, c, 20
+
+# Parameter l: lower limit of linear function (i.e. minimum required stake)
+parameter, l, 0
+
+# Equation format: (equation, name, formula, condition)
+
+# Equations
+equation, f_x, a * x, l <= x <= c
+equation, g_x, a * c + (x - c) ** (1 / b), x > c
