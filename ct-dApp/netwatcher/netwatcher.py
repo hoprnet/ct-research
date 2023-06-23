@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 import aiohttp
 from aiohttp.client_exceptions import ClientConnectorError
-
+from aiohttp import ClientSession
 from ct.hopr_node import HOPRNode, connectguard
 
 log = logging.getLogger(__name__)
@@ -23,8 +23,13 @@ def wakeupcall(message:str=None, minutes:int=0, seconds:int=0):
     """
 
     def next_delay_in_seconds(minutes: int = 0, seconds: int = 0):
-        delta = timedelta(minutes=minutes, seconds=seconds)
+        """
+        Calculates the delay until the next whole `minutes`min and `seconds`sec.
+        :param minutes: next whole minute to trigger the function
+        :param seconds: next whole second to trigger the function
+        """
 
+        delta = timedelta(minutes=minutes, seconds=seconds)
         
         dt = datetime.now()
         min_date = datetime.min
@@ -58,10 +63,16 @@ def wakeupcall(message:str=None, minutes:int=0, seconds:int=0):
     return decorator
 
 class NetWatcher(HOPRNode):
-    """ Class description."""
+    """
+    NetWatcher implementation. This class is used to detect peers and send them to the 
+    Aggregator via a POST request.
+    """
     def __init__(self, url: str, key: str, posturl: str):
         """
         Initialisation of the class.
+        :param url: the url of the hopr node
+        :param key: the key of the hopr node
+        :param posturl: the url of the Aggregator to send the peers to
         """
         # assign unique uuid as a string
         self.id = str(uuid.uuid4())
@@ -79,20 +90,25 @@ class NetWatcher(HOPRNode):
 
         self.peers.clear()
 
-    async def _post_list(self, session, peers: list, latencies: list):
+    async def _post_list(self, session: ClientSession, peers: list, latencies: list):
         """
-        Sends the detected peers to the Aggregator
+        Sends the detected peers to the Aggregator. For the moment, only the last 
+        latency is transmitted for each peer.
+        :param session: the aiohttp session
+        :param peers: the list of peers
+        :param latencies: the list of latencies
         """
-        short_list = [p[-5:] for p in peers]
-        long_list = [p for p in peers]
 
+        # list of shorten peer ids (only for convenience. will be removed)
+        short_list = [p[-5:] for p in peers] 
+
+        # list standard peer ids (creating a secure copy of the list)
+        long_list = [p for p in peers]
 
         latency_dict = {}
         for i in range(len(short_list)):
-            if long_list[i] in latencies:
-                latency = latencies[long_list[i]][-1]
-            else:
-                latency = None
+            latency = latencies[long_list[i]][-1] if long_list[i] in latencies else None
+            
             latency_dict[short_list[i]] = latency
 
         data = {"id": self.id, "list": latency_dict}

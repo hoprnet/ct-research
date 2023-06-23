@@ -10,6 +10,16 @@ def setup_routes(app):
 
     @app.route("/aggregator/list", methods=["POST"])
     async def post_list(request: Request):
+        """
+        Create a POST route to receive a list of peers from a pod.
+        The body of the request must be a JSON object with the following keys:
+        - id: the network UUID of the pod
+        - list: a list of peers with their latency
+
+        At each call, the list is added to the aggregator, and the last update timestamp
+        for the given pod is set to the current time.
+        """
+
         if "id" not in request.json:
             return sanic_text("`id` key not in body", status=500)
         if "list" not in request.json:
@@ -22,6 +32,11 @@ def setup_routes(app):
     
     @app.route("/aggregator/list", methods=["GET"])
     async def get_list(request: Request):
+        """
+        Create a GET route to retrieve the aggregated list of peers/latency and generate 
+        an HTML page to display it.
+        NO NEED TO CHECK THIS METHOD, AS IT'S PURPOSE IS ONLY FOR DEBUGGING.
+        """
         agg_info = agg.get()
         count = len(agg_info)
 
@@ -53,6 +68,10 @@ def setup_routes(app):
     
 
     def _display_pod_infos(pod_id: str, data_list: dict, time: datetime, styles: dict):
+        """
+        Generate the HTML code to display the information of a pod.
+        NO NEED TO CHECK THIS METHOD, AS IT'S PURPOSE IS ONLY FOR DEBUGGING.
+        """
         def peer_lines(data_list):
             return [f"<b>{peer}</b> ({lat}ms)" for peer, lat in data_list.items()]
         # peer list
