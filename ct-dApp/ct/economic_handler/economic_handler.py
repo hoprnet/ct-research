@@ -50,29 +50,24 @@ class EconomicHandler():
     def mock_data_metrics_db(self):
         """
         Generates a mock metrics dictionary that mimics the metrics database output.
-        :returns: a dictionary containing mock metrics data with peer IDs,
-                  latency values, and network watcher IDs.
+        :returns: a dictionary containing mock metrics data with peer IDs and network
+        watcher IDs odered by a statistical measure computed on latency
         """
         metrics_dict = {
-            "peer_id1": {
-                "latency": [23, 55, 87, 42, 12, 65, 98],
-                "netw": ["nw_id1", "nw_id3"]
+            "peer_id_1": {
+                "netw": ["nw_1", "nw_3"]
             },
-            "peer_id2": {
-                "latency": [68, 77, 33, 51, 92],
-                "netw": ["nw_id1", "nw_id2", "nw_id4"]
+            "peer_id_2": {
+                "netw": ["nw_1", "nw_2", "nw_4"]
             },
-            "peer_id3": {
-                "latency": [12, 92, 48, 75, 16, 41, 79, 55],
-                "netw": ["nw_id2", "nw_id3", "nw_id4"]
+            "peer_id_3": {
+                "netw": ["nw_2", "nw_3", "nw_4"]
             },
-            "peer_id4": {
-                "latency": [35, 66, 83, 27, 44, 91],
-                "netw": ["nw_id1", "nw_id2", "nw_id3"]
+            "peer_id_4": {
+                "netw": ["nw_1", "nw_2", "nw_3"]
             },
-            "peer_id5": {
-                "latency": [3, 67, 4, 27, 55, 96],
-                "netw": ["nw_id1", "nw_id2", "nw_id3", "nw_id4"]
+            "peer_id_5": {
+                "netw": ["nw_1", "nw_2", "nw_3", "nw_4"]
             }
         }
         return metrics_dict
@@ -84,19 +79,19 @@ class EconomicHandler():
                   and stake as value.
         """
         subgraph_dict = {
-            "safe_address1": {
+            "safe_1": {
                 "stake": 10
             },
-            "safe_address2": {
+            "safe_2": {
                 "stake": 55
             },
-            "safe_address3": {
+            "safe_3": {
                 "stake": 23
             },
-            "safe_address4": {
+            "safe_4": {
                 "stake": 85
             },
-            "safe_address5": {
+            "safe_5": {
                 "stake": 62
             }
         }
