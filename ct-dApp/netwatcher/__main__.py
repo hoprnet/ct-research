@@ -3,17 +3,19 @@ from signal import SIGINT, SIGTERM
 
 from ct.exit_codes import ExitCode
 from ct.utils import _getenvvar, _getlogger, stop
+import click
 
 from .netwatcher import NetWatcher
 
-
-def main():
+@click.command()
+@click.option("--port", "port", help="Port to specify the node")
+def main(port: str):
     log = _getlogger()
     exit_code = ExitCode.OK
     
     try:
-        API_host = _getenvvar("HOPR_NODE_1_HTTP_URL")
-        API_key = _getenvvar("HOPR_NODE_1_API_KEY")
+        API_host = _getenvvar("HOPR_NODE_HTTP_URL").replace("PORT_FIELD", port)
+        API_key = _getenvvar("HOPR_NODE_API_KEY").replace("PORT_FIELD", port)
         AGG_post_route = _getenvvar("AGG_HTTP_POST_URL")
     except ValueError:
         exit(ExitCode.ERROR_BAD_ARGUMENTS)
