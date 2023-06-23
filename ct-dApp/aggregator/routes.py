@@ -1,11 +1,17 @@
-from sanic.response import html as sanic_html
-from sanic.response import text as sanic_text
-from sanic.request import Request
-
-from aggregator import Aggregator
 from datetime import datetime
 
-def setup_routes(app):
+from sanic.response.convenience import redirect
+from db_connection.database_connection import DatabaseConnection
+
+from sanic.request import Request
+from sanic.response import html as sanic_html
+from sanic.response import text as sanic_text
+
+
+from .aggregator import Aggregator
+
+
+def attach_endpoints(app):
     agg = Aggregator()
 
     @app.route("/aggregator/list", methods=["POST"])
@@ -62,6 +68,9 @@ def setup_routes(app):
         if len(agg_info) == 0:
             html_text.append(_display_pod_infos("N/A", {}, None, styles))
 
+
+        action = "location.href='/aggregator/to_db';"
+        html_text.append(f"<button type='button' onclick={action}>Send to DB</button>")
         html_text.append("</body>")
 
         return sanic_html("".join(html_text), status=200)
@@ -87,3 +96,24 @@ def setup_routes(app):
         text.append(f"<p style='{styles['line']}'>Peers: {peer_list}</p>")
 
         return ''.join(text)
+    
+    @app.route("/aggregator/to_db", methods=["GET"])
+    async def post_to_db(request: Request):
+        """
+        Takes the peers and metrics from the _dict and sends them to the database.
+        NO NEED TO CHECK THIS METHOD, AS IT'S PURPOSE IS ONLY FOR DEBUGGING.
+        """
+        
+        with DatabaseConnection(database="metricDB",
+                                host="localhost",
+                                user="postgres",
+                                password="admin",
+                                port="5432") as db:
+            for pod_id, data_list in agg._dict.items():
+                for peer, lat in data_list.items():
+                    db.insert("raw_data_table", 
+                              peer=peer, 
+                              nws=[pod_id],
+                              latencies=[lat])
+
+        return redirect('/aggregator/list')
