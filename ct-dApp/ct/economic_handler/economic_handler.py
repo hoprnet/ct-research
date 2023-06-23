@@ -1,8 +1,11 @@
 import logging
 import os
 import traceback
+import json
+import jsonschema
 
 from ct.hopr_api_helper import HoprdAPIHelper
+from .parameters_schema import schema
 
 # Configure logging to output log messages to the console
 logging.basicConfig(level=logging.DEBUG)
@@ -133,54 +136,31 @@ class EconomicHandler():
 
         return new_subgraph_dict
 
-    def read_parameters_and_equations(self, file_name: str = "parameters.txt"):
+    def read_parameters_and_equations(self, file_name: str = "parameters.json"):
         """
-        Reads the parameters and equations from a text file.
-        :param: file_name (str): The name of the text file containing the parameters
-          and equations. Defaults to "parameters.txt".
-        :returns: tuple: The first dictionary contains the parameters, where the keys
-            are the parameter names and the values are the parameter values. The second
-            dictionary contains the equations, where the keys are the equation names
-            and the values are dictionaries with "formula" and "condition" keys.
+        Reads parameters and equations from a JSON file and validates it using a schema.
+        :param: file_name (str): The name of the JSON file containing the parameters
+        and equations. Defaults to "parameters.json".
+        :returns: tuple: The first dictionary contains the parameters and the second
+        dictionary contains the equations.
         """
         script_directory = os.path.dirname(os.path.abspath(__file__))
         parameters_file_path = os.path.join(script_directory, file_name)
 
         try:
             with open(parameters_file_path, 'r') as file:
-                contents = file.readlines()
+                contents = json.load(file)
         except FileNotFoundError as e:
             log.error(f"The file '{file_name}' does not exist. {e}")
             log.error(traceback.format_exc())
 
-        parameters = {}
-        equations = {}
+        parameters = contents.get("parameters", {})
+        equations = contents.get("equations", {})
 
-        for line in contents:
-            line = line.strip()
-
-            if line.startswith('#') or not line:
-                continue
-
-            line = line.split(',')
-
-            if line[0].strip() == 'parameter':
-                try:
-                    parameter_name = line[1].strip()
-                    parameter_value = float(line[2].strip())
-                    parameters[parameter_name] = parameter_value
-                except IndexError as e:
-                    log.error(f"Missing parameter name or value. {e}")
-                    log.error(traceback.format_exc())
-            elif line[0].strip() == 'equation':
-                try:
-                    equation_name = line[1].strip()
-                    equation_formula = line[2].strip()
-                    equation_condition = line[3].strip()
-                    equations[equation_name] = {'formula': equation_formula,
-                                                'condition': equation_condition}
-                except IndexError as e:
-                    log.error(f"Missing equation name, formula, or condition. {e}")
-                    log.error(traceback.format_exc())
+        try:
+            jsonschema.validate(instance={"parameters": parameters, "equations": equations}, schema=schema)
+        except jsonschema.ValidationError as e:
+            log.error(f"The file '{file_name}' does not follow the expected structure. {e}")
+            log.error(traceback.format_exc())
 
         return parameters, equations
