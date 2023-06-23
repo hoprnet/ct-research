@@ -82,6 +82,11 @@ sudo docker run -d --name hopr_admin -p 3000:3000 gcr.io/hoprassociation/hopr-ad
 
 2. Start docker:
 ```bash
+sudo dockerd
+```
+If the docker serivice is not enabled run the following line beforehand.
+
+```bash
 sudo systemctl enable docker.service
 ```
 ***Notice:** This step is not necessary on macOS. Simply be sure that the Docker daemon is running by launching it from your Application folder*
