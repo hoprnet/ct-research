@@ -1,6 +1,11 @@
 import logging
+import os
+import traceback
+import json
+import jsonschema
 
 from ct.hopr_api_helper import HoprdAPIHelper
+from .parameters_schema import schema
 
 # Configure logging to output log messages to the console
 logging.basicConfig(level=logging.DEBUG)
@@ -130,3 +135,32 @@ class EconomicHandler():
             new_subgraph_dict[new_key] = data
 
         return new_subgraph_dict
+
+    def read_parameters_and_equations(self, file_name: str = "parameters.json"):
+        """
+        Reads parameters and equations from a JSON file and validates it using a schema.
+        :param: file_name (str): The name of the JSON file containing the parameters
+        and equations. Defaults to "parameters.json".
+        :returns: tuple: The first dictionary contains the parameters and the second
+        dictionary contains the equations.
+        """
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        parameters_file_path = os.path.join(script_directory, file_name)
+
+        try:
+            with open(parameters_file_path, 'r') as file:
+                contents = json.load(file)
+        except FileNotFoundError as e:
+            log.error(f"The file '{file_name}' does not exist. {e}")
+            log.error(traceback.format_exc())
+
+        parameters = contents.get("parameters", {})
+        equations = contents.get("equations", {})
+
+        try:
+            jsonschema.validate(instance={"parameters": parameters, "equations": equations}, schema=schema)
+        except jsonschema.ValidationError as e:
+            log.error(f"The file '{file_name}' does not follow the expected structure. {e}")
+            log.error(traceback.format_exc())
+
+        return parameters, equations

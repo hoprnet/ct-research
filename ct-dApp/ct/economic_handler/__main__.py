@@ -15,12 +15,15 @@ async def main():
     print(API_key)
 
     economic_handler = EconomicHandler(API_host, API_key)
-    result = await economic_handler.channel_topology()
-    result_1 = economic_handler.replace_keys_in_mock_data(result)
-    result_2 = economic_handler.replace_keys_in_mock_data_subgraph(result)
+    #result = await economic_handler.channel_topology()
+    #result_1 = economic_handler.replace_keys_in_mock_data(result)
+    #result_2 = economic_handler.replace_keys_in_mock_data_subgraph(result)
 
-    print(result_1)
-    print(result_2)
+    #print(result_1)
+    #print(result_2)
+    parameters, equations = economic_handler.read_parameters_and_equations()
+    print(parameters)
+    print(equations)
 
 if __name__ == "__main__":
     asyncio.run(main())
