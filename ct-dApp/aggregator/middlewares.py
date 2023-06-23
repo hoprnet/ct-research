@@ -1,4 +1,4 @@
-def setup_middlewares(app):
+def attach_middlewares(app):
     @app.on_response
     async def prevent_xss(request, response):
         """
