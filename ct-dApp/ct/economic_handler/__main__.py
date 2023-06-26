@@ -8,6 +8,7 @@ async def main():
     try:
         API_host = _getenvvar("HOPR_NODE_1_HTTP_URL")
         API_key = _getenvvar("HOPR_NODE_1_API_KEY")
+        RPCH_nodes = _getenvvar("RPCH_NODES_API_ENDPOINT")
     except ValueError:
         exit(ExitCode.ERROR_BAD_ARGUMENTS)
 
@@ -24,6 +25,9 @@ async def main():
     parameters, equations = economic_handler.read_parameters_and_equations()
     print(parameters)
     print(equations)
+
+    result = economic_handler.blacklist_rpch_nodes(api_endpoint=RPCH_nodes)
+    print(result)
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -3,6 +3,7 @@ import os
 import traceback
 import json
 import jsonschema
+import requests
 
 from ct.hopr_api_helper import HoprdAPIHelper
 from .parameters_schema import schema
@@ -164,3 +165,27 @@ class EconomicHandler():
             log.error(traceback.format_exc())
 
         return parameters, equations
+
+    def blacklist_rpch_nodes(self, api_endpoint: str):
+        """
+        Retrieves a list of RPCH node peer IDs from the specified API endpoint.
+        :param: api_endpoint (str): The URL endpoint to retrieve the data from.
+        :returns: A list of RPCH node peer IDs extracted from the response.
+        Notes:
+        - The function sends a GET request to the provided `api_endpoint`.
+        - Expects the response to be a JSON-encoded list of items.
+        - Filters out items that do not have the 'id' field.
+        - Logs errors and traceback in case of failures.
+        """
+        try:
+            response = requests.get(api_endpoint).json()
+            if isinstance(response, list) and response:
+                rpch_node_peerID = [item['id'] for item in response if 'id' in item]
+                return rpch_node_peerID
+        except requests.exceptions.RequestException as e:
+            log.error(f"An error occurred while making the request: {e}")
+        except ValueError as e:
+            log.error(f"An error occurred while parsing the response as JSON: {e}")
+        except Exception as e:
+            log.error(f"An unexpected error occurred: {e}")
+        log.error(traceback.format_exc())
