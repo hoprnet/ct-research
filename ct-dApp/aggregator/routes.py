@@ -24,8 +24,8 @@ def attach_endpoints(app):
         - id: the network UUID of the pod
         - list: a list of peers with their latency
 
-        At each call, the list is added to the aggregator, and the last update timestamp
-        for the given pod is set to the current time.
+        At each call, the list is added to the aggregator, and the last update 
+        timestamp for the given pod is set to the current time.
         """
 
         if "id" not in request.json:
@@ -41,8 +41,8 @@ def attach_endpoints(app):
     @app.route("/aggregator/list", methods=["GET"])
     async def get_list(request: Request):
         """
-        Create a GET route to retrieve the aggregated list of peers/latency and generate 
-        an HTML page to display it.
+        Create a GET route to retrieve the aggregated list of peers/latency 
+        and generate an HTML page to display it.
         NO NEED TO CHECK THIS METHOD, AS IT'S PURPOSE IS ONLY FOR DEBUGGING.
         """
         agg_info = agg.get()
