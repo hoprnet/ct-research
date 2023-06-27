@@ -8,11 +8,13 @@ async def main():
     try:
         API_host = _getenvvar("HOPR_NODE_1_HTTP_URL")
         API_key = _getenvvar("HOPR_NODE_1_API_KEY")
+        RPCH_nodes = _getenvvar("RPCH_NODES_API_ENDPOINT")
     except ValueError:
         exit(ExitCode.ERROR_BAD_ARGUMENTS)
 
     print(API_host)
     print(API_key)
+    print(RPCH_nodes)
 
     economic_handler = EconomicHandler(API_host, API_key)
     result = await economic_handler.channel_topology()
@@ -24,6 +26,9 @@ async def main():
     parameters, equations = economic_handler.read_parameters_and_equations()
     print(parameters)
     print(equations)
+
+    # result = economic_handler.blacklist_rpch_nodes(api_endpoint=RPCH_nodes)
+    # print(result)
 
     result_4 = economic_handler.compute_ct_prob(parameters, equations, result_3)
     print(result_4)
