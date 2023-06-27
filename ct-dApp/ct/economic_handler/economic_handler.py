@@ -189,3 +189,74 @@ class EconomicHandler():
         except Exception as e:
             log.error(f"An unexpected error occurred: {e}")
         log.error(traceback.format_exc())
+
+    def merge_topology_metricdb_subgraph(self, unique_peerId_address: dict,
+                                        new_metrics_dict: dict,
+                                        new_subgraph_dict: dict):
+        """
+        Merge metrics and subgraph data with the unique peer IDs - addresses link.
+        :param: unique_peerId_address: A dict mapping peer IDs to safe addresses.
+        :param: new_metrics_dict: A dict containing metrics with peer ID as the key.
+        :param: new_subgraph_dict: A dict containing subgraph data with
+                safe address as the key.
+        :returns: A dict with peer ID as the key and the merged information.
+        """
+        merged_result = {}
+
+        try:
+            # Merge based on peer ID
+            for peer_id, safe_address in unique_peerId_address.items():
+                if peer_id in new_metrics_dict and safe_address in new_subgraph_dict:
+                    merged_result[peer_id] = {
+                        'safe_address': safe_address,
+                        'netwatchers': new_metrics_dict[peer_id]['netw'],
+                        'stake': new_subgraph_dict[safe_address]['stake']
+                }
+        except Exception as e:
+            log.error(f"Error occurred while merging: {e}")
+            log.error(traceback.format_exc())
+
+        return merged_result
+
+    def compute_ct_prob(self, parameters, equations, merged_result):
+        """
+        Evaluate the function for each stake value in the merged_result dictionary.
+        :param: parameters: A dict containing the parameter values.
+        :param: equations: A dict containing the equations and conditions.
+        :param: A dict containing the data.
+        :returns: A dict containing the probability distribution.
+        """
+        results = {}
+        f_x_condition = equations['f_x']['condition']
+
+        # compute transformed stake
+        for key, value in merged_result.items():
+            stake = value['stake']
+            params = {param: value['value'] for param, value in parameters.items()}
+            params['x'] = stake
+
+            try:
+                if eval(f_x_condition, params):
+                    function = 'f_x'
+                else:
+                    function = 'g_x'
+
+                formula = equations[function]['formula']
+                result = eval(formula, params)
+                results[key] = {'trans_stake': result}
+
+            except Exception as e:
+                log.error(f"Error evaluating function for peer ID {key}: {e}")
+                log.error(traceback.format_exc())
+
+        # compute ct probability
+        sum_values = sum(result['trans_stake'] for result in results.values())
+        for key in results:
+            results[key]['prob'] = results[key]['trans_stake'] / sum_values
+
+        # update dictionary with model results
+        for key in merged_result:
+            if key in results:
+                merged_result[key].update(results[key])
+
+        return merged_result
