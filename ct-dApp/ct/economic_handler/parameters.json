@@ -9,7 +9,7 @@
       "comment": "denominator of the exponent of nonlinear function g(x)"
     },
     "c": {
-      "value": 20,
+      "value": 3,
       "comment": "threshold value defining the cutoff for when f(x) ends and g(x) starts"
     },
     "l": {
