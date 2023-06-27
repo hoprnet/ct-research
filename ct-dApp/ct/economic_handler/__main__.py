@@ -25,7 +25,6 @@ async def main():
     print(parameters)
     print(equations)
 
-    x_values = [1, 2, 3, 4, 5]
     result_4 = economic_handler.compute_ct_prob(parameters, equations, result_3)
     print(result_4)
 
