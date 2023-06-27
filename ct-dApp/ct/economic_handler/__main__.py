@@ -14,6 +14,7 @@ async def main():
 
     print(API_host)
     print(API_key)
+    print(RPCH_nodes)
 
     economic_handler = EconomicHandler(API_host, API_key)
     result = await economic_handler.channel_topology()
@@ -28,7 +29,7 @@ async def main():
 
     # result = economic_handler.blacklist_rpch_nodes(api_endpoint=RPCH_nodes)
     # print(result)
-    
+
     result_4 = economic_handler.compute_ct_prob(parameters, equations, result_3)
     print(result_4)
 
