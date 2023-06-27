@@ -18,7 +18,6 @@ unfixable = []
 
 # Exclude a variety of commonly ignored directories.
 exclude = [
-    "run_economic_handler.sh",
     ".bzr",
     ".direnv",
     ".eggs",
