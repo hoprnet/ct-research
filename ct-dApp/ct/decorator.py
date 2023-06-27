@@ -2,7 +2,7 @@ import asyncio
 import datetime
 import functools
 import logging
-from datetime import timedelta, datetime
+import datetime
 
 log = logging.getLogger(__name__)
 
@@ -23,10 +23,10 @@ def wakeupcall(message:str=None, minutes:int=0, seconds:int=0):
         :param seconds: next whole second to trigger the function
         """
 
-        delta = timedelta(minutes=minutes, seconds=seconds)
+        delta = datetime.timedelta(minutes=minutes, seconds=seconds)
         
-        dt = datetime.now()
-        min_date = datetime.min
+        dt = datetime.datetime.now()
+        min_date = datetime.datetime.min
         try:
             next_time = min_date + round((dt - min_date) / delta + 0.5) * delta
         except ZeroDivisionError:
