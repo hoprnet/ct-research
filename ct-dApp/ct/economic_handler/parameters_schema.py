@@ -31,7 +31,20 @@ schema = {
                     "required": ["formula", "condition"]
                 }
             }
+        },
+         "budget": {
+            "type": "object",
+            "properties": {
+                "value": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "comment": {
+                    "type": "string"
+                }
+            },
+            "required": ["value"]
         }
     },
-    "required": ["parameters", "equations"]
+    "required": ["parameters", "equations", "budget"]
 }

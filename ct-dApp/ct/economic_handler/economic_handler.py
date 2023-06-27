@@ -4,6 +4,8 @@ import traceback
 import json
 import jsonschema
 import requests
+import csv
+import time
 
 from ct.hopr_api_helper import HoprdAPIHelper
 from .parameters_schema import schema
@@ -142,8 +144,8 @@ class EconomicHandler():
         Reads parameters and equations from a JSON file and validates it using a schema.
         :param: file_name (str): The name of the JSON file containing the parameters
         and equations. Defaults to "parameters.json".
-        :returns: tuple: The first dictionary contains the parameters and the second
-        dictionary contains the equations.
+        :returns: dicts: The first dictionary contains the parameters, the second
+        dictionary contains the equations, and the third dictionary the budget.
         """
         script_directory = os.path.dirname(os.path.abspath(__file__))
         parameters_file_path = os.path.join(script_directory, file_name)
@@ -157,14 +159,16 @@ class EconomicHandler():
 
         parameters = contents.get("parameters", {})
         equations = contents.get("equations", {})
+        budget = contents.get("budget", {})
 
         try:
-            jsonschema.validate(instance={"parameters": parameters, "equations": equations}, schema=schema)
+            jsonschema.validate(instance={"parameters": parameters, "equations": equations,
+                                          "budget": budget}, schema=schema)
         except jsonschema.ValidationError as e:
             log.error(f"The file '{file_name}' does not follow the expected structure. {e}")
             log.error(traceback.format_exc())
 
-        return parameters, equations
+        return parameters, equations, budget
 
     def blacklist_rpch_nodes(self, api_endpoint: str):
         """
@@ -260,3 +264,27 @@ class EconomicHandler():
                 merged_result[key].update(results[key])
 
         return merged_result
+
+    def compute_expected_reward_savecsv(self, dataset: dict, budget: dict):
+        timestamp = time.strftime("%Y%m%d%H%M")
+
+        for entry in dataset.values():
+            entry['expected_reward'] = entry['prob'] * budget['value']
+
+        keys = list(dataset.keys())
+        values = list(dataset.values())
+
+        folder_name = "expected_rewards"
+        folder_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), folder_name)
+        filename = f"expected_reward_{timestamp}.csv"
+        file_path = os.path.join(folder_path, filename)
+
+        os.makedirs(folder_path, exist_ok=True)
+
+        with open(file_path, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['peer_id'] + list(dataset[keys[0]].keys()))
+            for key, value in zip(keys, values):
+                writer.writerow([key] + list(value.values()))
+
+        return dataset
