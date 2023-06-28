@@ -282,19 +282,27 @@ class EconomicHandler():
 
         try:
             os.makedirs(folder_path, exist_ok=True)
+        except OSError as e:
+            log.error(f"Error occurred while creating the folder: {e}")
 
+        try:
             for entry in dataset.values():
                 entry['expected_reward'] = entry['prob'] * budget['value']
+        except KeyError as e:
+            log.error(f"Error occurred while computing the expected reward: {e}")
 
+        try:
             with open(file_path, 'w', newline='') as csvfile:
                 writer = csv.writer(csvfile)
                 writer.writerow(['peer_id'] + list(dataset[next(iter(dataset))].keys()))
                 for key, value in dataset.items():
                     writer.writerow([key] + list(value.values()))
+        except OSError as e:
+            log.error(f"Error occurred while writing to the CSV file: {e}")
 
-            return dataset
+        log.error(traceback.format_exc())
 
-        except Exception as e:
-            log.error(f"Error occurred while merging: {e}")
-            log.error(traceback.format_exc())
+        return dataset
+
+
 
