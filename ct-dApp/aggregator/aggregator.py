@@ -1,5 +1,5 @@
-from datetime import datetime
 import threading
+import datetime
 
 class Singleton(type):
     """
@@ -30,7 +30,8 @@ class Aggregator(metaclass=Singleton):
         self._update_dict: dict = {}
         self._dict_lock = threading.Lock() # thread-safe list
         self._update_lock = threading.Lock() # thread-safe lastupdate
-    
+            
+
     def add(self, pod_id : str, items: list):
         """
         Add latency data to the aggregator for a specific pod (nw).
@@ -60,7 +61,7 @@ class Aggregator(metaclass=Singleton):
         with self._dict_lock:
             self._dict = {}
 
-    def set_update(self, pod_id: str, timestamp: datetime):
+    def set_update(self, pod_id: str, timestamp: datetime.datetime):
         """
         Set the last update timestamp for a specific pod.
         Concurrent access is managed using a lock.

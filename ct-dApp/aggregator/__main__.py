@@ -6,8 +6,11 @@ from .settings import Settings
 from .aggregator import Aggregator
 from .setup import create_app
 
+
 if __name__ == "__main__":
-    Aggregator()
+    agg = Aggregator()
+
+    # # start the node and run the event loop until the node stops
 
     loader = AppLoader(factory=partial(create_app))
     app = loader.load()
