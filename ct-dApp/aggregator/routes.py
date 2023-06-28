@@ -1,7 +1,5 @@
-import copy
 from datetime import datetime
 
-import numpy as np
 from sanic.request import Request
 from sanic.response import html as sanic_html
 from sanic.response import text as sanic_text
@@ -10,7 +8,6 @@ from sanic.response.convenience import redirect
 from db_connection.database_connection import DatabaseConnection
 
 from .aggregator import Aggregator
-from .utils import get_best_matchs
 
 
 def attach_endpoints(app):
@@ -106,35 +103,8 @@ def attach_endpoints(app):
         NO NEED TO CHECK THIS METHOD, AS IT'S PURPOSE IS ONLY FOR DEBUGGING.
         """
 
-        # create deep copy of agg._dict using library
-        dict_copy = copy.deepcopy(agg._dict)
+        matchs_for_db = agg.convert_to_db_data()
 
-        nw_names = list(dict_copy.keys())
-        peer_names = []
-
-        for _, values in dict_copy.items():
-            for peer, _ in values.items():
-                if peer not in peer_names:
-                    peer_names.append(peer)
-
-        latency_as_array = np.zeros((len(nw_names), len(peer_names)), dtype=np.int32)
-        for nw_idx, values in enumerate(dict_copy.values()):
-            for peer, lat in values.items():
-                peer_idx = peer_names.index(peer)
-                latency_as_array[nw_idx, peer_idx] = int(lat)
-
-
-        matchs = get_best_matchs(latency_as_array, max_iter=3)
-
-        matchs_for_db = []
-        for peer_idx, nw_idxs in matchs.items():
-            peer = peer_names[peer_idx]
-            nws = [nw_names[idx] for idx in nw_idxs]
-            latencies = [int(latency_as_array[idx, peer_idx]) for idx in nw_idxs]
-
-            matchs_for_db.append((peer, nws, latencies))
-
-        
         with DatabaseConnection(database="metricDB",
                                 host="localhost",
                                 user="postgres",
