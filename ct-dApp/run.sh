@@ -1,15 +1,10 @@
-#!/bin/sh
-# export HOPR_NODE='127.0.0.1'
-# export HOPR_NODE_HTTP_URL="http://${HOPR_NODE}:PORT_FIELD"
-# export HOPR_NODE_WS_URL="ws://${HOPR_NODE}:PORT_FIELD"
-# export HOPR_NODE_API_KEY='%th1s-IS-a-S3CR3T-ap1-PUSHING-b1ts-TO-you%'
-# export AGG_HTTP_POST_URL='http://localhost:8080/aggregator/list'
+echobold(){
+    GREEN='\e[1;42m'
+    NC='\033[0m'
+    printf "\e[1;42m${1}\033[0m\n"
+}
 
 
-# add CLI input arguments:
-# - m: module to run (ct, nw, agg, trigger)
-#     if m is "nw", add a parameter --port to specify the port
-#     if m is "trigger", add a parameter --url to specify the post_db_url
 while getopts :m:p:u:h:r:k:a: flag
 do
     case "${flag}" in
@@ -26,7 +21,7 @@ done
 
 if [ "$module" = "ct" ]; then
     clear
-    echo "Running ct"
+    echobold "Running ct"
     python -m ct --plotf plots --latcount 100
 
 elif [ "$module" = "nw" ]; then
@@ -48,7 +43,7 @@ elif [ "$module" = "nw" ]; then
     fi
 
     clear
-    echo "Running NetWatcher"
+    echobold "Running Netwatcher"
     python -m netwatcher --port $port --apihost $host --apikey $key --aggpost $aggpost
     
 elif [ "$module" = "agg" ]; then
@@ -61,7 +56,7 @@ elif [ "$module" = "agg" ]; then
         exit 1
     fi
     clear
-    echo "Running Aggregator"
+    echobold "Running Aggregator"
     python -m aggregator --host $host --port $port 
 elif [ "$module" = "trigger" ]; then
     if [ -z "$host" ]; then
@@ -77,10 +72,10 @@ elif [ "$module" = "trigger" ]; then
         exit 1
     fi
     clear
-    echo "Running Trigger"
+    echobold "Running Trigger"
     python -m aggregator_trigger --host $host --port $port --route $route
 else
-    echo "Tried to run unknown module: $module"
+    echobold "Tried to run unknown module: '$module'"
 fi
 
 
