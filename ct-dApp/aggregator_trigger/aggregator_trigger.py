@@ -3,10 +3,15 @@ import requests
 from ct.decorator import wakeupcall
 
 class AggregatorTrigger:
-    """ Class description."""
+    """This class is used to trigger the aggregator to send its data to the db
+    every hour:minute:second.
+    """
     def __init__(self, host: str, port: int, route: str):
         """
         Initialisation of the class.
+        :param host: The host of the aggregator
+        :param port: The port of the aggregator
+        :param route: The route to the 'send_list_to_db' method
         """
         self.started = False
         self.tasks = set[asyncio.Task]()
@@ -14,6 +19,9 @@ class AggregatorTrigger:
 
     @wakeupcall(minutes=1)
     async def send_list_to_db(self):
+        """
+        Sends a request to the aggregator to send its data to the db
+        """
         try:
             response = requests.get(self.endpoint_url)
         # catch request exceptions
@@ -35,7 +43,7 @@ class AggregatorTrigger:
     
     async def start(self):
         """
-        Starts the tasks of this node
+        Starts the automatic triggering of the aggregator
         """
         if self.tasks:
             return
