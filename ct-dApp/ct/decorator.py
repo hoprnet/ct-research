@@ -5,7 +5,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-def wakeupcall(message:str=None, minutes:int=0, seconds:int=0):
+def wakeupcall(message:str=None, hours:int=0, minutes:int=0, seconds:int=0):
     """
     Decorator to log the start of a function, make it run until stopped, and delay the
     next iteration. The delay is calculated so that the function is triggered every 
@@ -15,14 +15,14 @@ def wakeupcall(message:str=None, minutes:int=0, seconds:int=0):
     :param seconds: next whole second to trigger the function
     """
 
-    def next_delay_in_seconds(minutes: int = 0, seconds: int = 0):
+    def next_delay_in_seconds(hours: int = 0, minutes: int = 0, seconds: int = 0):
         """
         Calculates the delay until the next whole `minutes`min and `seconds`sec.
         :param minutes: next whole minute to trigger the function
         :param seconds: next whole second to trigger the function
         """
 
-        delta = datetime.timedelta(minutes=minutes, seconds=seconds)
+        delta = datetime.timedelta(hours=hours, minutes=minutes, seconds=seconds)
         
         dt = datetime.datetime.now()
         min_date = datetime.datetime.min
@@ -35,6 +35,7 @@ def wakeupcall(message:str=None, minutes:int=0, seconds:int=0):
         delay = int((next_time - dt).total_seconds())
         if delay == 0:
             return delta.seconds
+        
         return delay
 
     def decorator(func):
@@ -43,13 +44,13 @@ def wakeupcall(message:str=None, minutes:int=0, seconds:int=0):
             if message is not None:
                 log.info(message)
 
-            sleep = next_delay_in_seconds(minutes=minutes, seconds=seconds)
+            sleep = next_delay_in_seconds(hours, minutes, seconds)
             await asyncio.sleep(sleep)            
 
             while self.started:
                 await func(self, *args, **kwargs)
 
-                sleep = next_delay_in_seconds(minutes=minutes, seconds=seconds)
+                sleep = next_delay_in_seconds(hours, minutes, seconds)
                 await asyncio.sleep(sleep)
                 
         return wrapper
