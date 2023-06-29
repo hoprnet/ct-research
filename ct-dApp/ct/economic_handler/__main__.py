@@ -12,10 +12,6 @@ async def main():
     except ValueError:
         exit(ExitCode.ERROR_BAD_ARGUMENTS)
 
-    print(API_host)
-    print(API_key)
-    print(RPCH_nodes)
-
     economic_handler = EconomicHandler(API_host, API_key)
 
     tasks = [
@@ -26,12 +22,6 @@ async def main():
 
     result = await asyncio.gather(*tasks)
     channel_topology_result, parameters_equations_budget_result, blacklist_result = result
-
-    print(channel_topology_result)
-    print(parameters_equations_budget_result[0])  # parameters
-    print(parameters_equations_budget_result[1])  # equations
-    print(parameters_equations_budget_result[2])  # budget
-    print(blacklist_result) # RPCh nodes blacklist
 
     # helper functions that allow to test the code (subject to removal)
     result_1 = economic_handler.replace_keys_in_mock_data(channel_topology_result)

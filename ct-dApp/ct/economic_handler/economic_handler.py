@@ -3,7 +3,6 @@ import os
 import traceback
 import json
 import jsonschema
-import requests
 import csv
 import time
 import asyncio
