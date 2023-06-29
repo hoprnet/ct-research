@@ -26,5 +26,9 @@
       "formula": "a * c + (x - c) ** (1 / b)",
       "condition": "x > c"
     }
+  },
+  "budget": {
+    "value": 100,
+    "comment": "budget for the given distribution period"
   }
 }

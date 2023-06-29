@@ -6,6 +6,7 @@ __pycache__/
 env/
 
 # logs
+expected_reward_*.csv
 net_viz-*.png
 out.mp4
 websocket_client.log

@@ -23,15 +23,19 @@ async def main():
     result_3 = economic_handler.merge_topology_metricdb_subgraph(result, result_1, result_2)
 
     print(result_3)
-    parameters, equations = economic_handler.read_parameters_and_equations()
+    parameters, equations, budget = economic_handler.read_parameters_and_equations()
     print(parameters)
     print(equations)
+    print(budget)
 
     # result = economic_handler.blacklist_rpch_nodes(api_endpoint=RPCH_nodes)
     # print(result)
 
     result_4 = economic_handler.compute_ct_prob(parameters, equations, result_3)
     print(result_4)
+
+    result_5 = economic_handler.compute_expected_reward_savecsv(result_4, budget)
+    print(result_5)
 
 if __name__ == "__main__":
     asyncio.run(main())
