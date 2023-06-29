@@ -1,11 +1,16 @@
-from sanic.response import html as sanic_html
-from sanic.response import text as sanic_text
-from sanic.request import Request
-
-from aggregator import Aggregator
 from datetime import datetime
 
-def setup_routes(app):
+from sanic.request import Request
+from sanic.response import html as sanic_html
+from sanic.response import text as sanic_text
+from sanic.response.convenience import redirect
+
+from db_connection.database_connection import DatabaseConnection
+
+from .aggregator import Aggregator
+
+
+def attach_endpoints(app):
     agg = Aggregator()
 
     @app.route("/aggregator/list", methods=["POST"])
@@ -16,8 +21,8 @@ def setup_routes(app):
         - id: the network UUID of the pod
         - list: a list of peers with their latency
 
-        At each call, the list is added to the aggregator, and the last update timestamp
-        for the given pod is set to the current time.
+        At each call, the list is added to the aggregator, and the last update 
+        timestamp for the given pod is set to the current time.
         """
 
         if "id" not in request.json:
@@ -33,8 +38,8 @@ def setup_routes(app):
     @app.route("/aggregator/list", methods=["GET"])
     async def get_list(request: Request):
         """
-        Create a GET route to retrieve the aggregated list of peers/latency and generate 
-        an HTML page to display it.
+        Create a GET route to retrieve the aggregated list of peers/latency 
+        and generate an HTML page to display it.
         NO NEED TO CHECK THIS METHOD, AS IT'S PURPOSE IS ONLY FOR DEBUGGING.
         """
         agg_info = agg.get()
@@ -62,6 +67,9 @@ def setup_routes(app):
         if len(agg_info) == 0:
             html_text.append(_display_pod_infos("N/A", {}, None, styles))
 
+
+        action = "location.href='/aggregator/to_db';"
+        html_text.append(f"<button type='button' onclick={action}>Send to DB</button>")
         html_text.append("</body>")
 
         return sanic_html("".join(html_text), status=200)
@@ -87,3 +95,25 @@ def setup_routes(app):
         text.append(f"<p style='{styles['line']}'>Peers: {peer_list}</p>")
 
         return ''.join(text)
+    
+    @app.route("/aggregator/to_db", methods=["GET"])
+    async def post_to_db(request: Request):
+        """
+        Takes the peers and metrics from the _dict and sends them to the database.
+        NO NEED TO CHECK THIS METHOD, AS IT'S PURPOSE IS ONLY FOR DEBUGGING.
+        """
+
+        matchs_for_db = agg.convert_to_db_data()
+
+        with DatabaseConnection(database="metricDB",
+                                host="localhost",
+                                user="postgres",
+                                password="admin",
+                                port="5432") as db:
+            for peer, nws, latencies in matchs_for_db:
+                db.insert("raw_data_table", 
+                          peer=peer, 
+                          nws=nws,
+                          latencies=latencies)
+
+        return redirect('/aggregator/list')
