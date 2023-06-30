@@ -8,7 +8,7 @@ import time
 import asyncio
 import aiohttp
 
-from ct.hopr_api_helper import HoprdAPIHelper
+from tools.hopr_api_helper import HoprdAPIHelper
 from .parameters_schema import schema
 
 # Configure logging to output log messages to the console

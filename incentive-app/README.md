@@ -1,10 +1,13 @@
 # Cover Traffic dApp
+TODO
 
+***
 This folder contains the cover traffic dApp.
 
 The goal of the ct-dapp is to distribute cover traffic in the monte rosa network to keep the annoymity set of nodes sufficiently large at all times.
 
 However, the fist version of the ct-dapp has the sole purpose of replacing the staking rewards users earn in the current staking season beyond its discontinuation.
+***
 
 ## Development Requirements
 
@@ -115,19 +118,12 @@ pip install -r requirements.txt
 ```
 
 3. Adapt the values in `run.sh` file:
-```bash
-#!/bin/sh
-
-export HOPR_NODE_1='127.0.0.1'
-export HOPR_NODE_1_HTTP_URL="http://${HOPR_NODE_1}:13305"
-export HOPR_NODE_1_WS_URL="ws://${HOPR_NODE_1}:13305"
-export HOPR_NODE_1_API_KEY='%th1s-IS-a-S3CR3T-ap1-PUSHING-b1ts-TO-you%'
-
-python -m ct --plotf <plot-folder> --latcount <max_latency_count>
+```
+TODO
 ```
 
 #### Comments:
-- ```python -m ct --help``` provide a descrition of each parameter.
+- ```python -m <module> --help``` provide a descrition of each parameter.
 - The ```plot-folder``` is the place where all the generated plots are stored. It has a default value that is ```.```. It is highly recommended to specify a different folder. At runtime, the specified folder will be created if necessary.
 
 ### Configuration of Environment Variables
