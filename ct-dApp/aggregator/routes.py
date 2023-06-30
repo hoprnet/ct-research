@@ -3,7 +3,7 @@ from datetime import datetime
 from sanic.request import Request
 from sanic.response import html as sanic_html
 from sanic.response import text as sanic_text
-from sanic.response.convenience import redirect
+from sanic.response import json as sanic_json
 
 from db_connection.database_connection import DatabaseConnection
 
@@ -37,6 +37,16 @@ def attach_endpoints(app):
     
     @app.route("/aggregator/list", methods=["GET"])
     async def get_list(request: Request):
+        """
+        Create a GET route to retrieve the aggregated list of peers/latency.
+        The list is returned as a JSON object with the following keys:
+        - id: the network UUID of the pod
+        - list: a list of peers with their latency
+        """
+        return sanic_json(agg.get(), status=200)
+
+    @app.route("/aggregator/list_ui", methods=["GET"])
+    async def get_list_ui(request: Request):
         """
         Create a GET route to retrieve the aggregated list of peers/latency 
         and generate an HTML page to display it.
@@ -116,4 +126,4 @@ def attach_endpoints(app):
                           nws=nws,
                           latencies=latencies)
 
-        return redirect('/aggregator/list')
+        return sanic_text("Sent to DB", status=200)

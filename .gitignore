@@ -15,5 +15,6 @@ logs/
 .coverage
 run_play.sh
 foo.py
-
-
+run_aggregator.sh
+run_nw.sh
+run_trigger.sh

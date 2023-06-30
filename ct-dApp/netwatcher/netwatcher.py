@@ -25,7 +25,6 @@ class NetWatcher(HOPRNode):
         # assign unique uuid as a string
         self.id = str(uuid.uuid4())
         self.posturl = posturl
-        self.session = ClientSession()
         
         super().__init__(url, key, 10, '.')
     
@@ -67,6 +66,7 @@ class NetWatcher(HOPRNode):
                     log.info(f"Transmisted peers: {', '.join(short_list)}")
         except ClientConnectorError as e:
             log.error(f"Error transmitting peers: {e}")
+
 
     @wakeupcall(message="Initiated peers transmission", minutes=1)
     @connectguard
