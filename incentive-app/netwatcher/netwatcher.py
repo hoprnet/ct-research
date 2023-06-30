@@ -1,12 +1,11 @@
 import asyncio
 import logging
-import uuid
 import random
+import uuid
 
 from aiohttp import ClientSession
-from aiohttp.client_exceptions import ClientConnectorError
 
-from tools.decorator import connectguard, wakeupcall, formalin
+from tools.decorator import connectguard, formalin, wakeupcall
 from tools.hopr_node import HOPRNode
 
 log = logging.getLogger(__name__)
@@ -72,7 +71,7 @@ class NetWatcher(HOPRNode):
             async with session.post(self.posturl, json=data) as response:
                 if response.status == 200:
                     log.info(f"Transmisted peers: {', '.join(short_list)}")
-        except ClientConnectorError as e:
+        except Exception as e:  # ClientConnectorError
             log.error(f"Error transmitting peers: {e}")
 
     @formalin(message="Gathering peers", sleep=30)

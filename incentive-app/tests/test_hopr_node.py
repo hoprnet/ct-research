@@ -3,6 +3,10 @@
 # from tools import HOPRNode
 
 
+def test_dummy():
+    assert True
+
+
 # @pytest.mark.asyncio
 # async def test_connect_successful(mocker):
 #     """
