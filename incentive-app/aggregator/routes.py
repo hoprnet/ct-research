@@ -5,7 +5,7 @@ from sanic.response import html as sanic_html
 from sanic.response import text as sanic_text
 from sanic.response import json as sanic_json
 
-from db_connection.database_connection import DatabaseConnection
+from tools.db_connection.database_connection import DatabaseConnection
 
 from .aggregator import Aggregator
 
