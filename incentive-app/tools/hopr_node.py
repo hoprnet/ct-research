@@ -3,9 +3,10 @@ import logging
 
 from .hopr_api_helper import HoprdAPIHelper
 
-from .decorator import formalin, connectguard
+from .decorator import formalin
 
 log = logging.getLogger(__name__)
+
 
 class HOPRNode:
     """
@@ -31,7 +32,7 @@ class HOPRNode:
         self.tasks = set[asyncio.Task]()
         self.started = False
         log.debug("Created HOPR node instance")
-        
+
     @property
     def connected(self) -> bool:
         """
@@ -51,7 +52,6 @@ class HOPRNode:
         self.peer_id = None
         log.info("Disconnected HOPR node")
 
-    
     @formalin(message="Connecting to node", sleep=20)
     async def connect(self, address: str = "hopr"):
         """
@@ -64,7 +64,7 @@ class HOPRNode:
             self.peer_id = await self.api.get_address(address)
         except Exception as e:
             log.warning(f"Could not connect to {self.api.url}: {e}")
-            
+
         if self.peer_id is None:
             log.info("HOPR node is down")
         else:
