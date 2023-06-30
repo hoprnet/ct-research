@@ -1,7 +1,5 @@
 import asyncio
 import logging
-import random
-
 
 from .hopr_api_helper import HoprdAPIHelper
 
