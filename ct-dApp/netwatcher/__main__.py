@@ -1,8 +1,8 @@
 import asyncio
 from signal import SIGINT, SIGTERM
 
-from ct.exit_codes import ExitCode
-from ct.utils import _getlogger, stop
+from tools.exit_codes import ExitCode
+from tools.utils import _getlogger, stop
 import click
 
 from .netwatcher import NetWatcher

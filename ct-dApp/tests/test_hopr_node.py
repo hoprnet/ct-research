@@ -1,6 +1,6 @@
 import asyncio
 import pytest
-from ct import HOPRNode
+from tools import HOPRNode
 
 
 @pytest.mark.asyncio

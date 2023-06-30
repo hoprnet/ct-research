@@ -1,59 +1,20 @@
 import asyncio
-import functools
 import logging
 import random
-import time
-import traceback
-from pathlib import Path
 
-from viz import network_viz
 
 from .hopr_api_helper import HoprdAPIHelper
 
+from .decorator import formalin, connectguard
+
 log = logging.getLogger(__name__)
-
-def formalin(message: str = None, sleep: int = None):
-    """
-    Decorator to log the start of a function, make it run until stopped, and delay the
-    next iteration
-    :param message: the message to log when the function starts
-    :param sleep: the duration to sleep after an interation
-    """
-    def decorator(func):
-        @functools.wraps(func)
-        async def wrapper(self, *args, **kwargs):
-            if message is not None:
-                log.info(message)
-
-            while self.started:
-                await func(self, *args, **kwargs)
-
-                if sleep is not None:
-                    await asyncio.sleep(sleep)
-
-        return wrapper
-    return decorator
-
-def connectguard(func):
-    """
-    Decorator to check if the node is connected before running anything
-    """
-    @functools.wraps(func)
-    async def wrapper(self, *args, **kwargs):
-        if not self.connected:
-            log.warning("Node not connected, skipping")
-            return
-
-        await func(self, *args, **kwargs)
-
-    return wrapper
 
 class HOPRNode:
     """
     Implements the functionality of a HOPR node through the hoprd-api-python and WebSocket
     """
 
-    def __init__(self, url: str, key: str, max_lat_count: int = 100, plot_folder: str = "."):
+    def __init__(self, url: str, key: str, max_lat_count: int = 100):
         """
         :param url: the url of the HOPR node
         :param key: the API key of the HOPR node
@@ -74,10 +35,6 @@ class HOPRNode:
         # a dict to keep the max_lat_count latency measures {peer: [51, 23, ...]}
         self.latency = dict[str, list]()
         self.max_lat_count = max_lat_count
-
-        # a folder to store the logs
-        self.plot_folder = Path(plot_folder)
-        self.plot_folder.mkdir(parents=True, exist_ok=True)
 
         # a set to keep track of the running tasks
         self.tasks = set[asyncio.Task]()
@@ -145,24 +102,6 @@ class HOPRNode:
             for peer in vanished_peers:
                 log.info(f"Peer {peer[-5:]} vanished")
 
-    @formalin(message="Creating visualization", sleep=10.0)
-    @connectguard
-    async def plot(self):
-        """
-        Plots the network and latencies among its nodes.
-
-        :returns: nothing;
-        """
-
-        id = f"{time.time():.2f}".replace(".", "_")
-        file_name = self.plot_folder.joinpath(f"net_viz-{id}")
-        data = {self.peer_id: self.latency}
-        
-        try:
-            await asyncio.to_thread(network_viz, data, file_name)
-        except Exception as e:
-            log.error(f"Could not create visualization [ {file_name} ]: {e}")
-            log.error(traceback.format_exc())
 
     @formalin(message="Pinging peers", sleep=10.0)
     @connectguard
@@ -197,33 +136,3 @@ class HOPRNode:
 
             self.latency[peer_id].append(latency)
             self.latency[peer_id] = self.latency[peer_id][-self.max_lat_count:]
-
-    async def start(self):
-        """
-        Starts the tasks of this node
-        """
-        log.info("Starting node")
-        if self.tasks:
-            return
-    
-        self.started = True
-        self.tasks.add(asyncio.create_task(self.connect(address="hopr")))
-        self.tasks.add(asyncio.create_task(self.gather_peers()))
-        self.tasks.add(asyncio.create_task(self.ping_peers()))
-        self.tasks.add(asyncio.create_task(self.plot()))
-
-        await asyncio.gather(*self.tasks)
-
-    def stop(self):
-        """
-        Stops the running tasks of this node
-        """
-        log.info("Stopping node")
-        self.started = False
-
-        self.disconnect()
-
-        for t in self.tasks:
-            t.add_done_callback(self.tasks.discard)
-        
-        asyncio.gather(*self.tasks)

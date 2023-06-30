@@ -2,11 +2,11 @@ import asyncio
 import logging
 import uuid
 
-from aiohttp.client_exceptions import ClientConnectorError
 from aiohttp import ClientSession
-from ct.hopr_node import HOPRNode, connectguard
+from aiohttp.client_exceptions import ClientConnectorError
 
-from ct.decorator import wakeupcall
+from tools.decorator import connectguard, wakeupcall
+from tools.hopr_node import HOPRNode
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class NetWatcher(HOPRNode):
         self.id = str(uuid.uuid4())
         self.posturl = posturl
         
-        super().__init__(url, key, 10, '.')
+        super().__init__(url, key, 10)
     
 
     def wipe_peers(self):

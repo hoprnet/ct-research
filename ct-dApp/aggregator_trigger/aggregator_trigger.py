@@ -1,6 +1,6 @@
 import asyncio
 import requests
-from ct.decorator import wakeupcall
+from tools.decorator import wakeupcall
 
 class AggregatorTrigger:
     """This class is used to trigger the aggregator to send its data to the db

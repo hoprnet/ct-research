@@ -3,7 +3,7 @@ import os
 from unittest.mock import MagicMock
 from signal import SIGINT
 
-from ct import HOPRNode, _getenvvar, stop
+from tools import HOPRNode, _getenvvar, stop
 
 
 def test_getenvvar_load_envar() -> None:
