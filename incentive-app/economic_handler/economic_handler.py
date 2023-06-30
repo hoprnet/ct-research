@@ -8,29 +8,93 @@ import time
 import asyncio
 import aiohttp
 
-from tools.hopr_api_helper import HoprdAPIHelper
+from tools.hopr_node import HOPRNode
 from .parameters_schema import schema
+
+from tools.decorator import wakeupcall, connectguard
 
 # Configure logging to output log messages to the console
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
-class EconomicHandler():
-    def __init__(self, url: str, key: str):
+
+class EconomicHandler(HOPRNode):
+    def __init__(self, url: str, key: str, rpch_endpoint: str):
         """
         :param url: the url of the HOPR node
         :param key: the API key of the HOPR node
         :returns: a new instance of the Economic Handler using 'url' and API 'key'
         """
-        self.api_key = key
-        self.url = url
-        self.peer_id = None
 
-        # access the functionality of the hoprd python api
-        self.api = HoprdAPIHelper(url=url, token=key)
+        self.tasks = set[asyncio.Task]()
+        self.rpch_endpoint = rpch_endpoint
 
-        self.started = False
-        log.debug("Created EconomicHandler instance")
+        super().__init__(url=url, key=key)
+
+        # self.api_key = key
+        # self.url = url
+        # self.peer_id = None
+
+        # # access the functionality of the hoprd python api
+        # self.api = HoprdAPIHelper(url=url, token=key)
+
+        # self.started = False
+
+    @wakeupcall(seconds=10)
+    async def am_i_up(self):
+        print(f"{self.connected=}")
+        return self.connected
+
+    @wakeupcall(seconds=15)
+    @connectguard
+    async def scheduler(self):
+        scheduler_tasks = set[asyncio.Task]()
+
+        expected_order = ["topology", "params", "rpch"]
+
+        scheduler_tasks.add(asyncio.create_task(self.channel_topology()))
+        scheduler_tasks.add(asyncio.create_task(self.read_parameters_and_equations()))
+        scheduler_tasks.add(
+            asyncio.create_task(self.blacklist_rpch_nodes(self.rpch_endpoint))
+        )
+
+        await asyncio.sleep(0)
+
+        finished, _ = await asyncio.wait(scheduler_tasks)
+
+        unordered_results = [task.result() for task in finished]
+
+        # sort the results according to the expected order.
+        # This is necessary because the order of the results is not guaranteed
+        results = sorted(unordered_results, key=lambda x: expected_order.index(x[0]))
+
+        channel_topology = results[0][1]
+        parameters_equations_budget = results[1][1:]
+        blacklist = results[2][1]
+
+        # helper functions that allow to test the code (subject to removal)
+        result_1 = self.replace_keys_in_mock_data(channel_topology)
+        result_2 = self.replace_keys_in_mock_data_subgraph(channel_topology)
+
+        # merge channel topology with metrics from the database and subgraph data
+        result_3 = self.merge_topology_metricdb_subgraph(
+            channel_topology, result_1, result_2
+        )
+
+        # computation of cover traffic probability
+        result_4 = self.compute_ct_prob(
+            parameters_equations_budget[0], parameters_equations_budget[1], result_3
+        )
+        # calculate expected rewards and output it as a csv file
+        result_5 = self.compute_expected_reward_savecsv(
+            result_4, parameters_equations_budget[2]
+        )
+
+        print(
+            blacklist
+        )  # RPCh nodes blacklist (not yet included: would need to mock it)
+        print(f"{result_5=}")
+        print(f"{blacklist=}")
 
     async def channel_topology(self, full_topology: bool = True, channels: str = "all"):
         """
@@ -46,15 +110,15 @@ class EconomicHandler():
 
         for item in all_items:
             try:
-                source_peer_id = item['sourcePeerId']
-                source_address = item['sourceAddress']
+                source_peer_id = item["sourcePeerId"]
+                source_address = item["sourceAddress"]
             except KeyError as e:
                 raise KeyError(f"Missing key in item dictionary: {str(e)}")
 
             if source_peer_id not in unique_peerId_address:
                 unique_peerId_address[source_peer_id] = source_address
 
-        return unique_peerId_address
+        return "topology", unique_peerId_address
 
     def mock_data_metrics_db(self):
         """
@@ -63,21 +127,11 @@ class EconomicHandler():
         watcher IDs odered by a statistical measure computed on latency
         """
         metrics_dict = {
-            "peer_id_1": {
-                "netw": ["nw_1", "nw_3"]
-            },
-            "peer_id_2": {
-                "netw": ["nw_1", "nw_2", "nw_4"]
-            },
-            "peer_id_3": {
-                "netw": ["nw_2", "nw_3", "nw_4"]
-            },
-            "peer_id_4": {
-                "netw": ["nw_1", "nw_2", "nw_3"]
-            },
-            "peer_id_5": {
-                "netw": ["nw_1", "nw_2", "nw_3", "nw_4"]
-            }
+            "peer_id_1": {"netw": ["nw_1", "nw_3"]},
+            "peer_id_2": {"netw": ["nw_1", "nw_2", "nw_4"]},
+            "peer_id_3": {"netw": ["nw_2", "nw_3", "nw_4"]},
+            "peer_id_4": {"netw": ["nw_1", "nw_2", "nw_3"]},
+            "peer_id_5": {"netw": ["nw_1", "nw_2", "nw_3", "nw_4"]},
         }
         return metrics_dict
 
@@ -88,21 +142,11 @@ class EconomicHandler():
                   and stake as value.
         """
         subgraph_dict = {
-            "safe_1": {
-                "stake": 10
-            },
-            "safe_2": {
-                "stake": 55
-            },
-            "safe_3": {
-                "stake": 23
-            },
-            "safe_4": {
-                "stake": 85
-            },
-            "safe_5": {
-                "stake": 62
-            }
+            "safe_1": {"stake": 10},
+            "safe_2": {"stake": 55},
+            "safe_3": {"stake": 23},
+            "safe_4": {"stake": 85},
+            "safe_5": {"stake": 62},
         }
         return subgraph_dict
 
@@ -152,7 +196,7 @@ class EconomicHandler():
         parameters_file_path = os.path.join(script_directory, file_name)
 
         try:
-            with open(parameters_file_path, 'r') as file:
+            with open(parameters_file_path, "r") as file:
                 contents = await asyncio.to_thread(json.load, file)
         except FileNotFoundError as e:
             log.error(f"The file '{file_name}' does not exist. {e}")
@@ -163,13 +207,21 @@ class EconomicHandler():
         budget = contents.get("budget", {})
 
         try:
-            jsonschema.validate(instance={"parameters": parameters, "equations": equations,
-                                          "budget": budget}, schema=schema)
+            jsonschema.validate(
+                instance={
+                    "parameters": parameters,
+                    "equations": equations,
+                    "budget": budget,
+                },
+                schema=schema,
+            )
         except jsonschema.ValidationError as e:
-            log.error(f"The file '{file_name}' does not follow the expected structure. {e}")
+            log.error(
+                f"The file '{file_name}' does not follow the expected structure. {e}"
+            )
             log.error(traceback.format_exc())
 
-        return parameters, equations, budget
+        return "params", parameters, equations, budget
 
     async def blacklist_rpch_nodes(self, api_endpoint: str):
         """
@@ -188,7 +240,9 @@ class EconomicHandler():
                     if response.status == 200:
                         data = await response.json()
                         if isinstance(data, list) and data:
-                            rpch_node_peerID = [item['id'] for item in data if 'id' in item]
+                            rpch_node_peerID = [
+                                item["id"] for item in data if "id" in item
+                            ]
                             return rpch_node_peerID
                     else:
                         log.error(f"Received error code: {response.status}")
@@ -200,9 +254,14 @@ class EconomicHandler():
             log.error(f"An unexpected error occurred: {e}")
         log.error(traceback.format_exc())
 
-    def merge_topology_metricdb_subgraph(self, unique_peerId_address: dict,
-                                        new_metrics_dict: dict,
-                                        new_subgraph_dict: dict):
+        return "rpch", []
+
+    def merge_topology_metricdb_subgraph(
+        self,
+        unique_peerId_address: dict,
+        new_metrics_dict: dict,
+        new_subgraph_dict: dict,
+    ):
         """
         Merge metrics and subgraph data with the unique peer IDs - addresses link.
         :param: unique_peerId_address: A dict mapping peer IDs to safe addresses.
@@ -218,10 +277,10 @@ class EconomicHandler():
             for peer_id, safe_address in unique_peerId_address.items():
                 if peer_id in new_metrics_dict and safe_address in new_subgraph_dict:
                     merged_result[peer_id] = {
-                        'safe_address': safe_address,
-                        'netwatchers': new_metrics_dict[peer_id]['netw'],
-                        'stake': new_subgraph_dict[safe_address]['stake']
-                }
+                        "safe_address": safe_address,
+                        "netwatchers": new_metrics_dict[peer_id]["netw"],
+                        "stake": new_subgraph_dict[safe_address]["stake"],
+                    }
         except Exception as e:
             log.error(f"Error occurred while merging: {e}")
             log.error(traceback.format_exc())
@@ -237,32 +296,32 @@ class EconomicHandler():
         :returns: A dict containing the probability distribution.
         """
         results = {}
-        f_x_condition = equations['f_x']['condition']
+        f_x_condition = equations["f_x"]["condition"]
 
         # compute transformed stake
         for key, value in merged_result.items():
-            stake = value['stake']
-            params = {param: value['value'] for param, value in parameters.items()}
-            params['x'] = stake
+            stake = value["stake"]
+            params = {param: value["value"] for param, value in parameters.items()}
+            params["x"] = stake
 
             try:
                 if eval(f_x_condition, params):
-                    function = 'f_x'
+                    function = "f_x"
                 else:
-                    function = 'g_x'
+                    function = "g_x"
 
-                formula = equations[function]['formula']
+                formula = equations[function]["formula"]
                 result = eval(formula, params)
-                results[key] = {'trans_stake': result}
+                results[key] = {"trans_stake": result}
 
             except Exception as e:
                 log.error(f"Error evaluating function for peer ID {key}: {e}")
                 log.error(traceback.format_exc())
 
         # compute ct probability
-        sum_values = sum(result['trans_stake'] for result in results.values())
+        sum_values = sum(result["trans_stake"] for result in results.values())
         for key in results:
-            results[key]['prob'] = results[key]['trans_stake'] / sum_values
+            results[key]["prob"] = results[key]["trans_stake"] / sum_values
 
         # update dictionary with model results
         for key in merged_result:
@@ -282,7 +341,9 @@ class EconomicHandler():
         """
         timestamp = time.strftime("%Y%m%d%H%M")
         folder_name = "expected_rewards"
-        folder_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), folder_name)
+        folder_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), folder_name
+        )
         filename = f"expected_reward_{timestamp}.csv"
         file_path = os.path.join(folder_path, filename)
 
@@ -293,14 +354,14 @@ class EconomicHandler():
 
         try:
             for entry in dataset.values():
-                entry['expected_reward'] = entry['prob'] * budget['value']
+                entry["expected_reward"] = entry["prob"] * budget["value"]
         except KeyError as e:
             log.error(f"Error occurred while computing the expected reward: {e}")
 
         try:
-            with open(file_path, 'w', newline='') as csvfile:
+            with open(file_path, "w", newline="") as csvfile:
                 writer = csv.writer(csvfile)
-                writer.writerow(['peer_id'] + list(dataset[next(iter(dataset))].keys()))
+                writer.writerow(["peer_id"] + list(dataset[next(iter(dataset))].keys()))
                 for key, value in dataset.items():
                     writer.writerow([key] + list(value.values()))
         except OSError as e:
@@ -310,5 +371,29 @@ class EconomicHandler():
 
         return dataset
 
+    async def start(self):
+        """
+        Starts the tasks of this node
+        """
+        log.debug("Running EconomicHandler instance")
 
+        if self.tasks:
+            return
 
+        self.started = True
+        self.tasks.add(asyncio.create_task(self.connect(address="hopr")))
+        self.tasks.add(asyncio.create_task(self.am_i_up()))
+        self.tasks.add(asyncio.create_task(self.scheduler()))
+
+        await asyncio.gather(*self.tasks)
+
+    def stop(self):
+        """
+        Stops the tasks of this node
+        """
+        log.debug("Stopping EconomicHandler instance")
+
+        self.started = False
+        for task in self.tasks:
+            task.cancel()
+        self.tasks = set()
