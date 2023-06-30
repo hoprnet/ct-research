@@ -19,7 +19,6 @@ def _getlogger() -> logging.Logger:
     logger = logging.getLogger(__name__)
     logging.getLogger("httpx").setLevel(logging.WARNING) # logs were flooded by httpx 
 
-
     return logger
 
 

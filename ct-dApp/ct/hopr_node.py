@@ -104,7 +104,7 @@ class HOPRNode:
         log.info("Disconnected HOPR node")
 
     
-    @formalin(message="Connecting to node", sleep=5)
+    @formalin(message="Connecting to node", sleep=20)
     async def connect(self, address: str = "hopr"):
         """
         Connects to this HOPR node and sets the peer_id of this instance.
@@ -122,7 +122,7 @@ class HOPRNode:
         else:
             log.info(f"HOPR node {self.peer_id[-5:]} is up")
 
-    @formalin(message="Gathering peers", sleep=5.0)
+    @formalin(message="Gathering peers", sleep=30)
     @connectguard
     async def gather_peers(self, quality: float = 1.0):
         """
@@ -164,7 +164,7 @@ class HOPRNode:
             log.error(f"Could not create visualization [ {file_name} ]: {e}")
             log.error(traceback.format_exc())
 
-    @formalin(message="Pinging peers", sleep=1.0)
+    @formalin(message="Pinging peers", sleep=10.0)
     @connectguard
     async def ping_peers(self):
         """
@@ -189,7 +189,7 @@ class HOPRNode:
             if not self.connected:
                 break
             else:                                   
-                await asyncio.sleep(0.5) 
+                await asyncio.sleep(0.1) 
             # Above delay is set to allow the second peer's pinging from the test file 
             # before timeout (defined by test method). Can be changed. 
 
