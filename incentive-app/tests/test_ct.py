@@ -1,23 +1,24 @@
 # import pytest
-# import os
+import os
+
 # from unittest.mock import MagicMock
 # from signal import SIGINT
 
-# from tools import HOPRNode, _getenvvar, stop
+from tools import _getenvvar
 
 
-# def test_getenvvar_load_envar() -> None:
-#     """
-#     Test whether the global environment variables are loaded correctly.
-#     """
-#     os.environ["HOPR_NODE_1_HTTP_URL"] = "http_url"
-#     os.environ["HOPR_NODE_1_API_KEY"] = "api_key"
+def test_getenvvar_load_envar() -> None:
+    """
+    Test whether the global environment variables are loaded correctly.
+    """
+    os.environ["HOPR_NODE_1_HTTP_URL"] = "http_url"
+    os.environ["HOPR_NODE_1_API_KEY"] = "api_key"
 
-#     envvar_0 = _getenvvar("HOPR_NODE_1_HTTP_URL")
-#     envvar_1 = _getenvvar("HOPR_NODE_1_API_KEY")
+    envvar_0 = _getenvvar("HOPR_NODE_1_HTTP_URL")
+    envvar_1 = _getenvvar("HOPR_NODE_1_API_KEY")
 
-#     assert envvar_0 == "http_url"
-#     assert envvar_1 == "api_key"
+    assert envvar_0 == "http_url"
+    assert envvar_1 == "api_key"
 
 
 # def test_getenvvar_exit() -> None:
