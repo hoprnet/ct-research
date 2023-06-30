@@ -127,3 +127,8 @@ def attach_endpoints(app):
                           latencies=latencies)
 
         return sanic_text("Sent to DB", status=200)
+    
+
+    @app.route("/aggregator/metrics", methods=["GET"])
+    async def get_metrics(request: Request):
+        return sanic_json(agg.get_metrics(), status=200)

@@ -128,3 +128,9 @@ class Aggregator(metaclass=Singleton):
                 matchs_for_db.append((peer, nws, latencies))
 
         return matchs_for_db
+    
+    def get_metrics(self):
+        with self._dict_lock:
+            metrics = {}
+
+        return metrics
