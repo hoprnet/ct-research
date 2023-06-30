@@ -12,29 +12,37 @@ async def main():
     except ValueError:
         exit(ExitCode.ERROR_BAD_ARGUMENTS)
 
-    print(API_host)
-    print(API_key)
-    print(RPCH_nodes)
-
     economic_handler = EconomicHandler(API_host, API_key)
-    result = await economic_handler.channel_topology()
-    result_1 = economic_handler.replace_keys_in_mock_data(result)
-    result_2 = economic_handler.replace_keys_in_mock_data_subgraph(result)
-    result_3 = economic_handler.merge_topology_metricdb_subgraph(result, result_1, result_2)
 
-    print(result_3)
-    parameters, equations, budget = economic_handler.read_parameters_and_equations()
-    print(parameters)
-    print(equations)
-    print(budget)
+    tasks = [
+        economic_handler.channel_topology(),
+        economic_handler.read_parameters_and_equations(),
+        economic_handler.blacklist_rpch_nodes(api_endpoint=RPCH_nodes)
+    ]
 
-    # result = economic_handler.blacklist_rpch_nodes(api_endpoint=RPCH_nodes)
-    # print(result)
+    result = await asyncio.gather(*tasks)
+    channel_topology_result, parameters_equations_budget_result, blacklist_result = result
 
-    result_4 = economic_handler.compute_ct_prob(parameters, equations, result_3)
-    print(result_4)
+    # helper functions that allow to test the code (subject to removal)
+    result_1 = economic_handler.replace_keys_in_mock_data(channel_topology_result)
+    result_2 = economic_handler.replace_keys_in_mock_data_subgraph(channel_topology_result)
 
-    result_5 = economic_handler.compute_expected_reward_savecsv(result_4, budget)
+    # merge channel topology with metrics from the database and subgraph data
+    result_3 = economic_handler.merge_topology_metricdb_subgraph(channel_topology_result,
+                                                                result_1, result_2
+                                                                )
+
+    # computation of cover traffic probability
+    result_4 = economic_handler.compute_ct_prob(parameters_equations_budget_result[0],
+                                                parameters_equations_budget_result[1],
+                                                result_3)
+
+    # calculate expected rewards and output it as a csv file
+    result_5 = economic_handler.compute_expected_reward_savecsv(result_4,
+                                                                parameters_equations_budget_result[2]
+                                                                )
+
+    print(blacklist_result) # RPCh nodes blacklist (not yet included: would need to mock it)
     print(result_5)
 
 if __name__ == "__main__":

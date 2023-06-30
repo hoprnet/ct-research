@@ -3,15 +3,16 @@ import os
 import traceback
 import json
 import jsonschema
-import requests
 import csv
 import time
+import asyncio
+import aiohttp
 
 from ct.hopr_api_helper import HoprdAPIHelper
 from .parameters_schema import schema
 
 # Configure logging to output log messages to the console
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 class EconomicHandler():
@@ -139,7 +140,7 @@ class EconomicHandler():
 
         return new_subgraph_dict
 
-    def read_parameters_and_equations(self, file_name: str = "parameters.json"):
+    async def read_parameters_and_equations(self, file_name: str = "parameters.json"):
         """
         Reads parameters and equations from a JSON file and validates it using a schema.
         :param: file_name (str): The name of the JSON file containing the parameters
@@ -152,7 +153,7 @@ class EconomicHandler():
 
         try:
             with open(parameters_file_path, 'r') as file:
-                contents = json.load(file)
+                contents = await asyncio.to_thread(json.load, file)
         except FileNotFoundError as e:
             log.error(f"The file '{file_name}' does not exist. {e}")
             log.error(traceback.format_exc())
@@ -170,7 +171,7 @@ class EconomicHandler():
 
         return parameters, equations, budget
 
-    def blacklist_rpch_nodes(self, api_endpoint: str):
+    async def blacklist_rpch_nodes(self, api_endpoint: str):
         """
         Retrieves a list of RPCH node peer IDs from the specified API endpoint.
         :param: api_endpoint (str): The URL endpoint to retrieve the data from.
@@ -182,11 +183,16 @@ class EconomicHandler():
         - Logs errors and traceback in case of failures.
         """
         try:
-            response = requests.get(api_endpoint).json()
-            if isinstance(response, list) and response:
-                rpch_node_peerID = [item['id'] for item in response if 'id' in item]
-                return rpch_node_peerID
-        except requests.exceptions.RequestException as e:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(api_endpoint) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        if isinstance(data, list) and data:
+                            rpch_node_peerID = [item['id'] for item in data if 'id' in item]
+                            return rpch_node_peerID
+                    else:
+                        log.error(f"Received error code: {response.status}")
+        except aiohttp.ClientError as e:
             log.error(f"An error occurred while making the request: {e}")
         except ValueError as e:
             log.error(f"An error occurred while parsing the response as JSON: {e}")
