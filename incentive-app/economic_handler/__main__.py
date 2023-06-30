@@ -17,11 +17,11 @@ def main():
     try:
         API_host = _getenvvar("HOPR_NODE_1_HTTP_URL")
         API_key = _getenvvar("HOPR_NODE_1_API_KEY")
-        _getenvvar("RPCH_NODES_API_ENDPOINT")
+        RPCH_nodes = _getenvvar("RPCH_NODES_API_ENDPOINT")
     except ValueError:
         exit(ExitCode.ERROR_BAD_ARGUMENTS)
 
-    economic_handler = EconomicHandler(API_host, API_key)
+    economic_handler = EconomicHandler(API_host, API_key, RPCH_nodes)
 
     # tasks = [
     #     economic_handler.channel_topology(),

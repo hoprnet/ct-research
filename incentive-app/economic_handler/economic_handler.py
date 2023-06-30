@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 
 class EconomicHandler(HOPRNode):
-    def __init__(self, url: str, key: str):
+    def __init__(self, url: str, key: str, rpch_endpoint: str):
         """
         :param url: the url of the HOPR node
         :param key: the API key of the HOPR node
@@ -27,6 +27,7 @@ class EconomicHandler(HOPRNode):
         """
 
         self.tasks = set[asyncio.Task]()
+        self.rpch_endpoint = rpch_endpoint
 
         super().__init__(url=url, key=key)
 
@@ -54,7 +55,7 @@ class EconomicHandler(HOPRNode):
         scheduler_tasks.add(asyncio.create_task(self.channel_topology()))
         scheduler_tasks.add(asyncio.create_task(self.read_parameters_and_equations()))
         scheduler_tasks.add(
-            asyncio.create_task(self.blacklist_rpch_nodes("some_api_endpoint"))
+            asyncio.create_task(self.blacklist_rpch_nodes(self.rpch_endpoint))
         )
 
         await asyncio.sleep(0)
