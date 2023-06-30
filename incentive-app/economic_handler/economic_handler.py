@@ -11,7 +11,7 @@ import aiohttp
 from tools.hopr_node import HOPRNode
 from .parameters_schema import schema
 
-from tools.decorator import wakeupcall
+from tools.decorator import wakeupcall, connectguard
 
 # Configure logging to output log messages to the console
 logging.basicConfig(level=logging.INFO)
@@ -44,24 +44,32 @@ class EconomicHandler(HOPRNode):
         print(f"{self.connected=}")
         return self.connected
 
-    # @wakeupcall(seconds=15)
-    # @connectguard
+    @wakeupcall(seconds=15)
+    @connectguard
     async def scheduler(self):
         scheduler_tasks = set[asyncio.Task]()
 
-        loop = asyncio.get_event_loop()
+        expected_order = ["topology", "params", "rpch"]
 
-        scheduler_tasks.add(self.channel_topology())
-        scheduler_tasks.add(self.read_parameters_and_equations())
-        scheduler_tasks.add(self.blacklist_rpch_nodes("some_api_endpoint"))
+        scheduler_tasks.add(asyncio.create_task(self.channel_topology()))
+        scheduler_tasks.add(asyncio.create_task(self.read_parameters_and_equations()))
+        scheduler_tasks.add(
+            asyncio.create_task(self.blacklist_rpch_nodes("some_api_endpoint"))
+        )
 
-        results = loop.run_until_complete(asyncio.gather(*scheduler_tasks))
+        await asyncio.sleep(0)
 
-        loop.close()
+        finished, _ = await asyncio.wait(scheduler_tasks)
 
-        channel_topology = results[0]
-        parameters_equations_budget = results[1]
-        blacklist = results[2]
+        unordered_results = [task.result() for task in finished]
+
+        # sort the results according to the expected order.
+        # This is necessary because the order of the results is not guaranteed
+        results = sorted(unordered_results, key=lambda x: expected_order.index(x[0]))
+
+        channel_topology = results[0][1]
+        parameters_equations_budget = results[1][1:]
+        blacklist = results[2][1]
 
         # helper functions that allow to test the code (subject to removal)
         result_1 = self.replace_keys_in_mock_data(channel_topology)
@@ -76,7 +84,6 @@ class EconomicHandler(HOPRNode):
         result_4 = self.compute_ct_prob(
             parameters_equations_budget[0], parameters_equations_budget[1], result_3
         )
-
         # calculate expected rewards and output it as a csv file
         result_5 = self.compute_expected_reward_savecsv(
             result_4, parameters_equations_budget[2]
@@ -110,7 +117,7 @@ class EconomicHandler(HOPRNode):
             if source_peer_id not in unique_peerId_address:
                 unique_peerId_address[source_peer_id] = source_address
 
-        return unique_peerId_address
+        return "topology", unique_peerId_address
 
     def mock_data_metrics_db(self):
         """
@@ -213,7 +220,7 @@ class EconomicHandler(HOPRNode):
             )
             log.error(traceback.format_exc())
 
-        return parameters, equations, budget
+        return "params", parameters, equations, budget
 
     async def blacklist_rpch_nodes(self, api_endpoint: str):
         """
@@ -245,6 +252,8 @@ class EconomicHandler(HOPRNode):
         except Exception as e:
             log.error(f"An unexpected error occurred: {e}")
         log.error(traceback.format_exc())
+
+        return "rpch", []
 
     def merge_topology_metricdb_subgraph(
         self,
