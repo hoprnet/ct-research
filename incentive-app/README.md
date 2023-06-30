@@ -1,10 +1,13 @@
 # Cover Traffic dApp
+TODO
 
+***
 This folder contains the cover traffic dApp.
 
 The goal of the ct-dapp is to distribute cover traffic in the monte rosa network to keep the annoymity set of nodes sufficiently large at all times.
 
 However, the fist version of the ct-dapp has the sole purpose of replacing the staking rewards users earn in the current staking season beyond its discontinuation.
+***
 
 ## Development Requirements
 
