@@ -115,16 +115,17 @@ def test_get_metric():
     assert isinstance(agg.get_metrics(), dict)
 
 @clear_instance
-def test_convert_to_db_data():
+def test_convert_to_db_data_simple():
     """
     Test that the convert_to_db_data method works correctly.
     """
     pod_id = "pod_id"
     items = {"peer": 1}
 
-    agg._dict[pod_id] = items
+    agg.add(pod_id, items)
 
-    assert True
+    assert agg.convert_to_db_data() == [("peer", ["pod_id"], [1])]
+
 
 @clear_instance
 def test_add_multiple():
@@ -185,3 +186,29 @@ def test_add_to_existing_pod_multiple():
     agg.add(pod_id, items3)
 
     assert agg.get()[pod_id] == {"peer": 2, "peer2": 2}
+
+# Finally managed to run unittests by moving app.run statement to main block
+
+# # tiny app server starts here
+# app = Sanic(__name__)
+# generate_crud(app, [Metrics, ...])
+# if __name__ == '__main__':
+#     app.run(host='0.0.0.0', port=1337, debug=True)
+#         # workers=4, log_config=LOGGING)
+# and
+
+# from restapi import app
+# import json
+# import unittest
+
+# class AutoRestTests(unittest.TestCase):
+#     ''' Unit testcases for REST APIs '''
+
+#     def test_get_metrics_all(self):
+#         request, response = app.test_client.get('/metrics')
+#         self.assertEqual(response.status, 200)
+#         data = json.loads(response.text)
+#         self.assertEqual(data['metric_name'], 'vCPU')
+
+# if __name__ == '__main__':
+#     unittest.main()
