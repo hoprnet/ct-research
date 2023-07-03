@@ -155,7 +155,7 @@ if [ "$module" = "nw" ]; then
     clear
     echobold "Running Netwatcher"
     python -m netwatcher --port $port --apihost $host --apikey $key --aggpost $aggpost
-    
+
 elif [ "$module" = "agg" ]; then
     if [ -z "$host" ]; then
         echo "Error: --host parameter is required"
@@ -185,11 +185,11 @@ elif [ "$module" = "agg" ]; then
         echo "Error: --dbport parameter is required"
         exit 1
     fi
-    
+
     clear
     echobold "Running Aggregator"
     python -m aggregator --host $host --port $port --db $db --dbhost $dbhost --dbuser $dbuser --dbpass $dbpass --dbport $dbport
-    
+
 elif [ "$module" = "trigger" ]; then
     if [ -z "$host" ]; then
         echo "Error: --host parameter is required"
@@ -207,7 +207,7 @@ elif [ "$module" = "trigger" ]; then
     echobold "Running Trigger"
     python -m aggregator_trigger --host $host --port $port --route $route
 
-elif [ "$module" = "economic" ]; then
+elif [ "$module" = "economic_handler" ]; then
     if [ -z "$port" ]; then
         echo "Error: --port parameter is required"
         exit 1
@@ -236,7 +236,7 @@ fi
 
 
 # netwatcher: ./run.sh -m nw -p 13301 -h localhost -k "%th1s-IS-a-S3CR3T-ap1-PUSHING-b1ts-TO-you%" -a "http://localhost:8080/aggregator/list"
-#    trigger: ./run.sh -m trigger -h localhost -p 8080 -r /aggregator/to_db
+# trigger: ./run.sh -m trigger -h localhost -p 8080 -r /aggregator/to_db
 # aggregator: ./run.sh -m agg -h localhost -p 8080
-#   economic: ./run.sh -m economic -p 13301 -h localhost -k "%th1s-IS-a-S3CR3T-ap1-PUSHING-b1ts-TO-you%" -e 'some_api_endpoint_test'
+# economic_handler: ./run.sh --module  economic_handler --port 13301 --host "127.0.0.1" --key "%th1s-IS-a-S3CR3T-ap1-PUSHING-b1ts-TO-you%" --rcphendpoint "some_api_endpoint_test"
 
