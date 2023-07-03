@@ -1,16 +1,28 @@
 from functools import partial
+
+import click
 from sanic import Sanic
 from sanic.worker.loader import AppLoader
-import click
+
+from tools import _getlogger
 
 from .aggregator import Aggregator
 from .setup import create_app
 
 
 @click.command()
-@click.option("--host", help="Host to listen on")
-@click.option("--port", help="Port to listen on")
+@click.option("--host", default=None, help="Host to listen on")
+@click.option("--port", default=None, help="Port to listen on")
 def main(host: str, port: str):
+    log = _getlogger()
+
+    if not host:
+        log.error("Host not specified (use --host)")
+        exit()
+    if not port:
+        log.error("Port not specified (use --port)")
+        exit()
+
     Aggregator()
 
     loader = AppLoader(factory=partial(create_app))
