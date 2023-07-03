@@ -17,7 +17,7 @@ class NetWatcher(HOPRNode):
     Aggregator via a POST request.
     """
 
-    def __init__(self, url: str, key: str, posturl: str):
+    def __init__(self, url: str, key: str, posturl: str, max_lat_count: int = 10):
         """
         Initialisation of the class.
         :param url: the url of the hopr node
@@ -32,7 +32,7 @@ class NetWatcher(HOPRNode):
 
         # a dict to keep the max_lat_count latency measures {peer: [51, 23, ...]}
         self.latency = dict[str, list]()
-        self.max_lat_count = 10
+        self.max_lat_count = max_lat_count
 
         super().__init__(url, key)
 
@@ -71,8 +71,11 @@ class NetWatcher(HOPRNode):
             async with session.post(self.posturl, json=data) as response:
                 if response.status == 200:
                     log.info(f"Transmisted peers: {', '.join(short_list)}")
+                    return True
         except Exception as e:  # ClientConnectorError
             log.error(f"Error transmitting peers: {e}")
+
+        return False
 
     @formalin(message="Gathering peers", sleep=30)
     @connectguard
@@ -138,7 +141,11 @@ class NetWatcher(HOPRNode):
         Sends the detected peers to the Aggregator
         """
         async with ClientSession() as session:
-            await self._post_list(session, self.peers, self.latency)
+            success = await self._post_list(session, self.peers, self.latency)
+
+            if not success:
+                asyncio.sleep(5)
+                await self._post_list(session, self.peers, self.latency)
 
         self.wipe_peers()
 
