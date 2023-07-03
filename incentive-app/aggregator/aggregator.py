@@ -4,12 +4,14 @@ from .utils import get_best_matchs
 
 import numpy as np
 
+
 class Singleton(type):
     """
-    Singleton metaclass. 
-    A class that uses this metaclass can only be instantiated once. All subsequent 
-    calls to the constructor will return the same instance.    
+    Singleton metaclass.
+    A class that uses this metaclass can only be instantiated once. All subsequent
+    calls to the constructor will return the same instance.
     """
+
     _instances = {}
 
     def __call__(cls, *args, **kwargs):
@@ -18,7 +20,8 @@ class Singleton(type):
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         # otherwise, create it and return it
         return cls._instances[cls]
-    
+
+
 class Aggregator(metaclass=Singleton):
     """
     Aggregator class.
@@ -28,14 +31,28 @@ class Aggregator(metaclass=Singleton):
 
     It is implemented using threading locks to ensure concurrency safety.
     """
-    def __init__(self):
+
+    def __init__(
+        self,
+        db: str = None,
+        dbhost: str = None,
+        dbuser: str = None,
+        dbpassword: str = None,
+        dbport: str = None,
+    ):
         self._dict: dict = {}
         self._update_dict: dict = {}
-        self._dict_lock = threading.Lock() # thread-safe list
-        self._update_lock = threading.Lock() # thread-safe lastupdate
-            
+        self._dict_lock = threading.Lock()  # thread-safe list
+        self._update_lock = threading.Lock()  # thread-safe lastupdate
 
-    def add(self, pod_id : str, items: list):
+        # db connection information
+        self.db = db
+        self.dbhost = dbhost
+        self.dbuser = dbuser
+        self.dbpassword = dbpassword
+        self.dbport = dbport
+
+    def add(self, pod_id: str, items: list):
         """
         Add latency data to the aggregator for a specific pod (nw).
         Concurrent access is managed using a lock.
@@ -59,7 +76,7 @@ class Aggregator(metaclass=Singleton):
         """
         with self._dict_lock:
             return self._dict
-    
+
     def clear(self):
         """
         Clear the latency data stored.
@@ -91,16 +108,16 @@ class Aggregator(metaclass=Singleton):
             if pod_id not in self._update_dict:
                 return None
             return self._update_dict[pod_id]
-        
+
     def convert_to_db_data(self):
         """
-        Convert the data stored in self._dict to a list of tuples, describing for each 
+        Convert the data stored in self._dict to a list of tuples, describing for each
         peer the list of best nw to connect to and the corresponding latencies.
         """
         with self._dict_lock:
-            # gather all nw ids in a single list
+            # gather all nw ids in a single list
             nw_ids = list(self._dict.keys())
-            
+
             # gather all peers ids in a signel list
             peer_ids = set()
             for peer_list in self._dict.values():
@@ -128,7 +145,7 @@ class Aggregator(metaclass=Singleton):
                 matchs_for_db.append((peer, nws, latencies))
 
         return matchs_for_db
-    
+
     def get_metrics(self):
         with self._dict_lock:
             metrics = {}
