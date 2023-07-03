@@ -1,6 +1,7 @@
 # enum class with auto numbering
-import numpy as np
 import copy
+
+import numpy as np
 
 
 def one_round_nw_peer_match(input_array: np.ndarray) -> dict:
