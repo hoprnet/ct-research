@@ -117,11 +117,11 @@ def attach_endpoints(app):
         matchs_for_db = agg.convert_to_db_data()
 
         with DatabaseConnection(
-            database="metricDB",
-            host="localhost",
-            user="postgres",
-            password="admin",
-            port="5432",
+            database=agg.db,
+            host=agg.dbhost,
+            user=agg.dbuser,
+            password=agg.dbpassword,
+            port=agg.dbport,
         ) as db:
             for peer, nws, latencies in matchs_for_db:
                 db.insert("raw_data_table", peer=peer, nws=nws, latencies=latencies)

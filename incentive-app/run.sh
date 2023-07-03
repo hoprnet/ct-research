@@ -134,20 +134,6 @@ while :; do
     shift
 done
 
-printf 'module=%s\n' "$module"
-printf 'port=%s\n' "$port"
-printf 'host=%s\n' "$host"
-printf 'route=%s\n' "$route"
-printf 'key=%s\n' "$key"
-printf 'aggpost=%s\n' "$aggpost"
-printf 'rcphendpoint=%s\n' "$rcphendpoint"
-printf 'db=%s\n' "$db"
-printf 'dbhost=%s\n' "$dbhost"
-printf 'dbuser=%s\n' "$dbuser"
-printf 'dbpass=%s\n' "$dbpass"
-printf 'dbport=%s\n' "$dbport"
-
-
 if [ "$module" = "nw" ]; then
     if [ -z "$port" ]; then
         echo "Error: --port parameter is required"
@@ -203,7 +189,7 @@ elif [ "$module" = "agg" ]; then
     clear
     echobold "Running Aggregator"
     python -m aggregator --host $host --port $port --db $db --dbhost $dbhost --dbuser $dbuser --dbpass $dbpass --dbport $dbport
-
+    
 elif [ "$module" = "trigger" ]; then
     if [ -z "$host" ]; then
         echo "Error: --host parameter is required"
