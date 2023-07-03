@@ -14,7 +14,8 @@ from .netwatcher import NetWatcher
 @click.option("--apihost", default=None, help="API host to specify the node")
 @click.option("--apikey", default=None, help="API key to specify the node")
 @click.option("--aggpost", default=None, help="AGG post route to specify the node")
-def main(port: str, apihost: str, apikey: str, aggpost: str):
+@click.option("--latcount", default=10, type=int, help="Number of latencies to keep")
+def main(port: str, apihost: str, apikey: str, aggpost: str, latcount: int):
     log = _getlogger()
 
     if not port:
@@ -29,10 +30,13 @@ def main(port: str, apihost: str, apikey: str, aggpost: str):
     if not aggpost:
         log.error("Aggregator post route not specified (use --aggpost)")
         exit()
+    if not latcount:
+        log.error("Latency count not specified (use --latcount)")
+        exit()
 
     exit_code = ExitCode.OK
 
-    nw = NetWatcher(f"http://{apihost}:{port}", apikey, aggpost)
+    nw = NetWatcher(f"http://{apihost}:{port}", apikey, aggpost, latcount)
 
     loop = asyncio.new_event_loop()
     loop.add_signal_handler(SIGINT, stop, nw, SIGINT)
