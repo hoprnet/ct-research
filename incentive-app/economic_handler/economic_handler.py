@@ -13,8 +13,6 @@ from .parameters_schema import schema
 
 from tools.decorator import wakeupcall, connectguard
 
-# Configure logging to output log messages to the console
-logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 

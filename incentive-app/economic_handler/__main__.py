@@ -1,8 +1,10 @@
 import asyncio
 from signal import SIGINT, SIGTERM, Signals
 
+import click
+
 from tools.exit_codes import ExitCode
-from tools.utils import _getenvvar
+from tools.utils import _getlogger
 from .economic_handler import EconomicHandler
 
 
@@ -12,22 +14,31 @@ def stop(instance: EconomicHandler, signal: Signals):
     instance.stop()
 
 
-def main():
+@click.command()
+@click.option("--port", default=None, help="Port specifying the node")
+@click.option("--apihost", default=None, help="IP-address of the API host")
+@click.option("--apikey", default=None, help="API key of the API host")
+@click.option("--rcphnodes", default=None, help="API endpoint for RPCh nodes")
+def main(port: str, apihost: str, apikey: str, rcphnodes: str):
     """main"""
-    try:
-        API_host = _getenvvar("HOPR_NODE_1_HTTP_URL")
-        API_key = _getenvvar("HOPR_NODE_1_API_KEY")
-        RPCH_nodes = _getenvvar("RPCH_NODES_API_ENDPOINT")
-    except ValueError:
-        exit(ExitCode.ERROR_BAD_ARGUMENTS)
+    log = _getlogger()
 
-    economic_handler = EconomicHandler(API_host, API_key, RPCH_nodes)
+    if not port:
+        log.error("Port not specified (use --port)")
+        exit()
+    if not apihost:
+        log.error("API host not specified (use --apihost)")
+        exit()
+    if not apikey:
+        log.error("API key not specified (use --apikey)")
+        exit()
+    if not rcphnodes:
+        log.error("Endpoint for RPCh nodes not specified (use --rcphnodes)")
+        exit()
 
-    # tasks = [
-    #     economic_handler.channel_topology(),
-    #     economic_handler.read_parameters_and_equations(),
-    #     economic_handler.blacklist_rpch_nodes(api_endpoint=RPCH_nodes),
-    # ]
+    exit_code = ExitCode.OK
+
+    economic_handler = EconomicHandler(f"http://{apihost}:{port}", apikey, rcphnodes)
 
     loop = asyncio.new_event_loop()
     loop.add_signal_handler(SIGINT, stop, economic_handler, SIGINT)
