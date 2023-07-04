@@ -242,7 +242,7 @@ def test_add_to_existing_pod_multiple():
     assert agg.get()[pod_id] == {"peer": 2, "peer2": 2}
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def app():
     app_instance = Sanic("Aggregator")
     attach_endpoints(app_instance)
@@ -355,30 +355,3 @@ def test_sanic_post_to_db(test_cli):  # TODO
     _, response = test_cli.get("/aggregator/to_db")
 
     assert response.status == 500
-
-
-# Finally managed to run unittests by moving app.run statement to main block
-
-# # tiny app server starts here
-# app = Sanic(__name__)
-# generate_crud(app, [Metrics, ...])
-# if __name__ == '__main__':
-#     app.run(host='0.0.0.0', port=1337, debug=True)
-#         # workers=4, log_config=LOGGING)
-# and
-
-# from restapi import app
-# import json
-# import unittest
-
-# class AutoRestTests(unittest.TestCase):
-#     ''' Unit testcases for REST APIs '''
-
-#     def test_get_metrics_all(self):
-#         request, response = app.test_client.get('/metrics')
-#         self.assertEqual(response.status, 200)
-#         data = json.loads(response.text)
-#         self.assertEqual(data['metric_name'], 'vCPU')
-
-# if __name__ == '__main__':
-#     unittest.main()
