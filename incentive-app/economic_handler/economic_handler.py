@@ -81,7 +81,7 @@ class EconomicHandler(HOPRNode):
 
         # computation of cover traffic probability
         result_4 = self.compute_ct_prob(
-            parameters_equations_budget[0], parameters_equations_budget[1], result_3
+            parameters_equations_budget[0], parameters_equations_budget[1], result_3[1]
         )
         # calculate expected rewards and output it as a csv file
         result_5 = self.compute_expected_reward_savecsv(
@@ -284,8 +284,9 @@ class EconomicHandler(HOPRNode):
         except Exception as e:
             log.error(f"Error occurred while merging: {e}")
             log.error(traceback.format_exc())
+            return "merged_data", {}
 
-        return merged_result
+        return "merged_data", merged_result
 
     def compute_ct_prob(self, parameters, equations, merged_result):
         """
