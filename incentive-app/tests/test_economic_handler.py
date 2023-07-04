@@ -1,6 +1,5 @@
 import json
 import pytest
-import logging
 from unittest import mock
 from economic_handler.economic_handler import EconomicHandler
 
@@ -42,23 +41,22 @@ def file_contents():
 
 @pytest.fixture
 def mock_open_file():
-    with mock.patch("builtins.open") as mock_open:
-        yield mock_open
+    with mock.patch("builtins.open") as mock_open_func:
+        yield mock_open_func
 
 
 @pytest.mark.asyncio
 async def test_read_parameters_and_equations(mock_open_file, file_contents):
     """
-    Test whether parameters, equations, and budget are correctly read
-    and returned as a dictionary
+    Test whether parameters, equations, and budget are correctly returned
+    as a dictionary
     """
     mock_file = mock_open_file.return_value.__enter__.return_value
     mock_file.read.return_value = json.dumps(file_contents)
 
-    file_name = "some_file.json"
     node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
 
-    result = await node.read_parameters_and_equations(file_name)
+    result = await node.read_parameters_and_equations(mock_file)
 
     assert isinstance(result[1], dict)
     assert isinstance(result[2], dict)
@@ -66,22 +64,30 @@ async def test_read_parameters_and_equations(mock_open_file, file_contents):
 
 
 @pytest.mark.asyncio
+async def test_read_parameters_and_equations_file_not_found():
+    """
+    Test whether an empty dictionary gets returned in case of a FileNotFoundError.
+    """
+    file_name = "non_existent_file.json"
+    node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
+
+    result = await node.read_parameters_and_equations(file_name)
+
+    assert result == ("params", {}, {}, {})
+
+
+@pytest.mark.asyncio
 async def test_read_parameters_and_equations_check_values(
-    mock_open_file, file_contents, caplog
+    mock_open_file, file_contents
 ):
     """
-    Test whether validation error catches minimum parameter requirements
+    Test whether an empty dictionary gets returned in case of a ValidationError.
     """
     mock_file = mock_open_file.return_value.__enter__.return_value
     mock_file.read.return_value = json.dumps(file_contents)
 
-    file_name = "some_file.json"
     node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
 
-    with caplog.at_level(logging.ERROR):
-        await node.read_parameters_and_equations(file_name)
+    result = await node.read_parameters_and_equations(mock_file)
 
-    assert (
-        f"The file '{file_name}' does not follow the expected structure. "
-        "-1 is less than the minimum of 0" in caplog.text
-    )
+    assert result == ("params", {}, {}, {})

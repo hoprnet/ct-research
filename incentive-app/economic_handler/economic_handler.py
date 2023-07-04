@@ -199,6 +199,7 @@ class EconomicHandler(HOPRNode):
         except FileNotFoundError as e:
             log.error(f"The file '{file_name}' does not exist. {e}")
             log.error(traceback.format_exc())
+            return "params", {}, {}, {}
 
         parameters = contents.get("parameters", {})
         equations = contents.get("equations", {})
@@ -218,6 +219,7 @@ class EconomicHandler(HOPRNode):
                 f"The file '{file_name}' does not follow the expected structure. {e}"
             )
             log.error(traceback.format_exc())
+            return "params", {}, {}, {}
 
         return "params", parameters, equations, budget
 
