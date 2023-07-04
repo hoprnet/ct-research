@@ -1,4 +1,8 @@
+from sanic.app import Sanic
 from aggregator import Aggregator
+import pytest
+from aggregator.middlewares import attach_middlewares
+from aggregator.routes import attach_endpoints
 
 agg = Aggregator()
 
@@ -8,9 +12,11 @@ def clear_instance(func):
         agg = Aggregator()
         agg._dict = {}
         agg._update_dict = {}
-        
+
         func(*args, **kwargs)
+
     return wrapper
+
 
 @clear_instance
 def test_singleton():
@@ -22,10 +28,11 @@ def test_singleton():
 
     assert agg1 is agg2
 
+
 @clear_instance
 def test_singleton_update():
     """
-    Test that when an instance of the aggregator is updated, all the other instances 
+    Test that when an instance of the aggregator is updated, all the other instances
     are updated as well.
     """
     agg1 = Aggregator()
@@ -35,6 +42,7 @@ def test_singleton_update():
     agg2.set_update("pod_id", "timestamp")
 
     assert agg1.get() == agg2.get()
+
 
 @clear_instance
 def test_add():
@@ -48,6 +56,7 @@ def test_add():
 
     assert agg._dict.get(pod_id) == items
 
+
 @clear_instance
 def test_get():
     """
@@ -59,6 +68,7 @@ def test_get():
     agg._dict[pod_id] = items
 
     assert agg.get() == {pod_id: items}
+
 
 @clear_instance
 def test_clear():
@@ -74,6 +84,7 @@ def test_clear():
 
     assert agg._dict == {}
 
+
 @clear_instance
 def test_set_update():
     """
@@ -85,6 +96,7 @@ def test_set_update():
     agg.set_update(pod_id, timestamp)
 
     assert agg._update_dict.get(pod_id) == timestamp
+
 
 @clear_instance
 def test_get_update():
@@ -98,6 +110,7 @@ def test_get_update():
 
     assert agg.get_update(pod_id) == timestamp
 
+
 @clear_instance
 def test_get_update_not_in_dict():
     """
@@ -106,13 +119,15 @@ def test_get_update_not_in_dict():
     pod_id = "pod_id"
 
     assert not agg.get_update(pod_id)
-    
+
+
 @clear_instance
 def test_get_metric():
     """
     Test that the get_metric method works correctly.
     """
     assert isinstance(agg.get_metrics(), dict)
+
 
 @clear_instance
 def test_convert_to_db_data_simple():
@@ -128,6 +143,43 @@ def test_convert_to_db_data_simple():
 
 
 @clear_instance
+def test_convert_to_db_data_multiple_peers():
+    """
+    Test that the convert_to_db_data method works correctly when there are multiple
+    items.
+    """
+    pod_id = "pod_id"
+    items = {"peer": 1, "peer2": 2}
+
+    agg.add(pod_id, items)
+
+    assert agg.convert_to_db_data() == [
+        ("peer", ["pod_id"], [1]),
+        ("peer2", ["pod_id"], [2]),
+    ]
+
+
+@clear_instance
+def test_convert_to_db_data_multiple_pods():
+    """
+    Test that the convert_to_db_data method works correctly when there are multiple
+    pods.
+    """
+    pod_id = "pod_id"
+    pod_id2 = "pod_id2"
+    items = {"peer": 1}
+    items2 = {"peer2": 2}
+
+    agg.add(pod_id, items)
+    agg.add(pod_id2, items2)
+
+    assert agg.convert_to_db_data() == [
+        ("peer", ["pod_id"], [1]),
+        ("peer2", ["pod_id2"], [2]),
+    ]
+
+
+@clear_instance
 def test_add_multiple():
     """
     Test that the add method works correctly when adding multiple items.
@@ -138,6 +190,7 @@ def test_add_multiple():
     agg.add(pod_id, items)
 
     assert agg.get()[pod_id] == items
+
 
 @clear_instance
 def test_add_multiple_pods():
@@ -155,6 +208,7 @@ def test_add_multiple_pods():
     assert agg.get()[pod_id] == items
     assert agg.get()[pod_id2] == items2
 
+
 @clear_instance
 def test_add_to_existing_pod():
     """
@@ -167,13 +221,13 @@ def test_add_to_existing_pod():
     agg.add(pod_id, items)
     agg.add(pod_id, items2)
 
-    print(agg.get())
-    assert agg.get()[pod_id] == {"peer": 1, "peer2": 2} 
+    assert agg.get()[pod_id] == {"peer": 1, "peer2": 2}
+
 
 @clear_instance
 def test_add_to_existing_pod_multiple():
     """
-    Test that the add method works correctly when adding multiple items to an existing 
+    Test that the add method works correctly when adding multiple items to an existing
     pod.
     """
     pod_id = "pod_id"
@@ -186,6 +240,56 @@ def test_add_to_existing_pod_multiple():
     agg.add(pod_id, items3)
 
     assert agg.get()[pod_id] == {"peer": 2, "peer2": 2}
+
+
+@pytest.yield_fixture
+def app():
+    app_instance = Sanic("Aggregator")
+    attach_endpoints(app_instance)
+    attach_middlewares(app_instance)
+
+    app_instance.prepare(dev=True, access_log=False)
+    app_instance
+
+    yield app_instance
+
+
+@pytest.fixture
+def test_cli(app):
+    return app.test_client
+
+
+def test_sanic_metrics_endpoint(test_cli):
+    """
+    This test checks that the metrics endpoint returns the correct data.
+    """
+    request, response = test_cli.get("/aggregator/metrics")
+
+    assert response.status == 200
+
+
+def test_sanic_post_list_missing_id(test_cli):
+    """
+    This test checks that the post_list endpoint returns the correct data when
+    the id is missing.
+    """
+    request, response = test_cli.post("/aggregator/list", json={"list": []})
+
+    assert response.status == 400
+    assert response.json["message"] == "`id` key not in body"
+
+
+def test_sanic_post_list_missing_list(test_cli):
+    """
+    This test checks that the post_list endpoint returns the correct data when
+    the list is missing.
+    """
+    request, response = test_cli.post("/aggregator/list", json={"id": "some_id"})
+
+    print(response.json)
+    assert response.status == 400
+    assert response.json["message"] == "`list` key not in body"
+
 
 # Finally managed to run unittests by moving app.run statement to main block
 
