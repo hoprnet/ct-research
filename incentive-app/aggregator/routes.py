@@ -28,8 +28,14 @@ def attach_endpoints(app):
 
         if "id" not in request.json:
             raise exceptions.BadRequest("`id` key not in body")
+        if not isinstance(request.json["id"], str):
+            raise exceptions.BadRequest("`id` must be a string")  # TODO
         if "list" not in request.json:
             raise exceptions.BadRequest("`list` key not in body")
+        if not isinstance(request.json["list"], dict):
+            raise exceptions.BadRequest("`list` must be a dict")  # TODO
+        if len(request.json["list"]) == 0:
+            raise exceptions.BadRequest("`list` must not be empty")  # TODO
 
         agg.add(request.json["id"], request.json["list"])
         agg.set_update(request.json["id"], datetime.now())
