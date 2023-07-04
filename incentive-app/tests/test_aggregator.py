@@ -357,7 +357,7 @@ def test_sanic_get_list(test_cli):
     assert isinstance(response.json, dict)
 
 
-def test_sanic_post_to_db(test_cli):  # TODO
+def test_sanic_post_to_db(test_cli):  # TODO: this still need to be implemented
     """
     This test checks that the post_to_db endpoint works and is able to insert data into
     the database.
