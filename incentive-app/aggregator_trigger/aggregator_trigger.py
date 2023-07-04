@@ -29,10 +29,10 @@ class AggregatorTrigger:
         # catch request exceptions
         except requests.exceptions.RequestException as e:
             print("Request exception: ", e)
-            return
+            return False
         else:
             print("Response: ", response)
-            return
+            return True
 
     def stop(self):
         """
