@@ -233,7 +233,7 @@ def test_probability_sum(mocked_model_parameters, expected_merge_result):
     assert pytest.approx(sum_probabilities, abs=1e-6) == 1.0
 
 
-def test_ct_prob_exception(mocked_model_parameters, expected_merge_result):
+def test_ct_prob_exception(mocked_model_parameters):
     """
     Test whether an empty dictionary gets returned when a dataset is missing
     and therefore the exception gets triggered.
