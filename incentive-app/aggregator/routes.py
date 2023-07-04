@@ -27,9 +27,9 @@ def attach_endpoints(app):
         """
 
         if "id" not in request.json:
-            raise exceptions.ServerError("`id` key not in body")
+            raise exceptions.BadRequest("`id` key not in body")
         if "list" not in request.json:
-            raise exceptions.ServerError("`list` key not in body")
+            raise exceptions.BadRequest("`list` key not in body")
 
         agg.add(request.json["id"], request.json["list"])
         agg.set_update(request.json["id"], datetime.now())
