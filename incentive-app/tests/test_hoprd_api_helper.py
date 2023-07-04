@@ -59,8 +59,8 @@ async def test_get_alias(api_helper: HoprdAPIHelper):
 @pytest.mark.asyncio
 async def test_remove_alias(api_helper: HoprdAPIHelper):
     """
-    This test checks that the remove_alias method of the HoprdAPIHelper class returns the
-    expected response.
+    This test checks that the remove_alias method of the HoprdAPIHelper class returns
+    the expected response.
     """
     pass
 
@@ -68,8 +68,8 @@ async def test_remove_alias(api_helper: HoprdAPIHelper):
 @pytest.mark.asyncio
 async def test_get_settings(api_helper: HoprdAPIHelper):
     """
-    This test checks that the get_settings method of the HoprdAPIHelper class returns the
-    expected response.
+    This test checks that the get_settings method of the HoprdAPIHelper class returns
+    the expected response.
     """
     settings = await api_helper.get_settings()
 
@@ -80,8 +80,8 @@ async def test_get_settings(api_helper: HoprdAPIHelper):
 @pytest.mark.asyncio
 async def test_get_all_channels(api_helper: HoprdAPIHelper):
     """
-    This test checks that the get_all_channels method of the HoprdAPIHelper class returns the
-    expected response.
+    This test checks that the get_all_channels method of the HoprdAPIHelper class returns
+    the expected response.
     """
     await api_helper.get_all_channels(True)
 
@@ -89,8 +89,8 @@ async def test_get_all_channels(api_helper: HoprdAPIHelper):
 @pytest.mark.asyncio
 async def test_get_channel_topology(api_helper: HoprdAPIHelper):
     """
-    This test checks that the get_channel_topology method of the HoprdAPIHelper class returns the
-    expected response.
+    This test checks that the get_channel_topology method of the HoprdAPIHelper class
+    returns the expected response.
     """
     topology = await api_helper.get_channel_topology(True)
 
@@ -104,8 +104,8 @@ async def test_get_channel_topology(api_helper: HoprdAPIHelper):
 @pytest.mark.asyncio
 async def test_get_tickets_in_channel(api_helper: HoprdAPIHelper):
     """
-    This test checks that the get_tickets_in_channel method of the HoprdAPIHelper class returns the
-    expected response.
+    This test checks that the get_tickets_in_channel method of the HoprdAPIHelper class
+    returns the expected response.
     """
     await api_helper.get_tickets_in_channel(True)
 
@@ -113,8 +113,8 @@ async def test_get_tickets_in_channel(api_helper: HoprdAPIHelper):
 @pytest.mark.asyncio
 async def test_redeem_tickets_in_channel(api_helper: HoprdAPIHelper):
     """
-    This test checks that the redeem_tickets_in_channel method of the HoprdAPIHelper class returns the
-    expected response.
+    This test checks that the redeem_tickets_in_channel method of the HoprdAPIHelper
+    class returns the expected response.
     """
     pass
 
@@ -122,8 +122,8 @@ async def test_redeem_tickets_in_channel(api_helper: HoprdAPIHelper):
 @pytest.mark.asyncio
 async def test_redeem_tickets(api_helper: HoprdAPIHelper):
     """
-    This test checks that the redeem_tickets method of the HoprdAPIHelper class returns the
-    expected response.
+    This test checks that the redeem_tickets method of the HoprdAPIHelper class returns
+    the expected response.
     """
     await api_helper.redeem_tickets()
 
@@ -215,7 +215,7 @@ async def test_get_bad_address(api_helper: HoprdAPIHelper):
 @pytest.mark.asyncio
 async def test_send_message(api_helper: HoprdAPIHelper):
     """
-    This test checks that the send_message method of the HoprdAPIHelper class returns the
-    expected response.
+    This test checks that the send_message method of the HoprdAPIHelper class returns
+    the expected response.
     """
     pass
