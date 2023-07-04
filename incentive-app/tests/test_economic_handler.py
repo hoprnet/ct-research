@@ -92,7 +92,7 @@ async def test_read_parameters_and_equations_check_values(
 
     assert result == ("params", {}, {}, {})
 
-    
+
 @pytest.fixture
 def merge_data():
     """
@@ -124,15 +124,9 @@ def merge_data():
     return unique_peerId_address, metrics_dict, subgraph_dict
 
 
-def test_merge_topology_metricdb_subgraph(merge_data):
-    """
-    Test whether merge_topology_metricdb_subgraph merges the data as expected.
-    """
-    unique_peerId_address = merge_data[0]
-    new_metrics_dict = merge_data[1]
-    new_subgraph_dict = merge_data[2]
-
-    expected_result = {
+@pytest.fixture
+def expected_merge_result():
+    return {
         "peer_id_1": {
             "safe_address": "safe_1",
             "netwatchers": ["nw_1", "nw_3"],
@@ -160,6 +154,16 @@ def test_merge_topology_metricdb_subgraph(merge_data):
         },
     }
 
+
+def test_merge_topology_metricdb_subgraph(merge_data, expected_merge_result):
+    """
+    Test whether merge_topology_metricdb_subgraph merges the data as expected.
+    """
+    unique_peerId_address = merge_data[0]
+    new_metrics_dict = merge_data[1]
+    new_subgraph_dict = merge_data[2]
+    expected_result = expected_merge_result
+
     node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
     result = node.merge_topology_metricdb_subgraph(
         unique_peerId_address, new_metrics_dict, new_subgraph_dict
@@ -183,3 +187,63 @@ def test_merge_topology_metricdb_subgraph_exception(merge_data):
     )
 
     assert result == ("merged_data", {})
+
+
+@pytest.fixture
+def mocked_model_parameters():
+    return {
+        "parameters": {
+            "a": {"value": 1, "comment": "slope coefficient of linear equation f(x)"},
+            "b": {
+                "value": 1,
+                "comment": "denominator of the exponent of nonlinear function g(x)",
+            },
+            "c": {
+                "value": 3,
+                "comment": "threshold value defining the cutoff for when f(x) ends and g(x) starts",
+            },
+            "l": {
+                "value": 0,
+                "comment": "lower limit of linear function (i.e. minimum required stake)",
+            },
+        },
+        "equations": {
+            "f_x": {"formula": "a * x", "condition": "l <= x <= c"},
+            "g_x": {"formula": "a * c + (x - c) ** (1 / b)", "condition": "x > c"},
+        },
+        "budget": {"value": 100, "comment": "budget for the given distribution period"},
+    }
+
+
+def test_probability_sum(mocked_model_parameters, expected_merge_result):
+    """
+    Test whether the sum of probabilities is "close" to 1 due to
+    floating-point precision. Not that the result is a tuple:
+    ("ct_prob", merged_result)
+    """
+    parameters = mocked_model_parameters["parameters"]
+    equations = mocked_model_parameters["equations"]
+    merged_result = expected_merge_result
+
+    node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
+    result = node.compute_ct_prob(parameters, equations, merged_result)
+    sum_probabilities = sum(result[1][key]["prob"] for key in result[1])
+
+    # assert that sum is close to 1 due to floating-point precision
+    assert pytest.approx(sum_probabilities, abs=1e-6) == 1.0
+
+
+def test_ct_prob_exception(mocked_model_parameters, expected_merge_result):
+    """
+    Test whether an empty dictionary gets returned when a dataset is missing
+    and therefore the exception gets triggered.
+    """
+    parameters = mocked_model_parameters["parameters"]
+    equations = mocked_model_parameters["equations"]
+    merged_result = {}
+
+    node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
+
+    result = node.compute_ct_prob(parameters, equations, merged_result)
+
+    assert result == ("ct_prob", {})
