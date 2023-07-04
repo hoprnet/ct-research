@@ -263,7 +263,7 @@ def test_sanic_metrics_endpoint(test_cli):
     """
     This test checks that the metrics endpoint returns the correct data.
     """
-    request, response = test_cli.get("/aggregator/metrics")
+    _, response = test_cli.get("/aggregator/metrics")
 
     assert response.status == 200
 
@@ -273,10 +273,23 @@ def test_sanic_post_list_missing_id(test_cli):
     This test checks that the post_list endpoint returns the correct data when
     the id is missing.
     """
-    request, response = test_cli.post("/aggregator/list", json={"list": []})
+    _, response = test_cli.post("/aggregator/list", json={"list": []})
 
     assert response.status == 400
     assert response.json["message"] == "`id` key not in body"
+
+
+def test_sanic_post_list_wrong_id_type(test_cli):
+    """
+    This test checks that the post_list endpoint returns the correct data when
+    the id is missing.
+    """
+    _, response = test_cli.post(
+        "/aggregator/list", json={"id": 123, "list": {"peer": 1}}
+    )
+
+    assert response.status == 400
+    assert response.json["message"] == "`id` must be a string"
 
 
 def test_sanic_post_list_missing_list(test_cli):
@@ -284,11 +297,64 @@ def test_sanic_post_list_missing_list(test_cli):
     This test checks that the post_list endpoint returns the correct data when
     the list is missing.
     """
-    request, response = test_cli.post("/aggregator/list", json={"id": "some_id"})
+    _, response = test_cli.post("/aggregator/list", json={"id": "some_id"})
 
-    print(response.json)
     assert response.status == 400
     assert response.json["message"] == "`list` key not in body"
+
+
+def test_sanic_post_list_wrong_list_type(test_cli):
+    """
+    This test checks that the post_list endpoint returns the correct data when
+    the list is missing.
+    """
+    _, response = test_cli.post("/aggregator/list", json={"id": "some_id", "list": 123})
+
+    assert response.status == 400
+    assert response.json["message"] == "`list` must be a dict"
+
+
+def test_sanic_post_list_empty_list(test_cli):
+    """
+    This test checks that the post_list endpoint returns the correct data when
+    the list is missing.
+    """
+    _, response = test_cli.post("/aggregator/list", json={"id": "some_id", "list": {}})
+
+    assert response.status == 400
+    assert response.json["message"] == "`list` must not be empty"
+
+
+def test_sanic_post_list(test_cli):
+    """
+    This test checks that the post_list endpoint returns the correct data when
+    the list is missing.
+    """
+    _, response = test_cli.post(
+        "/aggregator/list", json={"id": "some_id", "list": {"peer": 1}}
+    )
+
+    assert response.status == 200
+
+
+def test_sanic_get_list(test_cli):
+    """
+    This test checks that the get_list endpoint returns the correct data.
+    """
+    _, response = test_cli.get("/aggregator/list")
+
+    assert response.status == 200
+    assert isinstance(response.json, dict)
+
+
+def test_sanic_post_to_db(test_cli):  # TODO
+    """
+    This test checks that the post_to_db endpoint works and is able to insert data into
+    the database.
+    """
+    _, response = test_cli.get("/aggregator/to_db")
+
+    assert response.status == 500
 
 
 # Finally managed to run unittests by moving app.run statement to main block
