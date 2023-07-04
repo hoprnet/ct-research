@@ -17,6 +17,7 @@ pytest-mock==3.10.0
 sanic==23.3.0
 sanic-envconfig==1.3.4
 secure==0.3.0
+validators==0.20.0
 
 # for hoprd package: here we use the latest WORKING version of the package. If you want 
 # the latest release, use :
