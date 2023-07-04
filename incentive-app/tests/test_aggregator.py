@@ -8,6 +8,11 @@ agg = Aggregator()
 
 
 def clear_instance(func):
+    """
+    Decorator that clears the instance of the aggregator before. This is necessary due
+    to the singleton implementation.
+    """
+
     def wrapper(*args, **kwargs):
         agg = Aggregator()
         agg._dict = {}
@@ -244,18 +249,23 @@ def test_add_to_existing_pod_multiple():
 
 @pytest.fixture
 def app():
+    """
+    This fixture returns a Sanic app.
+    """
     app_instance = Sanic("Aggregator")
     attach_endpoints(app_instance)
     attach_middlewares(app_instance)
 
     app_instance.prepare(dev=True, access_log=False)
-    app_instance
 
     yield app_instance
 
 
 @pytest.fixture
 def test_cli(app):
+    """
+    This fixture returns a test client.
+    """
     return app.test_client
 
 
