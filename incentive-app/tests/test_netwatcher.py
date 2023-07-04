@@ -1,8 +1,4 @@
-import asyncio  # noqa: F401
-import pytest  # noqa: F401
-
 from netwatcher import NetWatcher
-from tools.hopr_api_helper import HoprdAPIHelper  # noqa: F401
 
 # TODO: add tests for the following methods:
 # - wipe_peers
