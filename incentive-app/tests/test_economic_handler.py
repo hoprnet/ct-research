@@ -1,6 +1,8 @@
 import json
 import pytest
 from unittest import mock
+from unittest.mock import MagicMock
+
 from economic_handler.economic_handler import EconomicHandler
 
 
@@ -92,7 +94,7 @@ async def test_read_parameters_and_equations_check_values(
 
     assert result == ("params", {}, {}, {})
 
-    
+
 @pytest.fixture
 def merge_data():
     """
@@ -183,3 +185,45 @@ def test_merge_topology_metricdb_subgraph_exception(merge_data):
     )
 
     assert result == ("merged_data", {})
+
+
+@pytest.fixture
+def mock_node_for_test_start(mocker):
+    """
+    Create a mock for each coroutine that should be executed.
+    """
+    mocker.patch.object(EconomicHandler, "connect", return_value=None)
+    mocker.patch.object(EconomicHandler, "host_available", return_value=None)
+    mocker.patch.object(EconomicHandler, "scheduler", return_value=None)
+
+    return EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
+
+
+@pytest.mark.asyncio
+async def test_start(mock_node_for_test_start):
+    """
+    Test whether all coroutines were called with the expected arguments.
+    """
+    node = mock_node_for_test_start
+    await node.start()
+
+    assert node.connect.called
+    assert node.host_available.called
+    assert node.scheduler.called
+    assert len(node.tasks) == 3
+    assert node.started
+
+
+def test_stop():
+    """
+    Test whether the stop method cancels the tasks and updates the 'started' attribute.
+    """
+    mocked_task = MagicMock()
+    node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
+    node.tasks = {mocked_task}
+
+    node.stop()
+
+    assert not node.started
+    mocked_task.cancel.assert_called_once()
+    assert node.tasks == set()
