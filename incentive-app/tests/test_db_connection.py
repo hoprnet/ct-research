@@ -406,3 +406,39 @@ def test_count_uniques_in_last_added_rows_empty(
         db.drop_table("test_table")
 
         assert count == 0
+
+
+def test_database_name_modification(db_fixture: DatabaseConnection):
+    """
+    Test DatabaseConnection database name lock.
+    """
+    with db_fixture as db:
+        with pytest.raises(AttributeError):
+            db.database = "random_database"
+
+
+def test_database_host_modification(db_fixture: DatabaseConnection):
+    """
+    Test DatabaseConnection database host lock.
+    """
+    with db_fixture as db:
+        with pytest.raises(AttributeError):
+            db.host = "random_host"
+
+
+def test_database_user_modification(db_fixture: DatabaseConnection):
+    """
+    Test DatabaseConnection database port lock.
+    """
+    with db_fixture as db:
+        with pytest.raises(AttributeError):
+            db.user = "random_user"
+
+
+def test_database_port_modification(db_fixture: DatabaseConnection):
+    """
+    Test DatabaseConnection database port lock.
+    """
+    with db_fixture as db:
+        with pytest.raises(AttributeError):
+            db.port = "random_port"
