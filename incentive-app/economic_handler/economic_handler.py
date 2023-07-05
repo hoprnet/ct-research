@@ -91,7 +91,7 @@ class EconomicHandler(HOPRNode):
         print(
             blacklist
         )  # RPCh nodes blacklist (not yet included: would need to mock it)
-        print(f"{result_5=}")
+        print(f"{result_5[1]=}")
         print(f"{blacklist=}")
 
     async def channel_topology(self, full_topology: bool = True, channels: str = "all"):
@@ -348,29 +348,28 @@ class EconomicHandler(HOPRNode):
         filename = f"expected_reward_{timestamp}.csv"
         file_path = os.path.join(folder_path, filename)
 
+        for entry in dataset.values():
+            entry["expected_reward"] = entry["prob"] * budget["value"]
+
         try:
             os.makedirs(folder_path, exist_ok=True)
         except OSError as e:
             log.error(f"Error occurred while creating the folder: {e}")
-
-        try:
-            for entry in dataset.values():
-                entry["expected_reward"] = entry["prob"] * budget["value"]
-        except KeyError as e:
-            log.error(f"Error occurred while computing the expected reward: {e}")
+            return "expected_rewards", {}
 
         try:
             with open(file_path, "w", newline="") as csvfile:
                 writer = csv.writer(csvfile)
-                writer.writerow(["peer_id"] + list(dataset[next(iter(dataset))].keys()))
+                writer.writerow(["peer_id"] + list(dataset.keys()))
                 for key, value in dataset.items():
                     writer.writerow([key] + list(value.values()))
         except OSError as e:
             log.error(f"Error occurred while writing to the CSV file: {e}")
+            return "expected_reward", {}
 
         log.error(traceback.format_exc())
 
-        return dataset
+        return "expected_rewards", dataset
 
     async def start(self):
         """
