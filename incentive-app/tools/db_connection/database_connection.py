@@ -135,6 +135,25 @@ class DatabaseConnection:
         self.cursor.execute(command, (table, column))
         return self.cursor.fetchone()[0]
 
+    def non_default_columns(self, table: str):
+        """
+        Gets names for all columns that do not have a default value in the given table.
+        :param table: The name of the table to get columns from.
+        :return: A list of column names.
+        """
+        if not self.table_exists_guard(table):
+            raise ValueError(f"Table '{table}' does not exist")
+
+        command = SQL(
+            """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = %s AND column_default IS NULL;
+        """
+        )
+        self.cursor.execute(command, (table,))
+        return [row[0] for row in self.cursor.fetchall()]
+
     def insert(self, table: str, **kwargs):
         """
         Inserts a row into the given table.
@@ -150,6 +169,11 @@ class DatabaseConnection:
             if not self.column_exists_guard(table, key):
                 print("MISSING KEY")
                 raise ValueError(f"Column '{key}' does not exist in table '{table}'")
+
+        # check that all table's column are in kwargs
+        for column in self.non_default_columns(table):
+            if column not in kwargs.keys():
+                raise ValueError(f"Column '{column}' is missing")
 
         table_id = Identifier(table)
         keys = list(kwargs.keys())
@@ -193,6 +217,11 @@ class DatabaseConnection:
         for key in keys:
             if not self.column_exists_guard(table, key):
                 raise ValueError(f"Column '{key}' does not exist in table '{table}'")
+
+        # check that all table's column are in kwargs
+        for column in self.non_default_columns(table):
+            if column not in keys:
+                raise ValueError(f"Column '{column}' is missing")
 
         table_id = Identifier(table)
 

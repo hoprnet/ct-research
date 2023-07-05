@@ -72,6 +72,18 @@ def test_column_exists_guard(db_fixture: DatabaseConnection, cols_fixture: list[
         db.drop_table("test_table")
 
 
+def test_non_default_columns(db_fixture: DatabaseConnection, cols_fixture: list[tuple]):
+    """
+    Test DatabaseConnection test_get_non_default_columns method.
+    """
+    with db_fixture as db:
+        db.create_table("test_table", cols_fixture)
+        assert db.non_default_columns("test_table") == [
+            col[0] for col in cols_fixture[1:-1]
+        ]
+        db.drop_table("test_table")
+
+
 def test_insert(db_fixture: DatabaseConnection, cols_fixture: list[tuple]):
     """
     Test DatabaseConnection insert method.
@@ -106,18 +118,18 @@ def test_insert_unknown_column(
         db.drop_table("test_table")
 
 
-# def test_insert_missing_column(
-#     db_fixture: DatabaseConnection, cols_fixture: list[tuple]
-# ):
-#     with db_fixture as db:
-#         db.create_table("test_table", cols_fixture)
-#         with pytest.raises(ValueError):
-#             db.insert(
-#                 "test_table",
-#                 peer_id="0xF514",
-#                 netw_ids=["0xF24", "0xF21"],
-#             )
-#         db.drop_table("test_table")
+def test_insert_missing_column(
+    db_fixture: DatabaseConnection, cols_fixture: list[tuple]
+):
+    with db_fixture as db:
+        db.create_table("test_table", cols_fixture)
+        with pytest.raises(ValueError):
+            db.insert(
+                "test_table",
+                peer_id="0xF514",
+                netw_ids=["0xF24", "0xF21"],
+            )
+        db.drop_table("test_table")
 
 
 def test_insert_many(db_fixture: DatabaseConnection, cols_fixture: list[tuple]):
@@ -156,6 +168,28 @@ def test_insert_many_unknown_column(
                     ("0xF517", ["0xF24", "0xF21"], [100, 13], "bar"),
                     ("0xF518", ["0xF24", "0xF21"], [100, 13], "bar"),
                     ("0xF519", ["0xF24", "0xF21"], [100, 13], "bar"),
+                ],
+            )
+        db.drop_table("test_table")
+
+
+def test_insert_many_missing_column(
+    db_fixture: DatabaseConnection, cols_fixture: list[tuple]
+):
+    """
+    Test DatabaseConnection insert_many method with missing column.
+    """
+    with db_fixture as db:
+        db.create_table("test_table", cols_fixture)
+        with pytest.raises(ValueError):
+            db.insert_many(
+                "test_table",
+                ["peer_id", "netw_ids"],
+                [
+                    ("0xF516", ["0xF24", "0xF21"], [100, 13]),
+                    ("0xF517", ["0xF24", "0xF21"], [100, 13]),
+                    ("0xF518", ["0xF24", "0xF21"], [100, 13]),
+                    ("0xF519", ["0xF24", "0xF21"], [100, 13]),
                 ],
             )
         db.drop_table("test_table")
