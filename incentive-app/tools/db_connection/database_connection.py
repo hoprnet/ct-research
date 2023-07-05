@@ -53,7 +53,6 @@ class DatabaseConnection:
         :param table: The name of the table to create.
         :param columns: A list of tuples containing the column name and the column type.
         """
-
         if self.table_exists_guard(table):
             raise ValueError(f"Table '{table}' already exist")
 
@@ -165,9 +164,7 @@ class DatabaseConnection:
 
         # check if all columns are in table
         for key in kwargs.keys():
-            print(key)
             if not self.column_exists_guard(table, key):
-                print("MISSING KEY")
                 raise ValueError(f"Column '{key}' does not exist in table '{table}'")
 
         # check that all table's column are in kwargs
