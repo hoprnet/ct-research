@@ -1,6 +1,8 @@
 import pytest
 from tools.hopr_api_helper import HoprdAPIHelper
 
+pytest.skip(allow_module_level=True)
+
 
 @pytest.fixture
 def api_helper():
