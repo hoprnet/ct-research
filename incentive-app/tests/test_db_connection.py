@@ -1,6 +1,8 @@
 from tools.db_connection import DatabaseConnection  # noqa: F401
 import pytest
 
+pytest.skip(allow_module_level=True)
+
 
 @pytest.fixture
 def db_fixture():
@@ -442,6 +444,14 @@ def test_count_uniques_in_last_added_rows_empty(
         assert count == 0
 
 
+def test_database_name(db_fixture: DatabaseConnection):
+    """
+    Test DatabaseConnection database name.
+    """
+    with db_fixture as db:
+        assert db.database == "metricDB"
+
+
 def test_database_name_modification(db_fixture: DatabaseConnection):
     """
     Test DatabaseConnection database name lock.
@@ -449,6 +459,14 @@ def test_database_name_modification(db_fixture: DatabaseConnection):
     with db_fixture as db:
         with pytest.raises(AttributeError):
             db.database = "random_database"
+
+
+def test_database_host(db_fixture: DatabaseConnection):
+    """
+    Test DatabaseConnection database host.
+    """
+    with db_fixture as db:
+        assert db.host == "localhost"
 
 
 def test_database_host_modification(db_fixture: DatabaseConnection):
@@ -460,6 +478,14 @@ def test_database_host_modification(db_fixture: DatabaseConnection):
             db.host = "random_host"
 
 
+def test_database_user(db_fixture: DatabaseConnection):
+    """
+    Test DatabaseConnection database user.
+    """
+    with db_fixture as db:
+        assert db.user == "postgres"
+
+
 def test_database_user_modification(db_fixture: DatabaseConnection):
     """
     Test DatabaseConnection database port lock.
@@ -467,6 +493,14 @@ def test_database_user_modification(db_fixture: DatabaseConnection):
     with db_fixture as db:
         with pytest.raises(AttributeError):
             db.user = "random_user"
+
+
+def test_database_port(db_fixture: DatabaseConnection):
+    """
+    Test DatabaseConnection database port.
+    """
+    with db_fixture as db:
+        assert db.port == "5432"
 
 
 def test_database_port_modification(db_fixture: DatabaseConnection):

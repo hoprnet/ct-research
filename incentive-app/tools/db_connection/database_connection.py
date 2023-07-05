@@ -1,6 +1,5 @@
 from psycopg2 import connect
 from psycopg2.sql import SQL, Identifier
-from psycopg2.errors import NotNullViolation, InFailedSqlTransaction
 
 
 class DatabaseConnection:
@@ -184,21 +183,15 @@ class DatabaseConnection:
         """
         )
 
-        try:
-            self.cursor.execute(
-                command.format(
-                    table_id,
-                    SQL(", ").join(Identifier(key) for key in keys),
-                    SQL(", ").join(SQL("%s") for _ in values),
-                ),
-                values,
-            )
-        except NotNullViolation as e:
-            raise ValueError(e)
-        except InFailedSqlTransaction as e:
-            raise ValueError(e)
-        else:
-            self.conn.commit()
+        self.cursor.execute(
+            command.format(
+                table_id,
+                SQL(", ").join(Identifier(key) for key in keys),
+                SQL(", ").join(SQL("%s") for _ in values),
+            ),
+            values,
+        )
+        self.conn.commit()
 
     def insert_many(self, table: str, keys: list[str], values: list[tuple]):
         """
@@ -244,15 +237,11 @@ class DatabaseConnection:
             value_joined,
         )
 
-        try:
-            self.cursor.execute(
-                command_formatted,
-                separated_values,
-            )
-        except NotNullViolation as e:
-            raise ValueError(e)
-        else:
-            self.conn.commit()
+        self.cursor.execute(
+            command_formatted,
+            separated_values,
+        )
+        self.conn.commit()
 
     def last_row(self, table: str):
         """
