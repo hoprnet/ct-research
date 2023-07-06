@@ -4,7 +4,7 @@ from .middlewares import attach_middlewares
 from .routes import attach_endpoints
 
 
-def create_app():    
+def create_app():  # pragma: no cover
     try:
         app = Sanic("Aggregator")
         attach_endpoints(app)
@@ -15,8 +15,7 @@ def create_app():
 
     return app
 
-    # app.run(host = Settings.HOST, 
-    #         port = Settings.PORT, 
-    #         dev  = Settings.DEV, 
+    # app.run(host = Settings.HOST,
+    #         port = Settings.PORT,
+    #         dev  = Settings.DEV,
     #         fast = Settings.FAST)
-

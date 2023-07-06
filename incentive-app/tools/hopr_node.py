@@ -60,10 +60,7 @@ class HOPRNode:
         :returns: nothing
         """
 
-        try:
-            self.peer_id = await self.api.get_address(address)
-        except Exception as e:
-            log.warning(f"Could not connect to {self.api.url}: {e}")
+        self.peer_id = await self.api.get_address(address)
 
         if self.peer_id is None:
             log.info("HOPR node is down")
