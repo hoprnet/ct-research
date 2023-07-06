@@ -1,9 +1,6 @@
 from tools.db_connection import DatabaseConnection  # noqa: F401
 import pytest
 
-pytest.skip(allow_module_level=True)
-
-
 @pytest.fixture
 def db_fixture():
     """
