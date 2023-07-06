@@ -15,7 +15,6 @@ logs/
 #misc
 .coverage
 .coveragerc
-
 htmlcov/
 run_econ_handler.sh
 run_play.sh
@@ -24,4 +23,4 @@ run_aggregator.sh
 run_nw.sh
 run_trigger.sh
 .DS_Store
-```
+
