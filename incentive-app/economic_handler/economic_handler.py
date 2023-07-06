@@ -39,7 +39,7 @@ class EconomicHandler(HOPRNode):
         # self.started = False
 
     @wakeupcall(seconds=10)
-    async def am_i_up(self):
+    async def host_available(self):
         print(f"{self.connected=}")
         return self.connected
 
@@ -385,7 +385,7 @@ class EconomicHandler(HOPRNode):
 
         self.started = True
         self.tasks.add(asyncio.create_task(self.connect(address="hopr")))
-        self.tasks.add(asyncio.create_task(self.am_i_up()))
+        self.tasks.add(asyncio.create_task(self.host_available()))
         self.tasks.add(asyncio.create_task(self.scheduler()))
 
         await asyncio.gather(*self.tasks)

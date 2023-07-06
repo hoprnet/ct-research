@@ -1,17 +1,12 @@
 import asyncio
-from signal import SIGINT, SIGTERM, Signals
+from signal import SIGINT, SIGTERM
 
 import click
 
 from tools.exit_codes import ExitCode
 from tools.utils import _getlogger
 from .economic_handler import EconomicHandler
-
-
-def stop(instance: EconomicHandler, signal: Signals):
-    """Stop the economic handler instance when a signal is received"""
-    print(f">>> Caught signal {signal.name} <<<")
-    instance.stop()
+from .utils_econhandler import stop_instance
 
 
 @click.command()
@@ -41,8 +36,8 @@ def main(port: str, apihost: str, apikey: str, rcphnodes: str):
     economic_handler = EconomicHandler(f"http://{apihost}:{port}", apikey, rcphnodes)
 
     loop = asyncio.new_event_loop()
-    loop.add_signal_handler(SIGINT, stop, economic_handler, SIGINT)
-    loop.add_signal_handler(SIGTERM, stop, economic_handler, SIGTERM)
+    loop.add_signal_handler(SIGINT, stop_instance, economic_handler, SIGINT)
+    loop.add_signal_handler(SIGTERM, stop_instance, economic_handler, SIGTERM)
 
     # start the node and run the event loop until the node stops
     try:
