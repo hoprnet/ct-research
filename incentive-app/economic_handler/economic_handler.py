@@ -85,13 +85,13 @@ class EconomicHandler(HOPRNode):
         )
         # calculate expected rewards and output it as a csv file
         result_5 = self.compute_expected_reward_savecsv(
-            result_4, parameters_equations_budget[2]
+            result_4[1], parameters_equations_budget[2]
         )
 
         print(
             blacklist
         )  # RPCh nodes blacklist (not yet included: would need to mock it)
-        print(f"{result_5=}")
+        print(f"{result_5[1]=}")
         print(f"{blacklist=}")
 
     async def channel_topology(self, full_topology: bool = True, channels: str = "all"):
@@ -243,16 +243,18 @@ class EconomicHandler(HOPRNode):
                             rpch_node_peerID = [
                                 item["id"] for item in data if "id" in item
                             ]
-                            return rpch_node_peerID
+                            return "rpch", rpch_node_peerID
                     else:
                         log.error(f"Received error code: {response.status}")
         except aiohttp.ClientError as e:
             log.error(f"An error occurred while making the request: {e}")
+            log.error(traceback.format_exc())
         except ValueError as e:
             log.error(f"An error occurred while parsing the response as JSON: {e}")
+            log.error(traceback.format_exc())
         except Exception as e:
             log.error(f"An unexpected error occurred: {e}")
-        log.error(traceback.format_exc())
+            log.error(traceback.format_exc())
 
         return "rpch", []
 
@@ -318,6 +320,7 @@ class EconomicHandler(HOPRNode):
             except Exception as e:
                 log.error(f"Error evaluating function for peer ID {key}: {e}")
                 log.error(traceback.format_exc())
+                return "ct_prob", {}
 
         # compute ct probability
         sum_values = sum(result["trans_stake"] for result in results.values())
@@ -329,7 +332,7 @@ class EconomicHandler(HOPRNode):
             if key in results:
                 merged_result[key].update(results[key])
 
-        return merged_result
+        return "ct_prob", merged_result
 
     def compute_expected_reward_savecsv(self, dataset: dict, budget: dict):
         """
@@ -348,29 +351,28 @@ class EconomicHandler(HOPRNode):
         filename = f"expected_reward_{timestamp}.csv"
         file_path = os.path.join(folder_path, filename)
 
+        for entry in dataset.values():
+            entry["expected_reward"] = entry["prob"] * budget["value"]
+
         try:
             os.makedirs(folder_path, exist_ok=True)
         except OSError as e:
             log.error(f"Error occurred while creating the folder: {e}")
-
-        try:
-            for entry in dataset.values():
-                entry["expected_reward"] = entry["prob"] * budget["value"]
-        except KeyError as e:
-            log.error(f"Error occurred while computing the expected reward: {e}")
+            log.error(traceback.format_exc())
+            return "expected_rewards", {}
 
         try:
             with open(file_path, "w", newline="") as csvfile:
                 writer = csv.writer(csvfile)
-                writer.writerow(["peer_id"] + list(dataset[next(iter(dataset))].keys()))
+                writer.writerow(["peer_id"] + list(dataset.keys()))
                 for key, value in dataset.items():
                     writer.writerow([key] + list(value.values()))
         except OSError as e:
             log.error(f"Error occurred while writing to the CSV file: {e}")
+            log.error(traceback.format_exc())
+            return "expected_reward", {}
 
-        log.error(traceback.format_exc())
-
-        return dataset
+        return "expected_rewards", dataset
 
     async def start(self):
         """
