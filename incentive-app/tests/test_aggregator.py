@@ -292,7 +292,7 @@ def test_sanic_post_list_missing_id(test_cli):
 def test_sanic_post_list_wrong_id_type(test_cli):
     """
     This test checks that the post_list endpoint returns the correct data when
-    the id is missing.
+    the value passed as id is not a string
     """
     _, response = test_cli.post(
         "/aggregator/list", json={"id": 123, "list": {"peer": 1}}
@@ -316,7 +316,7 @@ def test_sanic_post_list_missing_list(test_cli):
 def test_sanic_post_list_wrong_list_type(test_cli):
     """
     This test checks that the post_list endpoint returns the correct data when
-    the list is missing.
+    the value passed as list is not a dict
     """
     _, response = test_cli.post("/aggregator/list", json={"id": "some_id", "list": 123})
 
@@ -327,7 +327,7 @@ def test_sanic_post_list_wrong_list_type(test_cli):
 def test_sanic_post_list_empty_list(test_cli):
     """
     This test checks that the post_list endpoint returns the correct data when
-    the list is missing.
+    the list is empty.
     """
     _, response = test_cli.post("/aggregator/list", json={"id": "some_id", "list": {}})
 

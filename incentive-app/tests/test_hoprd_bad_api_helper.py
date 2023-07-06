@@ -24,7 +24,7 @@ def test_withdraw(bad_api_helper: HoprdAPIHelper):
     This test checks that the withdraw method of the HoprdAPIHelper class returns the
     expected response.
     """
-    assert True
+    pass
 
 
 @pytest.mark.asyncio
@@ -44,7 +44,7 @@ async def test_set_alias(bad_api_helper: HoprdAPIHelper):
     This test checks that the set_alias method of the HoprdAPIHelper class returns the
     expected response.
     """
-    assert True
+    pass
 
 
 @pytest.mark.asyncio
@@ -53,7 +53,7 @@ async def test_get_alias(bad_api_helper: HoprdAPIHelper):
     This test checks that the get_alias method of the HoprdAPIHelper class returns the
     expected response.
     """
-    assert True
+    pass
 
 
 @pytest.mark.asyncio
@@ -62,7 +62,7 @@ async def test_remove_alias(bad_api_helper: HoprdAPIHelper):
     This test checks that the remove_alias method of the HoprdAPIHelper class returns the
     expected response.
     """
-    assert True
+    pass
 
 
 @pytest.mark.asyncio
@@ -116,7 +116,7 @@ async def test_redeem_tickets_in_channel(bad_api_helper: HoprdAPIHelper):
     expected response.
     """
 
-    assert True
+    pass
 
 
 @pytest.mark.asyncio
@@ -139,7 +139,7 @@ async def test_ping(bad_api_helper: HoprdAPIHelper):
     # peer_ids: list = await bad_api_helper.peers("peerId")
     # latency = await bad_api_helper.ping(peer_ids.pop())
 
-    assert True
+    pass
 
 
 @pytest.mark.asyncio
@@ -170,4 +170,4 @@ async def test_send_message(bad_api_helper: HoprdAPIHelper):
     This test checks that the send_message method of the HoprdAPIHelper class returns the
     expected response.
     """
-    assert True
+    pass
