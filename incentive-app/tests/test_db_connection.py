@@ -123,6 +123,9 @@ def test_insert_unknown_column(
 def test_insert_missing_column(
     db_fixture: DatabaseConnection, cols_fixture: list[tuple]
 ):
+    """
+    Test DatabaseConnection insert method with missing column.
+    """
     with db_fixture as db:
         db.create_table("test_table", cols_fixture)
         with pytest.raises(ValueError):
