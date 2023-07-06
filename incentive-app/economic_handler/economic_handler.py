@@ -21,7 +21,8 @@ class EconomicHandler(HOPRNode):
         """
         :param url: the url of the HOPR node
         :param key: the API key of the HOPR node
-        :returns: a new instance of the Economic Handler using 'url' and API 'key'
+        :param rpch_endpoint: endpoint returning rpch entry and exit nodes
+        :returns: a new instance of the Economic Handler
         """
 
         self.tasks = set[asyncio.Task]()
@@ -46,53 +47,60 @@ class EconomicHandler(HOPRNode):
     @wakeupcall(seconds=15)
     @connectguard
     async def scheduler(self):
-        scheduler_tasks = set[asyncio.Task]()
+        """
+        Schedules the tasks of the EconomicHandler
+        """
+        tasks = set[asyncio.Task]()
 
         expected_order = ["unique_peer_safe_links", "params", "rpch"]
 
-        scheduler_tasks.add(asyncio.create_task(self.get_unique_safe_peerId_links()))
-        scheduler_tasks.add(asyncio.create_task(self.read_parameters_and_equations()))
-        scheduler_tasks.add(
-            asyncio.create_task(self.blacklist_rpch_nodes(self.rpch_endpoint))
-        )
+        tasks.add(asyncio.create_task(self.get_unique_safe_peerId_links()))
+        tasks.add(asyncio.create_task(self.read_parameters_and_equations()))
+        tasks.add(asyncio.create_task(self.blacklist_rpch_nodes(self.rpch_endpoint)))
 
         await asyncio.sleep(0)
 
-        finished, _ = await asyncio.wait(scheduler_tasks)
+        finished, _ = await asyncio.wait(tasks)
 
-        unordered_results = [task.result() for task in finished]
+        unordered_tasks = [task.result() for task in finished]
 
         # sort the results according to the expected order.
-        # This is necessary because the order of the results is not guaranteed
-        results = sorted(unordered_results, key=lambda x: expected_order.index(x[0]))
+        # This is necessary because the order of the results is not guaranteed.
+        ordered_tasks = sorted(
+            unordered_tasks, key=lambda x: expected_order.index(x[0])
+        )
 
-        channel_topology = results[0][1]
-        parameters_equations_budget = results[1][1:]
-        blacklist = results[2][1]
+        unique_safe_peerId_links = ordered_tasks[0][1]
+        parameters_equations_budget = ordered_tasks[1][1:]
+        rpch_nodes_blacklist = ordered_tasks[2][1]
 
-        # helper functions that allow to test the code (subject to removal)
-        result_1 = self.replace_keys_in_mock_data(channel_topology)
-        result_2 = self.replace_keys_in_mock_data_subgraph(channel_topology)
+        # helper functions that allow to test the code by inserting
+        # the peerIDs of the pluto nodes (SUBJECT TO REMOVAL)
+        pluto_keys_in_mockdb_data = self.replace_keys_in_mock_data(
+            unique_safe_peerId_links
+        )
+        pluto_keys_in_mocksubraph_data = self.replace_keys_in_mock_data_subgraph(
+            unique_safe_peerId_links
+        )
 
-        # merge channel topology with metrics from the database and subgraph data
-        result_3 = self.merge_topology_metricdb_subgraph(
-            channel_topology, result_1, result_2
+        # merge unique_safe_peerId_links with database metrics and subgraph data
+        _, metrics_dict = self.merge_topology_metricdb_subgraph(
+            unique_safe_peerId_links,
+            pluto_keys_in_mockdb_data,
+            pluto_keys_in_mocksubraph_data,
         )
 
         # computation of cover traffic probability
-        result_4 = self.compute_ct_prob(
-            parameters_equations_budget[0], parameters_equations_budget[1], result_3[1]
+        parameters, equations, budget = parameters_equations_budget
+        _, ct_prob_dict = self.compute_ct_prob(
+            parameters,
+            equations,
+            metrics_dict,
         )
         # calculate expected rewards and output it as a csv file
-        result_5 = self.compute_expected_reward_savecsv(
-            result_4[1], parameters_equations_budget[2]
-        )
-
-        print(
-            blacklist
-        )  # RPCh nodes blacklist (not yet included: would need to mock it)
-        print(f"{result_5[1]=}")
-        print(f"{blacklist=}")
+        expected_rewards = self.compute_expected_reward_savecsv(ct_prob_dict, budget)
+        print(f"{expected_rewards[1]=}")
+        print(f"{rpch_nodes_blacklist=}")
 
     async def get_unique_safe_peerId_links(self):
         """
