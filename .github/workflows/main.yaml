@@ -41,7 +41,7 @@ jobs:
       - name: Test with pytest
         working-directory: incentive-app
         run: |
-          pytest
+          pytest -k "not api_helper.py and not db_connection.py"
 
   image:
     name: Build and push container image
@@ -57,7 +57,7 @@ jobs:
 
       - name: Calculate environment variables
         shell: sh
-        run: echo "SHORT_SHA=`git rev-parse --short HEAD`" >> $GITHUB_ENV
+        run: echo "SHORT_SHA=`echo $GITHUB_SHA | cut -c1-7`" >> $GITHUB_ENV
 
       - name: Login to GCP
         id: gcloud

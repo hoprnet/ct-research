@@ -27,9 +27,15 @@ def attach_endpoints(app):
         """
 
         if "id" not in request.json:
-            raise exceptions.ServerError("`id` key not in body")
+            raise exceptions.BadRequest("`id` key not in body")
+        if not isinstance(request.json["id"], str):
+            raise exceptions.BadRequest("`id` must be a string")
         if "list" not in request.json:
-            raise exceptions.ServerError("`list` key not in body")
+            raise exceptions.BadRequest("`list` key not in body")
+        if not isinstance(request.json["list"], dict):
+            raise exceptions.BadRequest("`list` must be a dict")
+        if len(request.json["list"]) == 0:
+            raise exceptions.BadRequest("`list` must not be empty")
 
         agg.add(request.json["id"], request.json["list"])
         agg.set_update(request.json["id"], datetime.now())
@@ -47,7 +53,7 @@ def attach_endpoints(app):
         return sanic_json(agg.get())
 
     @app.route("/aggregator/list_ui", methods=["GET"])
-    async def get_list_ui(request: Request):
+    async def get_list_ui(request: Request):  # pragma: no cover
         """
         Create a GET route to retrieve the aggregated list of peers/latency
         and generate an HTML page to display it.
@@ -84,7 +90,9 @@ def attach_endpoints(app):
 
         return sanic_html("".join(html_text))
 
-    def _display_pod_infos(pod_id: str, data_list: dict, time: datetime, styles: dict):
+    def _display_pod_infos(
+        pod_id: str, data_list: dict, time: datetime, styles: dict
+    ):  # pragma: no cover
         """
         Generate the HTML code to display the information of a pod.
         NO NEED TO CHECK THIS METHOD, AS IT'S PURPOSE IS ONLY FOR DEBUGGING.
@@ -108,7 +116,7 @@ def attach_endpoints(app):
         return "".join(text)
 
     @app.route("/aggregator/to_db", methods=["GET"])
-    async def post_to_db(request: Request):
+    async def post_to_db(request: Request):  # pragma: no cover
         """
         Takes the peers and metrics from the _dict and sends them to the database.
         NO NEED TO CHECK THIS METHOD, AS IT'S PURPOSE IS ONLY FOR DEBUGGING.
