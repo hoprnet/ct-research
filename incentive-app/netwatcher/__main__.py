@@ -1,12 +1,23 @@
 import asyncio
-from signal import SIGINT, SIGTERM
+from signal import SIGINT, SIGTERM, Signals
 
 import click
 
 from tools.exit_codes import ExitCode
-from tools.utils import _getlogger, stop
+from tools.utils import _getlogger
 
 from .netwatcher import NetWatcher
+
+
+def stop(instance: NetWatcher, caught_signal: Signals):
+    """
+    Stops the running node.
+    :param node: the HOPR node to stop
+    :param caught_signal: the signal that triggered the stop
+    """
+    click.echo(f">>> Caught signal {caught_signal.name} <<<")
+    click.echo(">>> Stopping ...")
+    instance.stop()
 
 
 @click.command()
