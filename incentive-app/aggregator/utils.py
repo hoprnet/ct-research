@@ -84,7 +84,7 @@ def dict_to_array(input_dict: dict, nw_ids: list, peer_ids: list):
 
 def array_to_db_list(input_array: np.ndarray, matchs: dict, nw_ids: list, peer_ids: list):
     """
-    This method create a list of tuples to be inserted in the database based on the 
+    This method creates a list of tuples to be inserted in the database based on the 
     input array and the matchs.
     """
     matchs_for_db = []
