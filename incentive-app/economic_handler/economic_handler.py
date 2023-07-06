@@ -248,11 +248,13 @@ class EconomicHandler(HOPRNode):
                         log.error(f"Received error code: {response.status}")
         except aiohttp.ClientError as e:
             log.error(f"An error occurred while making the request: {e}")
+            log.error(traceback.format_exc())
         except ValueError as e:
             log.error(f"An error occurred while parsing the response as JSON: {e}")
+            log.error(traceback.format_exc())
         except Exception as e:
             log.error(f"An unexpected error occurred: {e}")
-        log.error(traceback.format_exc())
+            log.error(traceback.format_exc())
 
         return "rpch", []
 
@@ -355,6 +357,7 @@ class EconomicHandler(HOPRNode):
             os.makedirs(folder_path, exist_ok=True)
         except OSError as e:
             log.error(f"Error occurred while creating the folder: {e}")
+            log.error(traceback.format_exc())
             return "expected_rewards", {}
 
         try:
@@ -365,9 +368,8 @@ class EconomicHandler(HOPRNode):
                     writer.writerow([key] + list(value.values()))
         except OSError as e:
             log.error(f"Error occurred while writing to the CSV file: {e}")
+            log.error(traceback.format_exc())
             return "expected_reward", {}
-
-        log.error(traceback.format_exc())
 
         return "expected_rewards", dataset
 
