@@ -4,7 +4,7 @@
 
 
 def test_dummy():
-    assert True
+    pass
 
 
 # @pytest.mark.asyncio
