@@ -1,6 +1,7 @@
 import pytest
 from tools.hopr_api_helper import HoprdAPIHelper
 
+# We keep the option to skip the tests until the package httpx package conflict gets resolved. 
 pytest.skip(allow_module_level=True)
 
 
