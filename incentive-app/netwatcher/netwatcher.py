@@ -165,5 +165,13 @@ class NetWatcher(HOPRNode):
 
         await asyncio.gather(*self.tasks)
 
-    def __str__(self):
-        return
+    def stop(self):
+        """
+        Stops the tasks of this instance
+        """
+        log.debug(f"Stopping instance {self.id}")
+
+        self.started = False
+        for task in self.tasks:
+            task.cancel()
+        self.tasks = set()
