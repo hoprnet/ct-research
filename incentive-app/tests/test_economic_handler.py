@@ -1,6 +1,7 @@
 import json
 import pytest
 from unittest import mock
+from unittest.mock import patch
 from economic_handler.economic_handler import EconomicHandler
 
 
@@ -188,7 +189,7 @@ def test_merge_topology_metricdb_subgraph_exception(merge_data):
 
     assert result == ("merged_data", {})
 
-
+ 
 @pytest.fixture
 def mocked_model_parameters():
     return {
@@ -213,6 +214,75 @@ def mocked_model_parameters():
         },
         "budget": {"value": 100, "comment": "budget for the given distribution period"},
     }
+
+
+@pytest.fixture
+def new_expected_merge_result(expected_merge_result):
+    """
+    Add new keys to the expected_merge_result @pytest.fixture
+    """
+    new_expected_merge_result = {}
+    for peer_id, values in expected_merge_result.items():
+        new_values = values.copy()
+        new_values["trans_stake"] = "some_value"
+        new_values["prob"] = 0.1
+        new_expected_merge_result[peer_id] = new_values
+
+    return new_expected_merge_result
+
+
+def test_compute_expected_reward(mocked_model_parameters, new_expected_merge_result):
+    """
+    Test whether the compute_expected_reward_savecsv method generates
+    the "expected_reward" value key in its output.
+    """
+    budget = mocked_model_parameters["budget"]
+    node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
+    result = node.compute_expected_reward_savecsv(new_expected_merge_result, budget)
+
+    # Assert Keys
+    assert set(result[1].keys()) == set(new_expected_merge_result.keys())
+
+    # Assert Values
+    for value in result[1].values():
+        assert "expected_reward" in value
+
+
+def test_compute_expected_reward_OSError_folder_creation(
+    mocked_model_parameters, new_expected_merge_result
+):
+    """
+    Test whether an OSError gets triggered when the folder creation
+    or the writing of the csv file fails.
+    """
+    budget = mocked_model_parameters["budget"]
+
+    with patch("os.makedirs") as mock_makedirs:
+        mock_makedirs.side_effect = OSError("Mocked OSError")
+        node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
+        result = node.compute_expected_reward_savecsv(new_expected_merge_result, budget)
+
+    assert result == ("expected_rewards", {})
+
+
+def test_compute_expected_reward_OSError_writing_csv(
+    mocked_model_parameters, new_expected_merge_result
+):
+    """
+    Test whether an OSError gets triggered when something goes wrong
+    while writing the csv file.
+    """
+    budget = mocked_model_parameters["budget"]
+
+    with patch("os.makedirs"):
+        with patch("builtins.open") as mock_open:
+            mock_open.side_effect = OSError("Mocked OSError")
+            node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
+            result = node.compute_expected_reward_savecsv(
+                new_expected_merge_result, budget
+            )
+
+    assert result == ("expected_reward", {})
 
 
 def test_probability_sum(mocked_model_parameters, expected_merge_result):
