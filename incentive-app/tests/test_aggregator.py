@@ -9,7 +9,7 @@ agg = Aggregator()
 
 def clear_instance(func):
     """
-    Decorator that clears the instance of the aggregator before. This is necessary due
+    Decorator that clears the instance of the aggregator. This is necessary due
     to the singleton implementation.
     """
 
