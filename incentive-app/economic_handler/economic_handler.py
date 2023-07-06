@@ -85,7 +85,7 @@ class EconomicHandler(HOPRNode):
         )
         # calculate expected rewards and output it as a csv file
         result_5 = self.compute_expected_reward_savecsv(
-            result_4, parameters_equations_budget[2]
+            result_4[1], parameters_equations_budget[2]
         )
 
         print(
@@ -243,7 +243,7 @@ class EconomicHandler(HOPRNode):
                             rpch_node_peerID = [
                                 item["id"] for item in data if "id" in item
                             ]
-                            return rpch_node_peerID
+                            return "rpch", rpch_node_peerID
                     else:
                         log.error(f"Received error code: {response.status}")
         except aiohttp.ClientError as e:
@@ -320,6 +320,7 @@ class EconomicHandler(HOPRNode):
             except Exception as e:
                 log.error(f"Error evaluating function for peer ID {key}: {e}")
                 log.error(traceback.format_exc())
+                return "ct_prob", {}
 
         # compute ct probability
         sum_values = sum(result["trans_stake"] for result in results.values())
@@ -331,7 +332,7 @@ class EconomicHandler(HOPRNode):
             if key in results:
                 merged_result[key].update(results[key])
 
-        return merged_result
+        return "ct_prob", merged_result
 
     def compute_expected_reward_savecsv(self, dataset: dict, budget: dict):
         """
