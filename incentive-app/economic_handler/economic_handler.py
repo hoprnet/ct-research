@@ -48,9 +48,9 @@ class EconomicHandler(HOPRNode):
     async def scheduler(self):
         scheduler_tasks = set[asyncio.Task]()
 
-        expected_order = ["topology", "params", "rpch"]
+        expected_order = ["unique_peer_safe_links", "params", "rpch"]
 
-        scheduler_tasks.add(asyncio.create_task(self.channel_topology()))
+        scheduler_tasks.add(asyncio.create_task(self.get_unique_safe_peerId_links()))
         scheduler_tasks.add(asyncio.create_task(self.read_parameters_and_equations()))
         scheduler_tasks.add(
             asyncio.create_task(self.blacklist_rpch_nodes(self.rpch_endpoint))
@@ -94,29 +94,14 @@ class EconomicHandler(HOPRNode):
         print(f"{result_5[1]=}")
         print(f"{blacklist=}")
 
-    async def channel_topology(self, full_topology: bool = True, channels: str = "all"):
+    async def get_unique_safe_peerId_links(self):
         """
-        :param: full_topology: bool indicating whether to retrieve the full topology.
-        :param: channels: indicating "all" channels ("incoming" and "outgoing").
-        :returns: unique_peerId_address: dict containing all unique
-                source_peerId-source_address links
+        Returns a dictionary containing all unique
+        source_peerId-source_address links
         """
-        response = await self.api.get_channel_topology(full_topology=full_topology)
+        response = await self.api.get_unique_safe_peerId_links()
 
-        unique_peerId_address = {}
-        all_items = response[channels]
-
-        for item in all_items:
-            try:
-                source_peer_id = item["sourcePeerId"]
-                source_address = item["sourceAddress"]
-            except KeyError as e:
-                raise KeyError(f"Missing key in item dictionary: {str(e)}")
-
-            if source_peer_id not in unique_peerId_address:
-                unique_peerId_address[source_peer_id] = source_address
-
-        return "topology", unique_peerId_address
+        return "unique_peer_safe_links", response
 
     def mock_data_metrics_db(self):
         """
