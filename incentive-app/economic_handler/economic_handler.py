@@ -243,7 +243,7 @@ class EconomicHandler(HOPRNode):
                             rpch_node_peerID = [
                                 item["id"] for item in data if "id" in item
                             ]
-                            return rpch_node_peerID
+                            return "rpch", rpch_node_peerID
                     else:
                         log.error(f"Received error code: {response.status}")
         except aiohttp.ClientError as e:
