@@ -38,23 +38,48 @@ class HoprdAPIHelper:
         else:
             return response
 
+          
     async def withdraw(self, currency, amount, address):
         method = self.wrapper.withdraw
         args = [currency, amount, address]
 
-        return await self._safe_call(method, *args)
+        try:
+            log.debug("Withdrawing")
+            response = await self._safe_call(method, *args)
+        except httpx.HTTPError as e:
+            log.error(f"Error withdrawing: {e}")
+            return None
+        else:
+            return response.json()
 
+          
     async def balance(self):
         method = self.wrapper.balance
 
-        return await self._safe_call(method)
+        try:
+            log.debug("Getting balance")
+            response = await self._safe_call(method)
+        except httpx.HTTPError as e:
+            log.error(f"Error getting balance: {e}")
+            return None
+        else:
+            return response.json()
 
+          
     async def set_alias(self, peer_id, alias):
         method = self.wrapper.set_alias
         args = [peer_id, alias]
 
-        return await self._safe_call(method, *args)
+        try:
+            log.debug("Setting alias")
+            response = await self._safe_call(method, *args)
+        except httpx.HTTPError as e:
+            log.error(f"Error setting alias: {e}")
+            return None
+        else:
+            return response.json()
 
+          
     async def get_alias(self, alias):
         method = self.wrapper.get_alias
         args = [alias]
@@ -107,6 +132,7 @@ class HoprdAPIHelper:
         else:
             return response.json()
 
+
     async def get_unique_safe_peerId_links(self):
         """
         Returns a dict containing all unique source_peerId-source_address links.
@@ -139,6 +165,7 @@ class HoprdAPIHelper:
 
             return unique_peerId_address
 
+
     async def get_tickets_in_channel(self, include_closed: bool):
         method = self.wrapper.get_tickets_in_channel
         args = [include_closed]
@@ -169,7 +196,18 @@ class HoprdAPIHelper:
 
     async def redeem_tickets(self):
         method = self.wrapper.redeem_tickets
-        return await self._safe_call(method)
+
+        try:
+            log.debug("Redeeming tickets")
+            response = await self._safe_call(method)
+        except httpx.HTTPError as e:
+            log.error(f"Error redeeming tickets: {e}")
+            return None
+        else:
+            if response.status_code == 204:
+                return None
+            return response.json()
+
 
     async def ping(self, peer_id, metric="latency"):
         method = self.wrapper.ping
@@ -185,7 +223,7 @@ class HoprdAPIHelper:
             json_body = response.json()
 
             if json_body is None:
-                log.error(f"Peer {peer_id[-5:]} not reachable using {self.api.url}")
+                log.error(f"Peer {peer_id[-5:]} not reachable using {self.url}")
                 return None
 
             if metric not in json_body:
@@ -197,25 +235,26 @@ class HoprdAPIHelper:
             )
             return json_body[metric]
 
-    async def peers(self, param: str = "peerId", **kwargs):
+          
+    async def peers(self, param: str = "peerId", status: str = "connected", **kwargs):
         method = self.wrapper.peers
-        status = "connected"
 
         try:
             log.debug("Getting peers")
             response = await self._safe_call(method, **kwargs)
         except httpx.HTTPError as e:
-            log.error(f"Could not get peers from {self.api.url}: {e}")
-            raise e
+            log.error(f"Could not get peers from {self.url}: {e}")
+            return None
         else:
             json_body = response.json()
 
             if status not in json_body:
-                log.error(f"No {status} from {self.api.url}")
+                log.error(f"No {status} from {self.url}")
                 return None
 
             return [peer[param] for peer in json_body[status]]
 
+          
     async def get_address(self, address: str):
         method = self.wrapper.get_address
 
@@ -223,13 +262,13 @@ class HoprdAPIHelper:
             log.debug("Getting address")
             response = await self._safe_call(method)
         except httpx.HTTPError as e:
-            log.error(f"Could not connect to {self.api.url}: {e}")
-            raise e
+            log.error(f"Could not connect to {self.url}: {e}")
+            return None
         else:
             json_body = response.json()
 
             if address not in json_body:
-                log.error(f"No {address} from {self.api.url}")
+                log.error(f"No {address} from {self.url}")
                 return None
 
             return json_body.get(address, None)
@@ -238,4 +277,11 @@ class HoprdAPIHelper:
         method = self.wrapper.send_message
         args = [destination, message, hops]
 
-        return await self._safe_call(method, *args)
+        try:
+            log.debug("Sending message")
+            response = await self._safe_call(method, *args)
+        except httpx.HTTPError as e:
+            log.error(f"Error sending message: {e}")
+            return None
+        else:
+            return response.json()

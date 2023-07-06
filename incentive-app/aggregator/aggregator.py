@@ -1,9 +1,8 @@
 import threading
 import datetime
-from .utils import get_best_matchs
-
-import numpy as np
-
+from .utils import (array_to_db_list, dict_to_array, 
+                   get_nw_list_from_dict, get_peer_list_from_dict, 
+                   multiple_round_nw_peer_match)
 
 class Singleton(type):
     """
@@ -116,33 +115,18 @@ class Aggregator(metaclass=Singleton):
         """
         with self._dict_lock:
             # gather all nw ids in a single list
-            nw_ids = list(self._dict.keys())
+            nw_ids = get_nw_list_from_dict(self._dict)
+            peer_ids = get_peer_list_from_dict(self._dict)
 
-            # gather all peers ids in a signel list
-            peer_ids = set()
-            for peer_list in self._dict.values():
-                for peer in peer_list:
-                    peer_ids.add(peer)
-            peer_ids = list(peer_ids)
-
-            # create a matric with latencies stored at the right indexes, corresponding
+            # create an array with latencies stored at the right indexes, corresponding
             # to nw and peer indexes in the lists above
-            lat_as_array = np.zeros((len(nw_ids), len(peer_ids)))
-            for nw_idx, peer_list in enumerate(self._dict.values()):
-                for peer, lat in peer_list.items():
-                    lat_as_array[nw_idx, peer_ids.index(peer)] = lat
+            lat_as_array = dict_to_array(self._dict, nw_ids, peer_ids)
 
             # create a dict with the best 'peer: [nw]' matchs
-            matchs = get_best_matchs(lat_as_array, max_iter=3)
+            matchs = multiple_round_nw_peer_match(lat_as_array, max_iter=3)
 
             # convert back each ids in matchs to the original ids
-            matchs_for_db = []
-            for peer_idx, nw_idxs in matchs.items():
-                peer = peer_ids[peer_idx]
-                nws = [nw_ids[idx] for idx in nw_idxs]
-                latencies = [int(lat_as_array[idx, peer_idx]) for idx in nw_idxs]
-
-                matchs_for_db.append((peer, nws, latencies))
+            matchs_for_db = array_to_db_list(lat_as_array, matchs, nw_ids, peer_ids)
 
         return matchs_for_db
 
