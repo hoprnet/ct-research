@@ -38,7 +38,6 @@ class HoprdAPIHelper:
         else:
             return response
 
-          
     async def withdraw(self, currency, amount, address):
         method = self.wrapper.withdraw
         args = [currency, amount, address]
@@ -52,7 +51,6 @@ class HoprdAPIHelper:
         else:
             return response.json()
 
-          
     async def balance(self):
         method = self.wrapper.balance
 
@@ -65,7 +63,6 @@ class HoprdAPIHelper:
         else:
             return response.json()
 
-          
     async def set_alias(self, peer_id, alias):
         method = self.wrapper.set_alias
         args = [peer_id, alias]
@@ -79,7 +76,6 @@ class HoprdAPIHelper:
         else:
             return response.json()
 
-          
     async def get_alias(self, alias):
         method = self.wrapper.get_alias
         args = [alias]
@@ -132,7 +128,6 @@ class HoprdAPIHelper:
         else:
             return response.json()
 
-
     async def get_unique_safe_peerId_links(self):
         """
         Returns a dict containing all unique source_peerId-source_address links.
@@ -164,7 +159,6 @@ class HoprdAPIHelper:
                     unique_peerId_address[source_peer_id] = source_address
 
             return unique_peerId_address
-
 
     async def get_tickets_in_channel(self, include_closed: bool):
         method = self.wrapper.get_tickets_in_channel
@@ -208,7 +202,6 @@ class HoprdAPIHelper:
                 return None
             return response.json()
 
-
     async def ping(self, peer_id, metric="latency"):
         method = self.wrapper.ping
         args = [peer_id]
@@ -235,7 +228,6 @@ class HoprdAPIHelper:
             )
             return json_body[metric]
 
-          
     async def peers(self, param: str = "peerId", status: str = "connected", **kwargs):
         method = self.wrapper.peers
 
@@ -252,9 +244,12 @@ class HoprdAPIHelper:
                 log.error(f"No {status} from {self.url}")
                 return None
 
+            if param not in json_body[status][0]:
+                log.error(f"No {param} from {self.url}")
+                return None
+
             return [peer[param] for peer in json_body[status]]
 
-          
     async def get_address(self, address: str):
         method = self.wrapper.get_address
 

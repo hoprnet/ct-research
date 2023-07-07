@@ -87,21 +87,6 @@ async def test_get_all_channels(api_helper: HoprdAPIHelper):
 
 
 @pytest.mark.asyncio
-async def test_get_channel_topology(api_helper: HoprdAPIHelper):
-    """
-    This test checks that the get_channel_topology method of the HoprdAPIHelper class
-    returns the expected response.
-    """
-    topology = await api_helper.get_channel_topology(True)
-
-    assert topology is not None
-    assert isinstance(topology, dict)
-    assert "incoming" in topology
-    assert "outgoing" in topology
-    assert "all" in topology
-
-
-@pytest.mark.asyncio
 async def test_get_tickets_in_channel(api_helper: HoprdAPIHelper):
     """
     This test checks that the get_tickets_in_channel method of the HoprdAPIHelper class
