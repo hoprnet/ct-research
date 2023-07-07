@@ -90,15 +90,19 @@ class EconomicHandler(HOPRNode):
             pluto_keys_in_mocksubraph_data,
         )
 
-        # computation of cover traffic probability
+        # Extract Parameters
         parameters, equations, budget = parameters_equations_budget
+
+        # computation of cover traffic probability
         _, ct_prob_dict = self.compute_ct_prob(
             parameters,
             equations,
             metrics_dict,
         )
+
         # calculate expected rewards and output it as a csv file
         expected_rewards = self.compute_expected_reward_savecsv(ct_prob_dict, budget)
+
         print(f"{expected_rewards[1]=}")
         print(f"{rpch_nodes_blacklist=}")
 
