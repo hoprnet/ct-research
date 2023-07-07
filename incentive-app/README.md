@@ -1,13 +1,8 @@
-# Cover Traffic dApp
-TODO
+# Incentive App
 
-***
-This folder contains the cover traffic dApp.
+This folder contains the incentive-app.
 
-The goal of the ct-dapp is to distribute cover traffic in the monte rosa network to keep the annoymity set of nodes sufficiently large at all times.
-
-However, the fist version of the ct-dapp has the sole purpose of replacing the staking rewards users earn in the current staking season beyond its discontinuation.
-***
+The goal of the incentive-app is to distribute wxHOPR token through 1 HOP messages in the monte rosa network. The incentive-app is responsible for replacing staking rewards users earn in the current staking season beyond its discontinuation.
 
 ## Development Requirements
 
@@ -60,7 +55,7 @@ These should be automatically picked up by VSCode when using workspace settings.
 9. Clone, create virtual environment, install dependencies and launch VSCode:
 ```
 $ git clone https://github.com/hoprnet/ct-research
-$ cd ct-research/ct-dApp
+$ cd ct-research/incentive-app
 $ python3 -m virtualenv /tmp/env
 $ . /tmp/env/bin/activate
 (env) $ pip install -r requirements_dev.txt
@@ -69,9 +64,9 @@ Successfully installed black-23.3.0 ...
 (env) $ code .
 ```
 
-10. Validate that everything is running correctly by launching the test cases
+10. Validate that everything is running correctly by launching the test cases. Its required to run a pluto cluster (see below) for the tests to pass. The test for `db_connection.py` are excluded as they require a local postgresSQL database. 
 ```
-(env) $ pytest tests
+(env) $ pytest -k "not db_connection.py"
 ```
 
 ## How to install and run a local development cluster on Ubuntu
@@ -104,11 +99,11 @@ sudo docker run -ti -p 13301-13305:13301-13305  gcr.io/hoprassociation/hopr-plut
 sudo docker start hopr_admin
 ```
 
-## How to run the ct-dapp in the local development cluster
+## How to run the incentive-app in the local development cluster
 
 ### Requirements
 
-To execute the module called "ct" you need to:
+To execute any of the modules you need to:
 
 1. Setup a virtual environment
 
@@ -138,10 +133,10 @@ This program requires two environment variables to be set. If either of these en
 To execute the program, run the following command:
 
 ```bash
-./run.sh
+./run.sh --module <module> --port 13301 --host "127.0.0.1" --key "%th1s-IS-a-S3CR3T-ap1-PUSHING-b1ts-TO-you%" --rcphendpoint "rpch_endpoint"
 ```
 
-The program will execute the ct-dApp.
+The program will execute the incentive-app.
 
 ### Logging
 This program logs to STDOUT. The log level is set to INFO by default.
