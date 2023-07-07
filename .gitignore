@@ -14,7 +14,6 @@ logs/
 
 #misc
 .coverage
-.coveragerc
 htmlcov/
 run_econ_handler.sh
 run_play.sh
