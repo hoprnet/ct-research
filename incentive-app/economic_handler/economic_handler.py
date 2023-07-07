@@ -21,7 +21,8 @@ class EconomicHandler(HOPRNode):
         """
         :param url: the url of the HOPR node
         :param key: the API key of the HOPR node
-        :returns: a new instance of the Economic Handler using 'url' and API 'key'
+        :param rpch_endpoint: endpoint returning rpch entry and exit nodes
+        :returns: a new instance of the Economic Handler
         """
 
         self.tasks = set[asyncio.Task]()
@@ -39,84 +40,80 @@ class EconomicHandler(HOPRNode):
         # self.started = False
 
     @wakeupcall(seconds=10)
-    async def am_i_up(self):
+    async def host_available(self):
         print(f"{self.connected=}")
         return self.connected
 
     @wakeupcall(seconds=15)
     @connectguard
     async def scheduler(self):
-        scheduler_tasks = set[asyncio.Task]()
+        """
+        Schedules the tasks of the EconomicHandler
+        """
+        tasks = set[asyncio.Task]()
 
-        expected_order = ["topology", "params", "rpch"]
+        expected_order = ["unique_peer_safe_links", "params", "rpch"]
 
-        scheduler_tasks.add(asyncio.create_task(self.channel_topology()))
-        scheduler_tasks.add(asyncio.create_task(self.read_parameters_and_equations()))
-        scheduler_tasks.add(
-            asyncio.create_task(self.blacklist_rpch_nodes(self.rpch_endpoint))
-        )
+        tasks.add(asyncio.create_task(self.get_unique_safe_peerId_links()))
+        tasks.add(asyncio.create_task(self.read_parameters_and_equations()))
+        tasks.add(asyncio.create_task(self.blacklist_rpch_nodes(self.rpch_endpoint)))
 
         await asyncio.sleep(0)
 
-        finished, _ = await asyncio.wait(scheduler_tasks)
+        finished, _ = await asyncio.wait(tasks)
 
-        unordered_results = [task.result() for task in finished]
+        unordered_tasks = [task.result() for task in finished]
 
         # sort the results according to the expected order.
-        # This is necessary because the order of the results is not guaranteed
-        results = sorted(unordered_results, key=lambda x: expected_order.index(x[0]))
-
-        channel_topology = results[0][1]
-        parameters_equations_budget = results[1][1:]
-        blacklist = results[2][1]
-
-        # helper functions that allow to test the code (subject to removal)
-        result_1 = self.replace_keys_in_mock_data(channel_topology)
-        result_2 = self.replace_keys_in_mock_data_subgraph(channel_topology)
-
-        # merge channel topology with metrics from the database and subgraph data
-        result_3 = self.merge_topology_metricdb_subgraph(
-            channel_topology, result_1, result_2
+        # This is necessary because the order of the results is not guaranteed.
+        ordered_tasks = sorted(
+            unordered_tasks, key=lambda x: expected_order.index(x[0])
         )
+
+        unique_safe_peerId_links = ordered_tasks[0][1]
+        parameters_equations_budget = ordered_tasks[1][1:]
+        rpch_nodes_blacklist = ordered_tasks[2][1]
+
+        # helper functions that allow to test the code by inserting
+        # the peerIDs of the pluto nodes (SUBJECT TO REMOVAL)
+        pluto_keys_in_mockdb_data = self.replace_keys_in_mock_data(
+            unique_safe_peerId_links
+        )
+        pluto_keys_in_mocksubraph_data = self.replace_keys_in_mock_data_subgraph(
+            unique_safe_peerId_links
+        )
+
+        # merge unique_safe_peerId_links with database metrics and subgraph data
+        _, metrics_dict = self.merge_topology_metricdb_subgraph(
+            unique_safe_peerId_links,
+            pluto_keys_in_mockdb_data,
+            pluto_keys_in_mocksubraph_data,
+        )
+
+        # Extract Parameters
+        parameters, equations, budget = parameters_equations_budget
 
         # computation of cover traffic probability
-        result_4 = self.compute_ct_prob(
-            parameters_equations_budget[0], parameters_equations_budget[1], result_3
+        _, ct_prob_dict = self.compute_ct_prob(
+            parameters,
+            equations,
+            metrics_dict,
         )
+
         # calculate expected rewards and output it as a csv file
-        result_5 = self.compute_expected_reward_savecsv(
-            result_4, parameters_equations_budget[2]
-        )
+        expected_rewards = self.compute_expected_reward_savecsv(ct_prob_dict, budget)
 
-        print(
-            blacklist
-        )  # RPCh nodes blacklist (not yet included: would need to mock it)
-        print(f"{result_5=}")
-        print(f"{blacklist=}")
+        print(f"{expected_rewards[1]=}")
+        print(f"{rpch_nodes_blacklist=}")
 
-    async def channel_topology(self, full_topology: bool = True, channels: str = "all"):
+    async def get_unique_safe_peerId_links(self):
         """
-        :param: full_topology: bool indicating whether to retrieve the full topology.
-        :param: channels: indicating "all" channels ("incoming" and "outgoing").
-        :returns: unique_peerId_address: dict containing all unique
-                source_peerId-source_address links
+        Returns a dictionary containing all unique
+        source_peerId-source_address links
         """
-        response = await self.api.get_channel_topology(full_topology=full_topology)
+        response = await self.api.get_unique_safe_peerId_links()
 
-        unique_peerId_address = {}
-        all_items = response[channels]
-
-        for item in all_items:
-            try:
-                source_peer_id = item["sourcePeerId"]
-                source_address = item["sourceAddress"]
-            except KeyError as e:
-                raise KeyError(f"Missing key in item dictionary: {str(e)}")
-
-            if source_peer_id not in unique_peerId_address:
-                unique_peerId_address[source_peer_id] = source_address
-
-        return "topology", unique_peerId_address
+        return "unique_peer_safe_links", response
 
     def mock_data_metrics_db(self):
         """
@@ -199,6 +196,7 @@ class EconomicHandler(HOPRNode):
         except FileNotFoundError as e:
             log.error(f"The file '{file_name}' does not exist. {e}")
             log.error(traceback.format_exc())
+            return "params", {}, {}, {}
 
         parameters = contents.get("parameters", {})
         equations = contents.get("equations", {})
@@ -218,6 +216,7 @@ class EconomicHandler(HOPRNode):
                 f"The file '{file_name}' does not follow the expected structure. {e}"
             )
             log.error(traceback.format_exc())
+            return "params", {}, {}, {}
 
         return "params", parameters, equations, budget
 
@@ -241,16 +240,18 @@ class EconomicHandler(HOPRNode):
                             rpch_node_peerID = [
                                 item["id"] for item in data if "id" in item
                             ]
-                            return rpch_node_peerID
+                            return "rpch", rpch_node_peerID
                     else:
                         log.error(f"Received error code: {response.status}")
         except aiohttp.ClientError as e:
             log.error(f"An error occurred while making the request: {e}")
+            log.error(traceback.format_exc())
         except ValueError as e:
             log.error(f"An error occurred while parsing the response as JSON: {e}")
+            log.error(traceback.format_exc())
         except Exception as e:
             log.error(f"An unexpected error occurred: {e}")
-        log.error(traceback.format_exc())
+            log.error(traceback.format_exc())
 
         return "rpch", []
 
@@ -282,8 +283,9 @@ class EconomicHandler(HOPRNode):
         except Exception as e:
             log.error(f"Error occurred while merging: {e}")
             log.error(traceback.format_exc())
+            return "merged_data", {}
 
-        return merged_result
+        return "merged_data", merged_result
 
     def compute_ct_prob(self, parameters, equations, merged_result):
         """
@@ -315,6 +317,7 @@ class EconomicHandler(HOPRNode):
             except Exception as e:
                 log.error(f"Error evaluating function for peer ID {key}: {e}")
                 log.error(traceback.format_exc())
+                return "ct_prob", {}
 
         # compute ct probability
         sum_values = sum(result["trans_stake"] for result in results.values())
@@ -326,7 +329,7 @@ class EconomicHandler(HOPRNode):
             if key in results:
                 merged_result[key].update(results[key])
 
-        return merged_result
+        return "ct_prob", merged_result
 
     def compute_expected_reward_savecsv(self, dataset: dict, budget: dict):
         """
@@ -345,29 +348,28 @@ class EconomicHandler(HOPRNode):
         filename = f"expected_reward_{timestamp}.csv"
         file_path = os.path.join(folder_path, filename)
 
+        for entry in dataset.values():
+            entry["expected_reward"] = entry["prob"] * budget["value"]
+
         try:
             os.makedirs(folder_path, exist_ok=True)
         except OSError as e:
             log.error(f"Error occurred while creating the folder: {e}")
-
-        try:
-            for entry in dataset.values():
-                entry["expected_reward"] = entry["prob"] * budget["value"]
-        except KeyError as e:
-            log.error(f"Error occurred while computing the expected reward: {e}")
+            log.error(traceback.format_exc())
+            return "expected_rewards", {}
 
         try:
             with open(file_path, "w", newline="") as csvfile:
                 writer = csv.writer(csvfile)
-                writer.writerow(["peer_id"] + list(dataset[next(iter(dataset))].keys()))
+                writer.writerow(["peer_id"] + list(dataset.keys()))
                 for key, value in dataset.items():
                     writer.writerow([key] + list(value.values()))
         except OSError as e:
             log.error(f"Error occurred while writing to the CSV file: {e}")
+            log.error(traceback.format_exc())
+            return "expected_reward", {}
 
-        log.error(traceback.format_exc())
-
-        return dataset
+        return "expected_rewards", dataset
 
     async def start(self):
         """
@@ -380,7 +382,7 @@ class EconomicHandler(HOPRNode):
 
         self.started = True
         self.tasks.add(asyncio.create_task(self.connect(address="hopr")))
-        self.tasks.add(asyncio.create_task(self.am_i_up()))
+        self.tasks.add(asyncio.create_task(self.host_available()))
         self.tasks.add(asyncio.create_task(self.scheduler()))
 
         await asyncio.gather(*self.tasks)
