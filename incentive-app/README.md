@@ -64,10 +64,12 @@ Successfully installed black-23.3.0 ...
 (env) $ code .
 ```
 
-10. Validate that everything is running correctly by launching the test cases. Its required to run a pluto cluster (see below) for the tests to pass. The test for `db_connection.py` are excluded as they require a local postgresSQL database. 
+10. Validate that everything is running correctly by launching the test cases. Its required to run a pluto cluster (see below) for the tests to pass. The test for `db_connection.py` are excluded as they require a local postgreSQL database. 
 ```
 (env) $ pytest -k "not db_connection.py"
 ```
+
+**Notice**: this last step requires that the local development cluster is running.
 
 ## How to install and run a local development cluster on Ubuntu
 
@@ -112,31 +114,79 @@ To execute any of the modules you need to:
 pip install -r requirements.txt
 ```
 
-3. Adapt the values in `run.sh` file:
-```
-TODO
-```
-
 #### Comments:
 - ```python -m <module> --help``` provide a descrition of each parameter.
 - The ```plot-folder``` is the place where all the generated plots are stored. It has a default value that is ```.```. It is highly recommended to specify a different folder. At runtime, the specified folder will be created if necessary.
 
-### Configuration of Environment Variables
-This program requires two environment variables to be set. If either of these environment variables is not set, the program will exit with an error.
+### Configuration of Parameters
+To run the individual modules of the app, each of them requires a different set of parameters to run. To check which parameters are required for each module, run the following command:
 
-1. `API_URL`: The URL of the API endpoint to be used. This variable is already set for you in the run.sh file above.
-2. `API_TOKEN`: The authentication token to be used with the API endpoint. The authentication token is already set for you in the run.sh file above.
+```python
+python -m <module> --help
+```
 
+#### Aggregator
+parameter | description
+--- | ---
+`--module`  | name of the module
+`--host`    | host address for the web server
+`--port`    | exposed port for the web server
+`--db`      | name of the database to store metrics to
+`--dbhost`  | host address of the database
+`--dbuser`  | database connection username
+`--dbpass`  | database connection password
+`--dbport`  | database opened port
+
+```bash
+sh ./run.sh --module aggregator --host <host> --port <port> --db <dbname> --dbhost <dbhost> --dbuser <dbuser> --dbpass <dbpass> --dbport <dbport>
+```
+
+#### Aggregator Trigger
+parameter | description
+--- | ---
+`--module`  | name of the module
+`--host`    | host address of the aggregator
+`--port`    | exposed port of the aggregator
+`--route`   | route to trigger 
+```bash
+sh ./run.sh --module aggtrigger --host <host> --port <port> --route <route>
+```
+
+#### Economic Handler
+parameter | description
+--- | ---
+`--module`     | name of the module
+`--apihost`    | host address of the node to connect to
+`--apiport`    | exposed port of the node to connect to
+`--key`        | connection key for the node
+`--rchpnodes`  | endpoint to retrieve the RCPh nodes IDs
+```bash
+sh ./run.sh --module economic_handler --apihost <apihost> --apikey <apikey> --port <port> --rcphnodes <rcphnodes>
+```
+
+#### Netwatcher
+parameter | description
+--- | ---
+`--module`  | name of the module
+`--host`    | host address of the node to connect to
+`--port`    | exposed port of the node to connect to
+`--key`     | connection key for the node
+`--aggpost` | POST endpoint to call for transmitting the peer list
+```bash
+sh ./run.sh --module netwatcher --host <host> --port <port> --key <key> --aggpost <aggpost>
+```
 
 ### Execute the Program
 
-To execute the program, run the following command:
-
+To execute the program, two methods are available:
+- run the python module directly:
+```python
+python -m <module> [PARAMETERS]
+```
+- run the `run.sh` script:
 ```bash
 ./run.sh --module <module> --port 13301 --host "127.0.0.1" --key "%th1s-IS-a-S3CR3T-ap1-PUSHING-b1ts-TO-you%" --rcphendpoint "rpch_endpoint"
 ```
-
-The program will execute the incentive-app.
 
 ### Logging
 This program logs to STDOUT. The log level is set to INFO by default.
