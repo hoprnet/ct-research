@@ -114,7 +114,7 @@ To execute any of the modules you need to:
 pip install -r requirements.txt
 ```
 
-#### Comments:
+#### Comments
 - ```python -m <module> --help``` provide a descrition of each parameter.
 - The ```plot-folder``` is the place where all the generated plots are stored. It has a default value that is ```.```. It is highly recommended to specify a different folder. At runtime, the specified folder will be created if necessary.
 
@@ -141,7 +141,7 @@ parameter | description
 sh ./run.sh --module aggregator --host <host> --port <port> --db <dbname> --dbhost <dbhost> --dbuser <dbuser> --dbpass <dbpass> --dbport <dbport>
 ```
 
-#### Aggregator Trigger
+#### Aggregator Trigger
 parameter | description
 --- | ---
 `--module`  | name of the module
@@ -164,7 +164,7 @@ parameter | description
 sh ./run.sh --module economic_handler --apihost <apihost> --apikey <apikey> --port <port> --rcphnodes <rcphnodes>
 ```
 
-#### Netwatcher
+#### Netwatcher
 parameter | description
 --- | ---
 `--module`  | name of the module
