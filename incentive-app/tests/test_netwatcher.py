@@ -31,6 +31,22 @@ def FakeNetWatcher() -> NetWatcher:
     return NetWatcher("some_url", "some_key", "some_posturl", 10)
 
 
+def test__post_list():
+    """
+    Test that the method _post_list works.
+    """
+    instance = FakeNetWatcher()
+    instance.peers = ["some_peer", "some_other_peer"]
+    instance.latency = {"some_peer": [10, 20], "some_other_peer": [30, 40]}
+
+    instance._post_list(MagicMock(), instance.peers, instance.latency)
+
+    assert len(instance.peers) == 2
+    assert len(instance.latency) == 2
+
+    # TODO add test if a post request has been sent
+
+
 def test_wipe_peers():
     """
     Test that the method wipes the peers and latency attributes.
