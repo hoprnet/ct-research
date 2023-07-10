@@ -22,8 +22,8 @@ def mock_decorator(*args, **kwargs):
 patch("tools.decorator.wakeupcall", mock_decorator).start()
 patch("tools.decorator.formalin", mock_decorator).start()
 
-from netwatcher import NetWatcher
-from tools.hopr_api_helper import HoprdAPIHelper
+from netwatcher import NetWatcher  # noqa: E402
+from tools.hopr_api_helper import HoprdAPIHelper  # noqa: E402
 
 
 # TODO: add tests for the following methods:
