@@ -134,7 +134,7 @@ while :; do
     shift
 done
 
-if [ "$module" = "nw" ]; then
+if [ "$module" = "netwatcher" ]; then
     if [ -z "$port" ]; then
         echo "Error: --port parameter is required"
         exit 1
@@ -156,7 +156,7 @@ if [ "$module" = "nw" ]; then
     echobold "Running Netwatcher"
     python -m netwatcher --port $port --apihost $host --apikey $key --aggpost $aggpost
 
-elif [ "$module" = "agg" ]; then
+elif [ "$module" = "aggregrator" ]; then
     if [ -z "$host" ]; then
         echo "Error: --host parameter is required"
         exit 1
@@ -190,7 +190,7 @@ elif [ "$module" = "agg" ]; then
     echobold "Running Aggregator"
     python -m aggregator --host $host --port $port --db $db --dbhost $dbhost --dbuser $dbuser --dbpass $dbpass --dbport $dbport
 
-elif [ "$module" = "trigger" ]; then
+elif [ "$module" = "aggtrigger" ]; then
     if [ -z "$host" ]; then
         echo "Error: --host parameter is required"
         exit 1
