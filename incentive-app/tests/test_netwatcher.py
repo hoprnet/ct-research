@@ -26,15 +26,6 @@ from netwatcher import NetWatcher  # noqa: E402
 from tools.hopr_api_helper import HoprdAPIHelper  # noqa: E402
 
 
-# TODO: add tests for the following methods:
-# - wipe_peers
-# - _post_list
-# - gather_peers
-# - ping_peers
-# - transmit_peers
-# - connect
-
-
 def FakeNetWatcher() -> NetWatcher:
     """Fixture that returns a mock instance of a NetWatcher"""
     return NetWatcher("some_url", "some_key", "some_posturl", 10)
