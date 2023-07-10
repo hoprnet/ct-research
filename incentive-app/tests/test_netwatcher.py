@@ -47,13 +47,6 @@ def test_wipe_peers():
     assert len(instance.latency) == 0
 
 
-def test__post_list():
-    """
-    Test that the method posts the peers and latency to the aggregator.
-    """
-    pass
-
-
 @pytest.fixture
 def mock_instance_for_test_gather(mocker):
     """
