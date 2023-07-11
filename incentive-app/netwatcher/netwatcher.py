@@ -43,6 +43,7 @@ class NetWatcher(HOPRNode):
         log.info("Wiping peers")
 
         self.peers.clear()
+        self.latency.clear()
 
     async def _post_list(self, session: ClientSession, peers: list, latencies: list):
         """
@@ -134,7 +135,7 @@ class NetWatcher(HOPRNode):
             self.latency[peer_id].append(latency)
             self.latency[peer_id] = self.latency[peer_id][-self.max_lat_count :]
 
-    @wakeupcall(message="Initiated peers transmission", minutes=1)
+    @wakeupcall(message="Initiated peers transmission", seconds=60)
     @connectguard
     async def transmit_peers(self):
         """
