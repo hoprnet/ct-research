@@ -1,3 +1,4 @@
+import datetime
 from psycopg2 import connect
 from psycopg2.sql import SQL, Identifier
 
@@ -394,3 +395,28 @@ class DatabaseConnection:
         )
         self.cursor.execute(command.format(column_id, table_id, table_id))
         return self.cursor.fetchone()[0]
+
+    def rows_after_timestamp(self, table: str, timestamp: datetime.datetime):
+        """
+        Gets the rows from the given table that have a timestamp more recent than the given
+        timestamp.
+        :param table: The name of the table to get the rows from.
+        :param timestamp: The timestamp to compare to.
+        :return: The rows as a tuple.
+        """
+        if not self.table_exists_guard(table):
+            raise ValueError(f"Table '{table}' does not exist")
+        if not isinstance(timestamp, datetime.datetime):
+            raise ValueError("Timestamp must be a datetime.datetime object")
+
+        table_id = Identifier(table)
+
+        command = SQL(
+            """
+            SELECT *
+            FROM {}
+            WHERE timestamp >= (%s)
+        """
+        )
+        self.cursor.execute(command.format(table_id), (timestamp,))
+        return self.cursor.fetchall()
