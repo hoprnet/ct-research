@@ -120,6 +120,8 @@ def attach_endpoints(app):
         Takes the peers and metrics from the _dict and sends them to the database.
         NO NEED TO CHECK THIS METHOD, AS IT'S PURPOSE IS ONLY FOR DEBUGGING.
         """
+        if agg.db is None:
+            return sanic_text("No DB configured", status=500)
 
         matchs_for_db = agg.convert_to_db_data()
 

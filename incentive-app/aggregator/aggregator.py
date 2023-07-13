@@ -56,9 +56,12 @@ class Aggregator(metaclass=Singleton):
         self._nw_balances: dict = {}
         self._nw_balances_lock = threading.Lock()  # thread-safe balances
 
-        self.db = DatabaseConnection(
-            database=db, host=dbhost, user=dbuser, password=dbpassword, port=dbport
-        )
+        if db and dbhost and dbuser and dbpassword and dbport:
+            self.db = DatabaseConnection(
+                database=db, host=dbhost, user=dbuser, password=dbpassword, port=dbport
+            )
+        else:
+            self.db = None
 
     def add_nw_peer_latencies(self, pod_id: str, items: list):
         """
@@ -184,14 +187,17 @@ class Aggregator(metaclass=Singleton):
     def get_metrics(self):
         metrics = {"peers": {}, "netwatchers": {}, "aggregator": {}}
 
+        nw_balances = self.get_nw_balances()
+        nw_peer_latencies = self.get_nw_peer_latencies()
+
         with self._nw_balances_lock:
-            for nw_id, balances in self.get_nw_balances().items():
+            for nw_id, balances in nw_balances.items():
                 if nw_id not in metrics["netwatchers"]:
                     metrics["netwatchers"][nw_id] = {}
                 metrics["netwatchers"][nw_id]["balances"] = balances
 
-        with self._nw_peer_latencies_lock:
-            for _, latencies in self.get_nw_peer_latencies().items():
+        with self._nw_peer_latency_lock:
+            for _, latencies in nw_peer_latencies.items():
                 for peer_id, latency in latencies.items():
                     if peer_id not in metrics["peers"]:
                         metrics["peers"][peer_id] = {}
