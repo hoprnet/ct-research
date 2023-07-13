@@ -136,14 +136,15 @@ class Aggregator(metaclass=Singleton):
         return matchs_for_db
 
     def get_metrics(self):
-        with self._nw_peer_latency_lock:
-            metrics = {"peers": {}, "netwatchers": {}, "aggregator": {}}
+        metrics = {"peers": {}, "netwatchers": {}, "aggregator": {}}
 
+        with self._nw_balances_lock:
             for nw_id, balances in self.get_nw_balances().items():
                 if nw_id not in metrics["netwatchers"]:
                     metrics["netwatchers"][nw_id] = {}
                 metrics["netwatchers"][nw_id]["balances"] = balances
 
+        with self._nw_peer_latencies_lock:
             for _, latencies in self.get_nw_peer_latencies().items():
                 for peer_id, latency in latencies.items():
                     if peer_id not in metrics["peers"]:
