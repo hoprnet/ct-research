@@ -1,8 +1,13 @@
 import threading
 import datetime
-from .utils import (array_to_db_list, dict_to_array, 
-                   get_nw_list_from_dict, get_peer_list_from_dict, 
-                   multiple_round_nw_peer_match)
+from .utils import (
+    array_to_db_list,
+    dict_to_array,
+    get_nw_list_from_dict,
+    get_peer_list_from_dict,
+    multiple_round_nw_peer_match,
+)
+
 
 class Singleton(type):
     """
@@ -131,7 +136,19 @@ class Aggregator(metaclass=Singleton):
         return matchs_for_db
 
     def get_metrics(self):
-        with self._dict_lock:
-            metrics = {}
+        with self._nw_peer_latency_lock:
+            metrics = {"peers": {}, "netwatchers": {}, "aggregator": {}}
+
+            for nw_id, balances in self.get_nw_balances().items():
+                if nw_id not in metrics["netwatchers"]:
+                    metrics["netwatchers"][nw_id] = {}
+                metrics["netwatchers"][nw_id]["balances"] = balances
+
+            for _, latencies in self.get_nw_peer_latencies().items():
+                for peer_id, latency in latencies.items():
+                    if peer_id not in metrics["peers"]:
+                        metrics["peers"][peer_id] = {}
+
+                    metrics["peers"][peer_id] = latency
 
         return metrics
