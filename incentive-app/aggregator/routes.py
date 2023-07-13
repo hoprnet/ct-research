@@ -148,6 +148,8 @@ def attach_endpoints(app):
         for token, amount in request.json["balances"].items():
             agg.add_nw_balance(request.json["id"], token, amount)
 
+        return sanic_text(f"Received balance for {request.json['id']}")
+
     @app.route("/aggregator/metrics", methods=["GET"])
     async def get_metrics(request: Request):
         return sanic_json(agg.get_metrics())

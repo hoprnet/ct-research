@@ -269,13 +269,14 @@ def test_cli(app):
     return app.test_client
 
 
-def test_sanic_metrics_endpoint(test_cli):
+def test_sanic_get_metrics(test_cli):
     """
-    This test checks that the metrics endpoint returns the correct data.
+    This test checks that the get metrics endpoint returns the correct data.
     """
     _, response = test_cli.get("/aggregator/metrics")
 
     assert response.status == 200
+    assert isinstance(response.json, dict)
 
 
 def test_sanic_post_list_missing_id(test_cli):
@@ -365,3 +366,63 @@ def test_sanic_post_to_db(test_cli):  # TODO: this still need to be implemented
     _, response = test_cli.get("/aggregator/to_db")
 
     assert response.status == 500
+
+
+def test_sanic_post_balance(test_cli):
+    """
+    This test checks that the post_balances endpoint returns the correct data when
+    nothing is missing.
+    """
+    _, response = test_cli.post(
+        "/aggregator/balance", json={"id": "some_id", "balances": {"xdai": 1}}
+    )
+
+    assert response.status == 200
+
+
+def test_sanic_post_balance_id_missing(test_cli):
+    """
+    This test checks that the post_balances endpoint returns the correct data when
+    the id is missing.
+    """
+    _, response = test_cli.post("/aggregator/balance", json={"balances": {"xdai": 1}})
+
+    assert response.status == 400
+    assert response.json["message"] == "`id` key not in body"
+
+
+def test_sanic_post_balance_id_wrong_type(test_cli):
+    """
+    This test checks that the post_balances endpoint returns the correct data when
+    the id is not a string.
+    """
+    _, response = test_cli.post(
+        "/aggregator/balance", json={"id": 123, "balances": {"xdai": 1}}
+    )
+
+    assert response.status == 400
+    assert response.json["message"] == "`id` must be a string"
+
+
+def test_sanic_post_balance_balances_missing(test_cli):
+    """
+    This test checks that the post_balances endpoint returns the correct data when
+    the balances are missing.
+    """
+    _, response = test_cli.post("/aggregator/balance", json={"id": "some_id"})
+
+    assert response.status == 400
+    assert response.json["message"] == "`balances` key not in body"
+
+
+def test_sanic_post_balance_balances_wrong_type(test_cli):
+    """
+    This test checks that the post_balances endpoint returns the correct data when
+    the balances are not a dict.
+    """
+    _, response = test_cli.post(
+        "/aggregator/balance", json={"id": "some_id", "balances": 123}
+    )
+
+    assert response.status == 400
+    assert response.json["message"] == "`balances` must be a dict"
