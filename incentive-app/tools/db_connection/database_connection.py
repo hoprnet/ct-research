@@ -415,7 +415,7 @@ class DatabaseConnection:
             """
             SELECT *
             FROM {}
-            WHERE timestamp >= (%s)
+            WHERE timestamp > (%s)
         """
         )
         self.cursor.execute(command.format(table_id), (timestamp,))
