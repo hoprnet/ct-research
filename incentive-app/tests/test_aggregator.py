@@ -15,8 +15,8 @@ def clear_instance(func):
 
     def wrapper(*args, **kwargs):
         agg = Aggregator()
-        agg._dict = {}
-        agg._update_dict = {}
+        agg._nw_peer_latency = {}
+        agg._nw_last_update = {}
 
         func(*args, **kwargs)
 
@@ -43,10 +43,10 @@ def test_singleton_update():
     agg1 = Aggregator()
     agg2 = Aggregator()
 
-    agg1.add("pod_id", {"peer": 1})
-    agg2.set_update("pod_id", "timestamp")
+    agg1.add_nw_peer_latencies("pod_id", {"peer": 1})
+    agg2.set_nw_update("pod_id", "timestamp")
 
-    assert agg1.get() == agg2.get()
+    assert agg1.get_nw_peer_latencies() == agg2.get_nw_peer_latencies()
 
 
 @clear_instance
@@ -57,9 +57,9 @@ def test_add():
     pod_id = "pod_id"
     items = {"peer": 1}
 
-    agg.add(pod_id, items)
+    agg.add_nw_peer_latencies(pod_id, items)
 
-    assert agg._dict.get(pod_id) == items
+    assert agg._nw_peer_latency.get(pod_id) == items
 
 
 @clear_instance
@@ -70,9 +70,9 @@ def test_get():
     pod_id = "pod_id"
     items = {"peer": 1}
 
-    agg._dict[pod_id] = items
+    agg._nw_peer_latency[pod_id] = items
 
-    assert agg.get() == {pod_id: items}
+    assert agg.get_nw_peer_latencies() == {pod_id: items}
 
 
 @clear_instance
@@ -83,11 +83,11 @@ def test_clear():
     pod_id = "pod_id"
     items = {"peer": 1}
 
-    agg.add(pod_id, items)
+    agg.add_nw_peer_latencies(pod_id, items)
 
-    agg.clear()
+    agg.clear_nw_peer_latencies()
 
-    assert agg._dict == {}
+    assert agg._nw_peer_latency == {}
 
 
 @clear_instance
@@ -98,9 +98,9 @@ def test_set_update():
     pod_id = "pod_id"
     timestamp = "timestamp"
 
-    agg.set_update(pod_id, timestamp)
+    agg.set_nw_update(pod_id, timestamp)
 
-    assert agg._update_dict.get(pod_id) == timestamp
+    assert agg._nw_last_update.get(pod_id) == timestamp
 
 
 @clear_instance
@@ -111,9 +111,9 @@ def test_get_update():
     pod_id = "pod_id"
     timestamp = "timestamp"
 
-    agg._update_dict[pod_id] = timestamp
+    agg._nw_last_update[pod_id] = timestamp
 
-    assert agg.get_update(pod_id) == timestamp
+    assert agg.get_nw_update(pod_id) == timestamp
 
 
 @clear_instance
@@ -123,7 +123,7 @@ def test_get_update_not_in_dict():
     """
     pod_id = "pod_id"
 
-    assert not agg.get_update(pod_id)
+    assert not agg.get_nw_update(pod_id)
 
 
 @clear_instance
@@ -142,7 +142,7 @@ def test_convert_to_db_data_simple():
     pod_id = "pod_id"
     items = {"peer": 1}
 
-    agg.add(pod_id, items)
+    agg.add_nw_peer_latencies(pod_id, items)
 
     assert agg.convert_to_db_data() == [("peer", ["pod_id"], [1])]
 
@@ -156,7 +156,7 @@ def test_convert_to_db_data_multiple_peers():
     pod_id = "pod_id"
     items = {"peer": 1, "peer2": 2}
 
-    agg.add(pod_id, items)
+    agg.add_nw_peer_latencies(pod_id, items)
 
     assert agg.convert_to_db_data() == [
         ("peer", ["pod_id"], [1]),
@@ -175,8 +175,8 @@ def test_convert_to_db_data_multiple_pods():
     items = {"peer": 1}
     items2 = {"peer2": 2}
 
-    agg.add(pod_id, items)
-    agg.add(pod_id2, items2)
+    agg.add_nw_peer_latencies(pod_id, items)
+    agg.add_nw_peer_latencies(pod_id2, items2)
 
     assert agg.convert_to_db_data() == [
         ("peer", ["pod_id"], [1]),
@@ -192,9 +192,9 @@ def test_add_multiple():
     pod_id = "pod_id"
     items = {"peer": 1, "peer2": 2}
 
-    agg.add(pod_id, items)
+    agg.add_nw_peer_latencies(pod_id, items)
 
-    assert agg.get()[pod_id] == items
+    assert agg.get_nw_peer_latencies()[pod_id] == items
 
 
 @clear_instance
@@ -207,11 +207,11 @@ def test_add_multiple_pods():
     items = {"peer": 1}
     items2 = {"peer2": 2}
 
-    agg.add(pod_id, items)
-    agg.add(pod_id2, items2)
+    agg.add_nw_peer_latencies(pod_id, items)
+    agg.add_nw_peer_latencies(pod_id2, items2)
 
-    assert agg.get()[pod_id] == items
-    assert agg.get()[pod_id2] == items2
+    assert agg.get_nw_peer_latencies()[pod_id] == items
+    assert agg.get_nw_peer_latencies()[pod_id2] == items2
 
 
 @clear_instance
@@ -223,10 +223,10 @@ def test_add_to_existing_pod():
     items = {"peer": 1}
     items2 = {"peer2": 2}
 
-    agg.add(pod_id, items)
-    agg.add(pod_id, items2)
+    agg.add_nw_peer_latencies(pod_id, items)
+    agg.add_nw_peer_latencies(pod_id, items2)
 
-    assert agg.get()[pod_id] == {"peer": 1, "peer2": 2}
+    assert agg.get_nw_peer_latencies()[pod_id] == {"peer": 1, "peer2": 2}
 
 
 @clear_instance
@@ -240,11 +240,11 @@ def test_add_to_existing_pod_multiple():
     items2 = {"peer": 2, "peer2": 1}
     items3 = {"peer2": 2}
 
-    agg.add(pod_id, items)
-    agg.add(pod_id, items2)
-    agg.add(pod_id, items3)
+    agg.add_nw_peer_latencies(pod_id, items)
+    agg.add_nw_peer_latencies(pod_id, items2)
+    agg.add_nw_peer_latencies(pod_id, items3)
 
-    assert agg.get()[pod_id] == {"peer": 2, "peer2": 2}
+    assert agg.get_nw_peer_latencies()[pod_id] == {"peer": 2, "peer2": 2}
 
 
 @pytest.fixture
@@ -269,13 +269,14 @@ def test_cli(app):
     return app.test_client
 
 
-def test_sanic_metrics_endpoint(test_cli):
+def test_sanic_get_metrics(test_cli):
     """
-    This test checks that the metrics endpoint returns the correct data.
+    This test checks that the get metrics endpoint returns the correct data.
     """
     _, response = test_cli.get("/aggregator/metrics")
 
     assert response.status == 200
+    assert isinstance(response.json, dict)
 
 
 def test_sanic_post_list_missing_id(test_cli):
@@ -365,3 +366,63 @@ def test_sanic_post_to_db(test_cli):  # TODO: this still need to be implemented
     _, response = test_cli.get("/aggregator/to_db")
 
     assert response.status == 500
+
+
+def test_sanic_post_balance(test_cli):
+    """
+    This test checks that the post_balances endpoint returns the correct data when
+    nothing is missing.
+    """
+    _, response = test_cli.post(
+        "/aggregator/balance", json={"id": "some_id", "balances": {"xdai": 1}}
+    )
+
+    assert response.status == 200
+
+
+def test_sanic_post_balance_id_missing(test_cli):
+    """
+    This test checks that the post_balances endpoint returns the correct data when
+    the id is missing.
+    """
+    _, response = test_cli.post("/aggregator/balance", json={"balances": {"xdai": 1}})
+
+    assert response.status == 400
+    assert response.json["message"] == "`id` key not in body"
+
+
+def test_sanic_post_balance_id_wrong_type(test_cli):
+    """
+    This test checks that the post_balances endpoint returns the correct data when
+    the id is not a string.
+    """
+    _, response = test_cli.post(
+        "/aggregator/balance", json={"id": 123, "balances": {"xdai": 1}}
+    )
+
+    assert response.status == 400
+    assert response.json["message"] == "`id` must be a string"
+
+
+def test_sanic_post_balance_balances_missing(test_cli):
+    """
+    This test checks that the post_balances endpoint returns the correct data when
+    the balances are missing.
+    """
+    _, response = test_cli.post("/aggregator/balance", json={"id": "some_id"})
+
+    assert response.status == 400
+    assert response.json["message"] == "`balances` key not in body"
+
+
+def test_sanic_post_balance_balances_wrong_type(test_cli):
+    """
+    This test checks that the post_balances endpoint returns the correct data when
+    the balances are not a dict.
+    """
+    _, response = test_cli.post(
+        "/aggregator/balance", json={"id": "some_id", "balances": 123}
+    )
+
+    assert response.status == 400
+    assert response.json["message"] == "`balances` must be a dict"

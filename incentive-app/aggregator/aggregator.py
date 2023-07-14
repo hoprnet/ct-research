@@ -1,8 +1,16 @@
 import threading
 import datetime
-from .utils import (array_to_db_list, dict_to_array, 
-                   get_nw_list_from_dict, get_peer_list_from_dict, 
-                   multiple_round_nw_peer_match)
+
+from tools.db_connection import DatabaseConnection
+
+from .utils import (
+    array_to_db_list,
+    dict_to_array,
+    get_nw_list_from_dict,
+    get_peer_list_from_dict,
+    multiple_round_nw_peer_match,
+)
+
 
 class Singleton(type):
     """
@@ -39,19 +47,23 @@ class Aggregator(metaclass=Singleton):
         dbpassword: str = None,
         dbport: str = None,
     ):
-        self._dict: dict = {}
-        self._update_dict: dict = {}
-        self._dict_lock = threading.Lock()  # thread-safe list
-        self._update_lock = threading.Lock()  # thread-safe lastupdate
+        self._nw_peer_latency: dict = {}
+        self._nw_peer_latency_lock = threading.Lock()  # thread-safe nw_peer_latency
 
-        # db connection information
-        self.db = db
-        self.dbhost = dbhost
-        self.dbuser = dbuser
-        self.dbpassword = dbpassword
-        self.dbport = dbport
+        self._nw_last_update: dict = {}
+        self._nw_last_update_lock = threading.Lock()  # thread-safe last_update
 
-    def add(self, pod_id: str, items: list):
+        self._nw_balances: dict = {}
+        self._nw_balances_lock = threading.Lock()  # thread-safe balances
+
+        if db and dbhost and dbuser and dbpassword and dbport:
+            self.db = DatabaseConnection(
+                database=db, host=dbhost, user=dbuser, password=dbpassword, port=dbport
+            )
+        else:
+            self.db = None
+
+    def add_nw_peer_latencies(self, pod_id: str, items: list):
         """
         Add latency data to the aggregator for a specific pod (nw).
         Concurrent access is managed using a lock.
@@ -60,32 +72,32 @@ class Aggregator(metaclass=Singleton):
         :return: Nothing
         """
 
-        with self._dict_lock:
-            if pod_id not in self._dict:
-                self._dict[pod_id] = {}
+        with self._nw_peer_latency_lock:
+            if pod_id not in self._nw_peer_latency:
+                self._nw_peer_latency[pod_id] = {}
 
             for peer, lat in items.items():
-                self._dict[pod_id][peer] = lat
+                self._nw_peer_latency[pod_id][peer] = lat
 
-    def get(self) -> dict:
+    def get_nw_peer_latencies(self) -> dict:
         """
         Get the latency data stored.
         Concurrent access is managed using a lock.
         :return: the latency data stored
         """
-        with self._dict_lock:
-            return self._dict
+        with self._nw_peer_latency_lock:
+            return self._nw_peer_latency
 
-    def clear(self):
+    def clear_nw_peer_latencies(self):
         """
         Clear the latency data stored.
         Concurrent access is managed using a lock.
         :return: Nothing
         """
-        with self._dict_lock:
-            self._dict = {}
+        with self._nw_peer_latency_lock:
+            self._nw_peer_latency = {}
 
-    def set_update(self, pod_id: str, timestamp: datetime.datetime):
+    def set_nw_update(self, pod_id: str, timestamp: datetime.datetime):
         """
         Set the last update timestamp for a specific pod.
         Concurrent access is managed using a lock.
@@ -93,34 +105,76 @@ class Aggregator(metaclass=Singleton):
         :param timestamp: the last update timestamp for the specified pod
         :return: Nothing
         """
-        with self._update_lock:
-            self._update_dict[pod_id] = timestamp
+        with self._nw_last_update_lock:
+            self._nw_last_update[pod_id] = timestamp
 
-    def get_update(self, pod_id: str) -> datetime.datetime:
+    def get_nw_update(self, pod_id: str) -> datetime.datetime:
         """
         Get the last update timestamp for a specific pod.
         Concurrent access is managed using a lock.
         :param pod_id: the pod id (nw id) to get the last update timestamp for
         :return: the last update timestamp for the specified pod
         """
-        with self._update_lock:
-            if pod_id not in self._update_dict:
+        with self._nw_last_update_lock:
+            if pod_id not in self._nw_last_update:
                 return None
-            return self._update_dict[pod_id]
+            return self._nw_last_update[pod_id]
+
+    def clear_nw_update(self):
+        """
+        Clear the last update timestamp stored.
+        Concurrent access is managed using a lock.
+        :return: Nothing
+        """
+        with self._nw_last_update_lock:
+            self._nw_last_update = {}
+
+    def add_nw_balance(self, pod_id: str, token: str, balance: float):
+        """
+        Add a balance for a specific pod.
+        Concurrent access is managed using a lock.
+        :param pod_id: the pod id (nw id) to add the balance for
+        :param token: the token for which the balance is added
+        :param balance: the balance to add
+        :return: Nothing
+        """
+        with self._nw_balances_lock:
+            if pod_id not in self._nw_balances:
+                self._nw_balances[pod_id] = {}
+
+            self._nw_balances[pod_id][token] = balance
+
+    def get_nw_balances(self) -> dict:
+        """
+        Get the balances stored.
+        Concurrent access is managed using a lock.
+        :return: the balances stored
+        """
+        with self._nw_balances_lock:
+            return self._nw_balances
+
+    def clear_nw_balances(self):
+        """
+        Clear the balances stored.
+        Concurrent access is managed using a lock.
+        :return: Nothing
+        """
+        with self._nw_balances_lock:
+            self._nw_balances = {}
 
     def convert_to_db_data(self):
         """
         Convert the data stored in self._dict to a list of tuples, describing for each
         peer the list of best nw to connect to and the corresponding latencies.
         """
-        with self._dict_lock:
+        with self._nw_peer_latency_lock:
             # gather all nw ids in a single list
-            nw_ids = get_nw_list_from_dict(self._dict)
-            peer_ids = get_peer_list_from_dict(self._dict)
+            nw_ids = get_nw_list_from_dict(self._nw_peer_latency)
+            peer_ids = get_peer_list_from_dict(self._nw_peer_latency)
 
             # create an array with latencies stored at the right indexes, corresponding
             # to nw and peer indexes in the lists above
-            lat_as_array = dict_to_array(self._dict, nw_ids, peer_ids)
+            lat_as_array = dict_to_array(self._nw_peer_latency, nw_ids, peer_ids)
 
             # create a dict with the best 'peer: [nw]' matchs
             matchs = multiple_round_nw_peer_match(lat_as_array, max_iter=3)
@@ -131,7 +185,23 @@ class Aggregator(metaclass=Singleton):
         return matchs_for_db
 
     def get_metrics(self):
-        with self._dict_lock:
-            metrics = {}
+        metrics = {"peers": {}, "netwatchers": {}, "aggregator": {}}
+
+        nw_balances = self.get_nw_balances()
+        nw_peer_latencies = self.get_nw_peer_latencies()
+
+        with self._nw_balances_lock:
+            for nw_id, balances in nw_balances.items():
+                if nw_id not in metrics["netwatchers"]:
+                    metrics["netwatchers"][nw_id] = {}
+                metrics["netwatchers"][nw_id]["balances"] = balances
+
+        with self._nw_peer_latency_lock:
+            for _, latencies in nw_peer_latencies.items():
+                for peer_id, latency in latencies.items():
+                    if peer_id not in metrics["peers"]:
+                        metrics["peers"][peer_id] = {}
+
+                    metrics["peers"][peer_id] = latency
 
         return metrics
