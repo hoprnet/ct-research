@@ -1,5 +1,8 @@
+from datetime import datetime, timedelta
 from tools.db_connection import DatabaseConnection  # noqa: F401
 import pytest
+import time
+
 
 @pytest.fixture
 def db_fixture():
@@ -442,6 +445,77 @@ def test_count_uniques_in_last_added_rows_empty(
         db.drop_table("test_table")
 
         assert count == 0
+
+
+def test_rows_after_timestamp_empty(
+    db_fixture: DatabaseConnection, cols_fixture: list[tuple]
+):
+    """
+    Test DatabaseConnection rows_after_timestamp method when theres nothing in the db.
+    """
+    with db_fixture as db:
+        db.create_table("test_table", cols_fixture)
+        rows = db.rows_after_timestamp("test_table", datetime(1970, 1, 1, 0, 0, 0, 0))
+        db.drop_table("test_table")
+
+        assert rows == []
+
+
+def test_rows_after_timestamp_to_recent(
+    db_fixture: DatabaseConnection, cols_fixture: list[tuple]
+):
+    """
+    Test DatabaseConnection rows_after_timestamp method when timestamp is to recent.
+    """
+    with db_fixture as db:
+        db.create_table("test_table", cols_fixture)
+        db.insert_many(
+            "test_table",
+            ["peer_id", "netw_ids", "latency_metric"],
+            [
+                ("0xF516", ["0xF24", "0xF21"], [100, 13]),
+                ("0xF517", ["0xF24", "0xF21"], [100, 13]),
+            ],
+        )
+        rows = db.rows_after_timestamp("test_table", datetime.now())
+        db.drop_table("test_table")
+
+        assert rows == []
+
+
+def test_rows_after_timestamp(
+    db_fixture: DatabaseConnection, cols_fixture: list[tuple]
+):
+    """
+    Test DatabaseConnection rows_after_timestamp method when there is content to return.
+    """
+    with db_fixture as db:
+        db.create_table("test_table", cols_fixture)
+        db.insert_many(
+            "test_table",
+            ["peer_id", "netw_ids", "latency_metric"],
+            [
+                ("0xF516", ["0xF24", "0xF21"], [100, 13]),
+                ("0xF517", ["0xF24", "0xF21"], [100, 13]),
+            ],
+        )
+
+        time.sleep(5)
+        db.insert_many(
+            "test_table",
+            ["peer_id", "netw_ids", "latency_metric"],
+            [
+                ("0xF518", ["0xF24", "0xF21"], [100, 13]),
+                ("0xF519", ["0xF24", "0xF21"], [100, 13]),
+                ("0xF519", ["0xF24", "0xF21"], [100, 13]),
+            ],
+        )
+        rows = db.rows_after_timestamp(
+            "test_table", datetime.now() - timedelta(seconds=4)
+        )
+        db.drop_table("test_table")
+
+        assert len(rows) == 3
 
 
 def test_database_name(db_fixture: DatabaseConnection):
