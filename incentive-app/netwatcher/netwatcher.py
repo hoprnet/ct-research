@@ -27,11 +27,13 @@ class NetWatcher(HOPRNode):
         # assign unique uuid as a string
         self.id = str(uuid.uuid4())
         self.posturl = posturl
+
         # a set to keep the peers of this node, see:
         self.peers = set[str]()
 
         # a dict to keep the max_lat_count latency measures {peer: [51, 23, ...]}
         self.latency = dict[str, list]()
+
         self.max_lat_count = max_lat_count
 
         super().__init__(url, key)
@@ -163,6 +165,18 @@ class NetWatcher(HOPRNode):
         self.tasks.add(asyncio.create_task(self.gather_peers()))
         self.tasks.add(asyncio.create_task(self.ping_peers()))
         self.tasks.add(asyncio.create_task(self.transmit_peers()))
+
+        await asyncio.gather(*self.tasks)
+
+    async def start_mock(self):
+        """
+        Mock-starts the tasks of this node
+        """
+        log.info(f"Starting instance '{self.id}'")
+        if self.tasks:
+            return
+
+        self.started = True
 
         await asyncio.gather(*self.tasks)
 
