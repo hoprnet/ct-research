@@ -100,10 +100,13 @@ class EconomicHandler(HOPRNode):
             metrics_dict,
         )
 
-        # calculate expected rewards and output it as a csv file
-        expected_rewards = self.compute_expected_reward_savecsv(ct_prob_dict, budget)
+        # calculate expected rewards
+        _, expected_rewards = self.compute_expected_reward(ct_prob_dict, budget)
 
-        print(f"{expected_rewards[1]=}")
+        # output expected rewards as a csv file
+        self.save_expected_reward_csv(expected_rewards)
+
+        print(f"{expected_rewards=}")
         print(f"{rpch_nodes_blacklist=}")
 
     async def get_unique_safe_peerId_links(self):
@@ -331,16 +334,26 @@ class EconomicHandler(HOPRNode):
 
         return "ct_prob", merged_result
 
-    def compute_expected_reward_savecsv(self, dataset: dict, budget: dict):
+    def compute_expected_reward(self, dataset: dict, budget: dict):
         """
-        Computes the expected reward for each entry in the dataset based on the provided
-        budget, saves the results to a CSV file, and returns the updated dataset.
+        Computes the expected reward for each entry in the dataset.
         :param: dataset (dict): A dictionary containing the dataset entries.
         :param: budget (dict): A dictionary containing the budget information.
-        :returns: dict: The updated dataset with the 'expected_reward' values
-                        computed and added to each entry.
+        :returns: dict: The updated dataset with the 'expected_reward' value.
         """
-        timestamp = time.strftime("%Y%m%d%H%M")
+        for entry in dataset.values():
+            entry["budget"] = budget["value"]
+            entry["expected_reward"] = entry["prob"] * budget["value"]
+
+        return "expected_reward", dataset
+
+    def save_expected_reward_csv(self, dataset: dict) -> str:
+        """
+        Saves the expected rewards dictionary as a CSV file
+        :param: dataset (dict): A dictionary containing the dataset entries.
+        :returns: str: Confirmation message of successfull dataset save.
+        """
+        timestamp = time.strftime("%Y%m%d%H%M%S")
         folder_name = "expected_rewards"
         folder_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), folder_name
@@ -348,28 +361,27 @@ class EconomicHandler(HOPRNode):
         filename = f"expected_reward_{timestamp}.csv"
         file_path = os.path.join(folder_path, filename)
 
-        for entry in dataset.values():
-            entry["expected_reward"] = entry["prob"] * budget["value"]
-
         try:
             os.makedirs(folder_path, exist_ok=True)
         except OSError as e:
             log.error(f"Error occurred while creating the folder: {e}")
             log.error(traceback.format_exc())
-            return "expected_rewards", {}
+            return "expected_rewards_csv", {}
 
         try:
             with open(file_path, "w", newline="") as csvfile:
                 writer = csv.writer(csvfile)
-                writer.writerow(["peer_id"] + list(dataset.keys()))
+                column_names = list(dataset.values())[0].keys()
+                writer.writerow(["peer_id"] + list(column_names))
                 for key, value in dataset.items():
                     writer.writerow([key] + list(value.values()))
         except OSError as e:
             log.error(f"Error occurred while writing to the CSV file: {e}")
             log.error(traceback.format_exc())
-            return "expected_reward", {}
+            return "expected_reward_csv", {}
 
-        return "expected_rewards", dataset
+        log.info("CSV file saved successfully")
+        return "CSV file saved successfully"
 
     async def start(self):
         """

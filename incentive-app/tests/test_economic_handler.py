@@ -240,7 +240,7 @@ def test_compute_expected_reward(mocked_model_parameters, new_expected_merge_res
     """
     budget = mocked_model_parameters["budget"]
     node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
-    result = node.compute_expected_reward_savecsv(new_expected_merge_result, budget)
+    result = node.compute_expected_reward(new_expected_merge_result, budget)
 
     # Assert Keys
     assert set(result[1].keys()) == set(new_expected_merge_result.keys())
@@ -250,41 +250,42 @@ def test_compute_expected_reward(mocked_model_parameters, new_expected_merge_res
         assert "expected_reward" in value
 
 
-def test_compute_expected_reward_OSError_folder_creation(
-    mocked_model_parameters, new_expected_merge_result
-):
+def test_save_expected_reward_csv_success(new_expected_merge_result):
+    """
+    Test whether the save_expected_reward_csv function returns the confirmation
+    message in case of no errors.
+    """
+    node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
+    result = node.save_expected_reward_csv(new_expected_merge_result)
+
+    assert result == "CSV file saved successfully"
+
+
+def test_save_expected_reward_csv_OSError_folder_creation(new_expected_merge_result):
     """
     Test whether an OSError gets triggered when the folder creation
     or the writing of the csv file fails.
     """
-    budget = mocked_model_parameters["budget"]
-
     with patch("os.makedirs") as mock_makedirs:
         mock_makedirs.side_effect = OSError("Mocked OSError")
         node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
-        result = node.compute_expected_reward_savecsv(new_expected_merge_result, budget)
+        result = node.save_expected_reward_csv(new_expected_merge_result)
 
-    assert result == ("expected_rewards", {})
+    assert result == ("expected_rewards_csv", {})
 
 
-def test_compute_expected_reward_OSError_writing_csv(
-    mocked_model_parameters, new_expected_merge_result
-):
+def test_save_expected_reward_csv_OSError_writing_csv(new_expected_merge_result):
     """
     Test whether an OSError gets triggered when something goes wrong
     while writing the csv file.
     """
-    budget = mocked_model_parameters["budget"]
-
     with patch("os.makedirs"):
         with patch("builtins.open") as mock_open:
             mock_open.side_effect = OSError("Mocked OSError")
             node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
-            result = node.compute_expected_reward_savecsv(
-                new_expected_merge_result, budget
-            )
+            result = node.save_expected_reward_csv(new_expected_merge_result)
 
-    assert result == ("expected_reward", {})
+    assert result == ("expected_reward_csv", {})
 
 
 def test_probability_sum(mocked_model_parameters, expected_merge_result):
@@ -320,7 +321,7 @@ def test_ct_prob_exception(mocked_model_parameters):
 
     assert result == ("ct_prob", {})
 
-    
+
 @pytest.fixture
 def mock_node_for_test_start(mocker):
     """
