@@ -1,5 +1,5 @@
-import threading
 import datetime
+import threading
 
 from tools.db_connection import DatabaseConnection
 
@@ -20,12 +20,18 @@ class Singleton(type):
     """
 
     _instances = {}
+    _lock = threading.Lock()
 
     def __call__(cls, *args, **kwargs):
         # if instance exists, return it
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         # otherwise, create it and return it
+        with cls._lock:
+            if cls in cls._instances:
+                print("Instance already exists")
+            else:
+                cls._instances[cls] = super().__call__(*args, **kwargs)
+                print("Creating instance")
+
         return cls._instances[cls]
 
 
@@ -57,6 +63,7 @@ class Aggregator(metaclass=Singleton):
         self._nw_balances_lock = threading.Lock()  # thread-safe balances
 
         if db and dbhost and dbuser and dbpassword and dbport:
+            print("DB configured")
             self.db = DatabaseConnection(
                 database=db, host=dbhost, user=dbuser, password=dbpassword, port=dbport
             )

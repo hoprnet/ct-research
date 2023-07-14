@@ -6,7 +6,6 @@ from sanic.response import html as sanic_html
 from sanic.response import json as sanic_json
 from sanic.response import text as sanic_text
 
-
 from .aggregator import Aggregator
 
 _db_columns = [
@@ -126,8 +125,8 @@ def attach_endpoints(app):
     async def post_to_db(request: Request):  # pragma: no cover
         """
         Takes the peers and metrics from the _dict and sends them to the database.
-        NO NEED TO CHECK THIS METHOD, AS IT'S PURPOSE IS ONLY FOR DEBUGGING.
         """
+        print(f"{agg.db=}")
         if agg.db is None:
             return sanic_text("No DB configured", status=500)
 
