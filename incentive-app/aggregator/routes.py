@@ -6,7 +6,6 @@ from sanic.response import html as sanic_html
 from sanic.response import json as sanic_json
 from sanic.response import text as sanic_text
 
-from tools.db_connection.database_connection import DatabaseConnection
 
 from .aggregator import Aggregator
 
@@ -37,8 +36,8 @@ def attach_endpoints(app):
         if len(request.json["list"]) == 0:
             raise exceptions.BadRequest("`list` must not be empty")
 
-        agg.add(request.json["id"], request.json["list"])
-        agg.set_update(request.json["id"], datetime.now())
+        agg.add_nw_peer_latencies(request.json["id"], request.json["list"])
+        agg.set_nw_update(request.json["id"], datetime.now())
 
         return sanic_text("Received list")
 
@@ -50,7 +49,7 @@ def attach_endpoints(app):
         - id: the network UUID of the pod
         - list: a list of peers with their latency
         """
-        return sanic_json(agg.get())
+        return sanic_json(agg.get_nw_peer_latencies())
 
     @app.route("/aggregator/list_ui", methods=["GET"])
     async def get_list_ui(request: Request):  # pragma: no cover
@@ -59,7 +58,7 @@ def attach_endpoints(app):
         and generate an HTML page to display it.
         NO NEED TO CHECK THIS METHOD, AS IT'S PURPOSE IS ONLY FOR DEBUGGING.
         """
-        agg_info = agg.get()
+        agg_info = agg.get_nw_peer_latencies()
         count = len(agg_info)
 
         # header
@@ -78,7 +77,7 @@ def attach_endpoints(app):
 
         # peers detected by pods
         for pod_id, data in agg_info.items():
-            update_time = agg.get_update(pod_id)
+            update_time = agg.get_nw_update(pod_id)
             html_text.append(_display_pod_infos(pod_id, data, update_time, styles))
 
         if len(agg_info) == 0:
@@ -121,20 +120,35 @@ def attach_endpoints(app):
         Takes the peers and metrics from the _dict and sends them to the database.
         NO NEED TO CHECK THIS METHOD, AS IT'S PURPOSE IS ONLY FOR DEBUGGING.
         """
+        if agg.db is None:
+            return sanic_text("No DB configured", status=500)
 
         matchs_for_db = agg.convert_to_db_data()
 
-        with DatabaseConnection(
-            database=agg.db,
-            host=agg.dbhost,
-            user=agg.dbuser,
-            password=agg.dbpassword,
-            port=agg.dbport,
-        ) as db:
+        with agg.db as db:
             for peer, nws, latencies in matchs_for_db:
                 db.insert("raw_data_table", peer=peer, nws=nws, latencies=latencies)
 
         return sanic_text("Sent to DB")
+
+    @app.route("/aggregator/balance", methods=["POST"])
+    async def post_balance(request: Request):
+        """
+        Create a POST route to receive the balance of a netwatcher.
+        """
+        if "id" not in request.json:
+            raise exceptions.BadRequest("`id` key not in body")
+        if not isinstance(request.json["id"], str):
+            raise exceptions.BadRequest("`id` must be a string")
+        if "balances" not in request.json:
+            raise exceptions.BadRequest("`balances` key not in body")
+        if not isinstance(request.json["balances"], dict):
+            raise exceptions.BadRequest("`balances` must be a dict")
+
+        for token, amount in request.json["balances"].items():
+            agg.add_nw_balance(request.json["id"], token, amount)
+
+        return sanic_text(f"Received balance for {request.json['id']}")
 
     @app.route("/aggregator/metrics", methods=["GET"])
     async def get_metrics(request: Request):
