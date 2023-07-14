@@ -1,10 +1,13 @@
 from datetime import datetime
+from tools.utils import envvar
 
 from sanic import exceptions
 from sanic.request import Request
 from sanic.response import html as sanic_html
 from sanic.response import json as sanic_json
 from sanic.response import text as sanic_text
+
+from tools.db_connection.database_connection import DatabaseConnection
 
 from .aggregator import Aggregator
 
@@ -126,13 +129,15 @@ def attach_endpoints(app):
         """
         Takes the peers and metrics from the _dict and sends them to the database.
         """
-        print(f"{agg.db=}")
-        if agg.db is None:
-            return sanic_text("No DB configured", status=500)
-
         matchs_for_db = agg.convert_to_db_data()
 
-        with agg.db as db:
+        with DatabaseConnection(
+            envvar("DB_NAME"),
+            envvar("DB_HOST"),
+            envvar("DB_USER"),
+            envvar("DB_PASSWORD"),
+            envvar("DB_PORT", int),
+        ) as db:
             try:
                 db.create_table("raw_data_table", _db_columns)
             except ValueError as e:

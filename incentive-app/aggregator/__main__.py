@@ -12,6 +12,11 @@ def main():
     log = _getlogger()
 
     try:
+        envvar("DB_NAME")
+        envvar("DB_HOST")
+        envvar("DB_USER")
+        envvar("DB_PASSWORD")
+        envvar("DB_PORT", int)
         host = envvar("API_HOST")
         port = envvar("API_PORT", int)
     except ValueError as e:
