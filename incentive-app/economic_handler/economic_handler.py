@@ -347,11 +347,11 @@ class EconomicHandler(HOPRNode):
 
         return "expected_reward", dataset
 
-    def save_expected_reward_csv(self, dataset: dict) -> str:
+    def save_expected_reward_csv(self, dataset: dict) -> bool:
         """
         Saves the expected rewards dictionary as a CSV file
         :param: dataset (dict): A dictionary containing the dataset entries.
-        :returns: str: Confirmation message of successfull dataset save.
+        :returns: bool: No meaning except that it allows testing of the function.
         """
         timestamp = time.strftime("%Y%m%d%H%M%S")
         folder_name = "expected_rewards"
@@ -366,7 +366,7 @@ class EconomicHandler(HOPRNode):
         except OSError as e:
             log.error(f"Error occurred while creating the folder: {e}")
             log.error(traceback.format_exc())
-            return "expected_rewards_csv", {}
+            return False
 
         try:
             with open(file_path, "w", newline="") as csvfile:
@@ -378,10 +378,10 @@ class EconomicHandler(HOPRNode):
         except OSError as e:
             log.error(f"Error occurred while writing to the CSV file: {e}")
             log.error(traceback.format_exc())
-            return "expected_reward_csv", {}
+            return False
 
         log.info("CSV file saved successfully")
-        return "CSV file saved successfully"
+        return True
 
     async def start(self):
         """

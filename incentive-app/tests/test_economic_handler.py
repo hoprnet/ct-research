@@ -258,7 +258,7 @@ def test_save_expected_reward_csv_success(new_expected_merge_result):
     node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
     result = node.save_expected_reward_csv(new_expected_merge_result)
 
-    assert result == "CSV file saved successfully"
+    assert result is True
 
 
 def test_save_expected_reward_csv_OSError_folder_creation(new_expected_merge_result):
@@ -271,7 +271,7 @@ def test_save_expected_reward_csv_OSError_folder_creation(new_expected_merge_res
         node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
         result = node.save_expected_reward_csv(new_expected_merge_result)
 
-    assert result == ("expected_rewards_csv", {})
+    assert result is False
 
 
 def test_save_expected_reward_csv_OSError_writing_csv(new_expected_merge_result):
@@ -285,7 +285,7 @@ def test_save_expected_reward_csv_OSError_writing_csv(new_expected_merge_result)
             node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
             result = node.save_expected_reward_csv(new_expected_merge_result)
 
-    assert result == ("expected_reward_csv", {})
+    assert result is False
 
 
 def test_probability_sum(mocked_model_parameters, expected_merge_result):
