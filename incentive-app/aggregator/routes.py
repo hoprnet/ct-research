@@ -146,7 +146,10 @@ def attach_endpoints(app):
             if not db.table_exists_guard("raw_data_table"):
                 return sanic_text("Table not available", status=500)
 
+            print(f"Inserting {len(matchs_for_db)} rows into DB")
+
             for peer, nws, latencies in matchs_for_db:
+                print(f"Inserting {peer} into DB")
                 db.insert(
                     "raw_data_table",
                     peer_id=peer,
