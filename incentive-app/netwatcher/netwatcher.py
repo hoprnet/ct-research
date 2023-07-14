@@ -36,6 +36,16 @@ class NetWatcher(HOPRNode):
 
         self.max_lat_count = max_lat_count
 
+        ############### MOCKING ###################
+        # set of 100 random peers
+        self.all_peers = set(
+            [
+                "0x" + "".join(random.choices("0123456789abcdef", k=20))
+                for _ in range(20)
+            ]
+        )
+        ###########################################
+
         super().__init__(url, key)
 
     def wipe_peers(self):
@@ -103,6 +113,29 @@ class NetWatcher(HOPRNode):
             for peer in vanished_peers:
                 log.info(f"Peer {peer[-5:]} vanished")
 
+    @formalin(message="MOCK Gathering peers", sleep=300)
+    async def mock_gather_peers(self, quality: float = 1.0):
+        """
+        MOCKING - Long-running task that continously updates the set of peers connected
+        to this node.
+        :param quality:
+        :returns: nothing; the set of connected peerIds is kept in self.peers.
+        """
+
+        number_to_pick = random.randint(5, 10)
+        found_peers = random.sample(self.all_peers, number_to_pick)
+
+        if found_peers:
+            new_peers = set(found_peers) - set(self.peers)
+            vanished_peers = set(self.peers) - set(found_peers)
+
+            for peer in new_peers:
+                self.peers.add(peer)
+                log.info(f"Found new peer {peer}")
+
+            for peer in vanished_peers:
+                log.info(f"Peer {peer} vanished")
+
     @formalin(message="Pinging peers", sleep=10.0)
     @connectguard
     async def ping_peers(self):
@@ -137,6 +170,33 @@ class NetWatcher(HOPRNode):
             self.latency[peer_id].append(latency)
             self.latency[peer_id] = self.latency[peer_id][-self.max_lat_count :]
 
+    @formalin(message="MOCK Pinging peers", sleep=60.0)
+    async def mock_ping_peers(self):
+        """
+        MOCKING - Pings the peers of this node and records latency measures.
+
+        The recorded latency measures are kept in the dictionary `self.latency`,
+        where each peer ID is associated with a list of latency values.
+        Only the most recent `self.max_lat_count` latency measures are stored
+        for each peer.
+        """
+
+        sampled_peers = random.sample(sorted(self.peers), len(self.peers))
+
+        # create an array to keep the latency measures of new peers
+        for peer_id in sampled_peers:
+            if peer_id not in self.latency:
+                self.latency[peer_id] = []
+
+        for peer_id in sampled_peers:
+            # Above delay is set to allow the second peer's pinging from the test file
+            # before timeout (defined by test method). Can be changed.
+
+            latency = random.randint(10, 100) if random.random() < 0.8 else None
+
+            self.latency[peer_id].append(latency)
+            self.latency[peer_id] = self.latency[peer_id][-self.max_lat_count :]
+
     @wakeupcall(message="Initiated peers transmission", seconds=60)
     @connectguard
     async def transmit_peers(self):
@@ -151,6 +211,20 @@ class NetWatcher(HOPRNode):
                 await self._post_list(session, self.peers, self.latency)
 
         self.wipe_peers()
+
+    @wakeupcall(message="MOCK Initiated peers transmission", seconds=600)
+    async def mock_transmit_peers(self):
+        """
+        MOCKING - Sends the detected peers to the Aggregator
+        """
+        async with ClientSession() as session:
+            success = await self._post_list(session, self.peers, self.latency)
+
+            if not success:
+                asyncio.sleep(5)
+                await self._post_list(session, self.peers, self.latency)
+
+        # self.wipe_peers()
 
     async def start(self):
         """
@@ -168,13 +242,17 @@ class NetWatcher(HOPRNode):
 
         await asyncio.gather(*self.tasks)
 
-    async def start_mock(self):
+    async def mock_start(self):
         """
         Mock-starts the tasks of this node
         """
         log.info(f"Starting instance '{self.id}'")
         if self.tasks:
             return
+
+        self.tasks.add(asyncio.create_task(self.mock_gather_peers()))
+        self.tasks.add(asyncio.create_task(self.mock_ping_peers()))
+        self.tasks.add(asyncio.create_task(self.mock_transmit_peers()))
 
         self.started = True
 

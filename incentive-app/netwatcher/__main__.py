@@ -42,7 +42,7 @@ def main():
     # start the node and run the event loop until the node stops
     try:
         if mock_mode:
-            loop.run_until_complete(nw.start_mock())
+            loop.run_until_complete(nw.mock_start())
         else:
             loop.run_until_complete(nw.start())
 
