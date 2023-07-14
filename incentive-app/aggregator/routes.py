@@ -147,7 +147,12 @@ def attach_endpoints(app):
                 return sanic_text("Table not available", status=500)
 
             for peer, nws, latencies in matchs_for_db:
-                db.insert("raw_data_table", peer=peer, nws=nws, latencies=latencies)
+                db.insert(
+                    "raw_data_table",
+                    peer_id=peer,
+                    netw_ids=nws,
+                    latency_metric=latencies,
+                )
 
         return sanic_text("Sent to DB")
 
