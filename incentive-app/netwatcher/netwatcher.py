@@ -221,7 +221,7 @@ class NetWatcher(HOPRNode):
             success = await self._post_list(session, self.peers, self.latency)
 
             if not success:
-                asyncio.sleep(5)
+                await asyncio.sleep(5)
                 await self._post_list(session, self.peers, self.latency)
 
         # self.wipe_peers()
