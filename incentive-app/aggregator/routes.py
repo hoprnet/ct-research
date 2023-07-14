@@ -9,6 +9,14 @@ from sanic.response import text as sanic_text
 
 from .aggregator import Aggregator
 
+_db_columns = [
+    ("id", "SERIAL PRIMARY KEY"),
+    ("peer_id", "VARCHAR(255) NOT NULL"),
+    ("netw_ids", "VARCHAR(255)[] NOT NULL"),
+    ("latency_metric", "INTEGER[] NOT NULL"),
+    ("timestamp", "TIMESTAMP NOT NULL DEFAULT NOW()"),
+]
+
 
 def attach_endpoints(app):
     agg = Aggregator()
@@ -126,6 +134,14 @@ def attach_endpoints(app):
         matchs_for_db = agg.convert_to_db_data()
 
         with agg.db as db:
+            try:
+                db.create_table("raw_data_table", _db_columns)
+            except ValueError as e:
+                print(e)
+
+            if not db.table_exists_guard("raw_data_table"):
+                return sanic_text("Table not available", status=500)
+
             for peer, nws, latencies in matchs_for_db:
                 db.insert("raw_data_table", peer=peer, nws=nws, latencies=latencies)
 
