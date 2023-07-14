@@ -113,7 +113,7 @@ class NetWatcher(HOPRNode):
             for peer in vanished_peers:
                 log.info(f"Peer {peer[-5:]} vanished")
 
-    @formalin(message="MOCK Gathering peers", sleep=300)
+    @formalin(message="MOCK Gathering peers", sleep=10)
     async def mock_gather_peers(self, quality: float = 1.0):
         """
         MOCKING - Long-running task that continously updates the set of peers connected
@@ -136,7 +136,7 @@ class NetWatcher(HOPRNode):
             for peer in vanished_peers:
                 log.info(f"Peer {peer} vanished")
 
-    @formalin(message="Pinging peers", sleep=10.0)
+    @formalin(message="Pinging peers", sleep=20.0)
     @connectguard
     async def ping_peers(self):
         """
@@ -212,7 +212,7 @@ class NetWatcher(HOPRNode):
 
         self.wipe_peers()
 
-    @wakeupcall(message="MOCK Initiated peers transmission", seconds=600)
+    @formalin(message="MOCK Initiated peers transmission", sleep=600)
     async def mock_transmit_peers(self):
         """
         MOCKING - Sends the detected peers to the Aggregator
@@ -250,11 +250,10 @@ class NetWatcher(HOPRNode):
         if self.tasks:
             return
 
+        self.started = True
         self.tasks.add(asyncio.create_task(self.mock_gather_peers()))
         self.tasks.add(asyncio.create_task(self.mock_ping_peers()))
         self.tasks.add(asyncio.create_task(self.mock_transmit_peers()))
-
-        self.started = True
 
         await asyncio.gather(*self.tasks)
 
