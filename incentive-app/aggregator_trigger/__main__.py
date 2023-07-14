@@ -23,7 +23,7 @@ def main():
     log = _getlogger()
 
     try:
-        endpoint = envvar("POST_ENDPOINT")
+        endpoint = envvar("POST_TO_DB_ENDPOINT")
     except ValueError as e:
         log.error(e)
         exit()
