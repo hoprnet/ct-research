@@ -2,9 +2,8 @@ import asyncio
 import traceback
 from signal import SIGINT, SIGTERM, Signals
 
-import click
 
-from tools import _getlogger
+from tools import _getlogger, envvar
 
 from .aggregator_trigger import AggregatorTrigger
 
@@ -20,24 +19,16 @@ def stop(trigger: AggregatorTrigger, caught_signal: Signals):
     trigger.stop()
 
 
-@click.command()
-@click.option("--host", default=None, help="host to send the list to the database")
-@click.option("--port", default=None, help="port to send the list to the database")
-@click.option("--route", default=None, help="route to send the list to the database")
-def main(host: str, port: str, route: str):
+def main():
     log = _getlogger()
 
-    if not host:
-        log.error("Host not specified (use --host)")
-        exit()
-    if not port:
-        log.error("Port not specified (use --port)")
-        exit()
-    if not route:
-        log.error("Route not specified (use --route)")
+    try:
+        endpoint = envvar("POST_ENDPOINT")
+    except ValueError as e:
+        log.error(e)
         exit()
 
-    trigger = AggregatorTrigger(host=host, port=port, route=route)
+    trigger = AggregatorTrigger(endpoint)
 
     # create the event loop and register the signal handlers
     loop = asyncio.new_event_loop()
