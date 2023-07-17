@@ -112,7 +112,7 @@ class EconomicHandler(HOPRNode):
         self.save_expected_reward_csv(expected_rewards)
 
         print(f"{expected_rewards=}")
-        # print(f"{rpch_nodes_blacklist=}")
+        print(f"{rpch_nodes_blacklist=}")
 
     async def get_unique_safe_peerId_links(self):
         """
