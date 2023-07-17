@@ -1,6 +1,6 @@
 import datetime
 import threading
-
+from tools import _getlogger
 
 from .utils import (
     array_to_db_list,
@@ -9,6 +9,8 @@ from .utils import (
     get_peer_list_from_dict,
     multiple_round_nw_peer_match,
 )
+
+log = _getlogger()
 
 
 class Singleton(type):
@@ -67,6 +69,8 @@ class Aggregator(metaclass=Singleton):
             for peer, lat in items.items():
                 self._nw_peer_latency[pod_id][peer] = lat
 
+            log.info(f"Added latency data for nw {pod_id}")
+
     def get_nw_peer_latencies(self) -> dict:
         """
         Get the latency data stored.
@@ -74,6 +78,8 @@ class Aggregator(metaclass=Singleton):
         :return: the latency data stored
         """
         with self._nw_peer_latency_lock:
+            log.info("Accessed latency data")
+
             return self._nw_peer_latency
 
     def clear_nw_peer_latencies(self):
@@ -84,6 +90,8 @@ class Aggregator(metaclass=Singleton):
         """
         with self._nw_peer_latency_lock:
             self._nw_peer_latency = {}
+
+            log.info("Cleared latency data")
 
     def set_nw_update(self, pod_id: str, timestamp: datetime.datetime):
         """
@@ -96,6 +104,8 @@ class Aggregator(metaclass=Singleton):
         with self._nw_last_update_lock:
             self._nw_last_update[pod_id] = timestamp
 
+            log.info(f"Set last update timestamp for nw {pod_id} to {timestamp}")
+
     def get_nw_update(self, pod_id: str) -> datetime.datetime:
         """
         Get the last update timestamp for a specific pod.
@@ -105,7 +115,10 @@ class Aggregator(metaclass=Singleton):
         """
         with self._nw_last_update_lock:
             if pod_id not in self._nw_last_update:
+                log.error(f"Requested last update timestamp for unknown nw {pod_id}")
                 return None
+
+            log.info(f"Accessed last update timestamp for nw {pod_id}")
             return self._nw_last_update[pod_id]
 
     def clear_nw_update(self):
@@ -116,6 +129,7 @@ class Aggregator(metaclass=Singleton):
         """
         with self._nw_last_update_lock:
             self._nw_last_update = {}
+            log.info("Cleared last update timestamps")
 
     def add_nw_balance(self, pod_id: str, token: str, balance: float):
         """
@@ -132,6 +146,8 @@ class Aggregator(metaclass=Singleton):
 
             self._nw_balances[pod_id][token] = balance
 
+            log.info(f"Added balance data for nw {pod_id} ({token})")
+
     def get_nw_balances(self) -> dict:
         """
         Get the balances stored.
@@ -139,6 +155,8 @@ class Aggregator(metaclass=Singleton):
         :return: the balances stored
         """
         with self._nw_balances_lock:
+            log.info("Accessed balance data")
+
             return self._nw_balances
 
     def clear_nw_balances(self):
@@ -150,6 +168,8 @@ class Aggregator(metaclass=Singleton):
         with self._nw_balances_lock:
             self._nw_balances = {}
 
+            log.info("Cleared balance data")
+
     def convert_to_db_data(self):
         """
         Convert the data stored in self._dict to a list of tuples, describing for each
@@ -158,7 +178,10 @@ class Aggregator(metaclass=Singleton):
         with self._nw_peer_latency_lock:
             # gather all nw ids in a single list
             nw_ids = get_nw_list_from_dict(self._nw_peer_latency)
+            log.info(f"NW going to be matched: {nw_ids}")
+
             peer_ids = get_peer_list_from_dict(self._nw_peer_latency)
+            log.info(f"Peers going to be matched: {peer_ids}")
 
             # create an array with latencies stored at the right indexes, corresponding
             # to nw and peer indexes in the lists above
@@ -169,6 +192,7 @@ class Aggregator(metaclass=Singleton):
 
             # convert back each ids in matchs to the original ids
             matchs_for_db = array_to_db_list(lat_as_array, matchs, nw_ids, peer_ids)
+            log.info(f"Matchs for db:\n{matchs_for_db}")
 
         return matchs_for_db
 
@@ -177,6 +201,9 @@ class Aggregator(metaclass=Singleton):
 
         nw_balances = self.get_nw_balances()
         nw_peer_latencies = self.get_nw_peer_latencies()
+
+        log.info(f"nw-balances: {nw_balances}")
+        log.info(f"nw-peer-latencies: {nw_peer_latencies}")
 
         with self._nw_balances_lock:
             for nw_id, balances in nw_balances.items():
@@ -191,5 +218,7 @@ class Aggregator(metaclass=Singleton):
                         metrics["peers"][peer_id] = {}
 
                     metrics["peers"][peer_id] = latency
+
+        log.info(f"prepared metrics: {metrics}")
 
         return metrics
