@@ -1,5 +1,4 @@
 import asyncio
-import traceback
 import requests
 from tools.decorator import wakeupcall
 from tools import _getlogger
@@ -31,9 +30,8 @@ class AggregatorTrigger:
         log.info("Sending request to aggregator to send data to db")
         try:
             response = requests.get(self.endpoint_url)
-        except requests.exceptions.RequestException as e:
-            log.error(f"Request exception: {str(e)}")
-            log.error(traceback.format_exc())
+        except requests.exceptions.RequestException:
+            log.exception("Error while sending request to aggregator")
             return False
         else:
             log.info(response)

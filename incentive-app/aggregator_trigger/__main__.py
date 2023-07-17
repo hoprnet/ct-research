@@ -1,5 +1,4 @@
 import asyncio
-import traceback
 from signal import SIGINT, SIGTERM, Signals
 
 
@@ -24,8 +23,8 @@ def main():
 
     try:
         endpoint = envvar("POST_TO_DB_ENDPOINT")
-    except ValueError as e:
-        log.error(e)
+    except ValueError:
+        log.exception("Missing environment variables")
         exit()
 
     trigger = AggregatorTrigger(endpoint)
@@ -39,9 +38,8 @@ def main():
     try:
         loop.run_until_complete(trigger.start())
 
-    except Exception as e:
-        log.error(f"Uncaught exception ocurred: {str(e)}")
-        log.error(traceback.format_exc())
+    except Exception:
+        log.exception("Uncaught exception ocurred")
     finally:
         trigger.stop()
         loop.close()
