@@ -1,4 +1,5 @@
 from datetime import datetime
+from tools.utils import envvar
 
 from sanic import exceptions
 from sanic.request import Request
@@ -6,8 +7,17 @@ from sanic.response import html as sanic_html
 from sanic.response import json as sanic_json
 from sanic.response import text as sanic_text
 
+from tools.db_connection.database_connection import DatabaseConnection
 
 from .aggregator import Aggregator
+
+_db_columns = [
+    ("id", "SERIAL PRIMARY KEY"),
+    ("peer_id", "VARCHAR(255) NOT NULL"),
+    ("netw_ids", "VARCHAR(255)[] NOT NULL"),
+    ("latency_metric", "INTEGER[] NOT NULL"),
+    ("timestamp", "TIMESTAMP NOT NULL DEFAULT NOW()"),
+]
 
 
 def attach_endpoints(app):
@@ -118,16 +128,34 @@ def attach_endpoints(app):
     async def post_to_db(request: Request):  # pragma: no cover
         """
         Takes the peers and metrics from the _dict and sends them to the database.
-        NO NEED TO CHECK THIS METHOD, AS IT'S PURPOSE IS ONLY FOR DEBUGGING.
         """
-        if agg.db is None:
-            return sanic_text("No DB configured", status=500)
-
         matchs_for_db = agg.convert_to_db_data()
 
-        with agg.db as db:
+        with DatabaseConnection(
+            envvar("DB_NAME"),
+            envvar("DB_HOST"),
+            envvar("DB_USER"),
+            envvar("DB_PASSWORD"),
+            envvar("DB_PORT", int),
+        ) as db:
+            try:
+                db.create_table("raw_data_table", _db_columns)
+            except ValueError as e:
+                print(e)
+
+            if not db.table_exists_guard("raw_data_table"):
+                return sanic_text("Table not available", status=500)
+
+            print(f"Inserting {len(matchs_for_db)} rows into DB")
+
             for peer, nws, latencies in matchs_for_db:
-                db.insert("raw_data_table", peer=peer, nws=nws, latencies=latencies)
+                print(f"Inserting {peer} into DB")
+                db.insert(
+                    "raw_data_table",
+                    peer_id=peer,
+                    netw_ids=nws,
+                    latency_metric=latencies,
+                )
 
         return sanic_text("Sent to DB")
 

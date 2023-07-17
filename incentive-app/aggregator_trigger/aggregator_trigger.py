@@ -8,7 +8,7 @@ class AggregatorTrigger:
     every hour:minute:second.
     """
 
-    def __init__(self, host: str, port: int, route: str):
+    def __init__(self, endpoint: str):
         """
         Initialisation of the class.
         :param host: The host of the aggregator
@@ -17,9 +17,9 @@ class AggregatorTrigger:
         """
         self.started = False
         self.tasks = set[asyncio.Task]()
-        self.endpoint_url = f"http://{host}:{port}{route}"
+        self.endpoint_url = endpoint
 
-    @wakeupcall(minutes=1)
+    @wakeupcall(minutes=5)
     def send_list_to_db(self):
         """
         Sends a request to the aggregator to send its data to the db

@@ -1,7 +1,6 @@
-import threading
 import datetime
+import threading
 
-from tools.db_connection import DatabaseConnection
 
 from .utils import (
     array_to_db_list,
@@ -20,12 +19,15 @@ class Singleton(type):
     """
 
     _instances = {}
+    _lock = threading.Lock()
 
     def __call__(cls, *args, **kwargs):
         # if instance exists, return it
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         # otherwise, create it and return it
+        with cls._lock:
+            if cls not in cls._instances:
+                cls._instances[cls] = super().__call__(*args, **kwargs)
+
         return cls._instances[cls]
 
 
@@ -39,14 +41,7 @@ class Aggregator(metaclass=Singleton):
     It is implemented using threading locks to ensure concurrency safety.
     """
 
-    def __init__(
-        self,
-        db: str = None,
-        dbhost: str = None,
-        dbuser: str = None,
-        dbpassword: str = None,
-        dbport: str = None,
-    ):
+    def __init__(self):
         self._nw_peer_latency: dict = {}
         self._nw_peer_latency_lock = threading.Lock()  # thread-safe nw_peer_latency
 
@@ -55,13 +50,6 @@ class Aggregator(metaclass=Singleton):
 
         self._nw_balances: dict = {}
         self._nw_balances_lock = threading.Lock()  # thread-safe balances
-
-        if db and dbhost and dbuser and dbpassword and dbport:
-            self.db = DatabaseConnection(
-                database=db, host=dbhost, user=dbuser, password=dbpassword, port=dbport
-            )
-        else:
-            self.db = None
 
     def add_nw_peer_latencies(self, pod_id: str, items: list):
         """

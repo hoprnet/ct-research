@@ -3,6 +3,7 @@ import copy
 
 import numpy as np
 
+
 def one_round_nw_peer_match(input_array: np.ndarray) -> dict:
     """
     This method implements the pairing between netwatchers and peers for one round.
@@ -50,6 +51,7 @@ def one_round_nw_peer_match(input_array: np.ndarray) -> dict:
 
     return {i: return_dict[i] for i in keys}
 
+
 def get_peer_list_from_dict(input_dict: dict) -> list:
     """
     This method returns the list of peers ids from the input dictionary.
@@ -60,14 +62,16 @@ def get_peer_list_from_dict(input_dict: dict) -> list:
             if peer in peer_ids:
                 continue
             peer_ids.append(peer)
-            
+
     return peer_ids
-    
+
+
 def get_nw_list_from_dict(input_dict: dict) -> list:
     """
     This method returns the list of netwatchers ids from the input dictionary.
     """
     return list(input_dict.keys())
+
 
 def dict_to_array(input_dict: dict, nw_ids: list, peer_ids: list):
     """
@@ -82,9 +86,12 @@ def dict_to_array(input_dict: dict, nw_ids: list, peer_ids: list):
 
     return outarray
 
-def array_to_db_list(input_array: np.ndarray, matchs: dict, nw_ids: list, peer_ids: list):
+
+def array_to_db_list(
+    input_array: np.ndarray, matchs: dict, nw_ids: list, peer_ids: list
+):
     """
-    This method creates a list of tuples to be inserted in the database based on the 
+    This method creates a list of tuples to be inserted in the database based on the
     input array and the matchs.
     """
     matchs_for_db = []
@@ -94,8 +101,9 @@ def array_to_db_list(input_array: np.ndarray, matchs: dict, nw_ids: list, peer_i
         latencies = [int(input_array[idx, peer_idx]) for idx in nw_idxs]
 
         matchs_for_db.append((peer, nws, latencies))
-        
+
     return matchs_for_db
+
 
 def remove_matchs(input_array: np.ndarray, matchs: dict) -> np.ndarray:
     """
@@ -105,6 +113,7 @@ def remove_matchs(input_array: np.ndarray, matchs: dict) -> np.ndarray:
         input_array[value, key] = 0
 
     return input_array
+
 
 def merge_matchs(matchs: list) -> dict:
     """
@@ -119,6 +128,7 @@ def merge_matchs(matchs: list) -> dict:
             merged_matchs[key].append(value)
 
     return merged_matchs
+
 
 def multiple_round_nw_peer_match(input_array: np.ndarray, max_iter: int = None) -> dict:
     """

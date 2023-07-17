@@ -1,17 +1,21 @@
 from sanic import Sanic
 
+
+from .aggregator import Aggregator
 from .middlewares import attach_middlewares
 from .routes import attach_endpoints
 
 
 def create_app():  # pragma: no cover
+    agg = Aggregator()  # noqa: F841
+
     try:
         app = Sanic("Aggregator")
         attach_endpoints(app)
         attach_middlewares(app)
     except Exception as e:
         print(e)
-        exit
+        exit()
 
     return app
 

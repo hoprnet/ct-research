@@ -1,10 +1,9 @@
 import asyncio
 from signal import SIGINT, SIGTERM, Signals
 
-import click
 
 from tools.exit_codes import ExitCode
-from tools.utils import _getlogger
+from tools.utils import _getlogger, envvar
 
 from .netwatcher import NetWatcher
 
@@ -15,39 +14,26 @@ def stop(instance: NetWatcher, caught_signal: Signals):
     :param node: the HOPR node to stop
     :param caught_signal: the signal that triggered the stop
     """
-    click.echo(f">>> Caught signal {caught_signal.name} <<<")
-    click.echo(">>> Stopping ...")
+    print(f">>> Caught signal {caught_signal.name} <<<")
+    print(">>> Stopping ...")
     instance.stop()
 
 
-@click.command()
-@click.option("--port", default=None, help="Port to specify the node")
-@click.option("--apihost", default=None, help="API host to specify the node")
-@click.option("--apikey", default=None, help="API key to specify the node")
-@click.option("--aggpost", default=None, help="AGG post route to specify the node")
-@click.option("--latcount", default=10, type=int, help="Number of latencies to keep")
-def main(port: str, apihost: str, apikey: str, aggpost: str, latcount: int):
+def main():
     log = _getlogger()
-
-    if not port:
-        log.error("Port not specified (use --port)")
-        exit()
-    if not apihost:
-        log.error("API host not specified (use --apihost)")
-        exit()
-    if not apikey:
-        log.error("API key not specified (use --apikey)")
-        exit()
-    if not aggpost:
-        log.error("Aggregator post route not specified (use --aggpost)")
-        exit()
-    if not latcount:
-        log.error("Latency count not specified (use --latcount)")
-        exit()
-
     exit_code = ExitCode.OK
 
-    nw = NetWatcher(f"http://{apihost}:{port}", apikey, aggpost, latcount)
+    try:
+        aggpost = envvar("AGG_POST")
+        apihost = envvar("API_HOST")
+        apikey = envvar("API_KEY")
+        latcount = envvar("LAT_COUNT", int)
+        mock_mode = envvar("MOCK_MODE", bool)
+    except KeyError as e:
+        log.error(e)
+        exit(ExitCode.ERROR_MISSING_ENV_VARS)
+
+    nw = NetWatcher(apihost, apikey, aggpost, latcount)
 
     loop = asyncio.new_event_loop()
     loop.add_signal_handler(SIGINT, stop, nw, SIGINT)
@@ -55,7 +41,10 @@ def main(port: str, apihost: str, apikey: str, aggpost: str, latcount: int):
 
     # start the node and run the event loop until the node stops
     try:
-        loop.run_until_complete(nw.start())
+        if mock_mode:
+            loop.run_until_complete(nw.mock_start())
+        else:
+            loop.run_until_complete(nw.start())
 
     except Exception as e:
         log.error("Uncaught exception ocurred", str(e))
