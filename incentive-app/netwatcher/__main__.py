@@ -29,8 +29,8 @@ def main():
         apikey = envvar("API_KEY")
         latcount = envvar("LAT_COUNT", int)
         mock_mode = envvar("MOCK_MODE", bool)
-    except KeyError as e:
-        log.error(e)
+    except KeyError:
+        log.exception("Missing environment variables")
         exit(ExitCode.ERROR_MISSING_ENV_VARS)
 
     nw = NetWatcher(apihost, apikey, aggpost, latcount)
@@ -46,8 +46,8 @@ def main():
         else:
             loop.run_until_complete(nw.start())
 
-    except Exception as e:
-        log.error("Uncaught exception ocurred", str(e))
+    except Exception:
+        log.exception("Uncaught exception ocurred")
         exit_code = ExitCode.ERROR_UNCAUGHT_EXCEPTION
 
     finally:
