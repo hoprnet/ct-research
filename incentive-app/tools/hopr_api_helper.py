@@ -98,7 +98,6 @@ class HoprdAPIHelper:
             response = await self._safe_call(method, *args)
         except httpx.HTTPError as e:
             log.error(f"Error removing alias: {e}")
-            print("Hello goodbye")
             return None
         else:
             return response.json()
