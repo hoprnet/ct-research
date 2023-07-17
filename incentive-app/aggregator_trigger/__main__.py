@@ -40,7 +40,7 @@ def main():
         loop.run_until_complete(trigger.start())
 
     except Exception as e:
-        log.error("Uncaught exception ocurred", str(e))
+        log.error(f"Uncaught exception ocurred: {str(e)}")
         log.error(traceback.format_exc())
     finally:
         trigger.stop()
