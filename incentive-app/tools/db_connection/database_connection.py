@@ -48,9 +48,17 @@ class DatabaseConnection:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        self.close_connection()
+
+    def close_connection(self):
+        """
+        Closes the database connection.
+        """
         self.conn.commit()
         self.cursor.close()
         self.conn.close()
+
+        log.info(f"Database connection closed as {self._user}")
 
     def create_table(self, table: str, columns: list[str] = []):
         """
