@@ -1,4 +1,5 @@
 from datetime import datetime
+import traceback
 from tools.utils import envvar, _getlogger
 
 from sanic import exceptions
@@ -146,9 +147,11 @@ def attach_endpoints(app):
             try:
                 db.create_table("raw_data_table", _db_columns)
             except ValueError as e:
-                print(e)
+                log.error(f"Exception occured {str(e)}")
+                log.error(traceback.format_exc())
 
             if not db.table_exists_guard("raw_data_table"):
+                log.warning("Table not available, not sending to DB")
                 return sanic_text("Table not available", status=500)
 
             log.info(f"Inserting {len(matchs_for_db)} rows into DB")

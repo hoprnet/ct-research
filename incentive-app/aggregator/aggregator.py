@@ -53,7 +53,7 @@ class Aggregator(metaclass=Singleton):
         self._nw_balances: dict = {}
         self._nw_balances_lock = threading.Lock()  # thread-safe balances
 
-    def add_nw_peer_latencies(self, pod_id: str, items: list):
+    def add_nw_peer_latencies(self, pod_id: str, items: dict):
         """
         Add latency data to the aggregator for a specific pod (nw).
         Concurrent access is managed using a lock.
@@ -186,9 +186,11 @@ class Aggregator(metaclass=Singleton):
             # create an array with latencies stored at the right indexes, corresponding
             # to nw and peer indexes in the lists above
             lat_as_array = dict_to_array(self._nw_peer_latency, nw_ids, peer_ids)
+            log.info(f"Latency data converted into an array:\n{lat_as_array}")
 
             # create a dict with the best 'peer: [nw]' matchs
             matchs = multiple_round_nw_peer_match(lat_as_array, max_iter=3)
+            log.info(f"Matchs with 3 iterations:\n{matchs}")
 
             # convert back each ids in matchs to the original ids
             matchs_for_db = array_to_db_list(lat_as_array, matchs, nw_ids, peer_ids)
@@ -202,8 +204,8 @@ class Aggregator(metaclass=Singleton):
         nw_balances = self.get_nw_balances()
         nw_peer_latencies = self.get_nw_peer_latencies()
 
-        log.info(f"nw-balances: {nw_balances}")
-        log.info(f"nw-peer-latencies: {nw_peer_latencies}")
+        log.info(f"NW balances: {nw_balances}")
+        log.info(f"NW-peer-latencies: {nw_peer_latencies}")
 
         with self._nw_balances_lock:
             for nw_id, balances in nw_balances.items():
@@ -219,6 +221,6 @@ class Aggregator(metaclass=Singleton):
 
                     metrics["peers"][peer_id] = latency
 
-        log.info(f"prepared metrics: {metrics}")
+        log.info(f"Prepared metrics: {metrics}")
 
         return metrics
