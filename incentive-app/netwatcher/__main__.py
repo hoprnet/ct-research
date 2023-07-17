@@ -7,6 +7,8 @@ from tools.utils import _getlogger, envvar
 
 from .netwatcher import NetWatcher
 
+log = _getlogger()
+
 
 def stop(instance: NetWatcher, caught_signal: Signals):
     """
@@ -14,13 +16,12 @@ def stop(instance: NetWatcher, caught_signal: Signals):
     :param node: the HOPR node to stop
     :param caught_signal: the signal that triggered the stop
     """
-    print(f">>> Caught signal {caught_signal.name} <<<")
-    print(">>> Stopping ...")
+    log.info(f">>> Caught signal {caught_signal.name} <<<")
+    log.info(">>> Stopping ...")
     instance.stop()
 
 
 def main():
-    log = _getlogger()
     exit_code = ExitCode.OK
 
     try:
