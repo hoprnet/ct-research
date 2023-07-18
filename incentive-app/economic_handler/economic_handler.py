@@ -308,10 +308,10 @@ class EconomicHandler(HOPRNode):
         for value in input_dict.values():
             safe_address = value["safe_address"]
 
-            if safe_address in safe_address_counts:
-                safe_address_counts[safe_address]["count"] += 1
-            else:
-                safe_address_counts[safe_address] = {"count": 1}
+            if safe_address not in safe_address_counts:
+                safe_address_counts[safe_address] = {"count": 0}
+                
+            safe_address_counts[safe_address]["count"] += 1
 
         # Update the input_dict with the calculated splitted_stake
         for value in input_dict.values():
