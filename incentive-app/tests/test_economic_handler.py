@@ -211,6 +211,7 @@ def test_block_rpch_nodes(mock_rpch_nodes_blacklist, expected_merge_result):
     assert len(result) == len(expected_peer_ids_in_result)
 
 
+@pytest.fixture
 def expected_split_stake_result():
     return {
         "peer_id_1": {
