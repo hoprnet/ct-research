@@ -32,7 +32,7 @@ def wakeupcall(
         try:
             next_time = min_date + round((dt - min_date) / delta + 0.5) * delta
         except ZeroDivisionError:
-            log.error("Next sleep is 0 seconds..")
+            log.exception("Next sleep is 0 seconds..")
             return 1
 
         delay = int((next_time - dt).total_seconds())

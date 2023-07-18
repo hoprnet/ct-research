@@ -104,7 +104,7 @@ def merge_data():
     """
     unique_peerId_address = {
         "peer_id_1": "safe_1",
-        "peer_id_2": "safe_2",
+        "peer_id_2": "safe_1",
         "peer_id_3": "safe_3",
         "peer_id_4": "safe_4",
         "peer_id_5": "safe_5",
@@ -117,8 +117,7 @@ def merge_data():
         "peer_id_5": {"netw": ["nw_1", "nw_2", "nw_3", "nw_4"]},
     }
     subgraph_dict = {
-        "safe_1": {"stake": 10},
-        "safe_2": {"stake": 55},
+        "safe_1": {"stake": 65},
         "safe_3": {"stake": 23},
         "safe_4": {"stake": 85},
         "safe_5": {"stake": 62},
@@ -133,12 +132,12 @@ def expected_merge_result():
         "peer_id_1": {
             "safe_address": "safe_1",
             "netwatchers": ["nw_1", "nw_3"],
-            "stake": 10,
+            "stake": 65,
         },
         "peer_id_2": {
-            "safe_address": "safe_2",
+            "safe_address": "safe_1",
             "netwatchers": ["nw_1", "nw_2", "nw_4"],
-            "stake": 55,
+            "stake": 65,
         },
         "peer_id_3": {
             "safe_address": "safe_3",
@@ -212,6 +211,60 @@ def test_block_rpch_nodes(mock_rpch_nodes_blacklist, expected_merge_result):
     assert len(result) == len(expected_peer_ids_in_result)
 
 
+def expected_split_stake_result():
+    return {
+        "peer_id_1": {
+            "safe_address": "safe_1",
+            "netwatchers": ["nw_1", "nw_3"],
+            "stake": 65,
+            "safe_address_count": 2,
+            "splitted_stake": 32.5,
+        },
+        "peer_id_2": {
+            "safe_address": "safe_1",
+            "netwatchers": ["nw_1", "nw_2", "nw_4"],
+            "stake": 65,
+            "safe_address_count": 2,
+            "splitted_stake": 32.5,
+        },
+        "peer_id_3": {
+            "safe_address": "safe_3",
+            "netwatchers": ["nw_2", "nw_3", "nw_4"],
+            "stake": 23,
+            "safe_address_count": 1,
+            "splitted_stake": 23,
+        },
+        "peer_id_4": {
+            "safe_address": "safe_4",
+            "netwatchers": ["nw_1", "nw_2", "nw_3"],
+            "stake": 85,
+            "safe_address_count": 1,
+            "splitted_stake": 85,
+        },
+        "peer_id_5": {
+            "safe_address": "safe_5",
+            "netwatchers": ["nw_1", "nw_2", "nw_3", "nw_4"],
+            "stake": 62,
+            "safe_address_count": 1,
+            "splitted_stake": 62,
+        },
+    }
+
+
+def test_safe_address_split_stake(expected_merge_result, expected_split_stake_result):
+    """
+    Test whether the method correctly splits the stake
+    and returns the expected result dictionary.
+    """
+    expected_result = expected_split_stake_result
+    print(expected_result)
+
+    node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
+    result = node.safe_address_split_stake(expected_merge_result)
+    print(result)
+    assert result == ("split_stake_dict", expected_result)
+
+
 @pytest.fixture
 def mocked_model_parameters():
     return {
@@ -239,49 +292,53 @@ def mocked_model_parameters():
 
 
 @pytest.fixture
-def new_expected_merge_result(expected_merge_result):
+def new_expected_split_stake_result(expected_split_stake_result):
     """
-    Add new keys to the expected_merge_result @pytest.fixture
+    Add new keys to the expected_split_stake_result @pytest.fixture
     """
-    new_expected_merge_result = {}
-    for peer_id, values in expected_merge_result.items():
+    new_expected_split_stake_result = {}
+    for peer_id, values in expected_split_stake_result.items():
         new_values = values.copy()
         new_values["trans_stake"] = "some_value"
         new_values["prob"] = 0.1
-        new_expected_merge_result[peer_id] = new_values
+        new_expected_split_stake_result[peer_id] = new_values
 
-    return new_expected_merge_result
+    return new_expected_split_stake_result
 
 
-def test_compute_expected_reward(mocked_model_parameters, new_expected_merge_result):
+def test_compute_expected_reward(
+    mocked_model_parameters, new_expected_split_stake_result
+):
     """
     Test whether the compute_expected_reward_savecsv method generates
     the "expected_reward" value key in its output.
     """
     budget = mocked_model_parameters["budget"]
     node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
-    result = node.compute_expected_reward(new_expected_merge_result, budget)
+    result = node.compute_expected_reward(new_expected_split_stake_result, budget)
 
     # Assert Keys
-    assert set(result[1].keys()) == set(new_expected_merge_result.keys())
+    assert set(result[1].keys()) == set(new_expected_split_stake_result.keys())
 
     # Assert Values
     for value in result[1].values():
         assert "expected_reward" in value
 
 
-def test_save_expected_reward_csv_success(new_expected_merge_result):
+def test_save_expected_reward_csv_success(new_expected_split_stake_result):
     """
     Test whether the save_expected_reward_csv function returns the confirmation
     message in case of no errors.
     """
     node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
-    result = node.save_expected_reward_csv(new_expected_merge_result)
+    result = node.save_expected_reward_csv(new_expected_split_stake_result)
 
     assert result is True
 
 
-def test_save_expected_reward_csv_OSError_folder_creation(new_expected_merge_result):
+def test_save_expected_reward_csv_OSError_folder_creation(
+    new_expected_split_stake_result,
+):
     """
     Test whether an OSError gets triggered when the folder creation
     or the writing of the csv file fails.
@@ -289,12 +346,12 @@ def test_save_expected_reward_csv_OSError_folder_creation(new_expected_merge_res
     with patch("os.makedirs") as mock_makedirs:
         mock_makedirs.side_effect = OSError("Mocked OSError")
         node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
-        result = node.save_expected_reward_csv(new_expected_merge_result)
+        result = node.save_expected_reward_csv(new_expected_split_stake_result)
 
     assert result is False
 
 
-def test_save_expected_reward_csv_OSError_writing_csv(new_expected_merge_result):
+def test_save_expected_reward_csv_OSError_writing_csv(new_expected_split_stake_result):
     """
     Test whether an OSError gets triggered when something goes wrong
     while writing the csv file.
@@ -303,12 +360,12 @@ def test_save_expected_reward_csv_OSError_writing_csv(new_expected_merge_result)
         with patch("builtins.open") as mock_open:
             mock_open.side_effect = OSError("Mocked OSError")
             node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
-            result = node.save_expected_reward_csv(new_expected_merge_result)
+            result = node.save_expected_reward_csv(new_expected_split_stake_result)
 
     assert result is False
 
 
-def test_probability_sum(mocked_model_parameters, expected_merge_result):
+def test_probability_sum(mocked_model_parameters, expected_split_stake_result):
     """
     Test whether the sum of probabilities is "close" to 1 due to
     floating-point precision. Not that the result is a tuple:
@@ -316,7 +373,7 @@ def test_probability_sum(mocked_model_parameters, expected_merge_result):
     """
     parameters = mocked_model_parameters["parameters"]
     equations = mocked_model_parameters["equations"]
-    merged_result = expected_merge_result
+    merged_result = expected_split_stake_result
 
     node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
     result = node.compute_ct_prob(parameters, equations, merged_result)

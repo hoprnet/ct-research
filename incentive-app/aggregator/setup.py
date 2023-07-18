@@ -4,6 +4,9 @@ from sanic import Sanic
 from .aggregator import Aggregator
 from .middlewares import attach_middlewares
 from .routes import attach_endpoints
+from tools import _getlogger
+
+log = _getlogger()
 
 
 def create_app():  # pragma: no cover
@@ -13,8 +16,8 @@ def create_app():  # pragma: no cover
         app = Sanic("Aggregator")
         attach_endpoints(app)
         attach_middlewares(app)
-    except Exception as e:
-        print(e)
+    except Exception:
+        log.exception("Error while creating app")
         exit()
 
     return app

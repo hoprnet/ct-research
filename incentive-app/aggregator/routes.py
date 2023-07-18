@@ -1,5 +1,5 @@
 from datetime import datetime
-from tools.utils import envvar
+from tools.utils import envvar, _getlogger
 
 from sanic import exceptions
 from sanic.request import Request
@@ -22,6 +22,7 @@ _db_columns = [
 
 def attach_endpoints(app):
     agg = Aggregator()
+    log = _getlogger()
 
     @app.route("/aggregator/list", methods=["POST"])
     async def post_list(request: Request):
@@ -46,6 +47,8 @@ def attach_endpoints(app):
         if len(request.json["list"]) == 0:
             raise exceptions.BadRequest("`list` must not be empty")
 
+        log.info(f"Received list from {request.json['id']}")
+
         agg.add_nw_peer_latencies(request.json["id"], request.json["list"])
         agg.set_nw_update(request.json["id"], datetime.now())
 
@@ -59,6 +62,8 @@ def attach_endpoints(app):
         - id: the network UUID of the pod
         - list: a list of peers with their latency
         """
+
+        log.info("Returned nw-peer-latency list")
         return sanic_json(agg.get_nw_peer_latencies())
 
     @app.route("/aggregator/list_ui", methods=["GET"])
@@ -141,15 +146,16 @@ def attach_endpoints(app):
             try:
                 db.create_table("raw_data_table", _db_columns)
             except ValueError as e:
-                print(e)
+                log.warning(f"Error creating table: {e}")
 
             if not db.table_exists_guard("raw_data_table"):
+                log.error("Table not available, not sending to DB")
                 return sanic_text("Table not available", status=500)
 
-            print(f"Inserting {len(matchs_for_db)} rows into DB")
+            log.info(f"Inserting {len(matchs_for_db)} rows into DB")
 
             for peer, nws, latencies in matchs_for_db:
-                print(f"Inserting {peer} into DB")
+                log.info(f"Inserting {peer} into DB")
                 db.insert(
                     "raw_data_table",
                     peer_id=peer,
@@ -173,6 +179,8 @@ def attach_endpoints(app):
         if not isinstance(request.json["balances"], dict):
             raise exceptions.BadRequest("`balances` must be a dict")
 
+        log.info(f"Received balances from {request.json['id']}")
+
         for token, amount in request.json["balances"].items():
             agg.add_nw_balance(request.json["id"], token, amount)
 
@@ -180,4 +188,6 @@ def attach_endpoints(app):
 
     @app.route("/aggregator/metrics", methods=["GET"])
     async def get_metrics(request: Request):
+        log.info("Metrics requested")
+
         return sanic_json(agg.get_metrics())
