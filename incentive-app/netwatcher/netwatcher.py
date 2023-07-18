@@ -5,7 +5,7 @@ import uuid
 
 from aiohttp import ClientSession
 
-from tools.decorator import connectguard, formalin, wakeupcall
+from tools.decorator import connectguard, formalin
 from tools.hopr_node import HOPRNode
 
 log = logging.getLogger(__name__)
@@ -85,8 +85,8 @@ class NetWatcher(HOPRNode):
                 if response.status == 200:
                     log.info(f"Transmisted peers: {', '.join(short_list)}")
                     return True
-        except Exception as e:  # ClientConnectorError
-            log.error(f"Error transmitting peers: {e}")
+        except Exception:  # ClientConnectorError
+            log.exception("Error transmitting peers")
 
         return False
 
@@ -127,14 +127,17 @@ class NetWatcher(HOPRNode):
 
         if found_peers:
             new_peers = set(found_peers) - set(self.peers)
-            vanished_peers = set(self.peers) - set(found_peers)
+            # vanished_peers = set(self.peers) - set(found_peers)
 
             for peer in new_peers:
                 self.peers.add(peer)
                 log.info(f"Found new peer {peer}")
 
-            for peer in vanished_peers:
-                log.info(f"Peer {peer} vanished")
+            log.info(f"Total peers: {len(self.peers)}")
+
+
+            # for peer in vanished_peers:
+            #     log.info(f"Peer {peer} vanished")
 
     @formalin(message="Pinging peers", sleep=20.0)
     @connectguard
@@ -197,7 +200,7 @@ class NetWatcher(HOPRNode):
             self.latency[peer_id].append(latency)
             self.latency[peer_id] = self.latency[peer_id][-self.max_lat_count :]
 
-    @wakeupcall(message="Initiated peers transmission", seconds=60)
+    @formalin(message="Initiated peers transmission", sleep=60)
     @connectguard
     async def transmit_peers(self):
         """

@@ -176,8 +176,8 @@ class HoprdAPIHelper:
 
         try:
             response = await self._safe_call(method, *args)
-        except httpx.HTTPError as e:
-            log.error(f"Error getting tickets in channel: {e}")
+        except httpx.HTTPError:
+            log.exception("Error getting tickets in channel")
             return None
         else:
             return response.json()
@@ -243,8 +243,8 @@ class HoprdAPIHelper:
 
         try:
             response = await self._safe_call(method, **kwargs)
-        except httpx.HTTPError as e:
-            log.error(f"Could not get peers from {self.url}: {e}")
+        except httpx.HTTPError:
+            log.exception(f"Could not get peers from {self.url}")
             return None
         else:
             json_body = response.json()
