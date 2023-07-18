@@ -304,26 +304,22 @@ class EconomicHandler(HOPRNode):
         """
         safe_address_counts = {}
 
-        # Calculate the aggregated stake for each safe_address
+        # Calculate the number of safe_addresses by peer_id
         for value in input_dict.values():
             safe_address = value["safe_address"]
 
             if safe_address not in safe_address_counts:
-                safe_address_counts[safe_address] = {"count": 0}
-                
-            safe_address_counts[safe_address]["count"] += 1
+                safe_address_counts[safe_address] = 0
+
+            safe_address_counts[safe_address] += 1
 
         # Update the input_dict with the calculated splitted_stake
         for value in input_dict.values():
             safe_address = value["safe_address"]
             stake = value["stake"]
-            count = safe_address_counts[safe_address]["count"]
-            value["count"] = count
+            value["safe_address_count"] = safe_address_counts[safe_address]
 
-            if count > 1:
-                value["splitted_stake"] = stake / count
-            else:
-                value["splitted_stake"] = stake
+            value["splitted_stake"] = stake / value["safe_address_count"]
 
         return "split_stake_dict", input_dict
 
