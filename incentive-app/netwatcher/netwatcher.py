@@ -131,10 +131,7 @@ class NetWatcher(HOPRNode):
 
             for peer in new_peers:
                 self.peers.add(peer)
-                log.info(f"Found new peer {peer}")
-
-            log.info(f"Total peers: {len(self.peers)}")
-
+                log.info(f"Found new peer {peer} (total of {len(self.peers)})")
 
             # for peer in vanished_peers:
             #     log.info(f"Peer {peer} vanished")
