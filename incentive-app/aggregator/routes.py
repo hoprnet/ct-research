@@ -145,11 +145,11 @@ def attach_endpoints(app):
         ) as db:
             try:
                 db.create_table("raw_data_table", _db_columns)
-            except ValueError:
-                log.exception("Error creating table")
+            except ValueError as e:
+                log.warning(f"Error creating table: {e}")
 
             if not db.table_exists_guard("raw_data_table"):
-                log.warning("Table not available, not sending to DB")
+                log.error("Table not available, not sending to DB")
                 return sanic_text("Table not available", status=500)
 
             log.info(f"Inserting {len(matchs_for_db)} rows into DB")
