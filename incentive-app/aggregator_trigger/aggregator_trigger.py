@@ -1,6 +1,6 @@
 import asyncio
 import requests
-from tools.decorator import wakeupcall
+from tools.decorator import formalin
 from tools import _getlogger
 
 log = _getlogger()
@@ -22,7 +22,7 @@ class AggregatorTrigger:
         self.tasks = set[asyncio.Task]()
         self.endpoint_url = endpoint
 
-    @wakeupcall(minutes=5)
+    @formalin(sleep=300)
     async def send_list_to_db(self):
         """
         Sends a request to the aggregator to send its data to the db
@@ -41,6 +41,8 @@ class AggregatorTrigger:
         """
         Stops the tasks of this node
         """
+        log.info("Stopping AggTrigger instance")
+        
         self.started = False
         for task in self.tasks:
             task.cancel()
@@ -50,6 +52,7 @@ class AggregatorTrigger:
         """
         Starts the automatic triggering of the aggregator
         """
+        log.info("Starting AggTrigger instance")
         if self.tasks:
             return
 
