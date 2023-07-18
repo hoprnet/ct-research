@@ -89,6 +89,12 @@ class EconomicHandler(HOPRNode):
             pluto_keys_in_mockdb_data,
             pluto_keys_in_mocksubraph_data,
         )
+        print(metrics_dict)
+
+        # Exclude RPCh entry and exit nodes from the reward computation
+        _, metrics_dict_excluding_rpch = self.block_rpch_nodes(
+            rpch_nodes_blacklist, metrics_dict
+        )
 
         # Extract Parameters
         parameters, equations, budget = parameters_equations_budget
@@ -97,7 +103,7 @@ class EconomicHandler(HOPRNode):
         _, ct_prob_dict = self.compute_ct_prob(
             parameters,
             equations,
-            metrics_dict,
+            metrics_dict_excluding_rpch,
         )
 
         # calculate expected rewards
@@ -289,6 +295,23 @@ class EconomicHandler(HOPRNode):
             return "merged_data", {}
 
         return "merged_data", merged_result
+
+    def block_rpch_nodes(
+        self, blacklist_rpch_nodes: list, merged_metrics_subgraph_topology: dict
+    ):
+        """
+        Removes RPCh entry and exit nodes from the dictioanry that
+        contains the merged results of database metrics, subgraph, and topology.
+        :param: blacklist_rpch_nodes (list): Containing a list of RPCh nodes
+        :param: merged_metrics_subgraph_topology (dict): merged data
+        :returns: (dict): Updated merged_metrics_subgraph_topology dataset
+        """
+        merged_metrics_subgraph_topology = {
+            k: v
+            for k, v in merged_metrics_subgraph_topology.items()
+            if k not in blacklist_rpch_nodes
+        }
+        return "dict_excluding_rpch_nodes", merged_metrics_subgraph_topology
 
     def compute_ct_prob(self, parameters, equations, merged_result):
         """
