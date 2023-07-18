@@ -19,8 +19,8 @@ def main():
         envvar("DB_PORT", int)
         host = envvar("API_HOST")
         port = envvar("API_PORT", int)
-    except ValueError as e:
-        log.error(e)
+    except ValueError:
+        log.exception("Error while loading environment variables")
         exit(1)
 
     loader = AppLoader(factory=partial(create_app))

@@ -34,7 +34,7 @@ class AggregatorTrigger:
             log.exception("Error while sending request to aggregator")
             return False
         else:
-            log.info(response)
+            log.info(f"Response for `send_list`: {response}")
             return True
 
     def stop(self):
@@ -42,7 +42,7 @@ class AggregatorTrigger:
         Stops the tasks of this node
         """
         log.info("Stopping AggTrigger instance")
-        
+
         self.started = False
         for task in self.tasks:
             task.cancel()

@@ -85,8 +85,8 @@ class NetWatcher(HOPRNode):
                 if response.status == 200:
                     log.info(f"Transmisted peers: {', '.join(short_list)}")
                     return True
-        except Exception as e:  # ClientConnectorError
-            log.error(f"Error transmitting peers: {e}")
+        except Exception:  # ClientConnectorError
+            log.exception("Error transmitting peers")
 
         return False
 
