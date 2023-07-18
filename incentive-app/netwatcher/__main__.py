@@ -7,6 +7,8 @@ from tools.utils import _getlogger, envvar
 
 from .netwatcher import NetWatcher
 
+log = _getlogger()
+
 
 def stop(instance: NetWatcher, caught_signal: Signals):
     """
@@ -14,13 +16,12 @@ def stop(instance: NetWatcher, caught_signal: Signals):
     :param node: the HOPR node to stop
     :param caught_signal: the signal that triggered the stop
     """
-    print(f">>> Caught signal {caught_signal.name} <<<")
-    print(">>> Stopping ...")
+    log.info(f">>> Caught signal {caught_signal.name} <<<")
+    log.info(">>> Stopping ...")
     instance.stop()
 
 
 def main():
-    log = _getlogger()
     exit_code = ExitCode.OK
 
     try:
@@ -29,8 +30,8 @@ def main():
         apikey = envvar("API_KEY")
         latcount = envvar("LAT_COUNT", int)
         mock_mode = envvar("MOCK_MODE", bool)
-    except KeyError as e:
-        log.error(e)
+    except KeyError:
+        log.exception("Missing environment variables")
         exit(ExitCode.ERROR_MISSING_ENV_VARS)
 
     nw = NetWatcher(apihost, apikey, aggpost, latcount)
@@ -46,8 +47,8 @@ def main():
         else:
             loop.run_until_complete(nw.start())
 
-    except Exception as e:
-        log.error("Uncaught exception ocurred", str(e))
+    except Exception:
+        log.exception("Uncaught exception ocurred")
         exit_code = ExitCode.ERROR_UNCAUGHT_EXCEPTION
 
     finally:

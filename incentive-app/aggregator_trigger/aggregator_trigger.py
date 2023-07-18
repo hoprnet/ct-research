@@ -1,6 +1,9 @@
 import asyncio
 import requests
 from tools.decorator import wakeupcall
+from tools import _getlogger
+
+log = _getlogger()
 
 
 class AggregatorTrigger:
@@ -20,18 +23,18 @@ class AggregatorTrigger:
         self.endpoint_url = endpoint
 
     @wakeupcall(minutes=5)
-    def send_list_to_db(self):
+    async def send_list_to_db(self):
         """
         Sends a request to the aggregator to send its data to the db
         """
+        log.info("Sending request to aggregator to send data to db")
         try:
             response = requests.get(self.endpoint_url)
-        # catch request exceptions
-        except requests.exceptions.RequestException as e:
-            print("Request exception: ", e)
+        except requests.exceptions.RequestException:
+            log.exception("Error while sending request to aggregator")
             return False
         else:
-            print("Response: ", response)
+            log.info(response)
             return True
 
     def stop(self):
