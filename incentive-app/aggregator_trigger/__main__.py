@@ -1,11 +1,12 @@
 import asyncio
-import traceback
 from signal import SIGINT, SIGTERM, Signals
 
 
 from tools import _getlogger, envvar
 
 from .aggregator_trigger import AggregatorTrigger
+
+log = _getlogger()
 
 
 def stop(trigger: AggregatorTrigger, caught_signal: Signals):
@@ -14,18 +15,16 @@ def stop(trigger: AggregatorTrigger, caught_signal: Signals):
     :param node: the HOPR node to stop
     :param caught_signal: the signal that triggered the stop
     """
-    print(f">>> Caught signal {caught_signal.name} <<<")
-    print(">>> Stopping ...")
+    log.info(f">>> Caught signal {caught_signal.name} <<<")
+    log.info(">>> Stopping ...")
     trigger.stop()
 
 
 def main():
-    log = _getlogger()
-
     try:
         endpoint = envvar("POST_TO_DB_ENDPOINT")
-    except ValueError as e:
-        log.error(e)
+    except ValueError:
+        log.exception("Missing environment variables")
         exit()
 
     trigger = AggregatorTrigger(endpoint)
@@ -39,9 +38,8 @@ def main():
     try:
         loop.run_until_complete(trigger.start())
 
-    except Exception as e:
-        log.error("Uncaught exception ocurred", str(e))
-        log.error(traceback.format_exc())
+    except Exception:
+        log.exception("Uncaught exception ocurred")
     finally:
         trigger.stop()
         loop.close()
