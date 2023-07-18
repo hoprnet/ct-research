@@ -131,10 +131,7 @@ class NetWatcher(HOPRNode):
 
             for peer in new_peers:
                 self.peers.add(peer)
-                log.info(f"Found new peer {peer}")
-
-            log.info(f"Total peers: {len(self.peers)}")
-
+                log.info(f"Found new peer {peer} (total of {len(self.peers)})")
 
             # for peer in vanished_peers:
             #     log.info(f"Peer {peer} vanished")
@@ -195,7 +192,7 @@ class NetWatcher(HOPRNode):
             # Above delay is set to allow the second peer's pinging from the test file
             # before timeout (defined by test method). Can be changed.
 
-            latency = random.randint(10, 100) if random.random() < 0.8 else None
+            latency = random.randint(10, 100) if random.random() < 0.8 else 0
 
             self.latency[peer_id].append(latency)
             self.latency[peer_id] = self.latency[peer_id][-self.max_lat_count :]
