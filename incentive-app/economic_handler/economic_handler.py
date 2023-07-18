@@ -89,6 +89,11 @@ class EconomicHandler(HOPRNode):
             pluto_keys_in_mockdb_data,
             pluto_keys_in_mocksubraph_data,
         )
+        print(metrics_dict)
+
+        # update the metrics dictionary to allow for 1 to many safe address peerID links
+        _, one_to_many_safe_peerid_links = self.safe_address_split_stake(metrics_dict)
+        print(one_to_many_safe_peerid_links)
 
         # Extract Parameters
         parameters, equations, budget = parameters_equations_budget
@@ -97,7 +102,7 @@ class EconomicHandler(HOPRNode):
         _, ct_prob_dict = self.compute_ct_prob(
             parameters,
             equations,
-            metrics_dict,
+            one_to_many_safe_peerid_links,
         )
 
         # calculate expected rewards
@@ -290,6 +295,34 @@ class EconomicHandler(HOPRNode):
 
         return "merged_data", merged_result
 
+    def safe_address_split_stake(self, input_dict: dict):
+        """
+        Split the stake managed by a safe address equaly between the nodes
+        that the safe manages.
+        :param: input_dict: dictionary containing peerID, safeAdress and stake.
+        :returns: updated dictionary with the splitted stake and the node counts
+        """
+        safe_address_counts = {}
+
+        # Calculate the number of safe_addresses by peer_id
+        for value in input_dict.values():
+            safe_address = value["safe_address"]
+
+            if safe_address not in safe_address_counts:
+                safe_address_counts[safe_address] = 0
+
+            safe_address_counts[safe_address] += 1
+
+        # Update the input_dict with the calculated splitted_stake
+        for value in input_dict.values():
+            safe_address = value["safe_address"]
+            stake = value["stake"]
+            value["safe_address_count"] = safe_address_counts[safe_address]
+
+            value["splitted_stake"] = stake / value["safe_address_count"]
+
+        return "split_stake_dict", input_dict
+
     def compute_ct_prob(self, parameters, equations, merged_result):
         """
         Evaluate the function for each stake value in the merged_result dictionary.
@@ -303,7 +336,7 @@ class EconomicHandler(HOPRNode):
 
         # compute transformed stake
         for key, value in merged_result.items():
-            stake = value["stake"]
+            stake = value["splitted_stake"]
             params = {param: value["value"] for param, value in parameters.items()}
             params["x"] = stake
 
