@@ -91,8 +91,15 @@ class EconomicHandler(HOPRNode):
         )
         print(metrics_dict)
 
+        # Exclude RPCh entry and exit nodes from the reward computation
+        _, metrics_dict_excluding_rpch = self.block_rpch_nodes(
+            rpch_nodes_blacklist, metrics_dict
+        )
+
         # update the metrics dictionary to allow for 1 to many safe address peerID links
-        _, one_to_many_safe_peerid_links = self.safe_address_split_stake(metrics_dict)
+        _, one_to_many_safe_peerid_links = self.safe_address_split_stake(
+            metrics_dict_excluding_rpch
+        )
         print(one_to_many_safe_peerid_links)
 
         # Extract Parameters
@@ -294,6 +301,23 @@ class EconomicHandler(HOPRNode):
             return "merged_data", {}
 
         return "merged_data", merged_result
+
+    def block_rpch_nodes(
+        self, blacklist_rpch_nodes: list, merged_metrics_subgraph_topology: dict
+    ):
+        """
+        Removes RPCh entry and exit nodes from the dictioanry that
+        contains the merged results of database metrics, subgraph, and topology.
+        :param: blacklist_rpch_nodes (list): Containing a list of RPCh nodes
+        :param: merged_metrics_subgraph_topology (dict): merged data
+        :returns: (dict): Updated merged_metrics_subgraph_topology dataset
+        """
+        merged_metrics_subgraph_topology = {
+            k: v
+            for k, v in merged_metrics_subgraph_topology.items()
+            if k not in blacklist_rpch_nodes
+        }
+        return "dict_excluding_rpch_nodes", merged_metrics_subgraph_topology
 
     def safe_address_split_stake(self, input_dict: dict):
         """

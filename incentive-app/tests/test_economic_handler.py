@@ -192,6 +192,26 @@ def test_merge_topology_metricdb_subgraph_exception(merge_data):
 
 
 @pytest.fixture
+def mock_rpch_nodes_blacklist():
+    return ["peer_id_4", "peer_id_5"]
+
+
+def test_block_rpch_nodes(mock_rpch_nodes_blacklist, expected_merge_result):
+    """
+    Test whether the function returns the updated dictionary without the rpch
+    node keys. Test that the correct amount of peer_ids gets filtered out and
+    that the correct peer_ids are filtered out.
+    """
+    expected_peer_ids_in_result = {"peer_id_1", "peer_id_2", "peer_id_3"}
+    node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
+
+    _, result = node.block_rpch_nodes(mock_rpch_nodes_blacklist, expected_merge_result)
+
+    assert all(peer_id in result for peer_id in expected_peer_ids_in_result)
+    assert len(result) == len(expected_peer_ids_in_result)
+
+
+@pytest.fixture
 def expected_split_stake_result():
     return {
         "peer_id_1": {
