@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 
 
 class EconomicHandler(HOPRNode):
-    def __init__(self, url: str, key: str, rpch_endpoint: str):
+    def __init__(self, url: str, key: str, rpch_endpoint: str, subgraph_key: str):
         """
         :param url: the url of the HOPR node
         :param key: the API key of the HOPR node
@@ -27,6 +27,7 @@ class EconomicHandler(HOPRNode):
 
         self.tasks = set[asyncio.Task]()
         self.rpch_endpoint = rpch_endpoint
+        self.subgraph_key = subgraph_key
 
         super().__init__(url=url, key=key)
 
@@ -52,11 +53,21 @@ class EconomicHandler(HOPRNode):
         """
         tasks = set[asyncio.Task]()
 
-        expected_order = ["unique_peer_safe_links", "params", "rpch"]
+        expected_order = ["unique_peer_safe_links", "params", "rpch", "subgraph_data"]
 
         tasks.add(asyncio.create_task(self.get_unique_safe_peerId_links()))
         tasks.add(asyncio.create_task(self.read_parameters_and_equations()))
         tasks.add(asyncio.create_task(self.blacklist_rpch_nodes(self.rpch_endpoint)))
+        tasks.add(
+            asyncio.create_task(
+                self.get_staking_participations(
+                    api_key=self.subgraph_key,
+                    subgraph_id="DrkbaCvNGVcNH1RghepLRy6NSHFi8Dmwp4T2LN3LqcjY",
+                    staking_season="0x65c39e6bd97f80b5ae5d2120a47644578fd2b8dc",
+                    pagination_skip_size=1000,  # Maximum entries per query allowed by TheGraph
+                )
+            )
+        )
 
         await asyncio.sleep(0)
 
@@ -73,6 +84,7 @@ class EconomicHandler(HOPRNode):
         unique_safe_peerId_links = ordered_tasks[0][1]
         parameters_equations_budget = ordered_tasks[1][1:]
         rpch_nodes_blacklist = ordered_tasks[2][1]
+        staking_participations = ordered_tasks[3][1]
 
         # helper functions that allow to test the code by inserting
         # the peerIDs of the pluto nodes (SUBJECT TO REMOVAL)
@@ -118,8 +130,9 @@ class EconomicHandler(HOPRNode):
         # output expected rewards as a csv file
         self.save_expected_reward_csv(expected_rewards)
 
-        print(f"{expected_rewards=}")
-        print(f"{rpch_nodes_blacklist=}")
+        print(f"{staking_participations}")
+        # print(f"{expected_rewards=}")
+        # print(f"{rpch_nodes_blacklist=}")
 
     async def get_unique_safe_peerId_links(self):
         """
@@ -269,6 +282,89 @@ class EconomicHandler(HOPRNode):
             log.error(traceback.format_exc())
 
         return "rpch", []
+
+    async def get_staking_participations(
+        self,
+        api_key: str,
+        subgraph_id: str,
+        staking_season: str,
+        pagination_skip_size: int,
+    ):
+        """
+        This function retrieves staking participation data from the specified
+        staking_season smart contract deployed on gnosis chain using The Graph API.
+        The function uses pagination to handle large result sets, allowing retrieval of
+        all staking participation records incrementally.
+        :param: api_key (str): The API key for accessing The Graph API.
+        :param: subgraph_id (str): The id of the publicly deployed subgraph.
+        :param: staking_season (str): The sc address of a given staking season.
+        :param: pagination_skip_size (int): The number of records per pagination step.
+        :returns: Tuple[str, Dict[str, int]]: A tuple containing the result identifier
+        and a dictionary with account IDs of stakers and the amount of staked tokens.
+        """
+        query = """
+            query GetStakingParticipations($stakingSeason: String, $first: Int, $skip: Int) {
+                stakingParticipations(first: $first, skip: $skip, where: { stakingSeason: $stakingSeason }) {
+                    id
+                    account {
+                        id
+                    }
+                    stakingSeason {
+                        id
+                    }
+                    actualLockedTokenAmount
+                }
+            }
+        """
+
+        url = f"https://gateway.thegraph.com/api/{api_key}/subgraphs/id/{subgraph_id}"
+        variables = {
+            "stakingSeason": staking_season,
+            "first": pagination_skip_size,
+            "skip": 0,
+        }
+
+        subgraph_dict = {}
+        async with aiohttp.ClientSession() as session:
+            while True:
+                try:
+                    async with session.post(
+                        url, json={"query": query, "variables": variables}
+                    ) as response:
+                        if response.status == 200:
+                            json_data = await response.json()
+                            staking_participations = json_data["data"][
+                                "stakingParticipations"
+                            ]
+                            for item in staking_participations:
+                                subgraph_dict[item["account"]["id"]] = (
+                                    int(item["actualLockedTokenAmount"]) / 1e18
+                                )  # 1e18: Decimal Precision of the HOPR token
+
+                            if len(staking_participations) < pagination_skip_size:
+                                break  # No more data to fetch, exit the loop
+
+                            variables[
+                                "skip"
+                            ] += pagination_skip_size  # Increment skip for next iteration
+                        else:
+                            log.error(f"Received status code: {response.status}")
+                            break
+
+                except aiohttp.ClientError as e:
+                    log.exception(f"An error occurred while making the request: {e}")
+                    return "subgraph_data", {}
+                except ValueError as e:
+                    log.exception(
+                        f"An error occurred while parsing the response as JSON: {e}"
+                    )
+                    return "subgraph_data", {}
+                except Exception as e:
+                    log.exception(f"An unexpected error occurred: {e}")
+                    return "subgraph_data", {}
+
+        log.info("Subgraph data dictionary generated")
+        return "subgraph_data", subgraph_dict
 
     def merge_topology_metricdb_subgraph(
         self,

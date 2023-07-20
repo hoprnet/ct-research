@@ -10,7 +10,9 @@ def test_stop_instance():
     Test whether the stop function correctly calls the stop method of the node object
     with the SIGINT signal.
     """
-    node = EconomicHandler("some_url", "some_key", "some_rpch_endpoint")
+    node = EconomicHandler(
+        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+    )
 
     # Create a mock object of the stop method of the EconomicHandler class
     # to test whether the stop method calls the mock object.

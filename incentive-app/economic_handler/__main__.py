@@ -14,7 +14,8 @@ from .utils_econhandler import stop_instance
 @click.option("--apihost", default=None, help="IP-address of the API host")
 @click.option("--apikey", default=None, help="API key of the API host")
 @click.option("--rcphnodes", default=None, help="API endpoint for RPCh nodes")
-def main(port: str, apihost: str, apikey: str, rcphnodes: str):
+@click.option("--subgraphkey", default=None, help="API key of the subgraph")
+def main(port: str, apihost: str, apikey: str, rcphnodes: str, subgraphkey: str):
     """main"""
     log = _getlogger()
 
@@ -30,10 +31,15 @@ def main(port: str, apihost: str, apikey: str, rcphnodes: str):
     if not rcphnodes:
         log.error("Endpoint for RPCh nodes not specified (use --rcphnodes)")
         exit()
+    if not subgraphkey:
+        log.error("API key not specified (use --subgraphkey)")
+        exit()
 
     exit_code = ExitCode.OK
 
-    economic_handler = EconomicHandler(f"http://{apihost}:{port}", apikey, rcphnodes)
+    economic_handler = EconomicHandler(
+        f"http://{apihost}:{port}", apikey, rcphnodes, subgraphkey
+    )
 
     loop = asyncio.new_event_loop()
     loop.add_signal_handler(SIGINT, stop_instance, economic_handler, SIGINT)
