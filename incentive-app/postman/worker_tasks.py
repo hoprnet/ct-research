@@ -2,15 +2,17 @@ import asyncio
 import logging
 
 from celery import Celery
+
 from tools import HoprdAPIHelper, envvar
 
 log = logging.getLogger(__name__)
 
-PROJECT_NAME = envvar("PROJECT_NAME")
-CELERY_BROKER_URL = envvar("CELERY_BROKER_URL")
-CELERY_RESULT_BACKEND = envvar("CELERY_RESULT_BACKEND")
 
-app = Celery(name=PROJECT_NAME, broker=CELERY_BROKER_URL, backend=CELERY_RESULT_BACKEND)
+app = Celery(
+    name=envvar("PROJECT_NAME"),
+    broker=envvar("CELERY_BROKER_URL"),
+    backend=envvar("CELERY_RESULT_BACKEND"),
+)
 
 
 # the name of the task is the name of the "<task_name>.<worker_peer_id>"
@@ -37,6 +39,7 @@ async def async_send_1_hop_message(
     :param peer_id: Peer ID to send messages to.
     :param count: Number of messages to send.
     :param node_list: List of nodes connected to this peer, they can serve as backups.
+    :param node_index: Index of the node in the list of nodes.
     """
 
     api_host = envvar("API_HOST")
