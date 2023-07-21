@@ -13,6 +13,7 @@ CELERY_RESULT_BACKEND = envvar("CELERY_RESULT_BACKEND")
 app = Celery(name=PROJECT_NAME, broker=CELERY_BROKER_URL, backend=CELERY_RESULT_BACKEND)
 
 
+# the name of the task is the name of the "<task_name>.<worker_peer_id>"
 @app.task(name=f"{envvar('TASK_NAME')}.{envvar('WORKER_PEER_ID')}")
 def send_1_hop_message(peer: str, count: int, node_list: list[str], node_index: int):
     """
