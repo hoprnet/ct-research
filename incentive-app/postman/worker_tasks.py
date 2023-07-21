@@ -28,7 +28,7 @@ def send_1_hop_message(peer: str, count: int, node_list: list[str], node_index: 
     :param node_list: List of nodes connected to this peer, they can serve as backups.
     :param node_index: Index of the node in the list of nodes.
     """
-    asyncio.run(async_send_1_hop_message(peer, count, node_list, node_index))
+    return asyncio.run(async_send_1_hop_message(peer, count, node_list, node_index))
 
 
 async def async_send_1_hop_message(
@@ -82,6 +82,7 @@ async def async_send_1_hop_message(
         f"Sending {count} messages to `{peer_id}` "
         + f"via {node_list[node_index]}(#{node_index} - {api_host})"
     )
+
     # node is reachable, messages can be sent
     # TODO - SEND_MESSAGES_HERE
 
