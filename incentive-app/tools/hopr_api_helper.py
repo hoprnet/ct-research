@@ -26,6 +26,18 @@ class HoprdAPIHelper:
     def token(self) -> str:
         return self._token
 
+    async def _unsafe_call(self, func: Callable, *args, **kwargs):
+        """
+        Wrapper around each API call to handle exceptions
+        """
+        try:
+            response = await func(*args, **kwargs)
+            response.raise_for_status()
+        except httpx.HTTPError:
+            log.warning(f"Error calling `{func.__name__}`")
+
+        return response
+
     async def _safe_call(self, func: Callable, *args, **kwargs):
         """
         Wrapper around each API call to handle exceptions
@@ -34,7 +46,7 @@ class HoprdAPIHelper:
             response = await func(*args, **kwargs)
             response.raise_for_status()
         except httpx.HTTPError as e:
-            log.exception(f"Error calling {func.__name__}")
+            log.exception(f"Error calling `{func.__name__}`")
             raise e
         else:
             return response
@@ -121,7 +133,55 @@ class HoprdAPIHelper:
         else:
             return response.json()
 
-    async def get_all_channels(self, include_closed: bool):
+    async def open_channel(self, peer_id, amount):
+        method = self.wrapper.open_channel
+        args = [peer_id, amount]
+
+        log.debug("Opening channel")
+
+        try:
+            response = await self._safe_call(method, *args)
+        except httpx.HTTPStatusError:
+            log.error("Error opening channel")
+            return None
+        except httpx.HTTPError:
+            log.exception("Error opening channel")
+            return None
+        else:
+            log.info(f"Channel opened with {peer_id}")
+            return response.json()
+
+    async def open_channel_safe(self, peer_id, amount):
+        out_channels = await self.get_all_channels(False, "outgoing")
+
+        connected_peers = [
+            channel["peerId"] for channel in out_channels if channel["status"] == "Open"
+        ]
+
+        if peer_id in connected_peers:
+            log.info(f"Channel with {peer_id} already opened")
+            return None
+
+        return await self.open_channel(peer_id, amount)
+
+    async def close_channel(self, peer_id, direction):
+        method = self.wrapper.close_channel
+
+        args = [peer_id, direction]
+
+        log.debug("Closing channel")
+
+        try:
+            response = await self._safe_call(method, *args)
+        except httpx.HTTPError:
+            log.exception("Error closing channel")
+            return None
+        else:
+            return response.json()
+
+    async def get_all_channels(
+        self, include_closed: bool, direction: str = None, key: str = None
+    ):
         method = self.wrapper.get_all_channels
         args = [include_closed]
 
@@ -133,7 +193,19 @@ class HoprdAPIHelper:
             log.exception("Error getting all channels")
             return None
         else:
-            return response.json()
+            data = response.json()
+
+            if not direction and key:
+                log.error("Cannot filter by key without direction")
+                return data
+
+            if direction and not key:
+                data = data[direction]
+
+            if direction and key:
+                data = [channel[key] for channel in data[direction]]
+
+            return data
 
     async def get_unique_safe_peerId_links(self):
         """
