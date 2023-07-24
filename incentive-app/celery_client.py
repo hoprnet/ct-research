@@ -12,7 +12,7 @@ def main():
     )
     app.autodiscover_tasks(force=True)
 
-    node_list = ["0x1", "0x1"]
+    node_list = ["16Uiu2HAkzmoj11xg2euJpU2RpbSvXtqxyoCSLahn4QuY3k3aZgmg"]
     peer_id = "peer_a"
     count = 10
     node_index = 0
