@@ -17,7 +17,14 @@ log = logging.getLogger(__name__)
 
 
 class EconomicHandler(HOPRNode):
-    def __init__(self, url: str, key: str, rpch_endpoint: str, subgraph_key: str):
+    def __init__(
+        self,
+        url: str,
+        key: str,
+        rpch_endpoint: str,
+        subgraph_url: str,
+        sc_address: str,
+    ):
         """
         :param url: the url of the HOPR node
         :param key: the API key of the HOPR node
@@ -27,7 +34,8 @@ class EconomicHandler(HOPRNode):
 
         self.tasks = set[asyncio.Task]()
         self.rpch_endpoint = rpch_endpoint
-        self.subgraph_key = subgraph_key
+        self.subgraph_url = subgraph_url
+        self.sc_address = sc_address
 
         super().__init__(url=url, key=key)
 
@@ -61,9 +69,8 @@ class EconomicHandler(HOPRNode):
         tasks.add(
             asyncio.create_task(
                 self.get_staking_participations(
-                    api_key=self.subgraph_key,
-                    subgraph_id="DrkbaCvNGVcNH1RghepLRy6NSHFi8Dmwp4T2LN3LqcjY",
-                    staking_season="0x65c39e6bd97f80b5ae5d2120a47644578fd2b8dc",
+                    subgraph_url=self.subgraph_url,
+                    staking_season=self.sc_address,
                     pagination_skip_size=1000,  # Maximum entries per query allowed by TheGraph
                 )
             )
@@ -285,8 +292,7 @@ class EconomicHandler(HOPRNode):
 
     async def get_staking_participations(
         self,
-        api_key: str,
-        subgraph_id: str,
+        subgraph_url: str,
         staking_season: str,
         pagination_skip_size: int,
     ):
@@ -295,8 +301,7 @@ class EconomicHandler(HOPRNode):
         staking_season smart contract deployed on gnosis chain using The Graph API.
         The function uses pagination to handle large result sets, allowing retrieval of
         all staking participation records incrementally.
-        :param: api_key (str): The API key for accessing The Graph API.
-        :param: subgraph_id (str): The id of the publicly deployed subgraph.
+        :param: subgraph_url (str): The url for accessing The Graph API.
         :param: staking_season (str): The sc address of a given staking season.
         :param: pagination_skip_size (int): The number of records per pagination step.
         :returns: Tuple[str, Dict[str, int]]: A tuple containing the result identifier
@@ -317,7 +322,7 @@ class EconomicHandler(HOPRNode):
             }
         """
 
-        url = f"https://gateway.thegraph.com/api/{api_key}/subgraphs/id/{subgraph_id}"
+        url = subgraph_url
         variables = {
             "stakingSeason": staking_season,
             "first": pagination_skip_size,
@@ -325,43 +330,49 @@ class EconomicHandler(HOPRNode):
         }
 
         subgraph_dict = {}
+        staking_participations = []
+        more_content_available = True
+
         async with aiohttp.ClientSession() as session:
-            while True:
+            while more_content_available:
                 try:
                     async with session.post(
                         url, json={"query": query, "variables": variables}
                     ) as response:
-                        if response.status == 200:
-                            json_data = await response.json()
-                            staking_participations = json_data["data"][
-                                "stakingParticipations"
-                            ]
-                            for item in staking_participations:
-                                subgraph_dict[item["account"]["id"]] = (
-                                    int(item["actualLockedTokenAmount"]) / 1e18
-                                )  # 1e18: Decimal Precision of the HOPR token
-
-                            if len(staking_participations) < pagination_skip_size:
-                                break  # No more data to fetch, exit the loop
-
-                            variables[
-                                "skip"
-                            ] += pagination_skip_size  # Increment skip for next iteration
-                        else:
-                            log.error(f"Received status code: {response.status}")
+                        if response.status != 200:
+                            log.error(
+                                f"Received status code {response.status} when",
+                                "querying The Graph API",
+                            )
                             break
 
-                except aiohttp.ClientError as e:
-                    log.exception(f"An error occurred while making the request: {e}")
+                        json_data = await response.json()
+
+                except aiohttp.ClientError:
+                    log.exception("An error occurred while sending the request")
                     return "subgraph_data", {}
-                except ValueError as e:
+                except ValueError:
                     log.exception(
-                        f"An error occurred while parsing the response as JSON: {e}"
+                        "An error occurred while parsing the response as JSON"
                     )
                     return "subgraph_data", {}
-                except Exception as e:
-                    log.exception(f"An unexpected error occurred: {e}")
+                except Exception:
+                    log.exception("An unexpected error occurred")
                     return "subgraph_data", {}
+                else:
+                    staking_info = json_data["data"]["stakingParticipations"]
+
+                    staking_participations.extend(staking_info)
+                    variables[
+                        "skip"
+                    ] += pagination_skip_size  # Increment skip for next iter
+                    more_content_available = len(staking_info) == pagination_skip_size
+
+        for item in staking_participations:
+            account_id = item["account"]["id"]
+            subgraph_dict[account_id] = (
+                int(item["actualLockedTokenAmount"]) / 1e18
+            )  # 1e18: Decimal Precision of the HOPR token
 
         log.info("Subgraph data dictionary generated")
         return "subgraph_data", subgraph_dict

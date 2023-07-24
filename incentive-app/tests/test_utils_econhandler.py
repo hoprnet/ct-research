@@ -11,7 +11,11 @@ def test_stop_instance():
     with the SIGINT signal.
     """
     node = EconomicHandler(
-        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
     )
 
     # Create a mock object of the stop method of the EconomicHandler class

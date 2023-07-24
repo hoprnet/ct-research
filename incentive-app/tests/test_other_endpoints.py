@@ -23,7 +23,11 @@ async def test_blacklist_rpch_nodes():
         mock_response.json.return_value = mock_response_data
 
         node = EconomicHandler(
-            "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+            "some_url",
+            "some_api_key",
+            "some_rpch_endpoint",
+            "some_subgraph_url",
+            "some_sc_address",
         )
 
         result = await node.blacklist_rpch_nodes("some_api_endpoint")
@@ -41,7 +45,11 @@ async def test_blacklist_rpch_nodes_exceptions():
         # Simulate ClientError
         mock_get.side_effect = aiohttp.ClientError("ClientError")
         node = EconomicHandler(
-            "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+            "some_url",
+            "some_api_key",
+            "some_rpch_endpoint",
+            "some_subgraph_url",
+            "some_sc_address",
         )
         result = await node.blacklist_rpch_nodes("some_api_endpoint")
         assert result == ("rpch", [])
@@ -49,7 +57,11 @@ async def test_blacklist_rpch_nodes_exceptions():
         # Simulate ValueError
         mock_get.side_effect = ValueError("ValueError")
         node = EconomicHandler(
-            "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+            "some_url",
+            "some_api_key",
+            "some_rpch_endpoint",
+            "some_subgraph_url",
+            "some_sc_address",
         )
         result = await node.blacklist_rpch_nodes("some_api_endpoint")
         assert result == ("rpch", [])
@@ -57,7 +69,11 @@ async def test_blacklist_rpch_nodes_exceptions():
         # Simulate general exception
         mock_get.side_effect = Exception("Exception")
         node = EconomicHandler(
-            "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+            "some_url",
+            "some_api_key",
+            "some_rpch_endpoint",
+            "some_subgraph_url",
+            "some_sc_address",
         )
         result = await node.blacklist_rpch_nodes("some_api_endpoint")
         assert result == ("rpch", [])
@@ -103,11 +119,15 @@ async def test_get_staking_participations():
         mock_response.json.return_value = mock_response_data
 
         node = EconomicHandler(
-            "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+            "some_url",
+            "some_api_key",
+            "some_rpch_endpoint",
+            "some_subgraph_url",
+            "some_sc_address",
         )
 
         result = await node.get_staking_participations(
-            "some_api_key", "some_subgraph_id", "some_staking_season_address", 100
+            "some_subgraph_url", "some_staking_season_address", 100
         )
 
         assert result == (
@@ -129,29 +149,41 @@ async def test_get_staking_participations_exceptions():
         # Simulate ClientError
         mock_post.side_effect = aiohttp.ClientError("ClientError")
         node = EconomicHandler(
-            "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+            "some_url",
+            "some_api_key",
+            "some_rpch_endpoint",
+            "some_subgraph_url",
+            "some_sc_address",
         )
         result = await node.get_staking_participations(
-            "some_api_key", "some_subgraph_id", "some_staking_season_address", 100
+            "some_subgraph_url", "some_staking_season_address", 100
         )
         assert result == ("subgraph_data", {})
 
         # Simulate ValueError
         mock_post.side_effect = ValueError("ValueError")
         node = EconomicHandler(
-            "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+            "some_url",
+            "some_api_key",
+            "some_rpch_endpoint",
+            "some_subgraph_url",
+            "some_sc_address",
         )
         result = await node.get_staking_participations(
-            "some_api_key", "some_subgraph_id", "some_staking_season_address", 100
+            "some_subgraph_url", "some_staking_season_address", 100
         )
         assert result == ("subgraph_data", {})
 
         # Simulate general exception
         mock_post.side_effect = Exception("Exception")
         node = EconomicHandler(
-            "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+            "some_url",
+            "some_api_key",
+            "some_rpch_endpoint",
+            "some_subgraph_url",
+            "some_sc_address",
         )
         result = await node.get_staking_participations(
-            "some_api_key", "some_subgraph_id", "some_staking_season_address", 100
+            "some_subgraph_url", "some_staking_season_address", 100
         )
         assert result == ("subgraph_data", {})

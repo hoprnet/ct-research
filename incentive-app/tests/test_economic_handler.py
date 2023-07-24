@@ -58,7 +58,11 @@ async def test_read_parameters_and_equations(mock_open_file, file_contents):
     mock_file.read.return_value = json.dumps(file_contents)
 
     node = EconomicHandler(
-        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
     )
 
     result = await node.read_parameters_and_equations(mock_file)
@@ -75,7 +79,11 @@ async def test_read_parameters_and_equations_file_not_found():
     """
     file_name = "non_existent_file.json"
     node = EconomicHandler(
-        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
     )
 
     result = await node.read_parameters_and_equations(file_name)
@@ -94,7 +102,11 @@ async def test_read_parameters_and_equations_check_values(
     mock_file.read.return_value = json.dumps(file_contents)
 
     node = EconomicHandler(
-        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
     )
 
     result = await node.read_parameters_and_equations(mock_file)
@@ -173,7 +185,11 @@ def test_merge_topology_metricdb_subgraph(merge_data, expected_merge_result):
     expected_result = expected_merge_result
 
     node = EconomicHandler(
-        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
     )
     result = node.merge_topology_metricdb_subgraph(
         unique_peerId_address, new_metrics_dict, new_subgraph_dict
@@ -191,7 +207,11 @@ def test_merge_topology_metricdb_subgraph_exception(merge_data):
     new_subgraph_dict = {}
 
     node = EconomicHandler(
-        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
     )
 
     result = node.merge_topology_metricdb_subgraph(
@@ -214,7 +234,11 @@ def test_block_rpch_nodes(mock_rpch_nodes_blacklist, expected_merge_result):
     """
     expected_peer_ids_in_result = {"peer_id_1", "peer_id_2", "peer_id_3"}
     node = EconomicHandler(
-        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
     )
 
     _, result = node.block_rpch_nodes(mock_rpch_nodes_blacklist, expected_merge_result)
@@ -273,7 +297,11 @@ def test_safe_address_split_stake(expected_merge_result, expected_split_stake_re
     print(expected_result)
 
     node = EconomicHandler(
-        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
     )
     result = node.safe_address_split_stake(expected_merge_result)
     print(result)
@@ -330,7 +358,11 @@ def test_compute_expected_reward(
     """
     budget = mocked_model_parameters["budget"]
     node = EconomicHandler(
-        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
     )
     result = node.compute_expected_reward(new_expected_split_stake_result, budget)
 
@@ -348,7 +380,11 @@ def test_save_expected_reward_csv_success(new_expected_split_stake_result):
     message in case of no errors.
     """
     node = EconomicHandler(
-        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
     )
     result = node.save_expected_reward_csv(new_expected_split_stake_result)
 
@@ -365,7 +401,11 @@ def test_save_expected_reward_csv_OSError_folder_creation(
     with patch("os.makedirs") as mock_makedirs:
         mock_makedirs.side_effect = OSError("Mocked OSError")
         node = EconomicHandler(
-            "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+            "some_url",
+            "some_api_key",
+            "some_rpch_endpoint",
+            "some_subgraph_url",
+            "some_sc_address",
         )
         result = node.save_expected_reward_csv(new_expected_split_stake_result)
 
@@ -381,7 +421,11 @@ def test_save_expected_reward_csv_OSError_writing_csv(new_expected_split_stake_r
         with patch("builtins.open") as mock_open:
             mock_open.side_effect = OSError("Mocked OSError")
             node = EconomicHandler(
-                "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+                "some_url",
+                "some_api_key",
+                "some_rpch_endpoint",
+                "some_subgraph_url",
+                "some_sc_address",
             )
             result = node.save_expected_reward_csv(new_expected_split_stake_result)
 
@@ -399,7 +443,11 @@ def test_probability_sum(mocked_model_parameters, expected_split_stake_result):
     merged_result = expected_split_stake_result
 
     node = EconomicHandler(
-        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
     )
     result = node.compute_ct_prob(parameters, equations, merged_result)
     sum_probabilities = sum(result[1][key]["prob"] for key in result[1])
@@ -418,7 +466,11 @@ def test_ct_prob_exception(mocked_model_parameters):
     merged_result = {}
 
     node = EconomicHandler(
-        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
     )
 
     result = node.compute_ct_prob(parameters, equations, merged_result)
@@ -436,7 +488,11 @@ def mock_node_for_test_start(mocker):
     mocker.patch.object(EconomicHandler, "scheduler", return_value=None)
 
     return EconomicHandler(
-        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
     )
 
 
@@ -461,7 +517,11 @@ def test_stop():
     """
     mocked_task = MagicMock()
     node = EconomicHandler(
-        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_key"
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
     )
     node.tasks = {mocked_task}
 

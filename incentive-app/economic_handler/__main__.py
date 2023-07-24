@@ -14,8 +14,16 @@ from .utils_econhandler import stop_instance
 @click.option("--apihost", default=None, help="IP-address of the API host")
 @click.option("--apikey", default=None, help="API key of the API host")
 @click.option("--rcphnodes", default=None, help="API endpoint for RPCh nodes")
-@click.option("--subgraphkey", default=None, help="API key of the subgraph")
-def main(port: str, apihost: str, apikey: str, rcphnodes: str, subgraphkey: str):
+@click.option("--subgraphurl", default=None, help="API key of the subgraph")
+@click.option("--scaddress", default=None, help="Address of the staking season")
+def main(
+    port: str,
+    apihost: str,
+    apikey: str,
+    rcphnodes: str,
+    subgraphurl: str,
+    scaddress: str,
+):
     """main"""
     log = _getlogger()
 
@@ -31,14 +39,21 @@ def main(port: str, apihost: str, apikey: str, rcphnodes: str, subgraphkey: str)
     if not rcphnodes:
         log.error("Endpoint for RPCh nodes not specified (use --rcphnodes)")
         exit()
-    if not subgraphkey:
+    if not subgraphurl:
         log.error("API key not specified (use --subgraphkey)")
+        exit()
+    if not scaddress:
+        log.error("SC address not specified (use --scaddress)")
         exit()
 
     exit_code = ExitCode.OK
 
     economic_handler = EconomicHandler(
-        f"http://{apihost}:{port}", apikey, rcphnodes, subgraphkey
+        f"http://{apihost}:{port}",
+        apikey,
+        rcphnodes,
+        subgraphurl,
+        scaddress,
     )
 
     loop = asyncio.new_event_loop()

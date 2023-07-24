@@ -16,7 +16,8 @@ route=
 key=
 aggpost=
 rcphendpoint=
-subgraphkey=
+subgraphurl=
+scaddress=
 db=
 dbhost=
 dbuser=
@@ -81,12 +82,20 @@ while :; do
                 die 'ERROR: "--rcphendpoint" requires a non-empty option argument.'
             fi
             ;;
-        --subgraphkey)
+        --subgraphurl)
             if [ "$2" ]; then
-                subgraphkey=$2
+                subgraphurl=$2
                 shift
             else
-                die 'ERROR: "--subgraphkey" requires a non-empty option argument.'
+                die 'ERROR: "--subgraphurl" requires a non-empty option argument.'
+            fi
+            ;;
+        --scaddress)
+            if [ "$2" ]; then
+                scaddress=$2
+                shift
+            else
+                die 'ERROR: "--scaddress" requires a non-empty option argument.'
             fi
             ;;
         --db)
@@ -233,14 +242,18 @@ elif [ "$module" = "economic_handler" ]; then
         echo "Error: --rcphendpoint parameter is required"
         exit 1
     fi
-    if [ -z "$subgraphkey" ]; then
-        echo "Error: --subgraphkey parameter is required"
+    if [ -z "$subgraphurl" ]; then
+        echo "Error: --subgraphurl parameter is required"
+        exit 1
+    fi
+    if [ -z "$scaddress" ]; then
+        echo "Error: --scaddress parameter is required"
         exit 1
     fi
 
     clear
     echobold "Running Economic Handler"
-    python -m economic_handler  --port $port --apihost $host --apikey $key --rcphnodes $rcphendpoint --subgraphkey $subgraphkey
+    python -m economic_handler  --port $port --apihost $host --apikey $key --rcphnodes $rcphendpoint --subgraphurl $subgraphurl --scaddress $scaddress
 
 else
     echobold "Tried to run unknown module: '$module'"
