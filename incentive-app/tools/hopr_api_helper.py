@@ -323,7 +323,7 @@ class HoprdAPIHelper:
 
             return json_body.get(address, None)
 
-    async def send_message(self, destination, message, hops):
+    async def send_message(self, destination, message, hops) -> bool:
         method = self.wrapper.send_message
         args = [destination, message, hops]
 
@@ -333,9 +333,12 @@ class HoprdAPIHelper:
             response = await self._safe_call(method, *args)
         except httpx.HTTPError:
             log.exception("Error sending message")
-            return None
+            return False
         except UnboundLocalError:
             log.exception(f"Could not connect to {self.url}")
-            return None
+            return False
         else:
-            return response.json()
+            if response.status_code == 202:
+                return False
+            
+        return True
