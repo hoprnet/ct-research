@@ -85,7 +85,7 @@ async def async_send_1_hop_message(
 
     # node is reachable, messages can be sent
     for _ in range(count):
-        await api.send_message(address, "dummy message", [peer_id])
+        state = await api.send_message(address, "foo", [peer_id])  # noqa: F841
 
     log.info(
         f"{count} messages sent to `{peer_id}` "
