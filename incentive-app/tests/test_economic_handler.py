@@ -330,7 +330,16 @@ def mocked_model_parameters():
             "f_x": {"formula": "a * x", "condition": "l <= x <= c"},
             "g_x": {"formula": "a * c + (x - c) ** (1 / b)", "condition": "x > c"},
         },
-        "budget": {"value": 100, "comment": "budget for the given distribution period"},
+        "budget_param": {
+            "budget": {
+                "value": 100,
+                "comment": "budget for the given distribution period",
+            },
+            "s": {
+                "value": 0.25,
+                "comment": "split ratio between automated and airdrop mode",
+            },
+        },
     }
 
 
@@ -353,10 +362,10 @@ def test_compute_expected_reward(
     mocked_model_parameters, new_expected_split_stake_result
 ):
     """
-    Test whether the compute_expected_reward_savecsv method generates
-    the "expected_reward" value key in its output.
+    Test whether the compute_expected_reward method generates
+    the required values and whether the budget gets split correctly.
     """
-    budget = mocked_model_parameters["budget"]
+    budget_param = mocked_model_parameters["budget_param"]
     node = EconomicHandler(
         "some_url",
         "some_api_key",
@@ -364,14 +373,23 @@ def test_compute_expected_reward(
         "some_subgraph_url",
         "some_sc_address",
     )
-    result = node.compute_expected_reward(new_expected_split_stake_result, budget)
+    result = node.compute_expected_reward(new_expected_split_stake_result, budget_param)
 
     # Assert Keys
     assert set(result[1].keys()) == set(new_expected_split_stake_result.keys())
 
     # Assert Values
     for value in result[1].values():
-        assert "expected_reward" in value
+        assert "total_expected_reward" in value
+        assert "protocol_exp_reward" in value
+        assert "airdrop_expected_reward" in value
+
+    # Assert that the split works correctly
+    for entry in result[1].values():
+        assert (
+            entry["total_expected_reward"]
+            == entry["protocol_exp_reward"] + entry["airdrop_expected_reward"]
+        )
 
 
 def test_save_expected_reward_csv_success(new_expected_split_stake_result):

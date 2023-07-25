@@ -122,7 +122,7 @@ class EconomicHandler(HOPRNode):
         print(one_to_many_safe_peerid_links)
 
         # Extract Parameters
-        parameters, equations, budget = parameters_equations_budget
+        parameters, equations, budget_param = parameters_equations_budget
 
         # computation of cover traffic probability
         _, ct_prob_dict = self.compute_ct_prob(
@@ -132,13 +132,13 @@ class EconomicHandler(HOPRNode):
         )
 
         # calculate expected rewards
-        _, expected_rewards = self.compute_expected_reward(ct_prob_dict, budget)
+        _, expected_rewards = self.compute_expected_reward(ct_prob_dict, budget_param)
 
         # output expected rewards as a csv file
         self.save_expected_reward_csv(expected_rewards)
 
-        print(f"{staking_participations}")
-        # print(f"{expected_rewards=}")
+        # print(f"{staking_participations}")
+        print(f"{expected_rewards=}")
         # print(f"{rpch_nodes_blacklist=}")
 
     async def get_unique_safe_peerId_links(self):
@@ -235,14 +235,14 @@ class EconomicHandler(HOPRNode):
 
         parameters = contents.get("parameters", {})
         equations = contents.get("equations", {})
-        budget = contents.get("budget", {})
+        budget_param = contents.get("budget_param", {})
 
         try:
             jsonschema.validate(
                 instance={
                     "parameters": parameters,
                     "equations": equations,
-                    "budget": budget,
+                    "budget_param": budget_param,
                 },
                 schema=schema,
             )
@@ -253,7 +253,7 @@ class EconomicHandler(HOPRNode):
             log.error(traceback.format_exc())
             return "params", {}, {}, {}
 
-        return "params", parameters, equations, budget
+        return "params", parameters, equations, budget_param
 
     async def blacklist_rpch_nodes(self, api_endpoint: str):
         """
@@ -498,16 +498,26 @@ class EconomicHandler(HOPRNode):
 
         return "ct_prob", merged_result
 
-    def compute_expected_reward(self, dataset: dict, budget: dict):
+    def compute_expected_reward(self, dataset: dict, budget_param: dict):
         """
         Computes the expected reward for each entry in the dataset.
         :param: dataset (dict): A dictionary containing the dataset entries.
         :param: budget (dict): A dictionary containing the budget information.
-        :returns: dict: The updated dataset with the 'expected_reward' value.
+        :returns: dict: The updated dataset with the 'expected_reward' value
+        and reward splits for the automatic and airdrop mode.
         """
         for entry in dataset.values():
-            entry["budget"] = budget["value"]
-            entry["expected_reward"] = entry["prob"] * budget["value"]
+            budget = budget_param["budget"]["value"]
+            budget_split_ratio = budget_param["s"]["value"]
+            entry["budget"] = budget
+            entry["budget_split_ratio"] = budget_split_ratio
+
+            total_exp_reward = entry["prob"] * budget
+            entry["total_expected_reward"] = total_exp_reward
+            entry["protocol_exp_reward"] = total_exp_reward * budget_split_ratio
+            entry["airdrop_expected_reward"] = total_exp_reward * (
+                1 - budget_split_ratio
+            )
 
         return "expected_reward", dataset
 

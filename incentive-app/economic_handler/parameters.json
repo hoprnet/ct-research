@@ -27,8 +27,14 @@
       "condition": "x > c"
     }
   },
-  "budget": {
-    "value": 100,
-    "comment": "budget for the given distribution period"
+  "budget_param": {
+    "budget": {
+      "value": 100,
+      "comment": "budget for the given distribution period"
+    },
+    "s": {
+      "value": 0.25,
+      "comment": "split ratio between automated and airdrop mode"
+    }
   }
 }
