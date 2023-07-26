@@ -28,7 +28,7 @@ from tools.hopr_api_helper import HoprdAPIHelper  # noqa: E402
 
 def FakeNetWatcher() -> NetWatcher:
     """Fixture that returns a mock instance of a NetWatcher"""
-    return NetWatcher("some_url", "some_key", "some_posturl", 10)
+    return NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl", 10)
 
 
 def test__post_list():
@@ -72,7 +72,7 @@ def mock_instance_for_test_gather(mocker):
     api = HoprdAPIHelper("some_url", "some_key")
     mocker.patch.object(api, "peers", return_value=["some_peer", "some_other_peer"])
 
-    instance = NetWatcher("some_url", "some_key", "some_posturl")
+    instance = NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl")
     instance.api = api
 
     return instance
@@ -106,7 +106,7 @@ def mock_instance_for_test_ping(mocker):
     api = HoprdAPIHelper("some_url", "some_key")
     mocker.patch.object(api, "ping", return_value=10)
 
-    instance = NetWatcher("some_url", "some_key", "some_posturl")
+    instance = NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl")
     instance.peers = ["some_peer", "some_other_peer"]
     instance.api = api
 
@@ -139,10 +139,11 @@ def mock_instance_for_test_transmit(mocker):
     Create a mock for each coroutine that should be executed.
     """
 
-    instance = NetWatcher("some_url", "some_key", "some_posturl")
+    instance = NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl")
     instance.peers = ["some_peer", "some_other_peer"]
     instance.latency = {"some_peer": 10, "some_other_peer": 20}
     mocker.patch.object(instance, "_post_list", return_value=True)
+    mocker.patch.object(instance, "_post_balance", return_value=True)
 
     return instance
 
@@ -168,6 +169,42 @@ async def test_transmit_peers(mock_instance_for_test_transmit: NetWatcher):
 
 
 @pytest.fixture
+def mock_instance_for_test_transmit_balance(mocker):
+    """
+    Create a mock for each coroutine that should be executed.
+    """
+    api = HoprdAPIHelper("some_url", "some_key")
+    mocker.patch.object(api, "balance", return_value=10)
+
+    instance = NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl")
+    instance.api = api
+
+    mocker.patch.object(instance, "_post_balance", return_value=True)
+
+    return instance
+
+
+@pytest.mark.asyncio
+async def test_transmit_balance(mock_instance_for_test_transmit_balance: NetWatcher):
+    """
+    Test that the method transmit_balance works.
+    """
+    instance = mock_instance_for_test_transmit_balance
+
+    instance.peer_id = "some_peer_id"
+    instance.started = True
+
+    asyncio.create_task(instance.transmit_balance())
+    await asyncio.sleep(1)
+
+    # avoid infinite while loop by setting node.started = False
+    instance.started = False
+    await asyncio.sleep(1)
+
+    assert instance._post_balance.called
+
+
+@pytest.fixture
 def mock_instance_for_test_start(mocker):
     """
     Create a mock for each coroutine that should be executed.
@@ -176,8 +213,9 @@ def mock_instance_for_test_start(mocker):
     mocker.patch.object(NetWatcher, "gather_peers", return_value=None)
     mocker.patch.object(NetWatcher, "ping_peers", return_value=None)
     mocker.patch.object(NetWatcher, "transmit_peers", return_value=None)
+    mocker.patch.object(NetWatcher, "transmit_balance", return_value=None)
 
-    return NetWatcher("some_url", "some_api_key", "some_rpch_endpoint")
+    return NetWatcher("some_url", "some_api_key", "some_posturl", "some_balanceurl")
 
 
 @pytest.mark.asyncio
@@ -194,8 +232,9 @@ async def test_start(mock_instance_for_test_start: NetWatcher):
     assert instance.gather_peers.called
     assert instance.ping_peers.called
     assert instance.transmit_peers.called
+    assert instance.transmit_balance.called
 
-    assert len(instance.tasks) == 4
+    assert len(instance.tasks) == 5
 
     assert instance.started
 

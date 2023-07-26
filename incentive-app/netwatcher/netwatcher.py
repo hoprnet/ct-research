@@ -109,6 +109,8 @@ class NetWatcher(HOPRNode):
         except Exception:  # ClientConnectorError
             log.exception("Error transmitting balance")
 
+        return False
+
     @formalin(message="Gathering peers", sleep=30)
     @connectguard
     async def gather_peers(self, quality: float = 1.0):

@@ -90,7 +90,7 @@ class HoprdAPIHelper:
             if type == "all":
                 return response.json()
 
-            return response.json()[type]
+            return int(response.json()[type])
 
     async def set_alias(self, peer_id, alias):
         method = self.wrapper.set_alias
