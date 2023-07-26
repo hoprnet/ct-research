@@ -36,6 +36,9 @@ class HoprdAPIHelper:
         except httpx.HTTPError as e:
             log.exception(f"Error calling {func.__name__}")
             raise e
+        except UnboundLocalError:
+            log.exception(f"Could not connect to {self.url}")
+            return None
         else:
             return response
 
@@ -50,6 +53,9 @@ class HoprdAPIHelper:
         except httpx.HTTPError:
             log.exception("Error withdrawing")
             return None
+        except UnboundLocalError:
+            log.exception(f"Could not connect to {self.url}")
+            return None
         else:
             return response.json()
 
@@ -62,6 +68,9 @@ class HoprdAPIHelper:
             response = await self._safe_call(method)
         except httpx.HTTPError:
             log.exception
+            return None
+        except UnboundLocalError:
+            log.exception(f"Could not connect to {self.url}")
             return None
         else:
             return response.json()
@@ -77,6 +86,9 @@ class HoprdAPIHelper:
         except httpx.HTTPError:
             log.exception("Error setting alias")
             return None
+        except UnboundLocalError:
+            log.exception(f"Could not connect to {self.url}")
+            return None
         else:
             return response.json()
 
@@ -90,6 +102,9 @@ class HoprdAPIHelper:
             response = await self._safe_call(method, *args)
         except httpx.HTTPError:
             log.exception("Error getting alias")
+            return None
+        except UnboundLocalError:
+            log.exception(f"Could not connect to {self.url}")
             return None
         else:
             return response.json()
@@ -105,6 +120,9 @@ class HoprdAPIHelper:
         except httpx.HTTPError:
             log.exception("Error removing alias")
             return None
+        except UnboundLocalError:
+            log.exception(f"Could not connect to {self.url}")
+            return None
         else:
             return response.json()
 
@@ -117,6 +135,9 @@ class HoprdAPIHelper:
             response = await self._safe_call(method)
         except httpx.HTTPError:
             log.exception("Error getting settings")
+            return None
+        except UnboundLocalError:
+            log.exception(f"Could not connect to {self.url}")
             return None
         else:
             return response.json()
@@ -131,6 +152,9 @@ class HoprdAPIHelper:
             response = await self._safe_call(method, *args)
         except httpx.HTTPError:
             log.exception("Error getting all channels")
+            return None
+        except UnboundLocalError:
+            log.exception(f"Could not connect to {self.url}")
             return None
         else:
             return response.json()
@@ -148,6 +172,9 @@ class HoprdAPIHelper:
             response = await self._safe_call(method, *args)
         except httpx.HTTPError:
             log.exception("Error getting channel topology")
+            return None
+        except UnboundLocalError:
+            log.exception(f"Could not connect to {self.url}")
             return None
         else:
             unique_peerId_address = {}
@@ -179,6 +206,9 @@ class HoprdAPIHelper:
         except httpx.HTTPError:
             log.exception("Error getting tickets in channel")
             return None
+        except UnboundLocalError:
+            log.exception(f"Could not connect to {self.url}")
+            return None
         else:
             return response.json()
 
@@ -193,6 +223,9 @@ class HoprdAPIHelper:
         except httpx.HTTPError:
             log.exception(f"Error redeeming tickets in channel with peer {peer_id}")
             return None
+        except UnboundLocalError:
+            log.exception(f"Could not connect to {self.url}")
+            return None
         else:
             return response.json()
 
@@ -205,6 +238,9 @@ class HoprdAPIHelper:
             response = await self._safe_call(method)
         except httpx.HTTPError:
             log.exception("Error redeeming tickets")
+            return None
+        except UnboundLocalError:
+            log.exception(f"Could not connect to {self.url}")
             return None
         else:
             if response.status_code == 204:
@@ -221,6 +257,9 @@ class HoprdAPIHelper:
             response = await self._safe_call(method, *args)
         except httpx.HTTPError:
             log.exception(f"Error pinging peer {peer_id}")
+            return None
+        except UnboundLocalError:
+            log.exception(f"Could not connect to {self.url}")
             return None
         else:
             json_body = response.json()
@@ -246,6 +285,9 @@ class HoprdAPIHelper:
         except httpx.HTTPError:
             log.exception(f"Could not get peers from {self.url}")
             return None
+        except UnboundLocalError:
+            log.exception(f"Could not connect to {self.url}")
+            return None
         else:
             json_body = response.json()
 
@@ -269,6 +311,9 @@ class HoprdAPIHelper:
         except httpx.HTTPError:
             log.exception(f"Could not connect to {self.url}")
             return None
+        except UnboundLocalError:
+            log.exception(f"Could not connect to {self.url}")
+            return None
         else:
             json_body = response.json()
 
@@ -278,7 +323,7 @@ class HoprdAPIHelper:
 
             return json_body.get(address, None)
 
-    async def send_message(self, destination, message, hops):
+    async def send_message(self, destination, message, hops) -> bool:
         method = self.wrapper.send_message
         args = [destination, message, hops]
 
@@ -288,6 +333,12 @@ class HoprdAPIHelper:
             response = await self._safe_call(method, *args)
         except httpx.HTTPError:
             log.exception("Error sending message")
-            return None
+            return False
+        except UnboundLocalError:
+            log.exception(f"Could not connect to {self.url}")
+            return False
         else:
-            return response.json()
+            if response.status_code != 202:
+                return False
+
+        return True
