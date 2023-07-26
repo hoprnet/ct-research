@@ -59,7 +59,13 @@ class HoprdAPIHelper:
         else:
             return response.json()
 
-    async def balance(self):
+    async def balance(self, type: str = "all"):
+        """
+        Returns the balance of the node.
+        :param: type: str = "all" | "hopr" | "native"
+        :return: balance: int
+        """
+
         method = self.wrapper.balance
 
         log.debug("Getting balance")
@@ -73,7 +79,14 @@ class HoprdAPIHelper:
             log.exception(f"Could not connect to {self.url}")
             return None
         else:
-            return response.json()
+            if response.status_code != 200:
+                log.error(f"Error getting balance from {self.url}")
+                return None
+
+            if type == "all":
+                return response.json()
+            if type in ["hopr", "native"]:
+                return response.json()[type]
 
     async def set_alias(self, peer_id, alias):
         method = self.wrapper.set_alias
