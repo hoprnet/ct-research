@@ -68,6 +68,10 @@ class HoprdAPIHelper:
 
         method = self.wrapper.balance
 
+        if type not in ["all", "hopr", "native"]:
+            log.error(f"Type {type} not supported")
+            return None
+
         log.debug("Getting balance")
 
         try:
@@ -85,8 +89,8 @@ class HoprdAPIHelper:
 
             if type == "all":
                 return response.json()
-            if type in ["hopr", "native"]:
-                return response.json()[type]
+
+            return response.json()[type]
 
     async def set_alias(self, peer_id, alias):
         method = self.wrapper.set_alias
