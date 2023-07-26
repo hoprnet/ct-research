@@ -17,7 +17,9 @@ class NetWatcher(HOPRNode):
     Aggregator via a POST request.
     """
 
-    def __init__(self, url: str, key: str, posturl: str, max_lat_count: int = 10):
+    def __init__(
+        self, url: str, key: str, posturl: str, balanceurl: str, max_lat_count: int = 10
+    ):
         """
         Initialisation of the class.
         :param url: the url of the hopr node
@@ -27,6 +29,7 @@ class NetWatcher(HOPRNode):
         # assign unique uuid as a string
         self.id = str(uuid.uuid4())
         self.posturl = posturl
+        self.balanceurl = balanceurl
 
         # a set to keep the peers of this node, see:
         self.peers = set[str]()
@@ -90,6 +93,22 @@ class NetWatcher(HOPRNode):
 
         return False
 
+    async def _post_balance(self, session: ClientSession, balance: int):
+        """
+        Sends the node balance (xDai) to the Aggregator.
+        :param session: the aiohttp session
+        :param balance: the node balance
+        """
+        try:
+            async with session.post(
+                self.balanceurl, json={"id": self.id, "balance": balance}
+            ) as response:
+                if response.status == 200:
+                    log.info(f"Transmisted native balance: {balance}")
+                    return True
+        except Exception:  # ClientConnectorError
+            log.exception("Error transmitting balance")
+
     @formalin(message="Gathering peers", sleep=30)
     @connectguard
     async def gather_peers(self, quality: float = 1.0):
@@ -136,7 +155,7 @@ class NetWatcher(HOPRNode):
             # for peer in vanished_peers:
             #     log.info(f"Peer {peer} vanished")
 
-    @formalin(message="Pinging peers", sleep=20.0)
+    @formalin(message="Pinging peers", sleep=20)
     @connectguard
     async def ping_peers(self):
         """
@@ -170,7 +189,7 @@ class NetWatcher(HOPRNode):
             self.latency[peer_id].append(latency)
             self.latency[peer_id] = self.latency[peer_id][-self.max_lat_count :]
 
-    @formalin(message="MOCK Pinging peers", sleep=60.0)
+    @formalin(message="MOCK Pinging peers", sleep=60 * 1)
     async def mock_ping_peers(self):
         """
         MOCKING - Pings the peers of this node and records latency measures.
@@ -197,7 +216,7 @@ class NetWatcher(HOPRNode):
             self.latency[peer_id].append(latency)
             self.latency[peer_id] = self.latency[peer_id][-self.max_lat_count :]
 
-    @formalin(message="Initiated peers transmission", sleep=60)
+    @formalin(message="Initiated peers transmission", sleep=60 * 1)
     @connectguard
     async def transmit_peers(self):
         """
@@ -212,7 +231,7 @@ class NetWatcher(HOPRNode):
 
         self.wipe_peers()
 
-    @formalin(message="MOCK Initiated peers transmission", sleep=600)
+    @formalin(message="MOCK Initiated peers transmission", sleep=60 * 10)
     async def mock_transmit_peers(self):
         """
         MOCKING - Sends the detected peers to the Aggregator
@@ -225,6 +244,31 @@ class NetWatcher(HOPRNode):
                 await self._post_list(session, self.peers, self.latency)
 
         # self.wipe_peers()
+
+    @formalin(message="Sending node balance", sleep=60 * 5)
+    @connectguard
+    async def transmit_balance(self):
+        balance = await self.api.balance("native")
+        log.info(f"Got native balance: {balance}")
+
+        async with ClientSession() as session:
+            success = await self._post_balance(session, balance)
+
+            if not success:
+                await asyncio.sleep(5)
+                await self._post_balance(session, balance)
+
+    @formalin(message="MOCK Sending node balance", sleep=60 * 5)
+    async def mock_transmit_balance(self):
+        balance = random.randint(100, 1000)
+        log.info(f"Got native balance: {balance}")
+
+        async with ClientSession() as session:
+            success = await self._post_balance(session, balance)
+
+            if not success:
+                await asyncio.sleep(5)
+                await self._post_balance(session, balance)
 
     async def start(self):
         """
@@ -239,6 +283,7 @@ class NetWatcher(HOPRNode):
         self.tasks.add(asyncio.create_task(self.gather_peers()))
         self.tasks.add(asyncio.create_task(self.ping_peers()))
         self.tasks.add(asyncio.create_task(self.transmit_peers()))
+        self.tasks.add(asyncio.create_task(self.transmit_balance()))
 
         await asyncio.gather(*self.tasks)
 
@@ -254,6 +299,7 @@ class NetWatcher(HOPRNode):
         self.tasks.add(asyncio.create_task(self.mock_gather_peers()))
         self.tasks.add(asyncio.create_task(self.mock_ping_peers()))
         self.tasks.add(asyncio.create_task(self.mock_transmit_peers()))
+        self.tasks.add(asyncio.create_task(self.mock_transmit_balance()))
 
         await asyncio.gather(*self.tasks)
 

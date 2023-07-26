@@ -26,6 +26,7 @@ def main():
 
     try:
         aggpost = envvar("AGG_POST")
+        aggbalance = envvar("AGG_BALANCE")
         apihost = envvar("API_HOST")
         apikey = envvar("API_KEY")
         latcount = envvar("LAT_COUNT", int)
@@ -34,7 +35,7 @@ def main():
         log.exception("Missing environment variables")
         exit(ExitCode.ERROR_MISSING_ENV_VARS)
 
-    nw = NetWatcher(apihost, apikey, aggpost, latcount)
+    nw = NetWatcher(apihost, apikey, aggpost, aggbalance, latcount)
 
     loop = asyncio.new_event_loop()
     loop.add_signal_handler(SIGINT, stop, nw, SIGINT)
