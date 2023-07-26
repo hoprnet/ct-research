@@ -338,7 +338,7 @@ class HoprdAPIHelper:
             log.exception(f"Could not connect to {self.url}")
             return False
         else:
-            if response.status_code == 202:
+            if response.status_code != 202:
                 return False
-            
+
         return True
