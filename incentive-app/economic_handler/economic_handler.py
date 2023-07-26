@@ -91,7 +91,7 @@ class EconomicHandler(HOPRNode):
         unique_safe_peerId_links = ordered_tasks[0][1]
         parameters_equations_budget = ordered_tasks[1][1:]
         rpch_nodes_blacklist = ordered_tasks[2][1]
-        staking_participations = ordered_tasks[3][1]
+        # staking_participations = ordered_tasks[3][1]
 
         # helper functions that allow to test the code by inserting
         # the peerIDs of the pluto nodes (SUBJECT TO REMOVAL)
@@ -506,9 +506,10 @@ class EconomicHandler(HOPRNode):
         :returns: dict: The updated dataset with the 'expected_reward' value
         and reward splits for the automatic and airdrop mode.
         """
+        budget = budget_param["budget"]["value"]
+        budget_split_ratio = budget_param["s"]["value"]
+
         for entry in dataset.values():
-            budget = budget_param["budget"]["value"]
-            budget_split_ratio = budget_param["s"]["value"]
             entry["budget"] = budget
             entry["budget_split_ratio"] = budget_split_ratio
 
