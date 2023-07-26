@@ -335,9 +335,14 @@ def mocked_model_parameters():
                 "value": 100,
                 "comment": "budget for the given distribution period",
             },
+            "budget_period": {"value": 15, "comment": "budget period in seconds"},
             "s": {
                 "value": 0.25,
                 "comment": "split ratio between automated and airdrop mode",
+            },
+            "dist_freq": {
+                "value": 2,
+                "comment": "distribution frequency of rewards via the automatic distribution",
             },
         },
     }

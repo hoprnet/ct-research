@@ -508,17 +508,23 @@ class EconomicHandler(HOPRNode):
         """
         budget = budget_param["budget"]["value"]
         budget_split_ratio = budget_param["s"]["value"]
+        dist_freq = budget_param["dist_freq"]["value"]
 
         for entry in dataset.values():
             entry["budget"] = budget
             entry["budget_split_ratio"] = budget_split_ratio
+            entry["distribution_frequency"] = dist_freq
 
             total_exp_reward = entry["prob"] * budget
+            protocol_exp_reward = total_exp_reward * budget_split_ratio
+
             entry["total_expected_reward"] = total_exp_reward
-            entry["protocol_exp_reward"] = total_exp_reward * budget_split_ratio
             entry["airdrop_expected_reward"] = total_exp_reward * (
                 1 - budget_split_ratio
             )
+            entry["protocol_exp_reward"] = protocol_exp_reward
+
+            entry["protocol_exp_reward_per_dist"] = protocol_exp_reward / dist_freq
 
         return "expected_reward", dataset
 
