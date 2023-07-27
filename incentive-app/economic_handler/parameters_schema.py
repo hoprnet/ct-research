@@ -7,17 +7,12 @@ schema = {
                 ".*": {
                     "type": "object",
                     "properties": {
-                        "value": {
-                            "type": "number",
-                            "minimum": 0
-                        },
-                        "comment": {
-                            "type": "string"
-                        }
+                        "value": {"type": "number", "minimum": 0},
+                        "comment": {"type": "string"},
                     },
-                    "required": ["value"]
+                    "required": ["value"],
                 }
-            }
+            },
         },
         "equations": {
             "type": "object",
@@ -26,25 +21,50 @@ schema = {
                     "type": "object",
                     "properties": {
                         "formula": {"type": "string"},
-                        "condition": {"type": "string"}
+                        "condition": {"type": "string"},
                     },
-                    "required": ["formula", "condition"]
-                }
-            }
-        },
-         "budget": {
-            "type": "object",
-            "properties": {
-                "value": {
-                    "type": "number",
-                    "minimum": 0
-                },
-                "comment": {
-                    "type": "string"
+                    "required": ["formula", "condition"],
                 }
             },
-            "required": ["value"]
-        }
+        },
+        "budget_param": {
+            "type": "object",
+            "properties": {
+                "budget": {
+                    "type": "object",
+                    "properties": {
+                        "value": {"type": "number", "minimum": 0},
+                        "comment": {"type": "string"},
+                    },
+                    "required": ["value"],
+                },
+                "budget_period": {
+                    "type": "object",
+                    "properties": {
+                        "value": {"type": "number", "minimum": 10},
+                        "comment": {"type": "string"},
+                    },
+                    "required": ["value"],
+                },
+                "s": {
+                    "type": "object",
+                    "properties": {
+                        "value": {"type": "number", "minimum": 0, "maximum": 1},
+                        "comment": {"type": "string"},
+                    },
+                    "required": ["value"],
+                },
+                "dist_freq": {
+                    "type": "object",
+                    "properties": {
+                        "value": {"type": "number", "minimum": 1},
+                        "comment": {"type": "string"},
+                    },
+                    "required": ["value"],
+                },
+            },
+            "required": ["budget", "budget_period", "s", "dist_freq"],
+        },
     },
-    "required": ["parameters", "equations", "budget"]
+    "required": ["parameters", "equations", "budget_param"],
 }
