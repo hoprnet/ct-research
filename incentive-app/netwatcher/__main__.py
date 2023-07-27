@@ -36,6 +36,7 @@ def main():
         exit(ExitCode.ERROR_MISSING_ENV_VARS)
 
     nw = NetWatcher(apihost, apikey, aggpost, aggbalance, latcount)
+    nw.mock_mode = mock_mode
 
     loop = asyncio.new_event_loop()
     loop.add_signal_handler(SIGINT, stop, nw, SIGINT)
@@ -43,10 +44,7 @@ def main():
 
     # start the node and run the event loop until the node stops
     try:
-        if mock_mode:
-            loop.run_until_complete(nw.mock_start())
-        else:
-            loop.run_until_complete(nw.start())
+        loop.run_until_complete(nw.start())
 
     except Exception:
         log.exception("Uncaught exception ocurred")

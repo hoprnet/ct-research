@@ -39,7 +39,7 @@ def test__post_list():
     instance.peers = ["some_peer", "some_other_peer"]
     instance.latency = {"some_peer": [10, 20], "some_other_peer": [30, 40]}
 
-    instance._post_list(MagicMock(), instance.peers, instance.latency)
+    instance._post_list(MagicMock())
 
     assert len(instance.peers) == 2
     assert len(instance.latency) == 2

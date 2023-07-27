@@ -268,7 +268,7 @@ class HoprdAPIHelper:
         method = self.wrapper.ping
         args = [peer_id]
 
-        log.debug(f"Pinging peer {peer_id[-5:]}")
+        log.debug(f"Pinging peer {peer_id}")
 
         try:
             response = await self._safe_call(method, *args)
@@ -286,7 +286,7 @@ class HoprdAPIHelper:
                 return None
 
             if metric not in json_body:
-                log.error(f"No {metric} measure from peer {peer_id[-5:]}")
+                log.error(f"No {metric} measure from peer {peer_id}")
                 return None
 
             log.info(f"Measured {json_body[metric]:3d}({metric}) from peer {peer_id}")
