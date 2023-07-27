@@ -67,13 +67,13 @@ async def async_send_1_hop_message(
             return "FAIL"
 
         node_index += 1
-        node_id = node_list[node_index]
-        log.info(f"Redirecting task to {node_id} (#{node_index} - {api_host})")
+        node_address = node_list[node_index]
+        log.info(f"Redirecting task to {node_address} (#{node_index} - {api_host})")
 
         app.send_task(
-            f"{envvar('TASK_NAME')}.{node_id}",
+            f"{envvar('TASK_NAME')}.{node_address}",
             args=(peer_id, count, node_list, node_index),
-            queue=node_id,
+            queue=node_address,
         )
 
         return "RETRYING"

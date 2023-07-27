@@ -4,17 +4,17 @@ import copy
 import numpy as np
 
 
-def one_round_nw_peer_match(input_array: np.ndarray) -> dict:
+def one_round_node_peer_match(input_array: np.ndarray) -> dict:
     """
-    This method implements the pairing between netwatchers and peers for one round.
+    This method implements the pairing between nodes and peers for one round.
     At the end of the execution of this method, each peer will be paired with one
-    netwatcher (if available).
+    node (if available).
     The steps are the following:
-    1. Create a dictionary with the netwatchers as keys and an empty list as value
-    2. Create a list of counts of number of netwatcher seeing each peer
+    1. Create a dictionary with the nodes as keys and an empty list as value
+    2. Create a list of counts of number of node seeing each peer
     3. Sort the peer list by count
-    4. For each peer, get the list of netwatchers that see it, and select the best one
-    following this rule: select the netwatcher with the lowest number of peers and, in
+    4. For each peer, get the list of nodes that see it, and select the best one
+    following this rule: select the node with the lowest number of peers and, in
     case of a tie, select the one with the lowest latency.
     5. Return the dictionary of pairings
     """
@@ -34,8 +34,12 @@ def one_round_nw_peer_match(input_array: np.ndarray) -> dict:
     # step 4
     for peer_col, _ in sorted_peer_list:
         # get index of non-None values
-        p_nw_index = [[i, lat] for i, lat in enumerate(input_array[:, peer_col]) if lat]
-        length_list = [[index, len(peer_list[index]), lat] for index, lat in p_nw_index]
+        p_node_index = [
+            [i, lat] for i, lat in enumerate(input_array[:, peer_col]) if lat
+        ]
+        length_list = [
+            [index, len(peer_list[index]), lat] for index, lat in p_node_index
+        ]
 
         # sort length_list by count and then by latency
         ordered_choice = sorted(length_list, key=lambda x: (x[1], x[2]))
@@ -66,20 +70,20 @@ def get_peer_list_from_dict(input_dict: dict) -> list:
     return peer_ids
 
 
-def get_nw_list_from_dict(input_dict: dict) -> list:
+def get_node_list_from_dict(input_dict: dict) -> list:
     """
-    This method returns the list of netwatchers ids from the input dictionary.
+    This method returns the list of nodes ids from the input dictionary.
     """
     return list(input_dict.keys())
 
 
-def dict_to_array(input_dict: dict, node_ids: list, peer_ids: list):
+def dict_to_array(input_dict: dict, node_addresses: list, peer_ids: list):
     """
-    This method converts the input dictionary to a numpy array based on netwatchers and
+    This method converts the input dictionary to a numpy array based on nodes and
     peers ids orders.
     """
 
-    outarray = np.zeros((len(node_ids), len(peer_ids)))
+    outarray = np.zeros((len(node_addresses), len(peer_ids)))
     for node_idx, peer_list in enumerate(input_dict.values()):
         for peer, lat in peer_list.items():
             outarray[node_idx, peer_ids.index(peer)] = lat
@@ -88,7 +92,7 @@ def dict_to_array(input_dict: dict, node_ids: list, peer_ids: list):
 
 
 def array_to_db_list(
-    input_array: np.ndarray, matchs: dict, node_ids: list, peer_ids: list
+    input_array: np.ndarray, matchs: dict, node_addresses: list, peer_ids: list
 ):
     """
     This method creates a list of tuples to be inserted in the database based on the
@@ -97,10 +101,10 @@ def array_to_db_list(
     matchs_for_db = []
     for peer_idx, node_idxs in matchs.items():
         peer = peer_ids[peer_idx]
-        nws = [node_ids[idx] for idx in node_idxs]
+        nodes = [node_addresses[idx] for idx in node_idxs]
         latencies = [int(input_array[idx, peer_idx]) for idx in node_idxs]
 
-        matchs_for_db.append((peer, nws, latencies))
+        matchs_for_db.append((peer, nodes, latencies))
 
     return matchs_for_db
 
@@ -130,11 +134,13 @@ def merge_matchs(matchs: list) -> dict:
     return merged_matchs
 
 
-def multiple_round_nw_peer_match(input_array: np.ndarray, max_iter: int = None) -> dict:
+def multiple_round_node_peer_match(
+    input_array: np.ndarray, max_iter: int = None
+) -> dict:
     """
-    This method takes as input a matric of latencies between peers and netwatchers, and
+    This method takes as input a matric of latencies between peers and nodes, and
     a maximum number of iterations, and returns a dictionary of pairings between peers
-    and netwatchers.
+    and nodes.
     """
     matchs = []
     input = copy.deepcopy(input_array)
@@ -144,7 +150,7 @@ def multiple_round_nw_peer_match(input_array: np.ndarray, max_iter: int = None) 
         if max_iter and iter >= max_iter:
             break
 
-        matchs.append(one_round_nw_peer_match(input))
+        matchs.append(one_round_node_peer_match(input))
         input = remove_matchs(input, matchs[-1])
         iter += 1
 
