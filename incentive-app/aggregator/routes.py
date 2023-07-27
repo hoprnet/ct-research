@@ -14,7 +14,7 @@ from .aggregator import Aggregator
 _db_columns = [
     ("id", "SERIAL PRIMARY KEY"),
     ("peer_id", "VARCHAR(255) NOT NULL"),
-    ("netw_ids", "VARCHAR(255)[] NOT NULL"),
+    ("node_ids", "VARCHAR(255)[] NOT NULL"),
     ("latency_metric", "INTEGER[] NOT NULL"),
     ("timestamp", "TIMESTAMP NOT NULL DEFAULT NOW()"),
 ]
@@ -159,7 +159,7 @@ def attach_endpoints(app):
                 db.insert(
                     "raw_data_table",
                     peer_id=peer,
-                    netw_ids=nws,
+                    node_ids=nws,
                     latency_metric=latencies,
                 )
 

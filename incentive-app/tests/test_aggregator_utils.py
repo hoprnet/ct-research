@@ -11,11 +11,11 @@ def test_dict_to_array():
         "pod_id2": {"peer": 10, "peer2": 2},
     }
 
-    nw_ids = ["pod_id", "pod_id2"]
+    node_ids = ["pod_id", "pod_id2"]
     peer_ids = ["peer", "peer2"]
 
     expected_result = np.array([[1, 2], [10, 2]])
-    result = utils.dict_to_array(input_dict, nw_ids, peer_ids)
+    result = utils.dict_to_array(input_dict, node_ids, peer_ids)
 
     assert np.array_equal(result, expected_result)
 
@@ -79,13 +79,13 @@ def test_array_to_db_list():
     Test that the array_to_db_list method works correctly.
     """
     input_array = np.array([[1, 2]])
-    nw_ids = ["pod_0"]
+    node_ids = ["pod_0"]
     peer_ids = ["peer_0", "peer_1"]
 
     matchs = utils.multiple_round_nw_peer_match(input_array, max_iter=3)
 
     expected_result = [("peer_0", ["pod_0"], [1]), ("peer_1", ["pod_0"], [2])]
-    result = utils.array_to_db_list(input_array, matchs, nw_ids, peer_ids)
+    result = utils.array_to_db_list(input_array, matchs, node_ids, peer_ids)
 
     assert result == expected_result
 

@@ -176,16 +176,16 @@ class Aggregator(metaclass=Singleton):
         peer the list of best nw to connect to and the corresponding latencies.
         """
         with self._nw_peer_latency_lock:
-            # gather all nw ids in a single list
-            nw_ids = get_nw_list_from_dict(self._nw_peer_latency)
-            log.info(f"NW going to be matched: {nw_ids}")
+            # gather all node ids in a single list
+            node_ids = get_nw_list_from_dict(self._nw_peer_latency)
+            log.info(f"Nodes going to be matched: {node_ids}")
 
             peer_ids = get_peer_list_from_dict(self._nw_peer_latency)
             log.info(f"Peers going to be matched: {peer_ids}")
 
             # create an array with latencies stored at the right indexes, corresponding
             # to nw and peer indexes in the lists above
-            lat_as_array = dict_to_array(self._nw_peer_latency, nw_ids, peer_ids)
+            lat_as_array = dict_to_array(self._nw_peer_latency, node_ids, peer_ids)
             log.info(f"Latency data converted into an array:\n{lat_as_array}")
 
             # create a dict with the best 'peer: [nw]' matchs
@@ -193,7 +193,7 @@ class Aggregator(metaclass=Singleton):
             log.info(f"Matchs with 3 iterations:\n{matchs}")
 
             # convert back each ids in matchs to the original ids
-            matchs_for_db = array_to_db_list(lat_as_array, matchs, nw_ids, peer_ids)
+            matchs_for_db = array_to_db_list(lat_as_array, matchs, node_ids, peer_ids)
             log.info(f"Matchs for db:\n{matchs_for_db}")
 
         return matchs_for_db
@@ -208,10 +208,10 @@ class Aggregator(metaclass=Singleton):
         log.info(f"NW-peer-latencies: {nw_peer_latencies}")
 
         with self._nw_balances_lock:
-            for nw_id, balances in nw_balances.items():
-                if nw_id not in metrics["netwatchers"]:
-                    metrics["netwatchers"][nw_id] = {}
-                metrics["netwatchers"][nw_id]["balances"] = balances
+            for node_id, balances in nw_balances.items():
+                if node_id not in metrics["netwatchers"]:
+                    metrics["netwatchers"][node_id] = {}
+                metrics["netwatchers"][node_id]["balances"] = balances
 
         with self._nw_peer_latency_lock:
             for _, latencies in nw_peer_latencies.items():

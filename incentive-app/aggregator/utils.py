@@ -73,32 +73,32 @@ def get_nw_list_from_dict(input_dict: dict) -> list:
     return list(input_dict.keys())
 
 
-def dict_to_array(input_dict: dict, nw_ids: list, peer_ids: list):
+def dict_to_array(input_dict: dict, node_ids: list, peer_ids: list):
     """
     This method converts the input dictionary to a numpy array based on netwatchers and
     peers ids orders.
     """
 
-    outarray = np.zeros((len(nw_ids), len(peer_ids)))
-    for nw_idx, peer_list in enumerate(input_dict.values()):
+    outarray = np.zeros((len(node_ids), len(peer_ids)))
+    for node_idx, peer_list in enumerate(input_dict.values()):
         for peer, lat in peer_list.items():
-            outarray[nw_idx, peer_ids.index(peer)] = lat
+            outarray[node_idx, peer_ids.index(peer)] = lat
 
     return outarray
 
 
 def array_to_db_list(
-    input_array: np.ndarray, matchs: dict, nw_ids: list, peer_ids: list
+    input_array: np.ndarray, matchs: dict, node_ids: list, peer_ids: list
 ):
     """
     This method creates a list of tuples to be inserted in the database based on the
     input array and the matchs.
     """
     matchs_for_db = []
-    for peer_idx, nw_idxs in matchs.items():
+    for peer_idx, node_idxs in matchs.items():
         peer = peer_ids[peer_idx]
-        nws = [nw_ids[idx] for idx in nw_idxs]
-        latencies = [int(input_array[idx, peer_idx]) for idx in nw_idxs]
+        nws = [node_ids[idx] for idx in node_idxs]
+        latencies = [int(input_array[idx, peer_idx]) for idx in node_idxs]
 
         matchs_for_db.append((peer, nws, latencies))
 

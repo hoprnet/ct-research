@@ -15,8 +15,8 @@ app = Celery(
 )
 
 
-# the name of the task is the name of the "<task_name>.<worker_peer_id>"
-@app.task(name=f"{envvar('TASK_NAME')}.{envvar('WORKER_PEER_ID')}")
+# the name of the task is the name of the "<task_name>.<node_address>"
+@app.task(name=f"{envvar('TASK_NAME')}.{envvar('NODE_ADDRESS')}")
 def send_1_hop_message(peer: str, count: int, node_list: list[str], node_index: int):
     """
     Celery task to send `count`1-hop messages to a peer.

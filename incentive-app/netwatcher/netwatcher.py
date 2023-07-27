@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import random
-import uuid
 
 from aiohttp import ClientSession
 
@@ -27,7 +26,6 @@ class NetWatcher(HOPRNode):
         :param posturl: the url of the Aggregator to send the peers to
         """
         # assign unique uuid as a string
-        self.id = str(uuid.uuid4())
         self.posturl = posturl
         self.balanceurl = balanceurl
 
@@ -81,7 +79,7 @@ class NetWatcher(HOPRNode):
 
             latency_dict[short_list[i]] = latency
 
-        data = {"id": self.id, "list": latency_dict}
+        data = {"id": self.peer_id, "list": latency_dict}
 
         try:
             async with session.post(self.posturl, json=data) as response:
@@ -101,7 +99,7 @@ class NetWatcher(HOPRNode):
         """
         try:
             async with session.post(
-                self.balanceurl, json={"id": self.id, "balance": balance}
+                self.balanceurl, json={"id": self.peer_id, "balance": balance}
             ) as response:
                 if response.status == 200:
                     log.info(f"Transmisted native balance: {balance}")
@@ -276,7 +274,7 @@ class NetWatcher(HOPRNode):
         """
         Starts the tasks of this node
         """
-        log.info(f"Starting instance '{self.id}'")
+        log.info(f"Starting instance connected to '{self.peer_id}'")
         if self.tasks:
             return
 
@@ -293,7 +291,7 @@ class NetWatcher(HOPRNode):
         """
         Mock-starts the tasks of this node
         """
-        log.info(f"Starting instance '{self.id}'")
+        log.info(f"Starting instance '{self.peer_id}'")
         if self.tasks:
             return
 
@@ -309,7 +307,7 @@ class NetWatcher(HOPRNode):
         """
         Stops the tasks of this instance
         """
-        log.debug(f"Stopping instance {self.id}")
+        log.debug(f"Stopping instance {self.peer_id}")
 
         self.started = False
         for task in self.tasks:
