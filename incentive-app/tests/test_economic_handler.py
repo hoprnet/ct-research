@@ -135,10 +135,10 @@ def merge_data():
         "peer_id_5": {"netw": ["nw_1", "nw_2", "nw_3", "nw_4"]},
     }
     subgraph_dict = {
-        "safe_1": {"stake": 65},
-        "safe_3": {"stake": 23},
-        "safe_4": {"stake": 85},
-        "safe_5": {"stake": 62},
+        "safe_1": 65,
+        "safe_3": 23,
+        "safe_4": 85,
+        "safe_5": 62,
     }
 
     return unique_peerId_address, metrics_dict, subgraph_dict

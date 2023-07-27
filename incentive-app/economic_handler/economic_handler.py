@@ -98,9 +98,11 @@ class EconomicHandler(HOPRNode):
         pluto_keys_in_mockdb_data = self.replace_keys_in_mock_data(
             unique_safe_peerId_links
         )
+        print(pluto_keys_in_mockdb_data)
         pluto_keys_in_mocksubraph_data = self.replace_keys_in_mock_data_subgraph(
             unique_safe_peerId_links
         )
+        print(pluto_keys_in_mocksubraph_data)
 
         # merge unique_safe_peerId_links with database metrics and subgraph data
         _, metrics_dict = self.merge_topology_metricdb_subgraph(
@@ -119,7 +121,7 @@ class EconomicHandler(HOPRNode):
         _, one_to_many_safe_peerid_links = self.safe_address_split_stake(
             metrics_dict_excluding_rpch
         )
-        print(one_to_many_safe_peerid_links)
+        # print(one_to_many_safe_peerid_links)
 
         # Extract Parameters
         parameters, equations, budget_param = parameters_equations_budget
@@ -135,10 +137,10 @@ class EconomicHandler(HOPRNode):
         _, expected_rewards = self.compute_expected_reward(ct_prob_dict, budget_param)
 
         # output expected rewards as a csv file
-        self.save_expected_reward_csv(expected_rewards)
+        # self.save_expected_reward_csv(expected_rewards)
 
         # print(f"{staking_participations}")
-        print(f"{expected_rewards=}")
+        # print(f"{expected_rewards=}")
         # print(f"{rpch_nodes_blacklist=}")
 
     async def get_unique_safe_peerId_links(self):
@@ -172,11 +174,11 @@ class EconomicHandler(HOPRNode):
                   and stake as value.
         """
         subgraph_dict = {
-            "safe_1": {"stake": 10},
-            "safe_2": {"stake": 55},
-            "safe_3": {"stake": 23},
-            "safe_4": {"stake": 85},
-            "safe_5": {"stake": 62},
+            "safe_1": 10,
+            "safe_2": 55,
+            "safe_3": 23,
+            "safe_4": 85,
+            "safe_5": 62,
         }
         return subgraph_dict
 
@@ -400,7 +402,7 @@ class EconomicHandler(HOPRNode):
                     merged_result[peer_id] = {
                         "safe_address": safe_address,
                         "netwatchers": new_metrics_dict[peer_id]["netw"],
-                        "stake": new_subgraph_dict[safe_address]["stake"],
+                        "stake": new_subgraph_dict[safe_address],
                     }
         except Exception as e:
             log.error(f"Error occurred while merging: {e}")
