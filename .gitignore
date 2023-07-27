@@ -15,7 +15,7 @@ logs/
 #misc
 .coverage
 htmlcov/
-foo.py
+foo*.py
 run_*.sh
 .DS_Store
 
