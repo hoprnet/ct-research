@@ -1,7 +1,7 @@
 from .exit_codes import ExitCode
 from .hopr_node import HOPRNode
 from .hopr_api_helper import HoprdAPIHelper
-from .utils import _getlogger, envvar, stop
+from .utils import _getlogger, envvar, read_json_file
 from .decorator import wakeupcall, formalin, connectguard
 
 __all__ = [
@@ -10,8 +10,8 @@ __all__ = [
     "HoprdAPIHelper",
     "_getlogger",
     "envvar",
-    "stop",
     "wakeupcall",
     "formalin",
     "connectguard",
+    "read_json_file",
 ]
