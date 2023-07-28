@@ -1,11 +1,8 @@
 import logging
 import os
-from signal import Signals
 import logging.config
-
-import click
-
-from .hopr_node import HOPRNode
+import jsonschema
+import json
 
 
 def _getlogger() -> logging.Logger:
@@ -44,12 +41,30 @@ def envvar(name: str, type: type = None) -> str:
     return value
 
 
-def stop(node: HOPRNode, caught_signal: Signals):
+def read_json_file(path, schema):
     """
-    Stops the running node.
-    :param node: the HOPR node to stop
-    :param caught_signal: the signal that triggered the stop
+    Reads a JSON file and validates its contents using a schema.
+    :param: path: The path to the parameters file
+    ;param: schema: The validation schema
+    :returns: (dict): The contents of the JSON file.
     """
-    click.echo(f">>> Caught signal {caught_signal.name} <<<")
-    click.echo(">>> Stopping ...")
-    node.stop()
+    log = _getlogger()
+    try:
+        with open(path, "r") as file:
+            contents = json.load(file)
+    except FileNotFoundError as e:
+        log.exception(f"The file in '{path}' does not exist. {e}")
+        return {}
+
+    try:
+        jsonschema.validate(
+            contents,
+            schema=schema,
+        )
+    except jsonschema.ValidationError as e:
+        log.exception(
+            f"The file in'{path}' does not follow the expected structure. {e}"
+        )
+        return {}
+
+    return contents

@@ -1,19 +1,16 @@
-import logging
 import os
 import traceback
-import json
-import jsonschema
 import csv
 import time
 import asyncio
 import aiohttp
 
 from tools.hopr_node import HOPRNode
-from .parameters_schema import schema
+from assets.parameters_schema import schema as schema_name
+from tools.decorator import wakeupcall, connectguard, econ_handler_wakeupcall
+from tools.utils import _getlogger, read_json_file
 
-from tools.decorator import wakeupcall, connectguard
-
-log = logging.getLogger(__name__)
+log = _getlogger()
 
 
 class EconomicHandler(HOPRNode):
@@ -53,7 +50,7 @@ class EconomicHandler(HOPRNode):
         print(f"{self.connected=}")
         return self.connected
 
-    @wakeupcall(seconds=15)
+    @econ_handler_wakeupcall()
     @connectguard
     async def scheduler(self):
         """
@@ -66,6 +63,7 @@ class EconomicHandler(HOPRNode):
         tasks.add(asyncio.create_task(self.get_unique_safe_peerId_links()))
         tasks.add(asyncio.create_task(self.read_parameters_and_equations()))
         tasks.add(asyncio.create_task(self.blacklist_rpch_nodes(self.rpch_endpoint)))
+        """
         tasks.add(
             asyncio.create_task(
                 self.get_staking_participations(
@@ -75,7 +73,7 @@ class EconomicHandler(HOPRNode):
                 )
             )
         )
-
+        """
         await asyncio.sleep(0)
 
         finished, _ = await asyncio.wait(tasks)
@@ -92,17 +90,16 @@ class EconomicHandler(HOPRNode):
         parameters_equations_budget = ordered_tasks[1][1:]
         rpch_nodes_blacklist = ordered_tasks[2][1]
         # staking_participations = ordered_tasks[3][1]
+        print(parameters_equations_budget)
 
         # helper functions that allow to test the code by inserting
         # the peerIDs of the pluto nodes (SUBJECT TO REMOVAL)
         pluto_keys_in_mockdb_data = self.replace_keys_in_mock_data(
             unique_safe_peerId_links
         )
-        print(pluto_keys_in_mockdb_data)
         pluto_keys_in_mocksubraph_data = self.replace_keys_in_mock_data_subgraph(
             unique_safe_peerId_links
         )
-        print(pluto_keys_in_mocksubraph_data)
 
         # merge unique_safe_peerId_links with database metrics and subgraph data
         _, metrics_dict = self.merge_topology_metricdb_subgraph(
@@ -110,7 +107,7 @@ class EconomicHandler(HOPRNode):
             pluto_keys_in_mockdb_data,
             pluto_keys_in_mocksubraph_data,
         )
-        print(metrics_dict)
+        # print(metrics_dict)
 
         # Exclude RPCh entry and exit nodes from the reward computation
         _, metrics_dict_excluding_rpch = self.block_rpch_nodes(
@@ -140,7 +137,7 @@ class EconomicHandler(HOPRNode):
         # self.save_expected_reward_csv(expected_rewards)
 
         # print(f"{staking_participations}")
-        # print(f"{expected_rewards=}")
+        print(f"{expected_rewards=}")
         # print(f"{rpch_nodes_blacklist=}")
 
     async def get_unique_safe_peerId_links(self):
@@ -221,41 +218,23 @@ class EconomicHandler(HOPRNode):
         Reads parameters and equations from a JSON file and validates it using a schema.
         :param: file_name (str): The name of the JSON file containing the parameters
         and equations. Defaults to "parameters.json".
-        :returns: dicts: The first dictionary contains the parameters, the second
-        dictionary contains the equations, and the third dictionary the budget.
+        :returns: dicts: The first dictionary contains the model parameters, the second
+        dictionary contains the equations, and the third dictionary
+        contains the budget parameters.
         """
         script_directory = os.path.dirname(os.path.abspath(__file__))
-        parameters_file_path = os.path.join(script_directory, file_name)
+        assets_directory = os.path.join(script_directory, "../assets")
+        parameters_file_path = os.path.join(assets_directory, file_name)
 
-        try:
-            with open(parameters_file_path, "r") as file:
-                contents = await asyncio.to_thread(json.load, file)
-        except FileNotFoundError as e:
-            log.error(f"The file '{file_name}' does not exist. {e}")
-            log.error(traceback.format_exc())
-            return "params", {}, {}, {}
-
-        parameters = contents.get("parameters", {})
-        equations = contents.get("equations", {})
-        budget_param = contents.get("budget_param", {})
-
-        try:
-            jsonschema.validate(
-                instance={
-                    "parameters": parameters,
-                    "equations": equations,
-                    "budget_param": budget_param,
-                },
-                schema=schema,
-            )
-        except jsonschema.ValidationError as e:
-            log.error(
-                f"The file '{file_name}' does not follow the expected structure. {e}"
-            )
-            log.error(traceback.format_exc())
-            return "params", {}, {}, {}
-
-        return "params", parameters, equations, budget_param
+        contents = await asyncio.to_thread(
+            read_json_file, parameters_file_path, schema_name
+        )
+        return (
+            "params",
+            contents["parameters"],
+            contents["equations"],
+            contents["budget_param"],
+        )
 
     async def blacklist_rpch_nodes(self, api_endpoint: str):
         """
