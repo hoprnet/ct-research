@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 app = Celery(
     name=envvar("PROJECT_NAME"),
     broker=envvar("CELERY_BROKER_URL"),
-    backend=envvar("CELERY_RESULT_BACKEND"),
+    # backend=envvar("CELERY_RESULT_BACKEND"),
 )
 
 
