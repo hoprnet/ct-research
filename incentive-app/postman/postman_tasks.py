@@ -11,12 +11,12 @@ log = logging.getLogger(__name__)
 app = Celery(
     name=envvar("PROJECT_NAME"),
     broker=envvar("CELERY_BROKER_URL"),
-    backend=envvar("CELERY_RESULT_BACKEND"),
+    # backend=envvar("CELERY_RESULT_BACKEND"),
 )
 
 
-# the name of the task is the name of the "<task_name>.<worker_peer_id>"
-@app.task(name=f"{envvar('TASK_NAME')}.{envvar('WORKER_PEER_ID')}")
+# the name of the task is the name of the "<task_name>.<node_address>"
+@app.task(name=f"{envvar('TASK_NAME')}.{envvar('NODE_ADDRESS')}")
 def send_1_hop_message(peer: str, count: int, node_list: list[str], node_index: int):
     """
     Celery task to send `count`1-hop messages to a peer.
@@ -67,13 +67,13 @@ async def async_send_1_hop_message(
             return "FAIL"
 
         node_index += 1
-        node_id = node_list[node_index]
-        log.info(f"Redirecting task to {node_id} (#{node_index} - {api_host})")
+        node_address = node_list[node_index]
+        log.info(f"Redirecting task to {node_address} (#{node_index} - {api_host})")
 
         app.send_task(
-            f"{envvar('TASK_NAME')}.{node_id}",
+            f"{envvar('TASK_NAME')}.{node_address}",
             args=(peer_id, count, node_list, node_index),
-            queue=node_id,
+            queue=node_address,
         )
 
         return "RETRYING"

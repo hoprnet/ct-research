@@ -27,7 +27,7 @@ def cols_fixture():
     columns = [
         ("id", "SERIAL PRIMARY KEY"),
         ("peer_id", "VARCHAR(255) NOT NULL"),
-        ("netw_ids", "VARCHAR(255)[] NOT NULL"),
+        ("node_addresses", "VARCHAR(255)[] NOT NULL"),
         ("latency_metric", "INTEGER[] NOT NULL"),
         ("timestamp", "TIMESTAMP NOT NULL DEFAULT NOW()"),
     ]
@@ -95,7 +95,7 @@ def test_insert(db_fixture: DatabaseConnection, cols_fixture: list[tuple]):
         db.insert(
             "test_table",
             peer_id="0xF514",
-            netw_ids=["0xF24", "0xF21"],
+            node_addresses=["0xF24", "0xF21"],
             latency_metric=[100, 13],
         )
         db.drop_table("test_table")
@@ -113,7 +113,7 @@ def test_insert_unknown_column(
             db.insert(
                 "test_table",
                 peer_id="0xF514",
-                netw_ids=["0xF24", "0xF21"],
+                node_addresses=["0xF24", "0xF21"],
                 latency_metric=[100, 13],
                 foo="bar",
             )
@@ -132,7 +132,7 @@ def test_insert_missing_column(
             db.insert(
                 "test_table",
                 peer_id="0xF514",
-                netw_ids=["0xF24", "0xF21"],
+                node_addresses=["0xF24", "0xF21"],
             )
         db.drop_table("test_table")
 
@@ -145,7 +145,7 @@ def test_insert_many(db_fixture: DatabaseConnection, cols_fixture: list[tuple]):
         db.create_table("test_table", cols_fixture)
         db.insert_many(
             "test_table",
-            ["peer_id", "netw_ids", "latency_metric"],
+            ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF516", ["0xF24", "0xF21"], [100, 13]),
                 ("0xF517", ["0xF24", "0xF21"], [100, 13]),
@@ -167,7 +167,7 @@ def test_insert_many_unknown_column(
         with pytest.raises(ValueError):
             db.insert_many(
                 "test_table",
-                ["peer_id", "netw_ids", "latency_metric", "foo"],
+                ["peer_id", "node_addresses", "latency_metric", "foo"],
                 [
                     ("0xF516", ["0xF24", "0xF21"], [100, 13], "bar"),
                     ("0xF517", ["0xF24", "0xF21"], [100, 13], "bar"),
@@ -189,7 +189,7 @@ def test_insert_many_missing_column(
         with pytest.raises(ValueError):
             db.insert_many(
                 "test_table",
-                ["peer_id", "netw_ids"],
+                ["peer_id", "node_addresses"],
                 [
                     ("0xF516", ["0xF24", "0xF21"], [100, 13]),
                     ("0xF517", ["0xF24", "0xF21"], [100, 13]),
@@ -209,7 +209,7 @@ def test_last_row(db_fixture: DatabaseConnection, cols_fixture: list[tuple]):
         db.insert(
             "test_table",
             peer_id="0xF514",
-            netw_ids=["0xF24", "0xF21"],
+            node_addresses=["0xF24", "0xF21"],
             latency_metric=[100, 13],
         )
         last_row = db.last_row("test_table")
@@ -239,7 +239,7 @@ def test_row(db_fixture: DatabaseConnection, cols_fixture: list[tuple]):
         db.insert(
             "test_table",
             peer_id="0xF514",
-            netw_ids=["0xF24", "0xF21"],
+            node_addresses=["0xF24", "0xF21"],
             latency_metric=[100, 13],
         )
         row = db.row("test_table", 1)
@@ -268,7 +268,7 @@ def test_last_added_rows(db_fixture: DatabaseConnection, cols_fixture: list[tupl
         db.create_table("test_table", cols_fixture)
         db.insert_many(
             "test_table",
-            ["peer_id", "netw_ids", "latency_metric"],
+            ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF516", ["0xF24", "0xF21"], [100, 13]),
                 ("0xF517", ["0xF24", "0xF21"], [100, 13]),
@@ -276,7 +276,7 @@ def test_last_added_rows(db_fixture: DatabaseConnection, cols_fixture: list[tupl
         )
         db.insert_many(
             "test_table",
-            ["peer_id", "netw_ids", "latency_metric"],
+            ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF518", ["0xF24", "0xF21"], [100, 13]),
                 ("0xF519", ["0xF24", "0xF21"], [100, 13]),
@@ -320,7 +320,7 @@ def test_count_last_added_rows(
         db.create_table("test_table", cols_fixture)
         db.insert_many(
             "test_table",
-            ["peer_id", "netw_ids", "latency_metric"],
+            ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF516", ["0xF24", "0xF21"], [100, 13]),
                 ("0xF517", ["0xF24", "0xF21"], [100, 13]),
@@ -328,7 +328,7 @@ def test_count_last_added_rows(
         )
         db.insert_many(
             "test_table",
-            ["peer_id", "netw_ids", "latency_metric"],
+            ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF518", ["0xF24", "0xF21"], [100, 13]),
                 ("0xF519", ["0xF24", "0xF21"], [100, 13]),
@@ -365,7 +365,7 @@ def test_count_uniques(db_fixture: DatabaseConnection, cols_fixture: list[tuple]
         db.create_table("test_table", cols_fixture)
         db.insert_many(
             "test_table",
-            ["peer_id", "netw_ids", "latency_metric"],
+            ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF516", ["0xF24", "0xF21"], [100, 13]),
                 ("0xF517", ["0xF24", "0xF21"], [100, 13]),
@@ -373,7 +373,7 @@ def test_count_uniques(db_fixture: DatabaseConnection, cols_fixture: list[tuple]
         )
         db.insert_many(
             "test_table",
-            ["peer_id", "netw_ids", "latency_metric"],
+            ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF517", ["0xF24", "0xF21"], [100, 13]),
                 ("0xF518", ["0xF24", "0xF21"], [100, 13]),
@@ -410,7 +410,7 @@ def test_count_uniques_in_last_added_rows(
         db.create_table("test_table", cols_fixture)
         db.insert_many(
             "test_table",
-            ["peer_id", "netw_ids", "latency_metric"],
+            ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF516", ["0xF24", "0xF21"], [100, 13]),
                 ("0xF517", ["0xF24", "0xF21"], [100, 13]),
@@ -418,7 +418,7 @@ def test_count_uniques_in_last_added_rows(
         )
         db.insert_many(
             "test_table",
-            ["peer_id", "netw_ids", "latency_metric"],
+            ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF517", ["0xF24", "0xF21"], [100, 13]),
                 ("0xF518", ["0xF24", "0xF21"], [100, 13]),
@@ -471,7 +471,7 @@ def test_rows_after_timestamp_to_recent(
         db.create_table("test_table", cols_fixture)
         db.insert_many(
             "test_table",
-            ["peer_id", "netw_ids", "latency_metric"],
+            ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF516", ["0xF24", "0xF21"], [100, 13]),
                 ("0xF517", ["0xF24", "0xF21"], [100, 13]),
@@ -493,7 +493,7 @@ def test_rows_after_timestamp(
         db.create_table("test_table", cols_fixture)
         db.insert_many(
             "test_table",
-            ["peer_id", "netw_ids", "latency_metric"],
+            ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF516", ["0xF24", "0xF21"], [100, 13]),
                 ("0xF517", ["0xF24", "0xF21"], [100, 13]),
@@ -503,7 +503,7 @@ def test_rows_after_timestamp(
         time.sleep(5)
         db.insert_many(
             "test_table",
-            ["peer_id", "netw_ids", "latency_metric"],
+            ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF518", ["0xF24", "0xF21"], [100, 13]),
                 ("0xF519", ["0xF24", "0xF21"], [100, 13]),

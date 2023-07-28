@@ -14,7 +14,7 @@ from .aggregator import Aggregator
 _db_columns = [
     ("id", "SERIAL PRIMARY KEY"),
     ("peer_id", "VARCHAR(255) NOT NULL"),
-    ("netw_ids", "VARCHAR(255)[] NOT NULL"),
+    ("node_addresses", "VARCHAR(255)[] NOT NULL"),
     ("latency_metric", "INTEGER[] NOT NULL"),
     ("timestamp", "TIMESTAMP NOT NULL DEFAULT NOW()"),
 ]
@@ -29,7 +29,7 @@ def attach_endpoints(app):
         """
         Create a POST route to receive a list of peers from a pod.
         The body of the request must be a JSON object with the following keys:
-        - id: the network UUID of the pod
+        - id: the node id
         - list: a list of peers with their latency
 
         At each call, the list is added to the aggregator, and the last update
@@ -49,8 +49,8 @@ def attach_endpoints(app):
 
         log.info(f"Received list from {request.json['id']}")
 
-        agg.add_nw_peer_latencies(request.json["id"], request.json["list"])
-        agg.set_nw_update(request.json["id"], datetime.now())
+        agg.add_node_peer_latencies(request.json["id"], request.json["list"])
+        agg.set_node_update(request.json["id"], datetime.now())
 
         return sanic_text("Received list")
 
@@ -59,12 +59,12 @@ def attach_endpoints(app):
         """
         Create a GET route to retrieve the aggregated list of peers/latency.
         The list is returned as a JSON object with the following keys:
-        - id: the network UUID of the pod
+        - id: the node id
         - list: a list of peers with their latency
         """
 
-        log.info("Returned nw-peer-latency list")
-        return sanic_json(agg.get_nw_peer_latencies())
+        log.info("Returned node-peer-latency list")
+        return sanic_json(agg.get_node_peer_latencies())
 
     @app.route("/aggregator/list_ui", methods=["GET"])
     async def get_list_ui(request: Request):  # pragma: no cover
@@ -73,7 +73,7 @@ def attach_endpoints(app):
         and generate an HTML page to display it.
         NO NEED TO CHECK THIS METHOD, AS IT'S PURPOSE IS ONLY FOR DEBUGGING.
         """
-        agg_info = agg.get_nw_peer_latencies()
+        agg_info = agg.get_node_peer_latencies()
         count = len(agg_info)
 
         # header
@@ -92,7 +92,7 @@ def attach_endpoints(app):
 
         # peers detected by pods
         for pod_id, data in agg_info.items():
-            update_time = agg.get_nw_update(pod_id)
+            update_time = agg.get_node_update(pod_id)
             html_text.append(_display_pod_infos(pod_id, data, update_time, styles))
 
         if len(agg_info) == 0:
@@ -122,7 +122,7 @@ def attach_endpoints(app):
         timestamp = time.strftime("%d-%m-%Y, %H:%M:%S") if time else "N/A"
 
         text = []
-        text.append(f"<h2 style='{styles['h2']}'>NW UUID: {pod_id}</h2>")
+        text.append(f"<h2 style='{styles['h2']}'>Node ID: {pod_id}</h2>")
         text.append(f"<p style='{styles['date']}'>(Last updated: {timestamp})</p>")
 
         text.append(f"<p style='{styles['line']}'>Peers: {peer_list}</p>")
@@ -154,12 +154,12 @@ def attach_endpoints(app):
 
             log.info(f"Inserting {len(matchs_for_db)} rows into DB")
 
-            for peer, nws, latencies in matchs_for_db:
+            for peer, nodes, latencies in matchs_for_db:
                 log.info(f"Inserting {peer} into DB")
                 db.insert(
                     "raw_data_table",
                     peer_id=peer,
-                    netw_ids=nws,
+                    node_addresses=nodes,
                     latency_metric=latencies,
                 )
 
@@ -168,7 +168,7 @@ def attach_endpoints(app):
     @app.route("/aggregator/balance", methods=["POST"])
     async def post_balance(request: Request):
         """
-        Create a POST route to receive the balance of a netwatcher.
+        Create a POST route to receive the balance of a node.
         """
         if "id" not in request.json:
             raise exceptions.BadRequest("`id` key not in body")
@@ -182,7 +182,7 @@ def attach_endpoints(app):
         log.info(f"Received balances from {request.json['id']}")
 
         for token, amount in request.json["balances"].items():
-            agg.add_nw_balance(request.json["id"], token, amount)
+            agg.add_node_balance(request.json["id"], token, amount)
 
         return sanic_text(f"Received balance for {request.json['id']}")
 
