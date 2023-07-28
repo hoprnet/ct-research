@@ -1,5 +1,9 @@
+import datetime
 from psycopg2 import connect
 from psycopg2.sql import SQL, Identifier
+from tools import _getlogger
+
+log = _getlogger()
 
 
 class DatabaseConnection:
@@ -17,6 +21,8 @@ class DatabaseConnection:
             port=self._port,
         )
         self.cursor = self.conn.cursor()
+
+        log.info(f"Database connection established as {self._user}")
 
     @property
     def database(self):
@@ -42,9 +48,17 @@ class DatabaseConnection:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        self.close_connection()
+
+    def close_connection(self):
+        """
+        Closes the database connection.
+        """
         self.conn.commit()
         self.cursor.close()
         self.conn.close()
+
+        log.info(f"Database connection closed as {self._user}")
 
     def create_table(self, table: str, columns: list[str] = []):
         """
@@ -73,6 +87,8 @@ class DatabaseConnection:
         self.cursor.execute(command.format(table_id, columns_sql))
         self.conn.commit()
 
+        log.info(f"Table `{table}` created with {len(columns)} columns")
+
     def drop_table(self, table: str):
         """
         Drops a table from the database.
@@ -90,6 +106,8 @@ class DatabaseConnection:
 
         self.cursor.execute(command.format(table_id))
         self.conn.commit()
+
+        log.info(f"Table `{table}` dropped")
 
     def table_exists_guard(self, table: str):
         """
@@ -193,6 +211,8 @@ class DatabaseConnection:
         )
         self.conn.commit()
 
+        log.info(f"Row inserted into `{table}`")
+
     def insert_many(self, table: str, keys: list[str], values: list[tuple]):
         """
         Inserts multiple rows into the given table.
@@ -243,6 +263,8 @@ class DatabaseConnection:
         )
         self.conn.commit()
 
+        log.info(f"{len(values)} rows inserted into `{table}`")
+
     def last_row(self, table: str):
         """
         Gets the last row from the given table.
@@ -266,6 +288,8 @@ class DatabaseConnection:
 
         if len(result) == 0:
             return None
+
+        log.info(f"Last row fetched from `{table}`")
 
         return result[0]
 
@@ -294,6 +318,8 @@ class DatabaseConnection:
         if len(result) == 0:
             return None
 
+        log.info(f"Row {row} fetched from `{table}`")
+
         return result[0]
 
     def last_added_rows(self, table: str):
@@ -318,7 +344,10 @@ class DatabaseConnection:
         result = self.cursor.fetchall()
 
         if len(result) == 0:
+            log.warning(f"No rows fetched from `{table}` because no data was found")
             return None
+
+        log.info(f"Last added rows ({len(result)}) fetched from `{table}`")
 
         return result
 
@@ -341,7 +370,11 @@ class DatabaseConnection:
         """
         )
         self.cursor.execute(command.format(table_id, table_id))
-        return self.cursor.fetchone()[0]
+        count = self.cursor.fetchone()[0]
+
+        log.info(f"Counted last added rows from `{table}`: {count}")
+
+        return count
 
     def count_uniques(self, table: str, column: str):
         """
@@ -366,7 +399,11 @@ class DatabaseConnection:
         """
         )
         self.cursor.execute(command.format(column_id, table_id))
-        return self.cursor.fetchone()[0]
+        count = self.cursor.fetchone()[0]
+
+        log.info(f"Counted unique values in column `{column}` of `{table}`: {count}")
+
+        return count
 
     def count_uniques_in_last_added_rows(self, table: str, column: str):
         """
@@ -393,4 +430,39 @@ class DatabaseConnection:
         """
         )
         self.cursor.execute(command.format(column_id, table_id, table_id))
-        return self.cursor.fetchone()[0]
+        count = self.cursor.fetchone()[0]
+
+        log.info(
+            f"Counted last unique values in column `{column}` of `{table}`: {count}"
+        )
+
+        return count
+
+    def rows_after_timestamp(self, table: str, timestamp: datetime.datetime):
+        """
+        Gets the rows from the given table that have a timestamp more recent than the given
+        timestamp.
+        :param table: The name of the table to get the rows from.
+        :param timestamp: The timestamp to compare to.
+        :return: The rows as a tuple.
+        """
+        if not self.table_exists_guard(table):
+            raise ValueError(f"Table '{table}' does not exist")
+        if not isinstance(timestamp, datetime.datetime):
+            raise ValueError("Timestamp must be a datetime.datetime object")
+
+        table_id = Identifier(table)
+
+        command = SQL(
+            """
+            SELECT *
+            FROM {}
+            WHERE timestamp > (%s)
+        """
+        )
+        self.cursor.execute(command.format(table_id), (timestamp,))
+        result = self.cursor.fetchall()
+
+        log.info(f"Rows after {timestamp} fetched from `{table}`")
+
+        return result

@@ -1,12 +1,12 @@
 import asyncio
-import traceback
 from signal import SIGINT, SIGTERM, Signals
 
-import click
 
-from tools import _getlogger
+from tools import _getlogger, envvar
 
 from .aggregator_trigger import AggregatorTrigger
+
+log = _getlogger()
 
 
 def stop(trigger: AggregatorTrigger, caught_signal: Signals):
@@ -15,29 +15,19 @@ def stop(trigger: AggregatorTrigger, caught_signal: Signals):
     :param node: the HOPR node to stop
     :param caught_signal: the signal that triggered the stop
     """
-    print(f">>> Caught signal {caught_signal.name} <<<")
-    print(">>> Stopping ...")
+    log.info(f">>> Caught signal {caught_signal.name} <<<")
+    log.info(">>> Stopping ...")
     trigger.stop()
 
 
-@click.command()
-@click.option("--host", default=None, help="host to send the list to the database")
-@click.option("--port", default=None, help="port to send the list to the database")
-@click.option("--route", default=None, help="route to send the list to the database")
-def main(host: str, port: str, route: str):
-    log = _getlogger()
-
-    if not host:
-        log.error("Host not specified (use --host)")
-        exit()
-    if not port:
-        log.error("Port not specified (use --port)")
-        exit()
-    if not route:
-        log.error("Route not specified (use --route)")
+def main():
+    try:
+        endpoint = envvar("POST_TO_DB_ENDPOINT")
+    except ValueError:
+        log.exception("Missing environment variables")
         exit()
 
-    trigger = AggregatorTrigger(host=host, port=port, route=route)
+    trigger = AggregatorTrigger(endpoint)
 
     # create the event loop and register the signal handlers
     loop = asyncio.new_event_loop()
@@ -48,9 +38,8 @@ def main(host: str, port: str, route: str):
     try:
         loop.run_until_complete(trigger.start())
 
-    except Exception as e:
-        log.error("Uncaught exception ocurred", str(e))
-        log.error(traceback.format_exc())
+    except Exception:
+        log.exception("Uncaught exception ocurred")
     finally:
         trigger.stop()
         loop.close()

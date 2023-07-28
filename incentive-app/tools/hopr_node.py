@@ -65,4 +65,4 @@ class HOPRNode:
         if self.peer_id is None:
             log.info("HOPR node is down")
         else:
-            log.info(f"HOPR node {self.peer_id[-5:]} is up")
+            log.info(f"HOPR node {self.peer_id} is up")

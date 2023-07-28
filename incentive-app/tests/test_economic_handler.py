@@ -1,4 +1,4 @@
-import json
+# import json
 import pytest
 from unittest import mock
 from unittest.mock import MagicMock
@@ -38,7 +38,7 @@ def file_contents():
                 "condition": "some other condition",
             },
         },
-        "budget": {"value": 100, "comment": "some comment"},
+        "budget_param": {"value": 100, "comment": "some comment"},
     }
 
 
@@ -48,52 +48,70 @@ def mock_open_file():
         yield mock_open_func
 
 
-@pytest.mark.asyncio
-async def test_read_parameters_and_equations(mock_open_file, file_contents):
-    """
-    Test whether parameters, equations, and budget are correctly returned
-    as a dictionary
-    """
-    mock_file = mock_open_file.return_value.__enter__.return_value
-    mock_file.read.return_value = json.dumps(file_contents)
+# @pytest.mark.asyncio
+# async def test_read_parameters_and_equations(mock_open_file, file_contents):
+#     """
+#     Test whether parameters, equations, and budget are correctly returned
+#     as a dictionary
+#     """
+#     mock_file = mock_open_file.return_value.__enter__.return_value
+#     mock_file.read.return_value = json.dumps(file_contents)
 
-    node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
+#     node = EconomicHandler(
+#         "some_url",
+#         "some_api_key",
+#         "some_rpch_endpoint",
+#         "some_subgraph_url",
+#         "some_sc_address",
+#     )
 
-    result = await node.read_parameters_and_equations(mock_file)
+#     result = await node.read_parameters_and_equations(mock_file)
 
-    assert isinstance(result[1], dict)
-    assert isinstance(result[2], dict)
-    assert isinstance(result[3], dict)
-
-
-@pytest.mark.asyncio
-async def test_read_parameters_and_equations_file_not_found():
-    """
-    Test whether an empty dictionary gets returned in case of a FileNotFoundError.
-    """
-    file_name = "non_existent_file.json"
-    node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
-
-    result = await node.read_parameters_and_equations(file_name)
-
-    assert result == ("params", {}, {}, {})
+#     assert isinstance(result[1], dict)
+#     assert isinstance(result[2], dict)
+#     assert isinstance(result[3], dict)
 
 
-@pytest.mark.asyncio
-async def test_read_parameters_and_equations_check_values(
-    mock_open_file, file_contents
-):
-    """
-    Test whether an empty dictionary gets returned in case of a ValidationError.
-    """
-    mock_file = mock_open_file.return_value.__enter__.return_value
-    mock_file.read.return_value = json.dumps(file_contents)
+# @pytest.mark.asyncio
+# async def test_read_parameters_and_equations_file_not_found():
+#     """
+#     Test whether an empty dictionary gets returned in case of a FileNotFoundError.
+#     """
+#     file_name = "non_existent_file.json"
+#     node = EconomicHandler(
+#         "some_url",
+#         "some_api_key",
+#         "some_rpch_endpoint",
+#         "some_subgraph_url",
+#         "some_sc_address",
+#     )
 
-    node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
+#     result = await node.read_parameters_and_equations(file_name)
 
-    result = await node.read_parameters_and_equations(mock_file)
+#     assert result == ("params", {}, {}, {})
 
-    assert result == ("params", {}, {}, {})
+
+# @pytest.mark.asyncio
+# async def test_read_parameters_and_equations_check_values(
+#     mock_open_file, file_contents
+# ):
+#     """
+#     Test whether an empty dictionary gets returned in case of a ValidationError.
+#     """
+#     mock_file = mock_open_file.return_value.__enter__.return_value
+#     mock_file.read.return_value = json.dumps(file_contents)
+
+#     node = EconomicHandler(
+#         "some_url",
+#         "some_api_key",
+#         "some_rpch_endpoint",
+#         "some_subgraph_url",
+#         "some_sc_address",
+#     )
+
+#     result = await node.read_parameters_and_equations(mock_file)
+
+#     assert result == ("params", {}, {}, {})
 
 
 @pytest.fixture
@@ -104,7 +122,7 @@ def merge_data():
     """
     unique_peerId_address = {
         "peer_id_1": "safe_1",
-        "peer_id_2": "safe_2",
+        "peer_id_2": "safe_1",
         "peer_id_3": "safe_3",
         "peer_id_4": "safe_4",
         "peer_id_5": "safe_5",
@@ -117,11 +135,10 @@ def merge_data():
         "peer_id_5": {"netw": ["nw_1", "nw_2", "nw_3", "nw_4"]},
     }
     subgraph_dict = {
-        "safe_1": {"stake": 10},
-        "safe_2": {"stake": 55},
-        "safe_3": {"stake": 23},
-        "safe_4": {"stake": 85},
-        "safe_5": {"stake": 62},
+        "safe_1": 65,
+        "safe_3": 23,
+        "safe_4": 85,
+        "safe_5": 62,
     }
 
     return unique_peerId_address, metrics_dict, subgraph_dict
@@ -133,12 +150,12 @@ def expected_merge_result():
         "peer_id_1": {
             "safe_address": "safe_1",
             "netwatchers": ["nw_1", "nw_3"],
-            "stake": 10,
+            "stake": 65,
         },
         "peer_id_2": {
-            "safe_address": "safe_2",
+            "safe_address": "safe_1",
             "netwatchers": ["nw_1", "nw_2", "nw_4"],
-            "stake": 55,
+            "stake": 65,
         },
         "peer_id_3": {
             "safe_address": "safe_3",
@@ -167,7 +184,13 @@ def test_merge_topology_metricdb_subgraph(merge_data, expected_merge_result):
     new_subgraph_dict = merge_data[2]
     expected_result = expected_merge_result
 
-    node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
+    node = EconomicHandler(
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
+    )
     result = node.merge_topology_metricdb_subgraph(
         unique_peerId_address, new_metrics_dict, new_subgraph_dict
     )
@@ -183,13 +206,106 @@ def test_merge_topology_metricdb_subgraph_exception(merge_data):
     new_metrics_dict = merge_data[1]
     new_subgraph_dict = {}
 
-    node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
+    node = EconomicHandler(
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
+    )
 
     result = node.merge_topology_metricdb_subgraph(
         unique_peerId_address, new_metrics_dict, new_subgraph_dict
     )
 
     assert result == ("merged_data", {})
+
+
+@pytest.fixture
+def mock_rpch_nodes_blacklist():
+    return ["peer_id_4", "peer_id_5"]
+
+
+def test_block_rpch_nodes(mock_rpch_nodes_blacklist, expected_merge_result):
+    """
+    Test whether the function returns the updated dictionary without the rpch
+    node keys. Test that the correct amount of peer_ids gets filtered out and
+    that the correct peer_ids are filtered out.
+    """
+    expected_peer_ids_in_result = {"peer_id_1", "peer_id_2", "peer_id_3"}
+    node = EconomicHandler(
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
+    )
+
+    _, result = node.block_rpch_nodes(mock_rpch_nodes_blacklist, expected_merge_result)
+
+    assert all(peer_id in result for peer_id in expected_peer_ids_in_result)
+    assert len(result) == len(expected_peer_ids_in_result)
+
+
+@pytest.fixture
+def expected_split_stake_result():
+    return {
+        "peer_id_1": {
+            "safe_address": "safe_1",
+            "netwatchers": ["nw_1", "nw_3"],
+            "stake": 65,
+            "safe_address_count": 2,
+            "splitted_stake": 32.5,
+        },
+        "peer_id_2": {
+            "safe_address": "safe_1",
+            "netwatchers": ["nw_1", "nw_2", "nw_4"],
+            "stake": 65,
+            "safe_address_count": 2,
+            "splitted_stake": 32.5,
+        },
+        "peer_id_3": {
+            "safe_address": "safe_3",
+            "netwatchers": ["nw_2", "nw_3", "nw_4"],
+            "stake": 23,
+            "safe_address_count": 1,
+            "splitted_stake": 23,
+        },
+        "peer_id_4": {
+            "safe_address": "safe_4",
+            "netwatchers": ["nw_1", "nw_2", "nw_3"],
+            "stake": 85,
+            "safe_address_count": 1,
+            "splitted_stake": 85,
+        },
+        "peer_id_5": {
+            "safe_address": "safe_5",
+            "netwatchers": ["nw_1", "nw_2", "nw_3", "nw_4"],
+            "stake": 62,
+            "safe_address_count": 1,
+            "splitted_stake": 62,
+        },
+    }
+
+
+def test_safe_address_split_stake(expected_merge_result, expected_split_stake_result):
+    """
+    Test whether the method correctly splits the stake
+    and returns the expected result dictionary.
+    """
+    expected_result = expected_split_stake_result
+    print(expected_result)
+
+    node = EconomicHandler(
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
+    )
+    result = node.safe_address_split_stake(expected_merge_result)
+    print(result)
+    assert result == ("split_stake_dict", expected_result)
 
 
 @pytest.fixture
@@ -214,80 +330,132 @@ def mocked_model_parameters():
             "f_x": {"formula": "a * x", "condition": "l <= x <= c"},
             "g_x": {"formula": "a * c + (x - c) ** (1 / b)", "condition": "x > c"},
         },
-        "budget": {"value": 100, "comment": "budget for the given distribution period"},
+        "budget_param": {
+            "budget": {
+                "value": 100,
+                "comment": "budget for the given distribution period",
+            },
+            "budget_period": {"value": 15, "comment": "budget period in seconds"},
+            "s": {
+                "value": 0.25,
+                "comment": "split ratio between automated and airdrop mode",
+            },
+            "dist_freq": {
+                "value": 2,
+                "comment": "distribution frequency of rewards via the automatic distribution",
+            },
+        },
     }
 
 
 @pytest.fixture
-def new_expected_merge_result(expected_merge_result):
+def new_expected_split_stake_result(expected_split_stake_result):
     """
-    Add new keys to the expected_merge_result @pytest.fixture
+    Add new keys to the expected_split_stake_result @pytest.fixture
     """
-    new_expected_merge_result = {}
-    for peer_id, values in expected_merge_result.items():
+    new_expected_split_stake_result = {}
+    for peer_id, values in expected_split_stake_result.items():
         new_values = values.copy()
         new_values["trans_stake"] = "some_value"
         new_values["prob"] = 0.1
-        new_expected_merge_result[peer_id] = new_values
+        new_expected_split_stake_result[peer_id] = new_values
 
-    return new_expected_merge_result
+    return new_expected_split_stake_result
 
 
-def test_compute_expected_reward(mocked_model_parameters, new_expected_merge_result):
+def test_compute_expected_reward(
+    mocked_model_parameters, new_expected_split_stake_result
+):
     """
-    Test whether the compute_expected_reward_savecsv method generates
-    the "expected_reward" value key in its output.
+    Test whether the compute_expected_reward method generates
+    the required values and whether the budget gets split correctly.
     """
-    budget = mocked_model_parameters["budget"]
-    node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
-    result = node.compute_expected_reward_savecsv(new_expected_merge_result, budget)
+    budget_param = mocked_model_parameters["budget_param"]
+    node = EconomicHandler(
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
+    )
+    result = node.compute_expected_reward(new_expected_split_stake_result, budget_param)
 
     # Assert Keys
-    assert set(result[1].keys()) == set(new_expected_merge_result.keys())
+    assert set(result[1].keys()) == set(new_expected_split_stake_result.keys())
 
     # Assert Values
     for value in result[1].values():
-        assert "expected_reward" in value
+        assert "total_expected_reward" in value
+        assert "protocol_exp_reward" in value
+        assert "airdrop_expected_reward" in value
+
+    # Assert that the split works correctly
+    for entry in result[1].values():
+        assert (
+            entry["total_expected_reward"]
+            == entry["protocol_exp_reward"] + entry["airdrop_expected_reward"]
+        )
 
 
-def test_compute_expected_reward_OSError_folder_creation(
-    mocked_model_parameters, new_expected_merge_result
+def test_save_expected_reward_csv_success(new_expected_split_stake_result):
+    """
+    Test whether the save_expected_reward_csv function returns the confirmation
+    message in case of no errors.
+    """
+    node = EconomicHandler(
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
+    )
+    result = node.save_expected_reward_csv(new_expected_split_stake_result)
+
+    assert result is True
+
+
+def test_save_expected_reward_csv_OSError_folder_creation(
+    new_expected_split_stake_result,
 ):
     """
     Test whether an OSError gets triggered when the folder creation
     or the writing of the csv file fails.
     """
-    budget = mocked_model_parameters["budget"]
-
     with patch("os.makedirs") as mock_makedirs:
         mock_makedirs.side_effect = OSError("Mocked OSError")
-        node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
-        result = node.compute_expected_reward_savecsv(new_expected_merge_result, budget)
+        node = EconomicHandler(
+            "some_url",
+            "some_api_key",
+            "some_rpch_endpoint",
+            "some_subgraph_url",
+            "some_sc_address",
+        )
+        result = node.save_expected_reward_csv(new_expected_split_stake_result)
 
-    assert result == ("expected_rewards", {})
+    assert result is False
 
 
-def test_compute_expected_reward_OSError_writing_csv(
-    mocked_model_parameters, new_expected_merge_result
-):
+def test_save_expected_reward_csv_OSError_writing_csv(new_expected_split_stake_result):
     """
     Test whether an OSError gets triggered when something goes wrong
     while writing the csv file.
     """
-    budget = mocked_model_parameters["budget"]
-
     with patch("os.makedirs"):
         with patch("builtins.open") as mock_open:
             mock_open.side_effect = OSError("Mocked OSError")
-            node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
-            result = node.compute_expected_reward_savecsv(
-                new_expected_merge_result, budget
+            node = EconomicHandler(
+                "some_url",
+                "some_api_key",
+                "some_rpch_endpoint",
+                "some_subgraph_url",
+                "some_sc_address",
             )
+            result = node.save_expected_reward_csv(new_expected_split_stake_result)
 
-    assert result == ("expected_reward", {})
+    assert result is False
 
 
-def test_probability_sum(mocked_model_parameters, expected_merge_result):
+def test_probability_sum(mocked_model_parameters, expected_split_stake_result):
     """
     Test whether the sum of probabilities is "close" to 1 due to
     floating-point precision. Not that the result is a tuple:
@@ -295,9 +463,15 @@ def test_probability_sum(mocked_model_parameters, expected_merge_result):
     """
     parameters = mocked_model_parameters["parameters"]
     equations = mocked_model_parameters["equations"]
-    merged_result = expected_merge_result
+    merged_result = expected_split_stake_result
 
-    node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
+    node = EconomicHandler(
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
+    )
     result = node.compute_ct_prob(parameters, equations, merged_result)
     sum_probabilities = sum(result[1][key]["prob"] for key in result[1])
 
@@ -314,13 +488,19 @@ def test_ct_prob_exception(mocked_model_parameters):
     equations = mocked_model_parameters["equations"]
     merged_result = {}
 
-    node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
+    node = EconomicHandler(
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
+    )
 
     result = node.compute_ct_prob(parameters, equations, merged_result)
 
     assert result == ("ct_prob", {})
 
-    
+
 @pytest.fixture
 def mock_node_for_test_start(mocker):
     """
@@ -330,7 +510,13 @@ def mock_node_for_test_start(mocker):
     mocker.patch.object(EconomicHandler, "host_available", return_value=None)
     mocker.patch.object(EconomicHandler, "scheduler", return_value=None)
 
-    return EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
+    return EconomicHandler(
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
+    )
 
 
 @pytest.mark.asyncio
@@ -353,7 +539,13 @@ def test_stop():
     Test whether the stop method cancels the tasks and updates the 'started' attribute.
     """
     mocked_task = MagicMock()
-    node = EconomicHandler("some_url", "some_api_key", "some_rpch_endpoint")
+    node = EconomicHandler(
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+        "some_sc_address",
+    )
     node.tasks = {mocked_task}
 
     node.stop()

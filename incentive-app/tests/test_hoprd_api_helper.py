@@ -39,6 +39,18 @@ async def test_balance(api_helper: HoprdAPIHelper):
 
 
 @pytest.mark.asyncio
+async def test_balance_native(api_helper: HoprdAPIHelper):
+    """
+    This test checks that the balance method of the HoprdAPIHelper class returns the
+    expected response when only the native balance is requested.
+    """
+    native_balance = await api_helper.balance("native")
+
+    assert native_balance is not None
+    assert isinstance(native_balance, int)
+
+
+@pytest.mark.asyncio
 async def test_set_alias(api_helper: HoprdAPIHelper):
     """
     This test checks that the set_alias method of the HoprdAPIHelper class returns the

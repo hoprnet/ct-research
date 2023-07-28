@@ -15,11 +15,8 @@ logs/
 #misc
 .coverage
 htmlcov/
-run_econ_handler.sh
-run_play.sh
-foo.py
-run_aggregator.sh
-run_nw.sh
-run_trigger.sh
+foo*.py
+run_*.sh
 .DS_Store
 
+incentive-app/tools/db_connection/__main__.py

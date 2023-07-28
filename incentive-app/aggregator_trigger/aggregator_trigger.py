@@ -1,6 +1,9 @@
 import asyncio
 import requests
-from tools.decorator import wakeupcall
+from tools.decorator import formalin
+from tools import _getlogger
+
+log = _getlogger()
 
 
 class AggregatorTrigger:
@@ -8,7 +11,7 @@ class AggregatorTrigger:
     every hour:minute:second.
     """
 
-    def __init__(self, host: str, port: int, route: str):
+    def __init__(self, endpoint: str):
         """
         Initialisation of the class.
         :param host: The host of the aggregator
@@ -17,27 +20,29 @@ class AggregatorTrigger:
         """
         self.started = False
         self.tasks = set[asyncio.Task]()
-        self.endpoint_url = f"http://{host}:{port}{route}"
+        self.endpoint_url = endpoint
 
-    @wakeupcall(minutes=1)
-    def send_list_to_db(self):
+    @formalin(sleep=300)
+    async def send_list_to_db(self):
         """
         Sends a request to the aggregator to send its data to the db
         """
+        log.info("Sending request to aggregator to send data to db")
         try:
             response = requests.get(self.endpoint_url)
-        # catch request exceptions
-        except requests.exceptions.RequestException as e:
-            print("Request exception: ", e)
+        except requests.exceptions.RequestException:
+            log.exception("Error while sending request to aggregator")
             return False
         else:
-            print("Response: ", response)
+            log.info(f"Response for `send_list`: {response}")
             return True
 
     def stop(self):
         """
         Stops the tasks of this node
         """
+        log.info("Stopping AggTrigger instance")
+
         self.started = False
         for task in self.tasks:
             task.cancel()
@@ -47,6 +52,7 @@ class AggregatorTrigger:
         """
         Starts the automatic triggering of the aggregator
         """
+        log.info("Starting AggTrigger instance")
         if self.tasks:
             return
 

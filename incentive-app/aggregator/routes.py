@@ -1,4 +1,5 @@
 from datetime import datetime
+from tools.utils import envvar, _getlogger
 
 from sanic import exceptions
 from sanic.request import Request
@@ -10,16 +11,25 @@ from tools.db_connection.database_connection import DatabaseConnection
 
 from .aggregator import Aggregator
 
+_db_columns = [
+    ("id", "SERIAL PRIMARY KEY"),
+    ("peer_id", "VARCHAR(255) NOT NULL"),
+    ("node_addresses", "VARCHAR(255)[] NOT NULL"),
+    ("latency_metric", "INTEGER[] NOT NULL"),
+    ("timestamp", "TIMESTAMP NOT NULL DEFAULT NOW()"),
+]
+
 
 def attach_endpoints(app):
     agg = Aggregator()
+    log = _getlogger()
 
     @app.route("/aggregator/list", methods=["POST"])
     async def post_list(request: Request):
         """
         Create a POST route to receive a list of peers from a pod.
         The body of the request must be a JSON object with the following keys:
-        - id: the network UUID of the pod
+        - id: the node id
         - list: a list of peers with their latency
 
         At each call, the list is added to the aggregator, and the last update
@@ -37,8 +47,10 @@ def attach_endpoints(app):
         if len(request.json["list"]) == 0:
             raise exceptions.BadRequest("`list` must not be empty")
 
-        agg.add(request.json["id"], request.json["list"])
-        agg.set_update(request.json["id"], datetime.now())
+        log.info(f"Received list from {request.json['id']}")
+
+        agg.add_node_peer_latencies(request.json["id"], request.json["list"])
+        agg.set_node_update(request.json["id"], datetime.now())
 
         return sanic_text("Received list")
 
@@ -47,10 +59,12 @@ def attach_endpoints(app):
         """
         Create a GET route to retrieve the aggregated list of peers/latency.
         The list is returned as a JSON object with the following keys:
-        - id: the network UUID of the pod
+        - id: the node id
         - list: a list of peers with their latency
         """
-        return sanic_json(agg.get())
+
+        log.info("Returned node-peer-latency list")
+        return sanic_json(agg.get_node_peer_latencies())
 
     @app.route("/aggregator/list_ui", methods=["GET"])
     async def get_list_ui(request: Request):  # pragma: no cover
@@ -59,7 +73,7 @@ def attach_endpoints(app):
         and generate an HTML page to display it.
         NO NEED TO CHECK THIS METHOD, AS IT'S PURPOSE IS ONLY FOR DEBUGGING.
         """
-        agg_info = agg.get()
+        agg_info = agg.get_node_peer_latencies()
         count = len(agg_info)
 
         # header
@@ -78,7 +92,7 @@ def attach_endpoints(app):
 
         # peers detected by pods
         for pod_id, data in agg_info.items():
-            update_time = agg.get_update(pod_id)
+            update_time = agg.get_node_update(pod_id)
             html_text.append(_display_pod_infos(pod_id, data, update_time, styles))
 
         if len(agg_info) == 0:
@@ -108,7 +122,7 @@ def attach_endpoints(app):
         timestamp = time.strftime("%d-%m-%Y, %H:%M:%S") if time else "N/A"
 
         text = []
-        text.append(f"<h2 style='{styles['h2']}'>NW UUID: {pod_id}</h2>")
+        text.append(f"<h2 style='{styles['h2']}'>Node ID: {pod_id}</h2>")
         text.append(f"<p style='{styles['date']}'>(Last updated: {timestamp})</p>")
 
         text.append(f"<p style='{styles['line']}'>Peers: {peer_list}</p>")
@@ -119,23 +133,61 @@ def attach_endpoints(app):
     async def post_to_db(request: Request):  # pragma: no cover
         """
         Takes the peers and metrics from the _dict and sends them to the database.
-        NO NEED TO CHECK THIS METHOD, AS IT'S PURPOSE IS ONLY FOR DEBUGGING.
         """
-
         matchs_for_db = agg.convert_to_db_data()
 
         with DatabaseConnection(
-            database=agg.db,
-            host=agg.dbhost,
-            user=agg.dbuser,
-            password=agg.dbpassword,
-            port=agg.dbport,
+            envvar("DB_NAME"),
+            envvar("DB_HOST"),
+            envvar("DB_USER"),
+            envvar("DB_PASSWORD"),
+            envvar("DB_PORT", int),
         ) as db:
-            for peer, nws, latencies in matchs_for_db:
-                db.insert("raw_data_table", peer=peer, nws=nws, latencies=latencies)
+            try:
+                db.create_table("raw_data_table", _db_columns)
+            except ValueError as e:
+                log.warning(f"Error creating table: {e}")
+
+            if not db.table_exists_guard("raw_data_table"):
+                log.error("Table not available, not sending to DB")
+                return sanic_text("Table not available", status=500)
+
+            log.info(f"Inserting {len(matchs_for_db)} rows into DB")
+
+            for peer, nodes, latencies in matchs_for_db:
+                log.info(f"Inserting {peer} into DB")
+                db.insert(
+                    "raw_data_table",
+                    peer_id=peer,
+                    node_addresses=nodes,
+                    latency_metric=latencies,
+                )
 
         return sanic_text("Sent to DB")
 
+    @app.route("/aggregator/balance", methods=["POST"])
+    async def post_balance(request: Request):
+        """
+        Create a POST route to receive the balance of a node.
+        """
+        if "id" not in request.json:
+            raise exceptions.BadRequest("`id` key not in body")
+        if not isinstance(request.json["id"], str):
+            raise exceptions.BadRequest("`id` must be a string")
+        if "balances" not in request.json:
+            raise exceptions.BadRequest("`balances` key not in body")
+        if not isinstance(request.json["balances"], dict):
+            raise exceptions.BadRequest("`balances` must be a dict")
+
+        log.info(f"Received balances from {request.json['id']}")
+
+        for token, amount in request.json["balances"].items():
+            agg.add_node_balance(request.json["id"], token, amount)
+
+        return sanic_text(f"Received balance for {request.json['id']}")
+
     @app.route("/aggregator/metrics", methods=["GET"])
     async def get_metrics(request: Request):
+        log.info("Metrics requested")
+
         return sanic_json(agg.get_metrics())
