@@ -5,7 +5,7 @@ from tools import HoprdAPIHelper, envvar, _getlogger
 log = _getlogger()
 
 
-async def get_address():
+async def retrieve_address():
     """
     Celery task to send `count`1-hop messages to a peer in an async manner.
     :param peer_id: Peer ID to send messages to.
@@ -34,6 +34,6 @@ async def get_address():
 
 
 if __name__ == "__main__":
-    address = asyncio.run(get_address())
+    address = asyncio.run(retrieve_address())
 
     exit(address)
