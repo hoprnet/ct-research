@@ -1,8 +1,8 @@
-# Incentive App
+# ct-app
 
-This folder contains the incentive-app.
+This folder contains the ct-app.
 
-The goal of the incentive-app is to distribute wxHOPR token through 1 HOP messages in the monte rosa network. The incentive-app is responsible for replacing staking rewards users earn in the current staking season beyond its discontinuation.
+The goal of the ct-app is to distribute wxHOPR token through 1 HOP messages in the monte rosa network. The ct-app is responsible for replacing staking rewards users earn in the current staking season beyond its discontinuation.
 
 ## Development Requirements
 
@@ -55,7 +55,7 @@ These should be automatically picked up by VSCode when using workspace settings.
 9. Clone, create virtual environment, install dependencies and launch VSCode:
 ```
 $ git clone https://github.com/hoprnet/ct-research
-$ cd ct-research/incentive-app
+$ cd ct-research/ct-app
 $ python3 -m virtualenv /tmp/env
 $ . /tmp/env/bin/activate
 (env) $ pip install -r requirements_dev.txt
@@ -101,7 +101,7 @@ sudo docker run -ti -p 13301-13305:13301-13305  gcr.io/hoprassociation/hopr-plut
 sudo docker start hopr_admin
 ```
 
-## How to run the incentive-app in the local development cluster
+## How to run the ct-app in the local development cluster
 
 ### Requirements
 

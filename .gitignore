@@ -19,4 +19,4 @@ foo*.py
 run_*.sh
 .DS_Store
 
-incentive-app/tools/db_connection/__main__.py
+ct-app/tools/db_connection/__main__.py
