@@ -54,29 +54,29 @@ async def test_blacklist_rpch_nodes_exceptions():
         result = await node.blacklist_rpch_nodes("some_api_endpoint")
         assert result == ("rpch", [])
 
-        # # Simulate ValueError
-        # mock_get.side_effect = OSError("ValueError")
-        # node = EconomicHandler(
-        #     "some_url",
-        #     "some_api_key",
-        #     "some_rpch_endpoint",
-        #     "some_subgraph_url",
-        #     "some_sc_address",
-        # )
-        # result = await node.blacklist_rpch_nodes("some_api_endpoint")
-        # assert result == ("rpch", [])
+        # Simulate ValueError
+        mock_get.side_effect = OSError("ValueError")
+        node = EconomicHandler(
+            "some_url",
+            "some_api_key",
+            "some_rpch_endpoint",
+            "some_subgraph_url",
+            "some_sc_address",
+        )
+        result = await node.blacklist_rpch_nodes("some_api_endpoint")
+        assert result == ("rpch", [])
 
-        # # Simulate general exception
-        # mock_get.side_effect = Exception("Exception")
-        # node = EconomicHandler(
-        #     "some_url",
-        #     "some_api_key",
-        #     "some_rpch_endpoint",
-        #     "some_subgraph_url",
-        #     "some_sc_address",
-        # )
-        # result = await node.blacklist_rpch_nodes("some_api_endpoint")
-        # assert result == ("rpch", [])
+        # Simulate general exception
+        mock_get.side_effect = Exception("Exception")
+        node = EconomicHandler(
+            "some_url",
+            "some_api_key",
+            "some_rpch_endpoint",
+            "some_subgraph_url",
+            "some_sc_address",
+        )
+        result = await node.blacklist_rpch_nodes("some_api_endpoint")
+        assert result == ("rpch", [])
 
 
 @pytest.mark.asyncio
