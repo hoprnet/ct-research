@@ -10,4 +10,5 @@ Requests==2.31.0
 sanic==23.3.0
 validators==0.20.0
 sanic_testing==23.3.0
+celery==5.2.2
 # sanic[test]==23.3.0
