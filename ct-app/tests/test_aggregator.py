@@ -374,7 +374,7 @@ def test_sanic_post_balance(test_cli):
     nothing is missing.
     """
     _, response = test_cli.post(
-        "/aggregator/balance", json={"id": "some_id", "balances": {"xdai": 1}}
+        "/aggregator/balances", json={"id": "some_id", "balances": {"xdai": 1}}
     )
 
     assert response.status == 200
@@ -385,7 +385,7 @@ def test_sanic_post_balance_id_missing(test_cli):
     This test checks that the post_balances endpoint returns the correct data when
     the id is missing.
     """
-    _, response = test_cli.post("/aggregator/balance", json={"balances": {"xdai": 1}})
+    _, response = test_cli.post("/aggregator/balances", json={"balances": {"xdai": 1}})
 
     assert response.status == 400
     assert response.json["message"] == "`id` key not in body"
@@ -397,7 +397,7 @@ def test_sanic_post_balance_id_wrong_type(test_cli):
     the id is not a string.
     """
     _, response = test_cli.post(
-        "/aggregator/balance", json={"id": 123, "balances": {"xdai": 1}}
+        "/aggregator/balances", json={"id": 123, "balances": {"xdai": 1}}
     )
 
     assert response.status == 400
@@ -409,7 +409,7 @@ def test_sanic_post_balance_balances_missing(test_cli):
     This test checks that the post_balances endpoint returns the correct data when
     the balances are missing.
     """
-    _, response = test_cli.post("/aggregator/balance", json={"id": "some_id"})
+    _, response = test_cli.post("/aggregator/balances", json={"id": "some_id"})
 
     assert response.status == 400
     assert response.json["message"] == "`balances` key not in body"
@@ -421,7 +421,7 @@ def test_sanic_post_balance_balances_wrong_type(test_cli):
     the balances are not a dict.
     """
     _, response = test_cli.post(
-        "/aggregator/balance", json={"id": "some_id", "balances": 123}
+        "/aggregator/balances", json={"id": "some_id", "balances": 123}
     )
 
     assert response.status == 400
