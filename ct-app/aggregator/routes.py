@@ -165,7 +165,7 @@ def attach_endpoints(app):
 
         return sanic_text("Sent to DB")
 
-    @app.route("/aggregator/balance", methods=["POST"])
+    @app.route("/aggregator/balances", methods=["POST"])
     async def post_balance(request: Request):
         """
         Create a POST route to receive the balance of a node.

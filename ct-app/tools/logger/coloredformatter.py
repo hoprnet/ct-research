@@ -34,6 +34,10 @@ COLORS = {
 
 
 class ColoredFormatter(logging.Formatter):
+    """
+    A formatter that allows to color the output of the logger.
+    """
+
     def __init__(self, msg, use_color=True):
         logging.Formatter.__init__(self, msg)
         self.use_color = use_color

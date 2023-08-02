@@ -81,7 +81,10 @@ class NetWatcher(HOPRNode):
 
         latency_dict = {}
         for peer in peers_copy:
-            latency = self.latency[peer][-1] if peer in self.latency else None
+            if peer in self.latency and len(self.latency[peer]) > 0:
+                latency = self.latency[peer][-1]
+            else:
+                latency = None
 
             latency_dict[peer] = latency
 
@@ -90,7 +93,7 @@ class NetWatcher(HOPRNode):
         try:
             async with session.post(self.posturl, json=data) as response:
                 if response.status == 200:
-                    log.info(f"Transmisted peers: {', '.join(peers_copy)}")
+                    log.info(f"Transmitted peers: {', '.join(peers_copy)}")
                     return True
         except Exception:  # ClientConnectorError
             log.exception("Error transmitting peers")
@@ -103,12 +106,14 @@ class NetWatcher(HOPRNode):
         :param session: the aiohttp session
         :param balance: the node balance
         """
-        data = {"id": self.id, "balance": balance}
+        data = {"id": self.peer_id, "balances": {"native": balance}}
         try:
             async with session.post(self.balanceurl, json=data) as response:
                 if response.status == 200:
-                    log.info(f"Transmisted native balance: {balance}")
+                    for key, value in data["balances"].items():
+                        log.info(f"Transmitted {key} balance: {value}")
                     return True
+                log.error(f"{response}")
         except Exception:  # ClientConnectorError
             log.exception("Error transmitting balance")
 

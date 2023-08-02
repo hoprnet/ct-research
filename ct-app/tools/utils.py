@@ -78,6 +78,11 @@ def read_json_file(path, schema):
 
 
 def running_module(uppercase: bool = False):
+    """
+    Retrieve the name of the module that is running, independently of the file that
+    calls this method.
+    :param uppercase: if True, the module name will be returned in uppercase
+    :returns: the name of the module that is running"""
     argv = sys.argv[0]
 
     if not argv.endswith("__main__.py"):
