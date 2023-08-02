@@ -1,5 +1,5 @@
 from datetime import datetime
-from tools.utils import envvar, _getlogger
+from tools.utils import envvar, getlogger
 
 from sanic import exceptions
 from sanic.request import Request
@@ -22,7 +22,7 @@ _db_columns = [
 
 def attach_endpoints(app):
     agg = Aggregator()
-    log = _getlogger()
+    log = getlogger()
 
     @app.route("/aggregator/list", methods=["POST"])
     async def post_list(request: Request):

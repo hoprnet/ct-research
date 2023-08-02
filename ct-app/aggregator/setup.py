@@ -4,9 +4,9 @@ from sanic import Sanic
 from .aggregator import Aggregator
 from .middlewares import attach_middlewares
 from .routes import attach_endpoints
-from tools import _getlogger
+from tools import getlogger
 
-log = _getlogger()
+log = getlogger()
 
 
 def create_app():  # pragma: no cover

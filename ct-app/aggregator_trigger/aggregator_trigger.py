@@ -1,9 +1,9 @@
 import asyncio
 import requests
 from tools.decorator import formalin
-from tools import _getlogger
+from tools import getlogger
 
-log = _getlogger()
+log = getlogger()
 
 
 class AggregatorTrigger:

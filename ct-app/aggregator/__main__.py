@@ -3,13 +3,13 @@ from functools import partial
 from sanic import Sanic
 from sanic.worker.loader import AppLoader
 
-from tools import _getlogger, envvar
+from tools import getlogger, envvar
 
 from .setup import create_app
 
 
 def main():
-    log = _getlogger()
+    log = getlogger()
 
     try:
         envvar("DB_NAME")

@@ -2,11 +2,11 @@ import asyncio
 from signal import SIGINT, SIGTERM
 
 from tools.exit_codes import ExitCode
-from tools.utils import _getlogger, envvar
+from tools.utils import getlogger, envvar
 from .economic_handler import EconomicHandler
 from .utils_econhandler import stop_instance
 
-log = _getlogger()
+log = getlogger()
 
 
 def main():

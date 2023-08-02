@@ -2,11 +2,11 @@ import asyncio
 from signal import SIGINT, SIGTERM, Signals
 
 
-from tools import _getlogger, envvar
+from tools import getlogger, envvar
 
 from .aggregator_trigger import AggregatorTrigger
 
-log = _getlogger()
+log = getlogger()
 
 
 def stop(trigger: AggregatorTrigger, caught_signal: Signals):

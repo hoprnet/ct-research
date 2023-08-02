@@ -8,9 +8,9 @@ import aiohttp
 from tools.hopr_node import HOPRNode
 from assets.parameters_schema import schema as schema_name
 from tools.decorator import wakeupcall, connectguard, econ_handler_wakeupcall
-from tools.utils import _getlogger, read_json_file
+from tools.utils import getlogger, read_json_file
 
-log = _getlogger()
+log = getlogger()
 
 
 class EconomicHandler(HOPRNode):
