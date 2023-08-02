@@ -1,4 +1,4 @@
-hoprd @ git+https://github.com/hoprnet/hoprd-sdk-python.git@main
+git+https://github.com/hoprnet/hoprd-sdk-python.git@main
 aiohttp==3.8.4
 jsonschema==4.17.3
 numpy==1.25.0
