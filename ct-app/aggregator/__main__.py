@@ -3,7 +3,7 @@ from functools import partial
 from sanic import Sanic
 from sanic.worker.loader import AppLoader
 
-from tools import getlogger, envvar
+from tools import envvar, getlogger
 
 from .setup import create_app
 

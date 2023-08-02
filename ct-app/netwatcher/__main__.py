@@ -1,9 +1,8 @@
 import asyncio
 from signal import SIGINT, SIGTERM, Signals
 
-
 from tools.exit_codes import ExitCode
-from tools.utils import getlogger, envvar
+from tools.utils import envvar, getlogger
 
 from .netwatcher import NetWatcher
 

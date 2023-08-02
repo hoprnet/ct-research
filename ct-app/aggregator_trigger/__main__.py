@@ -1,8 +1,7 @@
 import asyncio
 from signal import SIGINT, SIGTERM, Signals
 
-
-from tools import getlogger, envvar
+from tools import envvar, getlogger
 
 from .aggregator_trigger import AggregatorTrigger
 

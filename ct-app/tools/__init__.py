@@ -1,8 +1,8 @@
+from .decorator import connectguard, formalin, wakeupcall
 from .exit_codes import ExitCode
-from .hopr_node import HOPRNode
 from .hopr_api_helper import HoprdAPIHelper
-from .utils import getlogger, envvar, read_json_file, running_module
-from .decorator import wakeupcall, formalin, connectguard
+from .hopr_node import HOPRNode
+from .utils import envvar, getlogger, read_json_file, running_module
 
 __all__ = [
     "HOPRNode",

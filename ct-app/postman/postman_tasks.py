@@ -1,12 +1,9 @@
 import asyncio
-import logging
 
 from celery import Celery
+from tools import HoprdAPIHelper, envvar, getlogger
 
-from tools import HoprdAPIHelper, envvar
-
-log = logging.getLogger(__name__)
-
+log = getlogger()
 
 app = Celery(
     name=envvar("PROJECT_NAME"),

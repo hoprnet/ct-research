@@ -1,5 +1,4 @@
 from datetime import datetime
-from tools.utils import envvar, getlogger
 
 from sanic import exceptions
 from sanic.request import Request
@@ -8,6 +7,7 @@ from sanic.response import json as sanic_json
 from sanic.response import text as sanic_text
 
 from tools.db_connection.database_connection import DatabaseConnection
+from tools.utils import envvar, getlogger
 
 from .aggregator import Aggregator
 

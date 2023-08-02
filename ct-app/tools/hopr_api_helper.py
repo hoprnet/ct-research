@@ -1,10 +1,11 @@
-import logging
 from typing import Callable
 
 import httpx
 from hoprd import wrapper
 
-log = logging.getLogger(__name__)
+from .utils import getlogger
+
+log = getlogger()
 
 
 class HoprdAPIHelper:

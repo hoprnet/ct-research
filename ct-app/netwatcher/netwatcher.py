@@ -1,13 +1,12 @@
 import asyncio
-import logging
 import random
 
 from aiohttp import ClientSession
-
+from tools import getlogger
 from tools.decorator import connectguard, formalin
 from tools.hopr_node import HOPRNode
 
-log = logging.getLogger(__name__)
+log = getlogger()
 
 
 class NetWatcher(HOPRNode):

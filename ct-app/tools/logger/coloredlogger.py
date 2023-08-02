@@ -1,5 +1,6 @@
 # Custom logger class with multiple destinations
 import logging
+
 from .coloredformatter import ColoredFormatter, formatter_message
 
 

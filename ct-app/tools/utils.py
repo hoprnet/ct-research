@@ -1,9 +1,11 @@
-import logging
-import os
-import logging.config
-import sys
-import jsonschema
 import json
+import logging
+import logging.config
+import os
+import sys
+
+import jsonschema
+
 from .logger import ColoredLogger
 
 
