@@ -1,7 +1,6 @@
 import logging
 
 import swagger_client as swagger
-from hoprd import wrapper
 from swagger_client.rest import ApiException
 
 log = logging.getLogger(__name__)
@@ -14,7 +13,6 @@ class HoprdAPIHelper:
 
     def __init__(self, url: str, token: str):
         self._setup(url, token)
-        self.wrapper = wrapper.HoprdAPI(api_url=url, api_token=token)
 
         self._url = url
         self._token = token
