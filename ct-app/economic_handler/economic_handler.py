@@ -682,6 +682,25 @@ class EconomicHandler(HOPRNode):
 
         await asyncio.gather(*self.tasks)
 
+    ################## MOCKING FOR TESTING DEPLOYMENT ##################
+    async def mockstart(self):
+        """
+        Starts the tasks of this node
+        """
+        log.debug("Running EconomicHandler instance")
+
+        if self.tasks:
+            return
+
+        self.started = True
+        self.tasks.add(asyncio.create_task(self.fake_method()))
+
+        await asyncio.gather(*self.tasks)
+
+    @wakeupcall("Entering fake method", seconds=15)
+    async def fake_method(self):
+        log.info("Fake log from the fake method")
+
     def stop(self):
         """
         Stops the tasks of this node

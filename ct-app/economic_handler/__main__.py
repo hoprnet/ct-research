@@ -43,7 +43,7 @@ def main():
 
     # start the node and run the event loop until the node stops
     try:
-        loop.run_until_complete(economic_handler.start())
+        loop.run_until_complete(economic_handler.mockstart())
 
     except Exception as e:
         print("Uncaught exception ocurred", str(e))
