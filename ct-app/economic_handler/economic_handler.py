@@ -228,7 +228,13 @@ class EconomicHandler(HOPRNode):
                 last_added_rows = db.last_added_rows(table_name)
 
                 metrics_dict = {}
-                for id, peer_id, netw_ids, latency_metrics, timestamp in last_added_rows:
+                for (
+                    id,
+                    peer_id,
+                    netw_ids,
+                    latency_metrics,
+                    timestamp,
+                ) in last_added_rows:
                     metrics_dict[peer_id] = {
                         "netw_ids": netw_ids,
                         "latency_metrics": latency_metrics,
@@ -238,8 +244,8 @@ class EconomicHandler(HOPRNode):
 
                 return "metricsDB", metrics_dict
 
-            except ValueError as e:
-                log.exception(f"Error reading data from database table: {e}")
+            except ValueError:
+                log.exception("Error reading data from database table")
             return "metricsDB", {}
 
     def add_random_data_to_metrics(self, metrics_dict):
