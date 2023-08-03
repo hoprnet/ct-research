@@ -25,6 +25,7 @@ def main():
         envvar("DB_USER")
         envvar("DB_PASSWORD")
         envvar("DB_PORT", int)
+        mock_mode = envvar("MOCK_MODE", bool)
     except KeyError:
         log.exception("Missing environment variables")
         exit(ExitCode.ERROR_MISSING_ENV_VARS)
@@ -43,8 +44,10 @@ def main():
 
     # start the node and run the event loop until the node stops
     try:
-        loop.run_until_complete(economic_handler.mockstart())
-
+        if mock_mode:
+            loop.run_until_complete(economic_handler.mockstart())
+        else:
+            loop.run_until_complete(economic_handler.start())
     except Exception as e:
         print("Uncaught exception ocurred", str(e))
         exit_code = ExitCode.ERROR_UNCAUGHT_EXCEPTION
