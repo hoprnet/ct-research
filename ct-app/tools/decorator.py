@@ -1,13 +1,13 @@
 import asyncio
 import datetime
 import functools
-import logging
 import os
 
-from .utils import read_json_file
 from assets.parameters_schema import schema as schema_name
 
-log = logging.getLogger(__name__)
+from .utils import getlogger, read_json_file
+
+log = getlogger()
 
 
 def wakeupcall(

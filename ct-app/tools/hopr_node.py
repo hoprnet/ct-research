@@ -1,11 +1,10 @@
 import asyncio
-import logging
-
-from .hopr_api_helper import HoprdAPIHelper
 
 from .decorator import formalin
+from .hopr_api_helper import HoprdAPIHelper
+from .utils import getlogger
 
-log = logging.getLogger(__name__)
+log = getlogger()
 
 
 class HOPRNode:

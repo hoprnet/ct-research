@@ -1,5 +1,4 @@
 from datetime import datetime
-from tools.utils import envvar, _getlogger
 
 from sanic import exceptions
 from sanic.request import Request
@@ -8,6 +7,7 @@ from sanic.response import json as sanic_json
 from sanic.response import text as sanic_text
 
 from tools.db_connection.database_connection import DatabaseConnection
+from tools.utils import envvar, getlogger
 
 from .aggregator import Aggregator
 
@@ -22,7 +22,7 @@ _db_columns = [
 
 def attach_endpoints(app):
     agg = Aggregator()
-    log = _getlogger()
+    log = getlogger()
 
     @app.route("/aggregator/list", methods=["POST"])
     async def post_list(request: Request):
@@ -165,7 +165,7 @@ def attach_endpoints(app):
 
         return sanic_text("Sent to DB")
 
-    @app.route("/aggregator/balance", methods=["POST"])
+    @app.route("/aggregator/balances", methods=["POST"])
     async def post_balance(request: Request):
         """
         Create a POST route to receive the balance of a node.

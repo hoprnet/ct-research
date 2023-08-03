@@ -1,9 +1,9 @@
-import logging
-
 import swagger_client as swagger
 from swagger_client.rest import ApiException
 
-log = logging.getLogger(__name__)
+from .utils import getlogger
+
+log = getlogger()
 
 
 class HoprdAPIHelper:
