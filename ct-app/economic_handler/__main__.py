@@ -20,6 +20,11 @@ def main():
         rcphnodes = envvar("RPCH_NODES")
         subgraphurl = envvar("SUBGRAPH_URL")
         scaddress = envvar("SC_ADDRESS")
+        envvar("DB_NAME")
+        envvar("DB_HOST")
+        envvar("DB_USER")
+        envvar("DB_PASSWORD")
+        envvar("DB_PORT", int)
     except KeyError:
         log.exception("Missing environment variables")
         exit(ExitCode.ERROR_MISSING_ENV_VARS)
