@@ -1,5 +1,6 @@
-from .economic_handler import EconomicHandler
 from signal import Signals
+
+from .economic_handler import EconomicHandler
 
 
 def stop_instance(instance: EconomicHandler, signal: Signals):

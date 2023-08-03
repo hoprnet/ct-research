@@ -1,9 +1,9 @@
 import datetime
 from psycopg2 import connect
 from psycopg2.sql import SQL, Identifier
-from tools import _getlogger
+from tools import getlogger
 
-log = _getlogger()
+log = getlogger()
 
 
 class DatabaseConnection:

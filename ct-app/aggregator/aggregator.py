@@ -1,6 +1,7 @@
 import datetime
 import threading
-from tools import _getlogger
+
+from tools import getlogger
 
 from .utils import (
     array_to_db_list,
@@ -10,7 +11,7 @@ from .utils import (
     multiple_round_node_peer_match,
 )
 
-log = _getlogger()
+log = getlogger()
 
 
 class Singleton(type):

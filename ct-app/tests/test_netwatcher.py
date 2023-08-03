@@ -31,7 +31,8 @@ def FakeNetWatcher() -> NetWatcher:
     return NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl", 10)
 
 
-def test__post_list():
+@pytest.mark.asyncio
+async def test__post_list():
     """
     Test that the method _post_list works.
     """
@@ -39,7 +40,7 @@ def test__post_list():
     instance.peers = ["some_peer", "some_other_peer"]
     instance.latency = {"some_peer": [10, 20], "some_other_peer": [30, 40]}
 
-    instance._post_list(MagicMock())
+    await instance._post_list(MagicMock())
 
     assert len(instance.peers) == 2
     assert len(instance.latency) == 2
