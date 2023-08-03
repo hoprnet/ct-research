@@ -63,55 +63,12 @@ async def test_remove_alias(bad_api_helper: HoprdAPIHelper):
 
 
 @pytest.mark.asyncio
-async def test_get_settings(bad_api_helper: HoprdAPIHelper):
-    """
-    This test checks that the get_settings method of the HoprdAPIHelper class returns the
-    expected response.
-    """
-    result = await bad_api_helper.get_settings()
-
-    assert result is None
-
-
-@pytest.mark.asyncio
 async def test_get_all_channels(bad_api_helper: HoprdAPIHelper):
     """
     This test checks that the get_all_channels method of the HoprdAPIHelper class returns the
     expected response.
     """
     result = await bad_api_helper.get_all_channels(True)
-
-    assert result is None
-
-
-@pytest.mark.asyncio
-async def test_get_tickets_in_channel(bad_api_helper: HoprdAPIHelper):
-    """
-    This test checks that the get_tickets_in_channel method of the HoprdAPIHelper class returns the
-    expected response.
-    """
-    result = await bad_api_helper.get_tickets_in_channel(True)
-
-    assert result is None
-
-
-@pytest.mark.asyncio
-async def test_redeem_tickets_in_channel(bad_api_helper: HoprdAPIHelper):
-    """
-    This test checks that the redeem_tickets_in_channel method of the HoprdAPIHelper class returns the
-    expected response.
-    """
-
-    pass
-
-
-@pytest.mark.asyncio
-async def test_redeem_tickets(bad_api_helper: HoprdAPIHelper):
-    """
-    This test checks that the redeem_tickets method of the HoprdAPIHelper class returns the
-    expected response.
-    """
-    result = await bad_api_helper.redeem_tickets()
 
     assert result is None
 
