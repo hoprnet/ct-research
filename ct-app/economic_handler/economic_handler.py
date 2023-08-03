@@ -250,24 +250,22 @@ class EconomicHandler(HOPRNode):
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(api_endpoint) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        if isinstance(data, list) and data:
-                            rpch_node_peerID = [
-                                item["id"] for item in data if "id" in item
-                            ]
-                            return "rpch", rpch_node_peerID
-                    else:
+                    if response.status != 200:
                         log.error(f"Received error code: {response.status}")
-        except aiohttp.ClientError as e:
-            log.error(f"An error occurred while making the request: {e}")
-            log.error(traceback.format_exc())
-        except ValueError as e:
-            log.error(f"An error occurred while parsing the response as JSON: {e}")
-            log.error(traceback.format_exc())
-        except Exception as e:
-            log.error(f"An unexpected error occurred: {e}")
-            log.error(traceback.format_exc())
+                        return "rpch", []
+                    data = await response.json()
+        except aiohttp.ClientError:
+            log.exception("An error occurred while making the request")
+        except OSError:
+            log.exception("An error occurred while reading the response")
+        except Exception:
+            log.exception("An unexpected error occurred")
+        else:
+            if not data or not isinstance(data, list):
+                return "rpch", []
+
+            rpch_node_peerID = [item["id"] for item in data if "id" in item]
+            return "rpch", rpch_node_peerID
 
         return "rpch", []
 
@@ -288,6 +286,7 @@ class EconomicHandler(HOPRNode):
         :returns: Tuple[str, Dict[str, int]]: A tuple containing the result identifier
         and a dictionary with account IDs of stakers and the amount of staked tokens.
         """
+
         query = """
             query GetStakingParticipations($stakingSeason: String, $first: Int, $skip: Int) {
                 stakingParticipations(first: $first, skip: $skip, where: { stakingSeason: $stakingSeason }) {
@@ -302,7 +301,6 @@ class EconomicHandler(HOPRNode):
                 }
             }
         """
-
         url = subgraph_url
         variables = {
             "stakingSeason": staking_season,
@@ -310,16 +308,15 @@ class EconomicHandler(HOPRNode):
             "skip": 0,
         }
 
+        data = {"query": query, "variables": variables}  # noqa: F841
         subgraph_dict = {}
         staking_participations = []
         more_content_available = True
 
-        async with aiohttp.ClientSession() as session:
-            while more_content_available:
+        while more_content_available:
+            async with aiohttp.ClientSession() as session:
                 try:
-                    async with session.post(
-                        url, json={"query": query, "variables": variables}
-                    ) as response:
+                    async with session.post(url, json=data) as response:
                         if response.status != 200:
                             log.error(
                                 f"Received status code {response.status} when",
@@ -336,6 +333,9 @@ class EconomicHandler(HOPRNode):
                     log.exception(
                         "An error occurred while parsing the response as JSON"
                     )
+                    return "subgraph_data", {}
+                except OSError:
+                    log.exception("An error occurred while reading the response")
                     return "subgraph_data", {}
                 except Exception:
                     log.exception("An unexpected error occurred")

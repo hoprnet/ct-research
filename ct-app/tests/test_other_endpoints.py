@@ -55,7 +55,7 @@ async def test_blacklist_rpch_nodes_exceptions():
         assert result == ("rpch", [])
 
         # Simulate ValueError
-        mock_get.side_effect = ValueError("ValueError")
+        mock_get.side_effect = OSError("ValueError")
         node = EconomicHandler(
             "some_url",
             "some_api_key",
@@ -147,6 +147,7 @@ async def test_get_staking_participations_exceptions():
     """
     with patch("aiohttp.ClientSession.post") as mock_post:
         # Simulate ClientError
+
         mock_post.side_effect = aiohttp.ClientError("ClientError")
         node = EconomicHandler(
             "some_url",
@@ -155,7 +156,7 @@ async def test_get_staking_participations_exceptions():
             "some_subgraph_url",
             "some_sc_address",
         )
-        result = await node.get_staking_participations(
+        result = await node.get_staking_participations(  # noqa: F841
             "some_subgraph_url", "some_staking_season_address", 100
         )
         assert result == ("subgraph_data", {})

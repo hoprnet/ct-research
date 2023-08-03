@@ -1,7 +1,5 @@
-from typing import Callable
-
-import httpx
-from hoprd import wrapper
+import swagger_client as swagger
+from swagger_client.rest import ApiException
 
 from .utils import getlogger
 
@@ -14,10 +12,20 @@ class HoprdAPIHelper:
     """
 
     def __init__(self, url: str, token: str):
-        self.wrapper = wrapper.HoprdAPI(api_url=url, api_token=token)
+        self._setup(url, token)
 
         self._url = url
         self._token = token
+
+    def _setup(self, url: str, token: str):
+        configuration = swagger.Configuration()
+        configuration.host = f"{url}/api/v2"
+        configuration.api_key["x-auth-token"] = token
+
+        self.node_api = swagger.NodeApi(swagger.ApiClient(configuration))
+        self.message_api = swagger.MessagesApi(swagger.ApiClient(configuration))
+        self.account_api = swagger.AccountApi(swagger.ApiClient(configuration))
+        self.channels_api = swagger.ChannelsApi(swagger.ApiClient(configuration))
 
     @property
     def url(self) -> str:
@@ -27,336 +35,170 @@ class HoprdAPIHelper:
     def token(self) -> str:
         return self._token
 
-    async def _safe_call(self, func: Callable, *args, **kwargs):
-        """
-        Wrapper around each API call to handle exceptions
-        """
-        try:
-            response = await func(*args, **kwargs)
-            response.raise_for_status()
-        except httpx.HTTPError as e:
-            log.exception(f"Error calling {func.__name__}")
-            raise e
-        except UnboundLocalError:
-            log.exception(f"Could not connect to {self.url}")
-            return None
-        else:
-            return response
-
-    async def withdraw(self, currency, amount, address):
-        method = self.wrapper.withdraw
-        args = [currency, amount, address]
-
-        log.debug("Withdrawing")
-
-        try:
-            response = await self._safe_call(method, *args)
-        except httpx.HTTPError:
-            log.exception("Error withdrawing")
-            return None
-        except UnboundLocalError:
-            log.exception(f"Could not connect to {self.url}")
-            return None
-        else:
-            return response.json()
-
-    async def balance(self, type: str = "all"):
+    async def balance(self, type: str = "native"):
         """
         Returns the balance of the node.
-        :param: type: str = "all" | "hopr" | "native"
+        :param: type: str =  "hopr" | "native"
         :return: balance: int
         """
 
-        method = self.wrapper.balance
-
-        if type not in ["all", "hopr", "native"]:
-            log.error(f"Type {type} not supported")
+        if type not in ["hopr", "native"]:
+            log.error(f"Type `{type}` not supported. Use `hopr` or `native`")
             return None
 
         log.debug("Getting balance")
 
         try:
-            response = await self._safe_call(method)
-        except httpx.HTTPError:
-            log.exception
+            # thread = self.account_api.account_get_balances(async_req=True)
+            # response = thread.get()
+            response = self.account_api.account_get_balances()
+        except ApiException:
+            log.exception("Exception when calling AccountApi->account_get_balances")
             return None
-        except UnboundLocalError:
-            log.exception(f"Could not connect to {self.url}")
+        except OSError:
+            log.exception("Exception when calling ChannelsApi->account_get_balances")
             return None
-        else:
-            if response.status_code != 200:
-                log.error(f"Error getting balance from {self.url}")
-                return None
 
-            if type == "all":
-                return response.json()
-
-            return int(response.json()[type])
-
-    async def set_alias(self, peer_id, alias):
-        method = self.wrapper.set_alias
-        args = [peer_id, alias]
-
-        log.debug("Setting alias")
-
-        try:
-            response = await self._safe_call(method, *args)
-        except httpx.HTTPError:
-            log.exception("Error setting alias")
-            return None
-        except UnboundLocalError:
-            log.exception(f"Could not connect to {self.url}")
-            return None
-        else:
-            return response.json()
-
-    async def get_alias(self, alias):
-        method = self.wrapper.get_alias
-        args = [alias]
-
-        log.debug("Getting alias")
-
-        try:
-            response = await self._safe_call(method, *args)
-        except httpx.HTTPError:
-            log.exception("Error getting alias")
-            return None
-        except UnboundLocalError:
-            log.exception(f"Could not connect to {self.url}")
-            return None
-        else:
-            return response.json()
-
-    async def remove_alias(self, alias):
-        method = self.wrapper.remove_alias
-        args = [alias]
-
-        log.debug("Removing alias")
-
-        try:
-            response = await self._safe_call(method, *args)
-        except httpx.HTTPError:
-            log.exception("Error removing alias")
-            return None
-        except UnboundLocalError:
-            log.exception(f"Could not connect to {self.url}")
-            return None
-        else:
-            return response.json()
-
-    async def get_settings(self):
-        method = self.wrapper.get_settings
-
-        log.debug("Getting settings")
-
-        try:
-            response = await self._safe_call(method)
-        except httpx.HTTPError:
-            log.exception("Error getting settings")
-            return None
-        except UnboundLocalError:
-            log.exception(f"Could not connect to {self.url}")
-            return None
-        else:
-            return response.json()
+        return int(getattr(response, type))
 
     async def get_all_channels(self, include_closed: bool):
-        method = self.wrapper.get_all_channels
-        args = [include_closed]
-
         log.debug("Getting all channels")
 
         try:
-            response = await self._safe_call(method, *args)
-        except httpx.HTTPError:
-            log.exception("Error getting all channels")
+            thread = self.channels_api.channels_get_channels(
+                including_closed=include_closed, async_req=True
+            )
+            response = thread.get()
+        except ApiException:
+            log.exception("Exception when calling ChannelsApi->channels_get_channels")
             return None
-        except UnboundLocalError:
-            log.exception(f"Could not connect to {self.url}")
+        except OSError:
+            log.exception("Exception when calling ChannelsApi->channels_get_channels")
             return None
         else:
-            return response.json()
+            return response
 
     async def get_unique_safe_peerId_links(self):
         """
         Returns a dict containing all unique source_peerId-source_address links.
         """
-        method = self.wrapper.get_channel_topology
-        args = [True]  # full_topology=True ro retrieve the full topology
 
         log.debug("Getting channel topology")
 
         try:
-            response = await self._safe_call(method, *args)
-        except httpx.HTTPError:
-            log.exception("Error getting channel topology")
+            thread = self.channels_api.channels_get_channel(
+                full_topology=True, async_req=True
+            )
+            response = thread.get()
+        except ApiException:
+            log.exception("Exception when calling ChannelsApi->channels_get_channel")
             return None
-        except UnboundLocalError:
-            log.exception(f"Could not connect to {self.url}")
+        except OSError:
+            log.exception("Exception when calling ChannelsApi->channels_get_channels")
             return None
-        else:
-            unique_peerId_address = {}
-            all_items = response.json()[
-                "all"
-            ]  # All to retrieve all channels (incomming and outgoing)
 
-            for item in all_items:
-                try:
-                    source_peer_id = item["sourcePeerId"]
-                    source_address = item["sourceAddress"]
-                except KeyError:
-                    log.exception("Error getting sourcePeerId or sourceAddress")
-                    return None
-
-                if source_peer_id not in unique_peerId_address:
-                    unique_peerId_address[source_peer_id] = source_address
-
-            return unique_peerId_address
-
-    async def get_tickets_in_channel(self, include_closed: bool):
-        method = self.wrapper.get_tickets_in_channel
-        args = [include_closed]
-
-        log.debug("Getting tickets in channel")
-
-        try:
-            response = await self._safe_call(method, *args)
-        except httpx.HTTPError:
-            log.exception("Error getting tickets in channel")
+        if not hasattr(response, "all"):
+            log.error("Response does not contain `all`")
             return None
-        except UnboundLocalError:
-            log.exception(f"Could not connect to {self.url}")
-            return None
-        else:
-            return response.json()
 
-    async def redeem_tickets_in_channel(self, peer_id):
-        method = self.wrapper.redeem_tickets_in_channel
-        args = [peer_id]
+        address_for_peer_id = {}
 
-        log.debug(f"Redeeming tickets in channel with peer {peer_id}")
+        for item in response.all:
+            peer_id = item.get("sourcePeerId", None)
+            address = item.get("sourceAddress", None)
 
-        try:
-            response = await self._safe_call(method, *args)
-        except httpx.HTTPError:
-            log.exception(f"Error redeeming tickets in channel with peer {peer_id}")
-            return None
-        except UnboundLocalError:
-            log.exception(f"Could not connect to {self.url}")
-            return None
-        else:
-            return response.json()
+            if not peer_id or not address:
+                log.error("Could not get peer_id or address from a peer")
+                continue
 
-    async def redeem_tickets(self):
-        method = self.wrapper.redeem_tickets
+            address_for_peer_id[peer_id] = address
 
-        log.debug("Redeeming tickets")
+        return address_for_peer_id
 
-        try:
-            response = await self._safe_call(method)
-        except httpx.HTTPError:
-            log.exception("Error redeeming tickets")
-            return None
-        except UnboundLocalError:
-            log.exception(f"Could not connect to {self.url}")
-            return None
-        else:
-            if response.status_code == 204:
-                return None
-            return response.json()
-
-    async def ping(self, peer_id, metric="latency"):
-        method = self.wrapper.ping
-        args = [peer_id]
-
+    async def ping(self, peer_id: str, metric: str = "latency"):
         log.debug(f"Pinging peer {peer_id}")
 
+        body = swagger.NodePingBody(peer_id)
+
         try:
-            response = await self._safe_call(method, *args)
-        except httpx.HTTPError:
-            log.exception(f"Error pinging peer {peer_id}")
+            thread = self.node_api.node_ping(body=body, async_req=True)
+            response = thread.get()
+        except ApiException:
+            log.exception("Exception when calling NodeApi->node_ping")
             return None
-        except UnboundLocalError:
-            log.exception(f"Could not connect to {self.url}")
+        except OSError:
+            log.exception("Exception when calling ChannelsApi->channels_get_channels")
             return None
-        else:
-            json_body = response.json()
 
-            if json_body is None:
-                log.error(f"Peer {peer_id} not reachable using {self.url}")
-                return None
+        if not hasattr(response, metric):
+            log.error(f"No `{metric}` measure from peer {peer_id}")
+            return None
 
-            if metric not in json_body:
-                log.error(f"No {metric} measure from peer {peer_id}")
-                return None
+        measure = int(getattr(response, metric))
 
-            log.info(f"Measured {json_body[metric]:3d}({metric}) from peer {peer_id}")
-            return json_body[metric]
+        log.info(f"Measured {measure:3d}({metric}) from peer {peer_id}")
+        return measure
 
-    async def peers(self, param: str = "peerId", status: str = "connected", **kwargs):
-        method = self.wrapper.peers
-
+    async def peers(self, param: str = "peer_id", status: str = "connected"):
         log.debug("Getting peers")
 
         try:
-            response = await self._safe_call(method, **kwargs)
-        except httpx.HTTPError:
-            log.exception(f"Could not get peers from {self.url}")
+            thread = self.node_api.node_get_peers(quality=1, async_req=True)
+            response = thread.get()
+        except ApiException:
+            log.exception("Exception when calling NodeApi->node_get_peers")
             return None
-        except UnboundLocalError:
-            log.exception(f"Could not connect to {self.url}")
+        except OSError:
+            log.exception("Exception when calling ChannelsApi->channels_get_channels")
             return None
-        else:
-            json_body = response.json()
 
-            if status not in json_body:
-                log.error(f"No {status} from {self.url}")
-                return None
+        if not hasattr(response, status):
+            log.error(f"No `{status}` from {self.url}")
+            return None
 
-            if param not in json_body[status][0]:
-                log.error(f"No {param} from {self.url}")
-                return None
+        if len(getattr(response, status)) == 0:
+            log.info(f"No peer with status `{status}`")
+            return None
 
-            return [peer[param] for peer in json_body[status]]
+        if not hasattr(getattr(response, status)[0], param):
+            log.error(f"No param `{param}` found for peers")
+            return None
+
+        return [getattr(peer, param) for peer in getattr(response, status)]
 
     async def get_address(self, address: str):
-        method = self.wrapper.get_address
-
         log.debug("Getting address")
 
         try:
-            response = await self._safe_call(method)
-        except httpx.HTTPError:
-            log.exception(f"Could not connect to {self.url}")
+            thread = self.account_api.account_get_address(async_req=True)
+            response = thread.get()
+        except ApiException:
+            log.exception("Exception when calling AccountApi->account_get_address")
             return None
-        except UnboundLocalError:
-            log.exception(f"Could not connect to {self.url}")
+        except OSError:
+            log.exception("Exception when calling ChannelsApi->channels_get_channels")
             return None
-        else:
-            json_body = response.json()
 
-            if address not in json_body:
-                log.error(f"No {address} from {self.url}")
-                return None
+        if not hasattr(response, address):
+            log.error(f"No {address} returned from the API")
+            return None
 
-            return json_body.get(address, None)
+        return getattr(response, address)
 
-    async def send_message(self, destination, message, hops) -> bool:
-        method = self.wrapper.send_message
-        args = [destination, message, hops]
-
+    async def send_message(
+        self, destination: str, message: str, hops: list[str]
+    ) -> bool:
         log.debug("Sending message")
 
+        body = swagger.MessagesBody(message, destination, hops)
         try:
-            response = await self._safe_call(method, *args)
-        except httpx.HTTPError:
-            log.exception("Error sending message")
-            return False
-        except UnboundLocalError:
-            log.exception(f"Could not connect to {self.url}")
-            return False
-        else:
-            if response.status_code != 202:
-                return False
+            thread = self.message_api.messages_send_message(body=body)
+            response = thread.get()
+        except ApiException:
+            log.exception("Exception when calling MessageApi->messages_send_message")
+            return None
+        except OSError:
+            log.exception("Exception when calling ChannelsApi->channels_get_channels")
+            return None
 
-        return True
+        return response
