@@ -228,9 +228,7 @@ class EconomicHandler(HOPRNode):
                 last_added_rows = db.last_added_rows(table_name)
 
                 metrics_dict = {}
-                for row in last_added_rows:
-                    id, peer_id, netw_ids, latency_metrics, timestamp = row
-
+                for id, peer_id, netw_ids, latency_metrics, timestamp in last_added_rows:
                     metrics_dict[peer_id] = {
                         "netw_ids": netw_ids,
                         "latency_metrics": latency_metrics,
