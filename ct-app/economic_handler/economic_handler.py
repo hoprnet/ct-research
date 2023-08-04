@@ -1,16 +1,18 @@
-import os
-import traceback
-import csv
-import time
 import asyncio
+import csv
+import os
+import time
+import traceback
+import random
+
 import aiohttp
-
-from tools.hopr_node import HOPRNode
 from assets.parameters_schema import schema as schema_name
-from tools.decorator import wakeupcall, connectguard, econ_handler_wakeupcall
-from tools.utils import _getlogger, read_json_file
+from tools.decorator import connectguard, econ_handler_wakeupcall, wakeupcall
+from tools.hopr_node import HOPRNode
+from tools.db_connection.database_connection import DatabaseConnection
+from tools.utils import getlogger, read_json_file, envvar
 
-log = _getlogger()
+log = getlogger()
 
 
 class EconomicHandler(HOPRNode):
@@ -52,93 +54,152 @@ class EconomicHandler(HOPRNode):
 
     @econ_handler_wakeupcall()
     @connectguard
-    async def scheduler(self):
+    async def scheduler(self, test_staging=True):
         """
-        Schedules the tasks of the EconomicHandler
+        Schedules the tasks of the EconomicHandler in two different modes
+        :param: staging (bool): If True, it uses the data returned by the database
+        and adds all the necessary data from the channel topology api call response
+        as well as the subgraph simply to the metrics dictionary to allow for easy
+        testing of the app in the staging environment. If False, data from the database
+        are mocked. This mode is better suited to test locally using pluto.
         """
-        tasks = set[asyncio.Task]()
+        if test_staging:
+            tasks = set[asyncio.Task]()
 
-        expected_order = ["unique_peer_safe_links", "params", "rpch", "subgraph_data"]
+            expected_order = [
+                "params",
+                "metricsDB",
+            ]
 
-        tasks.add(asyncio.create_task(self.get_unique_safe_peerId_links()))
-        tasks.add(asyncio.create_task(self.read_parameters_and_equations()))
-        tasks.add(asyncio.create_task(self.blacklist_rpch_nodes(self.rpch_endpoint)))
-        """
-        tasks.add(
-            asyncio.create_task(
-                self.get_staking_participations(
-                    subgraph_url=self.subgraph_url,
-                    staking_season=self.sc_address,
-                    pagination_skip_size=1000,  # Maximum entries per query allowed by TheGraph
+            tasks.add(asyncio.create_task(self.read_parameters_and_equations()))
+            tasks.add(asyncio.create_task(self.get_database_metrics()))
+
+            await asyncio.sleep(0)
+
+            finished, _ = await asyncio.wait(tasks)
+
+            unordered_tasks = [task.result() for task in finished]
+
+            # Sort the results as the expected order cannot be guaranteed.
+            ordered_tasks = sorted(
+                unordered_tasks, key=lambda x: expected_order.index(x[0])
+            )
+
+            parameters_equations_budget = ordered_tasks[0][1:]
+            database_metrics = ordered_tasks[1][1]
+            print(database_metrics)
+
+            # Add random stake and a random safe address to the metrics database
+            _, new_database_metrics = self.add_random_data_to_metrics(database_metrics)
+            print(new_database_metrics)
+
+            # Extract Parameters
+            parameters, equations, budget_param = parameters_equations_budget
+
+            # computation of cover traffic probability
+            _, ct_prob_dict = self.compute_ct_prob(
+                parameters,
+                equations,
+                new_database_metrics,
+            )
+
+            # calculate expected rewards
+            _, expected_rewards = self.compute_expected_reward(
+                ct_prob_dict, budget_param
+            )
+            print(f"{expected_rewards=}")
+
+        else:
+            tasks = set[asyncio.Task]()
+
+            expected_order = [
+                "unique_peer_safe_links",
+                "params",
+                "rpch",
+                "subgraph_data",
+            ]
+
+            tasks.add(asyncio.create_task(self.get_unique_safe_peerId_links()))
+            tasks.add(asyncio.create_task(self.read_parameters_and_equations()))
+            tasks.add(
+                asyncio.create_task(self.blacklist_rpch_nodes(self.rpch_endpoint))
+            )
+            """
+            tasks.add(
+                asyncio.create_task(
+                    self.get_staking_participations(
+                        subgraph_url=self.subgraph_url,
+                        staking_season=self.sc_address,
+                        pagination_skip_size=1000,  # Maximum entries per query allowed by TheGraph
+                    )
                 )
             )
-        )
-        """
-        await asyncio.sleep(0)
+            """
+            await asyncio.sleep(0)
 
-        finished, _ = await asyncio.wait(tasks)
+            finished, _ = await asyncio.wait(tasks)
 
-        unordered_tasks = [task.result() for task in finished]
+            unordered_tasks = [task.result() for task in finished]
 
-        # sort the results according to the expected order.
-        # This is necessary because the order of the results is not guaranteed.
-        ordered_tasks = sorted(
-            unordered_tasks, key=lambda x: expected_order.index(x[0])
-        )
+            # Sort the results as the expected order cannot be guaranteed.
+            ordered_tasks = sorted(
+                unordered_tasks, key=lambda x: expected_order.index(x[0])
+            )
 
-        unique_safe_peerId_links = ordered_tasks[0][1]
-        parameters_equations_budget = ordered_tasks[1][1:]
-        rpch_nodes_blacklist = ordered_tasks[2][1]
-        # staking_participations = ordered_tasks[3][1]
-        print(parameters_equations_budget)
+            unique_safe_peerId_links = ordered_tasks[0][1]
+            parameters_equations_budget = ordered_tasks[1][1:]
+            rpch_nodes_blacklist = ordered_tasks[2][1]
+            # staking_participations = ordered_tasks[3][1]
 
-        # helper functions that allow to test the code by inserting
-        # the peerIDs of the pluto nodes (SUBJECT TO REMOVAL)
-        pluto_keys_in_mockdb_data = self.replace_keys_in_mock_data(
-            unique_safe_peerId_links
-        )
-        pluto_keys_in_mocksubraph_data = self.replace_keys_in_mock_data_subgraph(
-            unique_safe_peerId_links
-        )
+            # helper functions that allow to test the code by inserting
+            # the peerIDs of the pluto nodes (SUBJECT TO REMOVAL)
+            pluto_keys_in_mockdb_data = self.replace_keys_in_mock_data(
+                unique_safe_peerId_links
+            )
+            pluto_keys_in_mocksubraph_data = self.replace_keys_in_mock_data_subgraph(
+                unique_safe_peerId_links
+            )
 
-        # merge unique_safe_peerId_links with database metrics and subgraph data
-        _, metrics_dict = self.merge_topology_metricdb_subgraph(
-            unique_safe_peerId_links,
-            pluto_keys_in_mockdb_data,
-            pluto_keys_in_mocksubraph_data,
-        )
-        # print(metrics_dict)
+            # merge unique_safe_peerId_links with database metrics and subgraph data
+            _, metrics_dict = self.merge_topology_metricdb_subgraph(
+                unique_safe_peerId_links,
+                pluto_keys_in_mockdb_data,
+                pluto_keys_in_mocksubraph_data,
+            )
+            # print(metrics_dict)
 
-        # Exclude RPCh entry and exit nodes from the reward computation
-        _, metrics_dict_excluding_rpch = self.block_rpch_nodes(
-            rpch_nodes_blacklist, metrics_dict
-        )
+            # Exclude RPCh entry and exit nodes from the reward computation
+            _, metrics_dict_excluding_rpch = self.block_rpch_nodes(
+                rpch_nodes_blacklist, metrics_dict
+            )
 
-        # update the metrics dictionary to allow for 1 to many safe address peerID links
-        _, one_to_many_safe_peerid_links = self.safe_address_split_stake(
-            metrics_dict_excluding_rpch
-        )
-        # print(one_to_many_safe_peerid_links)
+            # update the metrics dictionary to allow for 1 to many safe address peerID links
+            _, one_to_many_safe_peerid_links = self.safe_address_split_stake(
+                metrics_dict_excluding_rpch
+            )
+            # print(one_to_many_safe_peerid_links)
 
-        # Extract Parameters
-        parameters, equations, budget_param = parameters_equations_budget
+            # Extract Parameters
+            parameters, equations, budget_param = parameters_equations_budget
 
-        # computation of cover traffic probability
-        _, ct_prob_dict = self.compute_ct_prob(
-            parameters,
-            equations,
-            one_to_many_safe_peerid_links,
-        )
+            # computation of cover traffic probability
+            _, ct_prob_dict = self.compute_ct_prob(
+                parameters,
+                equations,
+                one_to_many_safe_peerid_links,
+            )
 
-        # calculate expected rewards
-        _, expected_rewards = self.compute_expected_reward(ct_prob_dict, budget_param)
+            # calculate expected rewards
+            _, expected_rewards = self.compute_expected_reward(
+                ct_prob_dict, budget_param
+            )
 
-        # output expected rewards as a csv file
-        # self.save_expected_reward_csv(expected_rewards)
+            # output expected rewards as a csv file
+            self.save_expected_reward_csv(expected_rewards)
 
-        # print(f"{staking_participations}")
-        print(f"{expected_rewards=}")
-        # print(f"{rpch_nodes_blacklist=}")
+            # print(f"{staking_participations}")
+            print(f"{expected_rewards=}")
+            # print(f"{rpch_nodes_blacklist=}")
 
     async def get_unique_safe_peerId_links(self):
         """
@@ -148,6 +209,66 @@ class EconomicHandler(HOPRNode):
         response = await self.api.get_unique_safe_peerId_links()
 
         return "unique_peer_safe_links", response
+
+    async def get_database_metrics(self):
+        """
+        This function establishes a connection to the database using the provided
+        connection details, retrieves the latest peer information from the database
+        table, and returns the data as a dictionary.
+        """
+        with DatabaseConnection(
+            envvar("DB_NAME"),
+            envvar("DB_HOST"),
+            envvar("DB_USER"),
+            envvar("DB_PASSWORD"),
+            envvar("DB_PORT", int),
+        ) as db:
+            try:
+                table_name = "raw_data_table"
+                last_added_rows = db.last_added_rows(table_name)
+
+                metrics_dict = {}
+                for (
+                    id,
+                    peer_id,
+                    netw_ids,
+                    latency_metrics,
+                    timestamp,
+                ) in last_added_rows:
+                    metrics_dict[peer_id] = {
+                        "netw_ids": netw_ids,
+                        "latency_metrics": latency_metrics,
+                        "id": id,
+                        "Timestamp": timestamp,
+                    }
+
+                return "metricsDB", metrics_dict
+
+            except ValueError:
+                log.exception("Error reading data from database table")
+            return "metricsDB", {}
+
+    def add_random_data_to_metrics(self, metrics_dict):
+        """
+        Adds random stake and safe address to the metrics dict to mock the
+        information returned by the channel topology and subgraph.
+        :param metrics_dict: The metrics dict retrieved from the database.
+        :return: The updated metrics dict with stake and safe address.
+        """
+        for peer_id, data in metrics_dict.items():
+            # Add a random number between 1 and 100 to the "stake" key
+            stake = random.randint(1, 100)
+            data["stake"] = stake
+            data["splitted_stake"] = stake / 2
+            data["safe_address_count"] = random.randint(1, 5)
+
+            # Generate a random 5-letter lowercase combination for "safe_address"
+            safe_address = "0x" + "".join(
+                random.choice("abcdefghijklmnopqrstuvwxyz") for _ in range(5)
+            )
+            data["safe_address"] = safe_address
+
+        return "new_metrics_dict", metrics_dict
 
     def mock_data_metrics_db(self):
         """
@@ -250,24 +371,22 @@ class EconomicHandler(HOPRNode):
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(api_endpoint) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        if isinstance(data, list) and data:
-                            rpch_node_peerID = [
-                                item["id"] for item in data if "id" in item
-                            ]
-                            return "rpch", rpch_node_peerID
-                    else:
+                    if response.status != 200:
                         log.error(f"Received error code: {response.status}")
-        except aiohttp.ClientError as e:
-            log.error(f"An error occurred while making the request: {e}")
-            log.error(traceback.format_exc())
-        except ValueError as e:
-            log.error(f"An error occurred while parsing the response as JSON: {e}")
-            log.error(traceback.format_exc())
-        except Exception as e:
-            log.error(f"An unexpected error occurred: {e}")
-            log.error(traceback.format_exc())
+                        return "rpch", []
+                    data = await response.json()
+        except aiohttp.ClientError:
+            log.exception("An error occurred while making the request")
+        except OSError:
+            log.exception("An error occurred while reading the response")
+        except Exception:
+            log.exception("An unexpected error occurred")
+        else:
+            if not data or not isinstance(data, list):
+                return "rpch", []
+
+            rpch_node_peerID = [item["id"] for item in data if "id" in item]
+            return "rpch", rpch_node_peerID
 
         return "rpch", []
 
@@ -288,6 +407,7 @@ class EconomicHandler(HOPRNode):
         :returns: Tuple[str, Dict[str, int]]: A tuple containing the result identifier
         and a dictionary with account IDs of stakers and the amount of staked tokens.
         """
+
         query = """
             query GetStakingParticipations($stakingSeason: String, $first: Int, $skip: Int) {
                 stakingParticipations(first: $first, skip: $skip, where: { stakingSeason: $stakingSeason }) {
@@ -302,7 +422,6 @@ class EconomicHandler(HOPRNode):
                 }
             }
         """
-
         url = subgraph_url
         variables = {
             "stakingSeason": staking_season,
@@ -310,16 +429,15 @@ class EconomicHandler(HOPRNode):
             "skip": 0,
         }
 
+        data = {"query": query, "variables": variables}  # noqa: F841
         subgraph_dict = {}
         staking_participations = []
         more_content_available = True
 
-        async with aiohttp.ClientSession() as session:
-            while more_content_available:
+        while more_content_available:
+            async with aiohttp.ClientSession() as session:
                 try:
-                    async with session.post(
-                        url, json={"query": query, "variables": variables}
-                    ) as response:
+                    async with session.post(url, json=data) as response:
                         if response.status != 200:
                             log.error(
                                 f"Received status code {response.status} when",
@@ -336,6 +454,9 @@ class EconomicHandler(HOPRNode):
                     log.exception(
                         "An error occurred while parsing the response as JSON"
                     )
+                    return "subgraph_data", {}
+                except OSError:
+                    log.exception("An error occurred while reading the response")
                     return "subgraph_data", {}
                 except Exception:
                     log.exception("An unexpected error occurred")
@@ -560,6 +681,25 @@ class EconomicHandler(HOPRNode):
         self.tasks.add(asyncio.create_task(self.scheduler()))
 
         await asyncio.gather(*self.tasks)
+
+    ################## MOCKING FOR TESTING DEPLOYMENT ##################
+    async def mockstart(self):
+        """
+        Starts the tasks of this node
+        """
+        log.debug("Running EconomicHandler instance")
+
+        if self.tasks:
+            return
+
+        self.started = True
+        self.tasks.add(asyncio.create_task(self.fake_method()))
+
+        await asyncio.gather(*self.tasks)
+
+    @wakeupcall("Entering fake method", seconds=15)
+    async def fake_method(self):
+        log.info("Fake log from the fake method")
 
     def stop(self):
         """

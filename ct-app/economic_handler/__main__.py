@@ -2,11 +2,12 @@ import asyncio
 from signal import SIGINT, SIGTERM
 
 from tools.exit_codes import ExitCode
-from tools.utils import _getlogger, envvar
+from tools.utils import envvar, getlogger
+
 from .economic_handler import EconomicHandler
 from .utils_econhandler import stop_instance
 
-log = _getlogger()
+log = getlogger()
 
 
 def main():
@@ -19,6 +20,12 @@ def main():
         rcphnodes = envvar("RPCH_NODES")
         subgraphurl = envvar("SUBGRAPH_URL")
         scaddress = envvar("SC_ADDRESS")
+        envvar("DB_NAME")
+        envvar("DB_HOST")
+        envvar("DB_USER")
+        envvar("DB_PASSWORD")
+        envvar("DB_PORT", int)
+        mock_mode = envvar("MOCK_MODE", bool)
     except KeyError:
         log.exception("Missing environment variables")
         exit(ExitCode.ERROR_MISSING_ENV_VARS)
@@ -37,8 +44,10 @@ def main():
 
     # start the node and run the event loop until the node stops
     try:
-        loop.run_until_complete(economic_handler.start())
-
+        if mock_mode:
+            loop.run_until_complete(economic_handler.mockstart())
+        else:
+            loop.run_until_complete(economic_handler.start())
     except Exception as e:
         print("Uncaught exception ocurred", str(e))
         exit_code = ExitCode.ERROR_UNCAUGHT_EXCEPTION

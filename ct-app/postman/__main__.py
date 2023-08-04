@@ -1,8 +1,8 @@
 import asyncio
 
-from tools import HoprdAPIHelper, envvar, _getlogger
+from tools import HoprdAPIHelper, envvar, getlogger
 
-log = _getlogger()
+log = getlogger()
 
 
 async def retrieve_address():
