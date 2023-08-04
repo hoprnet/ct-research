@@ -7,7 +7,7 @@ import random
 
 import aiohttp
 from assets.parameters_schema import schema as schema_name
-from tools.decorator import connectguard, econ_handler_wakeupcall, wakeupcall
+from tools.decorator import connectguard, econ_handler_wakeupcall, wakeupcall, formalin
 from tools.hopr_node import HOPRNode
 from tools.db_connection.database_connection import DatabaseConnection
 from tools.utils import getlogger, read_json_file, envvar
@@ -666,6 +666,23 @@ class EconomicHandler(HOPRNode):
         log.info("CSV file saved successfully")
         return True
 
+    @formalin(message="Closing incoming channels", sleep=60 * 2)
+    @connectguard
+    async def close_incoming_channels(self):
+        """
+        Closes incoming channels that are not used for forwarding.
+        """
+
+        peer_ids = await self.api.get_all_channels(
+            direction="incoming", field="peer_id"
+        )
+
+        if not peer_ids:
+            log.info("No incoming channels detected")
+
+        for peer_id in peer_ids:
+            await self.api.close_channel(peer_id, "incoming")
+
     async def start(self):
         """
         Starts the tasks of this node
@@ -679,6 +696,7 @@ class EconomicHandler(HOPRNode):
         self.tasks.add(asyncio.create_task(self.connect(address="hopr")))
         self.tasks.add(asyncio.create_task(self.host_available()))
         self.tasks.add(asyncio.create_task(self.scheduler()))
+        # self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
 
         await asyncio.gather(*self.tasks)
 
