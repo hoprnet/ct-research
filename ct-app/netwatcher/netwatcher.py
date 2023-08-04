@@ -232,6 +232,9 @@ class NetWatcher(HOPRNode):
         self.tasks.add(asyncio.create_task(self.transmit_peers()))
         self.tasks.add(asyncio.create_task(self.transmit_balance()))
 
+        for task in self.tasks:
+            task.add_done_callback(self.tasks.discard)
+
         await asyncio.gather(*self.tasks)
 
     def stop(self):
@@ -243,4 +246,5 @@ class NetWatcher(HOPRNode):
         self.started = False
         for task in self.tasks:
             task.cancel()
+
         self.tasks = set()
