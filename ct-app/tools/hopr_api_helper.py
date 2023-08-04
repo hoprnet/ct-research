@@ -86,12 +86,12 @@ class HoprdAPIHelper:
         log.debug("Getting channel topology")
 
         try:
-            thread = self.channels_api.channels_get_channel(
-                full_topology=True, async_req=True
+            thread = self.channels_api.channels_get_channels(
+                full_topology="true", async_req=True
             )
             response = thread.get()
         except ApiException:
-            log.exception("Exception when calling ChannelsApi->channels_get_channel")
+            log.exception("Exception when calling ChannelsApi->channels_get_channels")
             return None
         except OSError:
             log.exception("Exception when calling ChannelsApi->channels_get_channels")
@@ -102,16 +102,16 @@ class HoprdAPIHelper:
             return None
 
         address_for_peer_id = {}
-
         for item in response.all:
-            peer_id = item.get("sourcePeerId", None)
-            address = item.get("sourceAddress", None)
-
-            if not peer_id or not address:
-                log.error("Could not get peer_id or address from a peer")
+            if not hasattr(item, "source_peer_id"):
+                log.error("Response does not contain `source_peer_id`")
                 continue
 
-            address_for_peer_id[peer_id] = address
+            if not hasattr(item, "source_address"):
+                log.error("Response does not contain `source_address`")
+                continue
+
+            address_for_peer_id[item.source_peer_id] = item.source_address
 
         return address_for_peer_id
 
