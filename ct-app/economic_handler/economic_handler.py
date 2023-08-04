@@ -680,9 +680,6 @@ class EconomicHandler(HOPRNode):
         self.tasks.add(asyncio.create_task(self.host_available()))
         self.tasks.add(asyncio.create_task(self.scheduler()))
 
-        for task in self.tasks:
-            task.add_done_callback(self.tasks.discard)
-
         await asyncio.gather(*self.tasks)
 
     ################## MOCKING FOR TESTING DEPLOYMENT ##################
