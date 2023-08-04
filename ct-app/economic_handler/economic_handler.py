@@ -698,9 +698,6 @@ class EconomicHandler(HOPRNode):
         self.started = True
         self.tasks.add(asyncio.create_task(self.fake_method()))
 
-        for task in self.tasks:
-            task.add_done_callback(self.tasks.discard)
-
         await asyncio.gather(*self.tasks)
 
     @wakeupcall("Entering fake method", seconds=15)
@@ -715,6 +712,7 @@ class EconomicHandler(HOPRNode):
 
         self.started = False
         for task in self.tasks:
+            task.add_done_callback(self.tasks.discard)
             task.cancel()
 
         self.tasks = set()
