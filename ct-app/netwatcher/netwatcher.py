@@ -220,7 +220,7 @@ class NetWatcher(HOPRNode):
     @connectguard
     async def close_incoming_channels(self):
         """
-        Closes incoming channels that are not used for forwarding.
+        Closes incoming channels to the connected node as no message should be relayed
         """
         if self.mock_mode:
             return

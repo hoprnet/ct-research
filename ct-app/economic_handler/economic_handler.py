@@ -670,7 +670,7 @@ class EconomicHandler(HOPRNode):
     @connectguard
     async def close_incoming_channels(self):
         """
-        Closes incoming channels that are not used for forwarding.
+        Closes incoming channels to the connected node as no message should be relayed
         """
 
         peer_ids = await self.api.get_all_channels(
