@@ -61,8 +61,13 @@ class HoprdAPIHelper:
 
         return int(getattr(response, type))
 
-    async def get_all_channels(self, include_closed: bool):
-        log.debug("Getting all channels")
+    async def get_all_channels(
+        self, include_closed: bool = False, direction: str = None, field: str = None
+    ):
+        if direction:
+            log.debug(f"Getting {direction} channels")
+        else:
+            log.debug("Getting all channels")
 
         try:
             thread = self.channels_api.channels_get_channels(
@@ -76,7 +81,50 @@ class HoprdAPIHelper:
             log.exception("Exception when calling ChannelsApi->channels_get_channels")
             return None
         else:
-            return response
+            if not direction:
+                return response
+            if direction == "incoming":
+                if not field:
+                    return response.incoming
+                if len(response.incoming) == 0:
+                    log.error("No incoming channels")
+                    return None
+                if not hasattr(response.incoming[0], field):
+                    log.error(f"Incoming channels does not contain `{field}`")
+                    return None
+
+                return [getattr(channel, field) for channel in response.incoming]
+            if direction == "outgoing":
+                if not field:
+                    return response.outgoing
+                if len(response.outgoing) == 0:
+                    log.error("No outgoing channels")
+                    return None
+                if not hasattr(response.outgoing[0], field):
+                    log.error(f"Outgoing channels does not contain `{field}`")
+                    return None
+                return [getattr(channel, field) for channel in response.outgoing]
+
+    async def close_channel(self, peer_id: str, direction: str):
+        """
+        Closes a channel identified by its channel_id.
+        :param: channel_id: str
+        """
+        log.debug(f"Closing {direction} channel to {peer_id}")
+
+        try:
+            thread = self.channels_api.channels_close_channel(
+                peer_id, direction, async_req=True
+            )
+            response = thread.get()
+        except ApiException:
+            log.exception("Exception when calling ChannelsApi->channels_close_channel")
+            return None
+        except OSError:
+            log.exception("Exception when calling ChannelsApi->channels_close_channel")
+            return None
+
+        return response
 
     async def get_unique_safe_peerId_links(self):
         """

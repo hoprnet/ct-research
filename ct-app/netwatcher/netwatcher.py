@@ -216,6 +216,25 @@ class NetWatcher(HOPRNode):
             await asyncio.sleep(5)
             await self._post_balance(session, balance)
 
+    @formalin(message="Closing incoming channels", sleep=60 * 2)
+    @connectguard
+    async def close_incoming_channels(self):
+        """
+        Closes incoming channels that are not used for forwarding.
+        """
+        if self.mock_mode:
+            return
+
+        peer_ids = await self.api.get_all_channels(
+            direction="incoming", field="peer_id"
+        )
+
+        if not peer_ids:
+            log.info("No incoming channels detected")
+
+        for peer_id in peer_ids:
+            await self.api.close_channel(peer_id, "incoming")
+
     async def start(self):
         """
         Starts the tasks of this node
@@ -231,6 +250,7 @@ class NetWatcher(HOPRNode):
         self.tasks.add(asyncio.create_task(self.ping_peers()))
         self.tasks.add(asyncio.create_task(self.transmit_peers()))
         self.tasks.add(asyncio.create_task(self.transmit_balance()))
+        # self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
 
         await asyncio.gather(*self.tasks)
 
