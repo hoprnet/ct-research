@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from sanic import exceptions
+import prometheus_client as prometheus
+from sanic import exceptions, response
 from sanic.request import Request
 from sanic.response import html as sanic_html
 from sanic.response import json as sanic_json
@@ -24,7 +25,7 @@ def attach_endpoints(app):
     agg = Aggregator()
     log = getlogger()
 
-    @app.route("/aggregator/list", methods=["POST"])
+    @app.post("/aggregator/list")
     async def post_list(request: Request):
         """
         Create a POST route to receive a list of peers from a pod.
@@ -54,7 +55,7 @@ def attach_endpoints(app):
 
         return sanic_text("Received list")
 
-    @app.route("/aggregator/list", methods=["GET"])
+    @app.get("/aggregator/list")
     async def get_list(request: Request):
         """
         Create a GET route to retrieve the aggregated list of peers/latency.
@@ -66,7 +67,7 @@ def attach_endpoints(app):
         log.info("Returned node-peer-latency list")
         return sanic_json(agg.get_node_peer_latencies())
 
-    @app.route("/aggregator/list_ui", methods=["GET"])
+    @app.get("/aggregator/list_ui")
     async def get_list_ui(request: Request):  # pragma: no cover
         """
         Create a GET route to retrieve the aggregated list of peers/latency
@@ -129,7 +130,7 @@ def attach_endpoints(app):
 
         return "".join(text)
 
-    @app.route("/aggregator/to_db", methods=["GET"])
+    @app.get("/aggregator/to_db")
     async def post_to_db(request: Request):  # pragma: no cover
         """
         Takes the peers and metrics from the _dict and sends them to the database.
@@ -165,7 +166,7 @@ def attach_endpoints(app):
 
         return sanic_text("Sent to DB")
 
-    @app.route("/aggregator/balances", methods=["POST"])
+    @app.post("/aggregator/balances")
     async def post_balance(request: Request):
         """
         Create a POST route to receive the balance of a node.
@@ -186,8 +187,9 @@ def attach_endpoints(app):
 
         return sanic_text(f"Received balance for {request.json['id']}")
 
-    @app.route("/aggregator/metrics", methods=["GET"])
-    async def get_metrics(request: Request):
-        log.info("Metrics requested")
+    @app.get("/aggregator/metrics")
+    async def metrics(request: Request):
+        output = prometheus.exposition.generate_latest().decode("utf-8")
+        content_type = prometheus.exposition.CONTENT_TYPE_LATEST
 
-        return sanic_json(agg.get_metrics())
+        return response.text(body=output, content_type=content_type)
