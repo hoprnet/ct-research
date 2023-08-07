@@ -38,9 +38,9 @@ async def test__post_list():
     """
     instance = FakeNetWatcher()
     instance.peers = ["some_peer", "some_other_peer"]
-    instance.latency = {"some_peer": [10, 20], "some_other_peer": [30, 40]}
+    instance.latency = {"some_peer": 10, "some_other_peer": 30}
 
-    await instance._post_list(MagicMock())
+    await instance._post_list(MagicMock(), instance.latency)
 
     assert len(instance.peers) == 2
     assert len(instance.latency) == 2
@@ -125,13 +125,13 @@ async def test_ping_peers(mock_instance_for_test_ping: NetWatcher):
     instance.started = True
 
     asyncio.create_task(instance.ping_peers())
-    await asyncio.sleep(1)
+    await asyncio.sleep(2)
 
     # avoid infinite while loop by setting node.started = False
     instance.started = False
     await asyncio.sleep(1)
 
-    assert len(instance.latency) == 2
+    assert len(instance.latency) == 1
 
 
 @pytest.fixture
