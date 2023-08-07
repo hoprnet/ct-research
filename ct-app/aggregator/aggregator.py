@@ -60,10 +60,10 @@ class Aggregator(metaclass=Singleton):
             "node_balance", "Node balance", ["node_address", "token"]
         )
         self.prometheus_latency = Gauge(
-            "peer_latency", "Peer latency", ["node_address", "peer_id"]
+            "peer_latency", "Last peer latency measured", ["node_address", "peer_id"]
         )
         self.prometheus_node_update = Gauge(
-            "node_update", "Node update", ["node_address"]
+            "node_update", "Last node update received", ["node_address"]
         )
 
     def add_node_peer_latencies(self, node_id: str, items: dict):
