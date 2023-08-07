@@ -1,6 +1,8 @@
 import datetime
 import threading
 
+from prometheus_client.metrics import Gauge, Histogram
+
 from tools import getlogger
 
 from .utils import (
@@ -54,6 +56,16 @@ class Aggregator(metaclass=Singleton):
         self._node_balances: dict = {}
         self._node_balances_lock = threading.Lock()  # thread-safe balances
 
+        self.prometheus_balance = Gauge(
+            "node_balance", "Node balance", ["node_address", "token"]
+        )
+        self.prometheus_latency = Histogram(
+            "peer_latency", "Peer latency", ["node_address", "peer_id"]
+        )
+        self.prometheus_node_update = Gauge(
+            "node_update", "Node update", ["node_address"]
+        )
+
     def add_node_peer_latencies(self, node_id: str, items: dict):
         """
         Add latency data to the aggregator for a specific node.
@@ -72,6 +84,9 @@ class Aggregator(metaclass=Singleton):
 
             log.info(f"Added latency data for node {node_id}")
 
+        for peer, lat in items.items():
+            self.prometheus_latency.labels(node_id, peer).observe(lat)
+
     def get_node_peer_latencies(self) -> dict:
         """
         Get the latency data stored.
@@ -82,17 +97,6 @@ class Aggregator(metaclass=Singleton):
             log.info("Accessed latency data")
 
             return self._node_peer_latency
-
-    def clear_node_peer_latencies(self):
-        """
-        Clear the latency data stored.
-        Concurrent access is managed using a lock.
-        :return: Nothing
-        """
-        with self._node_peer_latency_lock:
-            self._node_peer_latency = {}
-
-            log.info("Cleared latency data")
 
     def set_node_update(self, node_id: str, timestamp: datetime.datetime):
         """
@@ -106,6 +110,9 @@ class Aggregator(metaclass=Singleton):
             self._node_last_update[node_id] = timestamp
 
             log.info(f"Set last update timestamp for node {node_id} to {timestamp}")
+
+        print(type(timestamp))
+        self.prometheus_node_update.labels(node_id).set(timestamp.timestamp())
 
     def get_node_update(self, node_id: str) -> datetime.datetime:
         """
@@ -141,35 +148,7 @@ class Aggregator(metaclass=Singleton):
         :param balance: the balance to add
         :return: Nothing
         """
-        with self._node_balances_lock:
-            if node_id not in self._node_balances:
-                self._node_balances[node_id] = {}
-
-            self._node_balances[node_id][token] = balance
-
-            log.info(f"Added balance data for node {node_id} ({token})")
-
-    def get_node_balances(self) -> dict:
-        """
-        Get the balances stored.
-        Concurrent access is managed using a lock.
-        :return: the balances stored
-        """
-        with self._node_balances_lock:
-            log.info("Accessed balance data")
-
-            return self._node_balances
-
-    def clear_node_balances(self):
-        """
-        Clear the balances stored.
-        Concurrent access is managed using a lock.
-        :return: Nothing
-        """
-        with self._node_balances_lock:
-            self._node_balances = {}
-
-            log.info("Cleared balance data")
+        self.prometheus_balance.labels(node_id, token).set(balance)
 
     def convert_to_db_data(self):
         """
@@ -202,30 +181,3 @@ class Aggregator(metaclass=Singleton):
             log.info(f"Matchs for db:\n{matchs_for_db}")
 
         return matchs_for_db
-
-    def get_metrics(self):
-        metrics = {"peers": {}, "nodes": {}, "aggregator": {}}
-
-        node_balances = self.get_node_balances()
-        node_peer_latencies = self.get_node_peer_latencies()
-
-        log.info(f"Node balances: {node_balances}")
-        log.info(f"Node-peer-latencies: {node_peer_latencies}")
-
-        with self._node_balances_lock:
-            for node_address, balances in node_balances.items():
-                if node_address not in metrics["nodes"]:
-                    metrics["nodes"][node_address] = {}
-                metrics["nodes"][node_address]["balances"] = balances
-
-        with self._node_peer_latency_lock:
-            for _, latencies in node_peer_latencies.items():
-                for peer_id, latency in latencies.items():
-                    if peer_id not in metrics["peers"]:
-                        metrics["peers"][peer_id] = {}
-
-                    metrics["peers"][peer_id] = latency
-
-        log.info(f"Prepared metrics: {metrics}")
-
-        return metrics
