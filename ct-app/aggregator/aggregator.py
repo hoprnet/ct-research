@@ -1,7 +1,7 @@
 import datetime
 import threading
 
-from prometheus_client.metrics import Gauge, Histogram
+from prometheus_client.metrics import Gauge
 
 from tools import getlogger
 
@@ -59,7 +59,7 @@ class Aggregator(metaclass=Singleton):
         self.prometheus_balance = Gauge(
             "node_balance", "Node balance", ["node_address", "token"]
         )
-        self.prometheus_latency = Histogram(
+        self.prometheus_latency = Gauge(
             "peer_latency", "Peer latency", ["node_address", "peer_id"]
         )
         self.prometheus_node_update = Gauge(
@@ -85,7 +85,7 @@ class Aggregator(metaclass=Singleton):
             log.info(f"Added latency data for node {node_id}")
 
         for peer, lat in items.items():
-            self.prometheus_latency.labels(node_id, peer).observe(lat)
+            self.prometheus_latency.labels(node_id, peer).set(lat)
 
     def get_node_peer_latencies(self) -> dict:
         """
