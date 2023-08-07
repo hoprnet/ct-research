@@ -100,13 +100,13 @@ class NetWatcher(HOPRNode):
 
         return False
 
-    async def _post_balance(self, session: ClientSession, balance: int):
+    async def _post_balance(self, session: ClientSession, balances: dict[str:int]):
         """
         Sends the node balance (xDai) to the Aggregator.
         :param session: the aiohttp session
         :param balance: the node balance
         """
-        data = {"id": self.peer_id, "balances": {"native": balance}}
+        data = {"id": self.peer_id, "balances": balances}
         try:
             async with session.post(self.balanceurl, json=data) as response:
                 if response.status == 200:
@@ -201,14 +201,18 @@ class NetWatcher(HOPRNode):
     @connectguard
     async def transmit_balance(self):
         if self.mock_mode:
-            balance = random.randint(100, 1000)
+            native_balance = random.randint(100, 1000)
+            hopr_balance = random.randint(100, 1000)
+
+            balances = {"native": native_balance, "hopr": hopr_balance}
         else:
             balance = await self.api.balance("native")
+            balances = {"native": balance}
 
-        log.info(f"Got native balance: {balance}")
+        log.info(f"Got balances: {balances}")
 
         async with ClientSession() as session:
-            success = await self._post_balance(session, balance)
+            success = await self._post_balance(session, balances)
 
             if success:
                 return
