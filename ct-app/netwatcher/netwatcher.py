@@ -133,7 +133,7 @@ class NetWatcher(HOPRNode):
         [self.peers.add(peer) for peer in new_peers]
         log.info(f"Found new peers {', '.join(new_peers)} (total of {len(self.peers)})")
 
-    @formalin(message="Pinging peers", sleep=1)
+    @formalin(message="Pinging peers", sleep=0.2)
     @connectguard
     async def ping_peers(self):
         """
@@ -147,7 +147,7 @@ class NetWatcher(HOPRNode):
 
         # shuffle the peer set to converge towards a uniform distribution of pings among
         # peers
-        rand_peer = random.sample(sorted(self.peers), 1)
+        rand_peer = random.choice(self.peers)
 
         # # create an array to keep the latency measures of new peers
         # for peer_id in sampled_peers:
@@ -167,7 +167,7 @@ class NetWatcher(HOPRNode):
         else:
             latency = await self.api.ping(rand_peer, "latency")
 
-        if latency:
+        if latency is not None:
             self.latency[rand_peer] = latency
 
         # self.latency[rand_peer] = self.latency[rand_peer][-self.max_lat_count :]
