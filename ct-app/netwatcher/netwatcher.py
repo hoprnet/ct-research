@@ -56,7 +56,7 @@ class NetWatcher(HOPRNode):
     @mock_mode.setter
     def mock_mode(self, value: bool):
         self._mock_mode = value
-        self.peer_id = "<mock-peer-id>"
+        self.peer_id = "<mock-node-address>"
 
     def wipe_peers(self):
         """
@@ -82,13 +82,13 @@ class NetWatcher(HOPRNode):
         latency_dict = {}
         for peer in peers_copy:
             if peer in self.latency and len(self.latency[peer]) > 0:
-                latency = self.latency[peer][-1]
-            else:
-                latency = None
-
-            latency_dict[peer] = latency
+                latency_dict[peer] = self.latency[peer][-1]
 
         data = {"id": self.peer_id, "list": latency_dict}
+
+        if len(data["list"]) == 0:
+            log.info("No peers to transmit")
+            return True
 
         try:
             async with session.post(self.posturl, json=data) as response:
@@ -143,7 +143,7 @@ class NetWatcher(HOPRNode):
                 self.peers.add(peer)
                 log.info(f"Found new peer {peer} (total of {len(self.peers)})")
 
-    @formalin(message="Pinging peers", sleep=60 * 1)
+    @formalin(message="Pinging peers", sleep=60 * 0.2)
     @connectguard
     async def ping_peers(self):
         """
@@ -180,7 +180,7 @@ class NetWatcher(HOPRNode):
             self.latency[peer_id].append(latency)
             self.latency[peer_id] = self.latency[peer_id][-self.max_lat_count :]
 
-    @formalin(message="Initiated peers transmission", sleep=60 * 10)
+    @formalin(message="Initiated peers transmission", sleep=60 * 1)
     @connectguard
     async def transmit_peers(self):
         """
@@ -192,7 +192,7 @@ class NetWatcher(HOPRNode):
             if success:
                 return
 
-            asyncio.sleep(5)
+            await asyncio.sleep(5)
             await self._post_list(session)
 
         # self.wipe_peers()
