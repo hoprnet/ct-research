@@ -133,7 +133,7 @@ class NetWatcher(HOPRNode):
         [self.peers.add(peer) for peer in new_peers]
         log.info(f"Found new peers {', '.join(new_peers)} (total of {len(self.peers)})")
 
-    @formalin(message="Pinging peers", sleep=0.2)
+    @formalin(message="Pinging peers", sleep=0.1)
     @connectguard
     async def ping_peers(self):
         """
