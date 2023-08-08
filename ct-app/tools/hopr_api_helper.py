@@ -49,9 +49,8 @@ class HoprdAPIHelper:
         log.debug("Getting balance")
 
         try:
-            # thread = self.account_api.account_get_balances(async_req=True)
-            # response = thread.get()
-            response = self.account_api.account_get_balances()
+            thread = self.account_api.account_get_balances(async_req=True)
+            response = thread.get()
         except ApiException:
             log.exception("Exception when calling AccountApi->account_get_balances")
             return None
@@ -190,9 +189,9 @@ class HoprdAPIHelper:
     ) -> bool:
         log.debug("Sending message")
 
-        body = swagger.MessagesBody(message, destination, hops)
+        body = swagger.MessagesBody(message, destination, path=hops)
         try:
-            thread = self.message_api.messages_send_message(body=body)
+            thread = self.message_api.messages_send_message(body=body, async_req=True)
             response = thread.get()
         except ApiException:
             log.exception("Exception when calling MessageApi->messages_send_message")
