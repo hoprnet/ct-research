@@ -59,7 +59,7 @@ class NetWatcher(HOPRNode):
 
         if value is True:
             index = random.randint(0, 100)
-            self.peer_id = f"<mock-peer-id-{index:03d}>"
+            self.peer_id = f"<mock-node-address-{index:03d}>"
 
     def wipe_peers(self):
         """
