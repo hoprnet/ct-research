@@ -56,7 +56,10 @@ class NetWatcher(HOPRNode):
     @mock_mode.setter
     def mock_mode(self, value: bool):
         self._mock_mode = value
-        self.peer_id = "<mock-node-address>"
+
+        if value is True:
+            index = random.randint(0, 100)
+            self.peer_id = f"<mock-peer-id-{index:03d}>"
 
     def wipe_peers(self):
         """
