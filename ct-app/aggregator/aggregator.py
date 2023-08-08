@@ -111,7 +111,6 @@ class Aggregator(metaclass=Singleton):
 
             log.info(f"Set last update timestamp for node {node_id} to {timestamp}")
 
-        print(type(timestamp))
         self.prometheus_node_update.labels(node_id).set(timestamp.timestamp())
 
     def get_node_update(self, node_id: str) -> datetime.datetime:
