@@ -28,6 +28,15 @@ def send_1_hop_message(peer: str, count: int, node_list: list[str], node_index: 
     return asyncio.run(async_send_1_hop_message(peer, count, node_list, node_index))
 
 
+def get_next_node_address(node_list: list[str], node_index: int):
+    if node_index == len(node_list) - 1:
+        return None, None
+
+    node_index += 1
+
+    return node_list[node_index], node_index
+
+
 async def async_send_1_hop_message(
     peer_id: str, count: int, node_list: list[str], node_index: int
 ):
@@ -58,13 +67,13 @@ async def async_send_1_hop_message(
     if address is None:
         log.error("Could not get connect to node. Trying with a backup node")
 
+        node_address, node_index = get_next_node_address(node_list, node_index)
+
         # if there are no more nodes in the list, the task is stopped
-        if node_index == len(node_list) - 1:
+        if not node_address:
             log.info("This is the last node in the list, stopping")
             return "FAIL"
 
-        node_index += 1
-        node_address = node_list[node_index]
         log.info(f"Redirecting task to {node_address} (#{node_index} - {api_host})")
 
         app.send_task(
@@ -81,12 +90,34 @@ async def async_send_1_hop_message(
     )
 
     # node is reachable, messages can be sent
-    for _ in range(count):
-        state = await api.send_message(address, "foo", [peer_id])  # noqa: F841
+    for idx in range(count):
+        state = await api.send_message(address, "foo", [peer_id])
 
-    log.info(
-        f"{count} messages sent to `{peer_id}` "
-        + f"via {node_list[node_index]}(#{node_index} - {api_host})"
+        if not state:
+            log.error("Could not send message")
+            break
+    else:
+        log.info(
+            f"{count} messages sent to `{peer_id}` "
+            + f"via {node_list[node_index]}(#{node_index} - {api_host})"
+        )
+
+        return "SUCCESS"
+
+    log.error("Could not send all messages")
+
+    node_address, node_index = get_next_node_address(node_list, node_index)
+
+    if not node_address:
+        log.info("This is the last node in the list, stopping")
+        log.info(f"Only sent {idx} messages")
+        return "FAIL"
+
+    log.info(f"Redirecting task to {node_address} (#{node_index} - {api_host})")
+    app.send_task(
+        f"{envvar('TASK_NAME')}.{node_address}",
+        args=(peer_id, count - idx, node_list, node_index),
+        queue=node_address,
     )
 
-    return "SUCCESS"
+    return "SPLITTED"
