@@ -128,11 +128,11 @@ def merge_data():
         "peer_id_5": "safe_5",
     }
     metrics_dict = {
-        "peer_id_1": {"netw": ["nw_1", "nw_3"]},
-        "peer_id_2": {"netw": ["nw_1", "nw_2", "nw_4"]},
-        "peer_id_3": {"netw": ["nw_2", "nw_3", "nw_4"]},
-        "peer_id_4": {"netw": ["nw_1", "nw_2", "nw_3"]},
-        "peer_id_5": {"netw": ["nw_1", "nw_2", "nw_3", "nw_4"]},
+        "peer_id_1": {"netw": ["node_1", "node_3"]},
+        "peer_id_2": {"netw": ["node_1", "node_2", "node_4"]},
+        "peer_id_3": {"netw": ["node_2", "node_3", "node_4"]},
+        "peer_id_4": {"netw": ["node_1", "node_2", "node_3"]},
+        "peer_id_5": {"netw": ["node_1", "node_2", "node_3", "node_4"]},
     }
     subgraph_dict = {
         "safe_1": 65,
@@ -149,27 +149,27 @@ def expected_merge_result():
     return {
         "peer_id_1": {
             "safe_address": "safe_1",
-            "node_addresses": ["nw_1", "nw_3"],
+            "node_addresses": ["node_1", "node_3"],
             "stake": 65,
         },
         "peer_id_2": {
             "safe_address": "safe_1",
-            "node_addresses": ["nw_1", "nw_2", "nw_4"],
+            "node_addresses": ["node_1", "node_2", "node_4"],
             "stake": 65,
         },
         "peer_id_3": {
             "safe_address": "safe_3",
-            "node_addresses": ["nw_2", "nw_3", "nw_4"],
+            "node_addresses": ["node_2", "node_3", "node_4"],
             "stake": 23,
         },
         "peer_id_4": {
             "safe_address": "safe_4",
-            "node_addresses": ["nw_1", "nw_2", "nw_3"],
+            "node_addresses": ["node_1", "node_2", "node_3"],
             "stake": 85,
         },
         "peer_id_5": {
             "safe_address": "safe_5",
-            "node_addresses": ["nw_1", "nw_2", "nw_3", "nw_4"],
+            "node_addresses": ["node_1", "node_2", "node_3", "node_4"],
             "stake": 62,
         },
     }
@@ -252,35 +252,35 @@ def expected_split_stake_result():
     return {
         "peer_id_1": {
             "safe_address": "safe_1",
-            "node_addresses": ["nw_1", "nw_3"],
+            "node_addresses": ["node_1", "node_3"],
             "stake": 65,
             "safe_address_count": 2,
             "splitted_stake": 32.5,
         },
         "peer_id_2": {
             "safe_address": "safe_1",
-            "node_addresses": ["nw_1", "nw_2", "nw_4"],
+            "node_addresses": ["node_1", "node_2", "node_4"],
             "stake": 65,
             "safe_address_count": 2,
             "splitted_stake": 32.5,
         },
         "peer_id_3": {
             "safe_address": "safe_3",
-            "node_addresses": ["nw_2", "nw_3", "nw_4"],
+            "node_addresses": ["node_2", "node_3", "node_4"],
             "stake": 23,
             "safe_address_count": 1,
             "splitted_stake": 23,
         },
         "peer_id_4": {
             "safe_address": "safe_4",
-            "node_addresses": ["nw_1", "nw_2", "nw_3"],
+            "node_addresses": ["node_1", "node_2", "node_3"],
             "stake": 85,
             "safe_address_count": 1,
             "splitted_stake": 85,
         },
         "peer_id_5": {
             "safe_address": "safe_5",
-            "node_addresses": ["nw_1", "nw_2", "nw_3", "nw_4"],
+            "node_addresses": ["node_1", "node_2", "node_3", "node_4"],
             "stake": 62,
             "safe_address_count": 1,
             "splitted_stake": 62,

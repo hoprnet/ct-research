@@ -290,11 +290,11 @@ class EconomicHandler(HOPRNode):
         watcher IDs odered by a statistical measure computed on latency
         """
         metrics_dict = {
-            "peer_id_1": {"netw": ["nw_1", "nw_3"]},
-            "peer_id_2": {"netw": ["nw_1", "nw_2", "nw_4"]},
-            "peer_id_3": {"netw": ["nw_2", "nw_3", "nw_4"]},
-            "peer_id_4": {"netw": ["nw_1", "nw_2", "nw_3"]},
-            "peer_id_5": {"netw": ["nw_1", "nw_2", "nw_3", "nw_4"]},
+            "peer_id_1": {"netw": ["node_1", "node_3"]},
+            "peer_id_2": {"netw": ["node_1", "node_2", "node_4"]},
+            "peer_id_3": {"netw": ["node_2", "node_3", "node_4"]},
+            "peer_id_4": {"netw": ["node_1", "node_2", "node_3"]},
+            "peer_id_5": {"netw": ["node_1", "node_2", "node_3", "node_4"]},
         }
         return metrics_dict
 
