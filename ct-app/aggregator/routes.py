@@ -153,15 +153,20 @@ def attach_endpoints(app):
                 return sanic_text("Table not available", status=500)
 
             log.info(f"Inserting {len(matchs_for_db)} rows into DB")
-
-            for peer, nodes, latencies in matchs_for_db:
-                log.info(f"Inserting {peer} into DB")
-                db.insert(
-                    "raw_data_table",
-                    peer_id=peer,
-                    node_addresses=nodes,
-                    latency_metric=latencies,
+            if len(matchs_for_db) > 0:
+                db.insert_many(
+                    "foo_table",
+                    ["peer_id", "node_addresses", "latency_metric"],
+                    matchs_for_db,
                 )
+            # for peer, nodes, latencies in matchs_for_db:
+            #     log.info(f"Inserting {peer} into DB")
+            #     db.insert(
+            #         "raw_data_table",
+            #         peer_id=peer,
+            #         node_addresses=nodes,
+            #         latency_metric=latencies,
+            #     )
 
         return sanic_text("Sent to DB")
 
