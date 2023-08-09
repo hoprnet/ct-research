@@ -440,8 +440,8 @@ class DatabaseConnection:
 
     def rows_after_timestamp(self, table: str, timestamp: datetime.datetime):
         """
-        Gets the rows from the given table that have a timestamp more recent than the given
-        timestamp.
+        Gets the rows from the given table that have a timestamp more recent than the
+        given timestamp.
         :param table: The name of the table to get the rows from.
         :param timestamp: The timestamp to compare to.
         :return: The rows as a tuple.
