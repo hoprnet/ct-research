@@ -149,27 +149,27 @@ def expected_merge_result():
     return {
         "peer_id_1": {
             "safe_address": "safe_1",
-            "netw_ids": ["nw_1", "nw_3"],
+            "node_addresses": ["nw_1", "nw_3"],
             "stake": 65,
         },
         "peer_id_2": {
             "safe_address": "safe_1",
-            "netw_ids": ["nw_1", "nw_2", "nw_4"],
+            "node_addresses": ["nw_1", "nw_2", "nw_4"],
             "stake": 65,
         },
         "peer_id_3": {
             "safe_address": "safe_3",
-            "netw_ids": ["nw_2", "nw_3", "nw_4"],
+            "node_addresses": ["nw_2", "nw_3", "nw_4"],
             "stake": 23,
         },
         "peer_id_4": {
             "safe_address": "safe_4",
-            "netw_ids": ["nw_1", "nw_2", "nw_3"],
+            "node_addresses": ["nw_1", "nw_2", "nw_3"],
             "stake": 85,
         },
         "peer_id_5": {
             "safe_address": "safe_5",
-            "netw_ids": ["nw_1", "nw_2", "nw_3", "nw_4"],
+            "node_addresses": ["nw_1", "nw_2", "nw_3", "nw_4"],
             "stake": 62,
         },
     }
@@ -252,35 +252,35 @@ def expected_split_stake_result():
     return {
         "peer_id_1": {
             "safe_address": "safe_1",
-            "netw_ids": ["nw_1", "nw_3"],
+            "node_addresses": ["nw_1", "nw_3"],
             "stake": 65,
             "safe_address_count": 2,
             "splitted_stake": 32.5,
         },
         "peer_id_2": {
             "safe_address": "safe_1",
-            "netw_ids": ["nw_1", "nw_2", "nw_4"],
+            "node_addresses": ["nw_1", "nw_2", "nw_4"],
             "stake": 65,
             "safe_address_count": 2,
             "splitted_stake": 32.5,
         },
         "peer_id_3": {
             "safe_address": "safe_3",
-            "netw_ids": ["nw_2", "nw_3", "nw_4"],
+            "node_addresses": ["nw_2", "nw_3", "nw_4"],
             "stake": 23,
             "safe_address_count": 1,
             "splitted_stake": 23,
         },
         "peer_id_4": {
             "safe_address": "safe_4",
-            "netw_ids": ["nw_1", "nw_2", "nw_3"],
+            "node_addresses": ["nw_1", "nw_2", "nw_3"],
             "stake": 85,
             "safe_address_count": 1,
             "splitted_stake": 85,
         },
         "peer_id_5": {
             "safe_address": "safe_5",
-            "netw_ids": ["nw_1", "nw_2", "nw_3", "nw_4"],
+            "node_addresses": ["nw_1", "nw_2", "nw_3", "nw_4"],
             "stake": 62,
             "safe_address_count": 1,
             "splitted_stake": 62,

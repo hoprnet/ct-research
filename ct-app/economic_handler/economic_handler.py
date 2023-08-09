@@ -244,12 +244,12 @@ class EconomicHandler(HOPRNode):
                 for (
                     id,
                     peer_id,
-                    netw_ids,
+                    node_addresses,
                     latency_metrics,
                     timestamp,
                 ) in last_added_rows:
                     metrics_dict[peer_id] = {
-                        "netw_ids": netw_ids,
+                        "node_addresses": node_addresses,
                         "latency_metrics": latency_metrics,
                         "id": id,
                         "Timestamp": timestamp,
@@ -514,7 +514,7 @@ class EconomicHandler(HOPRNode):
                 if peer_id in new_metrics_dict and safe_address in new_subgraph_dict:
                     merged_result[peer_id] = {
                         "safe_address": safe_address,
-                        "netw_ids": new_metrics_dict[peer_id]["netw"],
+                        "node_addresses": new_metrics_dict[peer_id]["netw"],
                         "stake": new_subgraph_dict[safe_address],
                     }
         except Exception as e:
@@ -717,7 +717,7 @@ class EconomicHandler(HOPRNode):
         app.autodiscover_tasks(force=True)
 
         for peer_id, value in dataset.items():
-            node_list = value["netw_ids"]
+            node_list = value["node_addresses"]
             count = value["jobs"]
             node_index = 0
 
