@@ -770,5 +770,7 @@ class EconomicHandler(HOPRNode):
 
         self.started = False
         for task in self.tasks:
+            task.add_done_callback(self.tasks.discard)
             task.cancel()
+
         self.tasks = set()
