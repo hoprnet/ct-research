@@ -2,8 +2,17 @@ import asyncio
 
 from celery import Celery
 from tools import HoprdAPIHelper, envvar, getlogger
+from enum import Enum
 
 log = getlogger()
+
+
+class TaskStatus(Enum):
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+    RETRYING = "RETRYING"
+    SPLITTED = "SPLITTED"
+
 
 app = Celery(
     name=envvar("PROJECT_NAME"),
@@ -14,7 +23,9 @@ app = Celery(
 
 # the name of the task is the name of the "<task_name>.<node_address>"
 @app.task(name=f"{envvar('TASK_NAME')}.{envvar('NODE_ADDRESS')}")
-def send_1_hop_message(peer: str, count: int, node_list: list[str], node_index: int):
+def send_1_hop_message(
+    peer: str, count: int, node_list: list[str], node_index: int
+) -> TaskStatus:
     """
     Celery task to send `count`1-hop messages to a peer.
     This method is the entry point for the celery worker. As the task that is executed
@@ -28,7 +39,7 @@ def send_1_hop_message(peer: str, count: int, node_list: list[str], node_index: 
     return asyncio.run(async_send_1_hop_message(peer, count, node_list, node_index))
 
 
-def get_next_node_address(node_list: list[str], node_index: int):
+def get_next_node_address(node_list: list[str], node_index: int) -> tuple[str, int]:
     if node_index == len(node_list) - 1:
         return None, None
 
@@ -39,7 +50,7 @@ def get_next_node_address(node_list: list[str], node_index: int):
 
 async def async_send_1_hop_message(
     peer_id: str, count: int, node_list: list[str], node_index: int
-):
+) -> TaskStatus:
     """
     Celery task to send `count`1-hop messages to a peer in an async manner.
     :param peer_id: Peer ID to send messages to.
@@ -72,7 +83,7 @@ async def async_send_1_hop_message(
         # if there are no more nodes in the list, the task is stopped
         if not node_address:
             log.info("This is the last node in the list, stopping")
-            return "FAIL"
+            return TaskStatus.FAILED
 
         log.info(f"Redirecting task to {node_address} (#{node_index} - {api_host})")
 
@@ -82,7 +93,7 @@ async def async_send_1_hop_message(
             queue=node_address,
         )
 
-        return "RETRYING"
+        return TaskStatus.RETRYING
 
     log.info(
         f"Sending {count} messages to `{peer_id}` "
@@ -102,16 +113,17 @@ async def async_send_1_hop_message(
             + f"via {node_list[node_index]}(#{node_index} - {api_host})"
         )
 
-        return "SUCCESS"
+        return TaskStatus.SUCCESS
 
-    log.error("Could not send all messages")
+    log.warning("Could not send all messages")
 
     node_address, node_index = get_next_node_address(node_list, node_index)
 
     if not node_address:
-        log.info("This is the last node in the list, stopping")
-        log.info(f"Only sent {idx} messages")
-        return "FAIL"
+        log.error(
+            f"This is the last node in the list, stopping. Only sent {idx} messages"
+        )
+        return TaskStatus.FAILED
 
     log.info(f"Redirecting task to {node_address} (#{node_index} - {api_host})")
     app.send_task(
@@ -120,4 +132,4 @@ async def async_send_1_hop_message(
         queue=node_address,
     )
 
-    return "SPLITTED"
+    return TaskStatus.SPLITTED
