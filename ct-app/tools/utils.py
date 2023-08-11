@@ -4,6 +4,7 @@ import logging.config
 import os
 import sys
 from aiohttp.client import ClientSession
+from aiohttp.client_exceptions import InvalidURL
 
 import jsonschema
 
@@ -112,6 +113,8 @@ async def post_dictionary(session: ClientSession, url: str, data: dict):
             if response.status == 200:
                 return True
             log.error(f"{response}")
+    except InvalidURL:
+        log.exception("Invalid URL")
     except Exception:  # ClientConnectorError
         log.exception("Error transmitting dictionary")
 
