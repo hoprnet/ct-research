@@ -192,12 +192,12 @@ class HoprdAPIHelper:
         body = swagger.MessagesBody(message, destination, path=hops)
         try:
             thread = self.message_api.messages_send_message(body=body, async_req=True)
-            response = thread.get()
+            thread.get()
         except ApiException:
             log.exception("Exception when calling MessageApi->messages_send_message")
-            return None
+            return False
         except OSError:
             log.exception("Exception when calling ChannelsApi->channels_get_channels")
-            return None
+            return False
 
-        return response
+        return True
