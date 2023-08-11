@@ -3,6 +3,7 @@ import logging
 import logging.config
 import os
 import sys
+from aiohttp.client import ClientSession
 
 import jsonschema
 
@@ -94,3 +95,24 @@ def running_module(uppercase: bool = False):
         module = module.upper()
 
     return module
+
+
+async def post_dictionary(session: ClientSession, url: str, data: dict):
+    """
+    Sends a JSON to the given URL.
+    :param session: the aiohttp session
+    :param url: the URL to send the JSON to
+    :param data: the JSON to send
+    :returns: True if the JSON was sent successfully, False otherwise
+    """
+    log = getlogger()
+
+    try:
+        async with session.post(url, json=data) as response:
+            if response.status == 200:
+                return True
+            log.error(f"{response}")
+    except Exception:  # ClientConnectorError
+        log.exception("Error transmitting dictionary")
+
+    return False
