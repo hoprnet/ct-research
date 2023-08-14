@@ -1,4 +1,3 @@
-# enum class with auto numbering
 import copy
 
 import numpy as np
