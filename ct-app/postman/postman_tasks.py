@@ -74,11 +74,14 @@ async def async_send_1_hop_message(
     timestamp: float,
 ) -> TaskStatus:
     """
-    Celery task to send `count` 1-hop messages to a peer in an async manner.
+    Celery task to send `count` 1-hop messages to a peer in an async manner. A timeout
+    mecanism is implemented to stop the task if sending a given buncn of messages takes
+    too long.
     :param peer_id: Peer ID to send messages to.
     :param count: Number of messages to send.
     :param node_list: List of nodes connected to this peer, they can serve as backups.
     :param node_index: Index of the node in the list of nodes.
+    :param timestamp: Timestamp at first iteration. For timeout purposes.
     """
 
     # at the first iteration, the timestamp is set to the current time. At each task
@@ -107,7 +110,7 @@ async def async_send_1_hop_message(
 
     # if the node is not reachable, the task is tranfered to the next node in the list
     if address is None:
-        log.error("Could not get connect to node. Transfering task to the next node.")
+        log.error("Could not connect to node. Transfering task to the next node.")
         status = TaskStatus.RETRIED
 
     while status == TaskStatus.DEFAULT:
@@ -125,14 +128,14 @@ async def async_send_1_hop_message(
         if sent_messages == message_count:
             status = TaskStatus.SUCCESS
 
-    log.info(f"{sent_messages} messages sent to `{peer_id}` via {address} ({api_host})")
+    log.info(
+        f"{sent_messages}/{message_count} messages sent to `{peer_id}` via "
+        + f"{address} ({api_host})"
+    )
 
     if status != TaskStatus.SUCCESS:
         node_address, node_index = loop_through_nodes(node_list, node_index)
-        log.info(
-            f"Creating task for {node_address}: {sent_messages}/{message_count} "
-            + "messages already sent"
-        )
+        log.info(f"Creating task for {node_address} to send {sent_messages} messages.")
 
         app.send_task(
             f"{envvar('TASK_NAME')}.{node_address}",
