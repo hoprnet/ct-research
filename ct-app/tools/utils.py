@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import logging.config
@@ -98,24 +99,38 @@ def running_module(uppercase: bool = False):
     return module
 
 
-async def post_dictionary(session: ClientSession, url: str, data: dict):
+async def post_dictionary(url: str, data: dict, retry_sleep: int = None):
     """
-    Sends a JSON to the given URL.
+    Sends a JSON to the given URL. If the transmission fails, it will retry after the
+    given delay.
     :param session: the aiohttp session
     :param url: the URL to send the JSON to
     :param data: the JSON to send
+    :param retry_sleep: the delay (in seconds) to wait before retrying to send the JSON.
+    If not set, no retry will be performed
     :returns: True if the JSON was sent successfully, False otherwise
     """
+
+    async def _post(session: ClientSession, url: str, data: dict):
+        try:
+            async with session.post(url, json=data) as response:
+                if response.status == 200:
+                    return True
+                log.error(f"{response}")
+        except InvalidURL:
+            log.exception("Invalid URL")
+        except Exception:  # ClientConnectorError
+            log.exception("Error transmitting dictionary")
+
+        return False
+
     log = getlogger()
 
-    try:
-        async with session.post(url, json=data) as response:
-            if response.status == 200:
-                return True
-            log.error(f"{response}")
-    except InvalidURL:
-        log.exception("Invalid URL")
-    except Exception:  # ClientConnectorError
-        log.exception("Error transmitting dictionary")
+    async with ClientSession() as session:
+        success = await _post(session, url, data)
 
-    return False
+        if not success and retry_sleep:
+            await asyncio.sleep(retry_sleep)
+            await _post(session, url, data)
+
+    return success

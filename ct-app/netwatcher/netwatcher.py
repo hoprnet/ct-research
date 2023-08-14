@@ -2,7 +2,6 @@ import asyncio
 import random
 import time
 
-from aiohttp import ClientSession
 
 from tools.decorator import connectguard, formalin
 from tools.hopr_node import HOPRNode
@@ -138,14 +137,7 @@ class NetWatcher(HOPRNode):
         data = {"id": self.peer_id, "peers": peers_to_send}
 
         # send peer list to aggregator.
-        # TODO: refactor this section to have the `async with session` in a dedicated
-        # function
-        async with ClientSession() as session:
-            success = await post_dictionary(session, self.posturl, data)
-
-            if not success:
-                await asyncio.sleep(5)
-                success = await post_dictionary(session, self.posturl, data)
+        success = await post_dictionary(self.posturl, data)
 
         if not success:
             log.error("Peers transmission failed")
@@ -173,16 +165,11 @@ class NetWatcher(HOPRNode):
         data = {"id": self.peer_id, "balances": {"native": balance}}
 
         # sends balance to aggregator.
-        # TODO: refactor this section to have the `async with session` in a dedicated
-        # function
-        async with ClientSession() as session:
-            success = await post_dictionary(session, self.balanceurl, data)
 
-            if not success:
-                await asyncio.sleep(5)
-                await post_dictionary(session, self.balanceurl, data)
+        success = await post_dictionary(self.balanceurl, data)
 
         if not success:
+            log.error("Balance transmission failed")
             return
 
         log.info(f"Transmitted balances: {data['balances']}")
