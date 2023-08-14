@@ -8,8 +8,10 @@ _db_columns = [
     ("id", "SERIAL PRIMARY KEY"),
     ("peer_id", "VARCHAR(255) NOT NULL"),
     ("node_address", "VARCHAR(255) NOT NULL"),
-    ("count", "INTEGER NOT NULL"),
-    ("timestamp", "TIMESTAMP NOT NULL DEFAULT NOW()"),
+    ("expected_count", "INTEGER NOT NULL"),
+    ("expected_count", "INTEGER NOT NULL"),
+    ("status", "VARCHAR(255) NOT NULL"),
+    ("timestamp", "FLOAT NOT NULL"),
 ]  # will be moved to DatabaseConnection attributes
 _table_name = "rewardTable"  # will be moved to DatabaseConnection attributes
 
@@ -25,7 +27,14 @@ app = Celery(
 
 # the name of the task is the name of the "<task_name>"
 @app.task(name="feedback_task")
-def feedback_task(peer_id: str, node_address: str, count: int):
+def feedback_task(
+    peer_id: str,
+    node_address: str,
+    effective_count: int,
+    expected_count: int,
+    status: str,
+    timestamp: float,
+):
     """
     Celery task to store the message delivery status in the database.
     """
@@ -46,6 +55,14 @@ def feedback_task(peer_id: str, node_address: str, count: int):
             log.error("Table not available, not sending to DB")
             return
 
-        db.insert(_table_name, peer_id=peer_id, node_address=node_address, count=count)
+        db.insert(
+            _table_name,
+            peer_id=peer_id,
+            node_address=node_address,
+            effective_count=effective_count,
+            expected_count=expected_count,
+            status=status,
+            timestamp=timestamp,
+        )
         # TODO: once everything merged to dev, here a check should be added to see if
         # insertion is successful
