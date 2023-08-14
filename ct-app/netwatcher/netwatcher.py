@@ -131,7 +131,7 @@ class NetWatcher(HOPRNode):
         if not trigger_transmission:
             return
 
-        data = {"id": self.peer_id, "list": peers_to_send}
+        data = {"id": self.peer_id, "peers": peers_to_send}
 
         async with ClientSession() as session:
             success = await post_dictionary(session, self.posturl, data)
