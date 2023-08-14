@@ -106,6 +106,7 @@ class NetWatcher(HOPRNode):
             latency = await self.api.ping(rand_peer, "latency")
 
         if latency is not None:
+            log.debug(f"Measured latency to {rand_peer}: {latency}ms")
             self.latency[rand_peer] = latency
 
     @formalin(message="Initiated peers transmission", sleep=5)
@@ -117,13 +118,16 @@ class NetWatcher(HOPRNode):
         peers_to_send: dict[str, int] = {}
         trigger_transmission = False
 
+        # pick the first `self.max_lat_count` peers from the latency dictionary
         for (peer, latency), _ in zip(self.latency.items(), range(self.max_lat_count)):
             peers_to_send[peer] = latency
 
+        # checks if transmission needs to be triggered by peer-list size
         if len(peers_to_send) == self.max_lat_count:
             trigger_transmission = True
             log.info("Peers transmission triggered by latency dictionary size")
 
+        # checks if transmission needs to be triggered by timestamp
         elif time.time() - self.last_peer_transmission > 60 * 5:  # 5 minutes
             trigger_transmission = True
             log.info("Peers transmission triggered by timestamp")
@@ -133,6 +137,9 @@ class NetWatcher(HOPRNode):
 
         data = {"id": self.peer_id, "peers": peers_to_send}
 
+        # send peer list to aggregator.
+        # TODO: refactor this section to have the `async with session` in a dedicated
+        # function
         async with ClientSession() as session:
             success = await post_dictionary(session, self.posturl, data)
 
@@ -141,6 +148,7 @@ class NetWatcher(HOPRNode):
                 success = await post_dictionary(session, self.posturl, data)
 
         if not success:
+            log.error("Peers transmission failed")
             return
 
         log.info(
@@ -164,6 +172,9 @@ class NetWatcher(HOPRNode):
 
         data = {"id": self.peer_id, "balances": {"native": balance}}
 
+        # sends balance to aggregator.
+        # TODO: refactor this section to have the `async with session` in a dedicated
+        # function
         async with ClientSession() as session:
             success = await post_dictionary(session, self.balanceurl, data)
 
