@@ -143,13 +143,14 @@ def attach_endpoints(app):
             envvar("DB_USER"),
             envvar("DB_PASSWORD"),
             envvar("DB_PORT", int),
+            "raw_data_table",
         ) as db:
             try:
-                db.create_table("raw_data_table", _db_columns)
+                db.create_table(_db_columns)
             except ValueError as e:
                 log.warning(f"Error creating table: {e}")
 
-            if not db.table_exists_guard("raw_data_table"):
+            if not db.table_exists_guard():
                 log.error("Table not available, not sending to DB")
                 return sanic_text("Table not available", status=500)
 
@@ -158,7 +159,6 @@ def attach_endpoints(app):
             for peer, nodes, latencies in matchs_for_db:
                 log.info(f"Inserting {peer} into DB")
                 db.insert(
-                    "raw_data_table",
                     peer_id=peer,
                     node_addresses=nodes,
                     latency_metric=latencies,

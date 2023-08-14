@@ -235,10 +235,10 @@ class EconomicHandler(HOPRNode):
             envvar("DB_USER"),
             envvar("DB_PASSWORD"),
             envvar("DB_PORT", int),
+            "raw_data_table",
         ) as db:
             try:
-                table_name = "raw_data_table"
-                last_added_rows = db.last_added_rows(table_name)
+                last_added_rows = db.last_added_rows()
 
                 metrics_dict = {}
                 for (
