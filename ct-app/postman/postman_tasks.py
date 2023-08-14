@@ -74,7 +74,7 @@ async def async_send_1_hop_message(
     timestamp: float,
 ) -> TaskStatus:
     """
-    Celery task to send `count`1-hop messages to a peer in an async manner.
+    Celery task to send `count` 1-hop messages to a peer in an async manner.
     :param peer_id: Peer ID to send messages to.
     :param count: Number of messages to send.
     :param node_list: List of nodes connected to this peer, they can serve as backups.
