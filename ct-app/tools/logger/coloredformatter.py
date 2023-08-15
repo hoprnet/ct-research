@@ -1,5 +1,4 @@
 import logging
-import time
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
 
@@ -17,10 +16,6 @@ def formatter_message(message, use_color=True):
     else:
         message = message.replace("$RESET", "").replace("$BOLD", "")
 
-    timeformat = "%y.%m.%d %H:%M:%S"
-    timestr = time.strftime(timeformat, time.localtime())
-
-    message = message.replace("$DATE", timestr)
     return message
 
 
