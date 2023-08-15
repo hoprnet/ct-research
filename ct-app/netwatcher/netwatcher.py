@@ -106,8 +106,11 @@ class NetWatcher(HOPRNode):
         else:
             latency = await self.api.ping(rand_peer, "latency")
 
-        if latency is not None:
-            async with self.latency_lock.acquire():
+        async with self.latency_lock.acquire():
+            if latency is None:
+                log.warning(f"Failed to ping {rand_peer}")
+                self.latency.pop(rand_peer, None)
+            else:
                 log.debug(f"Measured latency to {rand_peer}: {latency}ms")
                 self.latency[rand_peer] = latency
 
