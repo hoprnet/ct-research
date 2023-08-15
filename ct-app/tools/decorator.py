@@ -65,31 +65,35 @@ def wakeupcall(
     return decorator
 
 
-def econ_handler_wakeupcall(message: str = None):
+def econ_handler_wakeupcall(
+    message: str = None, folder: str = "", filename: str = "parameters.json"
+):
     """
     Decorator to log the start of a function, make it run until stopped, and delay the
     next iteration. The delay is specified in seconds.
-    :param seconds: next whole seconds to trigger the function
+    :param message: the message to log when the function starts
+    :param folder: the folder where the parameters file is located
+    :param filename: the name of the parameters file
     """
 
-    def determine_delay_from_parameters():
+    def determine_delay_from_parameters(
+        folder: str = "", filename: str = "parameters.json"
+    ):
         """
         Determines the number of seconds from the JSON contents.
-        :param contents: The JSON contents returned by read_json_file function.
-        :returns: (int): The number of seconds.
+        :param folder: the folder where the parameters file is located
+        :param filename: the name of the parameters file
+        :returns: (int): The number of seconds to sleep
         """
-        file_name = "parameters.json"
-
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        assets_directory = os.path.join(script_directory, "../assets")
-        parameters_file_path = os.path.join(assets_directory, file_name)
+        assets_directory = os.getcwd() + folder
+        parameters_file_path = os.path.join(assets_directory, filename)
 
         contents = read_json_file(parameters_file_path, schema_name)
-        len_budget_period_sec = contents["budget_param"]["budget_period"]["value"]
-        dist_number_budget_period = contents["budget_param"]["dist_freq"]["value"]
-        second_delay = len_budget_period_sec / dist_number_budget_period
 
-        return second_delay
+        period_in_seconds = contents["budget_param"]["budget_period"]["value"]
+        distribution_count = contents["budget_param"]["dist_freq"]["value"]
+
+        return period_in_seconds / distribution_count
 
     def decorator(func):
         @functools.wraps(func)
@@ -100,7 +104,7 @@ def econ_handler_wakeupcall(message: str = None):
             while self.started:
                 await func(self, *args, **kwargs)
 
-                sleep = determine_delay_from_parameters()
+                sleep = determine_delay_from_parameters(folder, filename)
                 log.info(f"sleep for {sleep} seconds")
                 await asyncio.sleep(sleep)
 

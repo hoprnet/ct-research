@@ -345,7 +345,7 @@ class DatabaseConnection:
 
         if len(result) == 0:
             log.warning(f"No rows fetched from `{table}` because no data was found")
-            return None
+            return []
 
         log.info(f"Last added rows ({len(result)}) fetched from `{table}`")
 

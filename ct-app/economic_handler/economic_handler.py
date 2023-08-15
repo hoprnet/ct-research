@@ -53,7 +53,7 @@ class EconomicHandler(HOPRNode):
         print(f"{self.connected=}")
         return self.connected
 
-    @econ_handler_wakeupcall()
+    @econ_handler_wakeupcall(folder="/assets", filename="parameters.json")
     @connectguard
     async def scheduler(self, test_staging=True):
         """
@@ -88,11 +88,9 @@ class EconomicHandler(HOPRNode):
 
             parameters_equations_budget = ordered_tasks[0][1:]
             database_metrics = ordered_tasks[1][1]
-            print(database_metrics)
 
             # Add random stake and a random safe address to the metrics database
             _, new_database_metrics = self.add_random_data_to_metrics(database_metrics)
-            print(new_database_metrics)
 
             # Extract Parameters
             parameters, equations, budget_param = parameters_equations_budget
