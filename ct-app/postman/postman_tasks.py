@@ -75,7 +75,7 @@ async def async_send_1_hop_message(
 ) -> TaskStatus:
     """
     Celery task to send `count` 1-hop messages to a peer in an async manner. A timeout
-    mecanism is implemented to stop the task if sending a given buncn of messages takes
+    mecanism is implemented to stop the task if sending a given bunch of messages takes
     too long.
     :param peer_id: Peer ID to send messages to.
     :param count: Number of messages to send.
