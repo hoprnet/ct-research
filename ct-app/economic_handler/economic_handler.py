@@ -8,7 +8,7 @@ import aiohttp
 from celery import Celery
 
 from assets.parameters_schema import schema as schema_name
-from tools.decorator import connectguard, econ_handler_wakeupcall, wakeupcall
+from tools.decorator import connectguard, wakeupcall_from_file, wakeupcall
 from tools.hopr_node import HOPRNode
 from tools.db_connection.database_connection import DatabaseConnection
 from tools.utils import getlogger, read_json_file, envvar
@@ -53,7 +53,7 @@ class EconomicHandler(HOPRNode):
         print(f"{self.connected=}")
         return self.connected
 
-    @econ_handler_wakeupcall(folder="/assets", filename="parameters.json")
+    @wakeupcall_from_file(folder="/assets", filename="parameters.json")
     @connectguard
     async def scheduler(self, test_staging=True):
         """

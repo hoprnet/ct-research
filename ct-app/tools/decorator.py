@@ -65,7 +65,7 @@ def wakeupcall(
     return decorator
 
 
-def econ_handler_wakeupcall(
+def wakeupcall_from_file(
     message: str = None, folder: str = "", filename: str = "parameters.json"
 ):
     """
