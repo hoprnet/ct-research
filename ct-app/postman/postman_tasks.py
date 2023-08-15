@@ -22,8 +22,8 @@ class TaskStatus(Enum):
 
 
 app = Celery(
-    name=f"amqp://{envvar('RABBITMQ_USERNAME')}:{envvar('RABBITMQ_PASSWORD')}@{envvar('RABBITMQ_HOST')}/{envvar('RABBITMQ_VIRTUALHOST')}",
-    broker=envvar("CELERY_BROKER_URL"),
+    name=envvar("PROJECT_NAME"),
+    broker=f"amqp://{envvar('RABBITMQ_USERNAME')}:{envvar('RABBITMQ_PASSWORD')}@{envvar('RABBITMQ_HOST')}/{envvar('RABBITMQ_VIRTUALHOST')}",
     # backend=envvar("CELERY_RESULT_BACKEND"),
 )
 app.autodiscover_tasks(force=True)
