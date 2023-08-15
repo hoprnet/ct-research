@@ -53,7 +53,7 @@ def send_1_hop_message(
     """
     Celery task to send `message_count`1-hop messages to a peer.
     This method is the entry point for the celery worker. As the task that is executed
-    relies on asyncio, we need to run it in a decated event loop. The only call this
+    relies on asyncio, we need to run it in a dedicated event loop. The only call this
     method does is to run the async method `async_send_1_hop_message`.
     :param peer: Peer ID to send messages to.
     :param message_count: Number of messages to send.
