@@ -39,6 +39,8 @@ class NetWatcher(HOPRNode):
         self.max_lat_count = max_lat_count
         self._mock_mode = False
 
+        self.latency_lock = asyncio.Lock()
+
         ############### MOCKING ###################
         # set of 100 random peers
         self.mocking_peers = set(
@@ -105,8 +107,9 @@ class NetWatcher(HOPRNode):
             latency = await self.api.ping(rand_peer, "latency")
 
         if latency is not None:
-            log.debug(f"Measured latency to {rand_peer}: {latency}ms")
-            self.latency[rand_peer] = latency
+            async with self.latency_lock.acquire():
+                log.debug(f"Measured latency to {rand_peer}: {latency}ms")
+                self.latency[rand_peer] = latency
 
     @formalin(message="Initiated peers transmission", sleep=5)
     @connectguard
@@ -115,23 +118,22 @@ class NetWatcher(HOPRNode):
         Sends the detected peers to the Aggregator
         """
         peers_to_send: dict[str, int] = {}
-        trigger_transmission = False
+
+        # access the peers address in the latency dictionary in a thread-safe way
+        async with self.latency_lock.acquire():
+            latency_peers = self.latency.items()
 
         # pick the first `self.max_lat_count` peers from the latency dictionary
-        for (peer, latency), _ in zip(self.latency.items(), range(self.max_lat_count)):
+        for (peer, latency), _ in zip(latency_peers, range(self.max_lat_count)):
             peers_to_send[peer] = latency
 
         # checks if transmission needs to be triggered by peer-list size
         if len(peers_to_send) == self.max_lat_count:
-            trigger_transmission = True
             log.info("Peers transmission triggered by latency dictionary size")
-
         # checks if transmission needs to be triggered by timestamp
         elif time.time() - self.last_peer_transmission > 60 * 5:  # 5 minutes
-            trigger_transmission = True
             log.info("Peers transmission triggered by timestamp")
-
-        if not trigger_transmission:
+        else:
             return
 
         data = {"id": self.peer_id, "peers": peers_to_send}
@@ -147,10 +149,12 @@ class NetWatcher(HOPRNode):
             f"Transmitted {len(list(peers_to_send))} peers: {', '.join(peers_to_send)}"
         )
 
-        # completely remove the transmitted key-value pair from self.latency
-        for peer in peers_to_send:
-            self.latency.pop(peer, None)
-        self.last_peer_transmission = time.time()
+        # completely remove the transmitted key-value pair from self.latency in a
+        # thread-safe way
+        async with self.latency_lock.acquire():
+            self.last_peer_transmission = time.time()
+            for peer in peers_to_send:
+                self.latency.pop(peer, None)
 
     @formalin(message="Sending node balance", sleep=60 * 5)
     @connectguard
