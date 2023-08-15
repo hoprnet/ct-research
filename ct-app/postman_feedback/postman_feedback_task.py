@@ -19,7 +19,7 @@ _table_name = "rewardTable"  # will be moved to DatabaseConnection attributes
 log = getlogger()
 
 app = Celery(
-    name=envvar("PROJECT_NAME"),
+    name=f"amqp://{envvar('RABBITMQ_USERNAME')}:{envvar('RABBITMQ_PASSWORD')}@{envvar('RABBITMQ_HOST')}/{envvar('RABBITMQ_VIRTUALHOST')}",
     broker=envvar("CELERY_BROKER_URL"),
     # backend=envvar("CELERY_RESULT_BACKEND"),
 )
