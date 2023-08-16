@@ -21,3 +21,4 @@ run_*.sh
 .DS_Store
 
 ct-app/tools/db_connection/__main__.py
+*.csv
