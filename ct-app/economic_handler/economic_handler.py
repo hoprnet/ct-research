@@ -4,10 +4,11 @@ import os
 import time
 import traceback
 import random
-
 import aiohttp
+from celery import Celery
+
 from assets.parameters_schema import schema as schema_name
-from tools.decorator import connectguard, econ_handler_wakeupcall, wakeupcall
+from tools.decorator import connectguard, wakeupcall_from_file, wakeupcall
 from tools.hopr_node import HOPRNode
 from tools.db_connection.database_connection import DatabaseConnection
 from tools.utils import getlogger, read_json_file, envvar
@@ -52,7 +53,7 @@ class EconomicHandler(HOPRNode):
         print(f"{self.connected=}")
         return self.connected
 
-    @econ_handler_wakeupcall()
+    @wakeupcall_from_file(folder="/assets", filename="parameters.json")
     @connectguard
     async def scheduler(self, test_staging=True):
         """
@@ -87,11 +88,9 @@ class EconomicHandler(HOPRNode):
 
             parameters_equations_budget = ordered_tasks[0][1:]
             database_metrics = ordered_tasks[1][1]
-            print(database_metrics)
 
             # Add random stake and a random safe address to the metrics database
             _, new_database_metrics = self.add_random_data_to_metrics(database_metrics)
-            print(new_database_metrics)
 
             # Extract Parameters
             parameters, equations, budget_param = parameters_equations_budget
@@ -107,7 +106,13 @@ class EconomicHandler(HOPRNode):
             _, expected_rewards = self.compute_expected_reward(
                 ct_prob_dict, budget_param
             )
-            print(f"{expected_rewards=}")
+
+            # calculate number of jobs per peer for the celery queue
+            _, job_distribution = self.compute_job_distribution(
+                expected_rewards, budget_param
+            )
+
+            print(f"{job_distribution=}")
 
         else:
             tasks = set[asyncio.Task]()
@@ -147,6 +152,7 @@ class EconomicHandler(HOPRNode):
             )
 
             unique_safe_peerId_links = ordered_tasks[0][1]
+            print(unique_safe_peerId_links)
             parameters_equations_budget = ordered_tasks[1][1:]
             rpch_nodes_blacklist = ordered_tasks[2][1]
             # staking_participations = ordered_tasks[3][1]
@@ -194,11 +200,16 @@ class EconomicHandler(HOPRNode):
                 ct_prob_dict, budget_param
             )
 
+            # calculate number of jobs per peer for the celery queue
+            _, job_distribution = self.compute_job_distribution(
+                expected_rewards, budget_param
+            )
+
             # output expected rewards as a csv file
             self.save_expected_reward_csv(expected_rewards)
 
             # print(f"{staking_participations}")
-            print(f"{expected_rewards=}")
+            print(f"{job_distribution=}")
             # print(f"{rpch_nodes_blacklist=}")
 
     async def get_unique_safe_peerId_links(self):
@@ -231,12 +242,12 @@ class EconomicHandler(HOPRNode):
                 for (
                     id,
                     peer_id,
-                    netw_ids,
+                    node_addresses,
                     latency_metrics,
                     timestamp,
                 ) in last_added_rows:
                     metrics_dict[peer_id] = {
-                        "netw_ids": netw_ids,
+                        "node_addresses": node_addresses,
                         "latency_metrics": latency_metrics,
                         "id": id,
                         "Timestamp": timestamp,
@@ -277,11 +288,11 @@ class EconomicHandler(HOPRNode):
         watcher IDs odered by a statistical measure computed on latency
         """
         metrics_dict = {
-            "peer_id_1": {"netw": ["nw_1", "nw_3"]},
-            "peer_id_2": {"netw": ["nw_1", "nw_2", "nw_4"]},
-            "peer_id_3": {"netw": ["nw_2", "nw_3", "nw_4"]},
-            "peer_id_4": {"netw": ["nw_1", "nw_2", "nw_3"]},
-            "peer_id_5": {"netw": ["nw_1", "nw_2", "nw_3", "nw_4"]},
+            "peer_id_1": {"netw": ["node_1", "node_3"]},
+            "peer_id_2": {"netw": ["node_1", "node_2", "node_4"]},
+            "peer_id_3": {"netw": ["node_2", "node_3", "node_4"]},
+            "peer_id_4": {"netw": ["node_1", "node_2", "node_3"]},
+            "peer_id_5": {"netw": ["node_1", "node_2", "node_3", "node_4"]},
         }
         return metrics_dict
 
@@ -501,7 +512,7 @@ class EconomicHandler(HOPRNode):
                 if peer_id in new_metrics_dict and safe_address in new_subgraph_dict:
                     merged_result[peer_id] = {
                         "safe_address": safe_address,
-                        "netwatchers": new_metrics_dict[peer_id]["netw"],
+                        "node_addresses": new_metrics_dict[peer_id]["netw"],
                         "stake": new_subgraph_dict[safe_address],
                     }
         except Exception as e:
@@ -630,6 +641,28 @@ class EconomicHandler(HOPRNode):
 
         return "expected_reward", dataset
 
+    def compute_job_distribution(self, dataset: dict, budget_param: dict):
+        """
+        Computes the number of jobs that must be executed per peer to satisfy the
+        protocol reward for each distribution in expectation.
+        :param: dataset (dict): A dictionary containing the expected reward.
+        :param: budget (dict): A dictionary containing the budget information.
+        :returns: dict: The updated dataset with the 'jobs' value determining the
+        amount of tasks to be sent.
+        """
+        ticket_price = budget_param["ticket_price"]["value"]
+        winning_prob = budget_param["winning_prob"]["value"]
+        denominator = ticket_price * winning_prob
+
+        for entry in dataset.values():
+            entry["ticket_price"] = ticket_price
+            entry["winning_prob"] = winning_prob
+            entry["ticket_price_times_winning_prob"] = denominator
+
+            entry["jobs"] = round(entry["protocol_exp_reward_per_dist"] / denominator)
+
+        return "job_distribution", dataset
+
     def save_expected_reward_csv(self, dataset: dict) -> bool:
         """
         Saves the expected rewards dictionary as a CSV file
@@ -665,6 +698,32 @@ class EconomicHandler(HOPRNode):
 
         log.info("CSV file saved successfully")
         return True
+
+    def push_jobs_to_celery_queue(self, dataset: dict):
+        """
+        Sends jobs to the celery queue including the number of jobs and an ordered
+        list of postmans that execute the jobs.
+        :param: dataset (dict): Contains the job number and postman list by peer id.
+        :returns: nothing.
+        """
+        app = Celery(
+            name="client",
+            broker=envvar("CELERY_BROKER_URL"),
+            backend=envvar("CELERY_RESULT_BACKEND"),
+            include=["celery_tasks"],
+        )
+        app.autodiscover_tasks(force=True)
+
+        for peer_id, value in dataset.items():
+            node_list = value["node_addresses"]
+            count = value["jobs"]
+            node_index = 0
+
+            app.send_task(
+                f"{envvar('TASK_NAME')}.{node_list[node_index]}",
+                args=(peer_id, count, node_list, node_index),
+                queue=node_list[node_index],
+            )
 
     async def start(self):
         """
@@ -709,5 +768,7 @@ class EconomicHandler(HOPRNode):
 
         self.started = False
         for task in self.tasks:
+            task.add_done_callback(self.tasks.discard)
             task.cancel()
+
         self.tasks = set()

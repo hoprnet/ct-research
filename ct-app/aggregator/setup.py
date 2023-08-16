@@ -1,5 +1,4 @@
 from sanic import Sanic
-
 from tools import getlogger
 
 from .aggregator import Aggregator

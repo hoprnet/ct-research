@@ -396,6 +396,7 @@ class DatabaseConnection:
             WHERE timestamp = (SELECT MAX(timestamp) FROM {})
         """
         )
+
         try:
             self.cursor.execute(command.format(table_id, table_id))
         except Exception:
@@ -407,7 +408,7 @@ class DatabaseConnection:
 
             if len(result) == 0:
                 log.warning(f"No rows fetched from `{table}`")
-                return None
+                return []
 
             log.info(f"Last added rows ({len(result)}) fetched from `{table}`")
 

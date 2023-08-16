@@ -25,7 +25,7 @@ def main():
         envvar("DB_USER")
         envvar("DB_PASSWORD")
         envvar("DB_PORT", int)
-        mock_mode = envvar("MOCK_MODE", bool)
+        mock_mode = envvar("MOCK_MODE", int)
     except KeyError:
         log.exception("Missing environment variables")
         exit(ExitCode.ERROR_MISSING_ENV_VARS)

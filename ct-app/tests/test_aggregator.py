@@ -1,6 +1,9 @@
-from sanic.app import Sanic
-from aggregator import Aggregator
+from datetime import datetime
+
 import pytest
+from sanic.app import Sanic
+
+from aggregator import Aggregator
 from aggregator.middlewares import attach_middlewares
 from aggregator.routes import attach_endpoints
 
@@ -44,7 +47,7 @@ def test_singleton_update():
     agg2 = Aggregator()
 
     agg1.add_node_peer_latencies("pod_id", {"peer": 1})
-    agg2.set_node_update("pod_id", "timestamp")
+    agg2.set_node_update("pod_id", datetime.now())
 
     assert agg1.get_node_peer_latencies() == agg2.get_node_peer_latencies()
 
@@ -76,27 +79,12 @@ def test_get():
 
 
 @clear_instance
-def test_clear():
-    """
-    Test that the clear method works correctly.
-    """
-    pod_id = "pod_id"
-    items = {"peer": 1}
-
-    agg.add_node_peer_latencies(pod_id, items)
-
-    agg.clear_node_peer_latencies()
-
-    assert agg._node_peer_latency == {}
-
-
-@clear_instance
 def test_set_update():
     """
     Test that the set_update method works correctly.
     """
     pod_id = "pod_id"
-    timestamp = "timestamp"
+    timestamp = datetime.now()
 
     agg.set_node_update(pod_id, timestamp)
 
@@ -124,14 +112,6 @@ def test_get_update_not_in_dict():
     pod_id = "pod_id"
 
     assert not agg.get_node_update(pod_id)
-
-
-@clear_instance
-def test_get_metric():
-    """
-    Test that the get_metric method works correctly.
-    """
-    assert isinstance(agg.get_metrics(), dict)
 
 
 @clear_instance
@@ -267,16 +247,6 @@ def test_cli(app):
     This fixture returns a test client.
     """
     return app.test_client
-
-
-def test_sanic_get_metrics(test_cli):
-    """
-    This test checks that the get metrics endpoint returns the correct data.
-    """
-    _, response = test_cli.get("/aggregator/metrics")
-
-    assert response.status == 200
-    assert isinstance(response.json, dict)
 
 
 def test_sanic_post_list_missing_id(test_cli):

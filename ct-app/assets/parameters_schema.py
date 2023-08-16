@@ -62,8 +62,31 @@ schema = {
                     },
                     "required": ["value"],
                 },
+                "ticket_price": {
+                    "type": "object",
+                    "properties": {
+                        "value": {"type": "number", "minimum": 0},
+                        "comment": {"type": "string"},
+                    },
+                    "required": ["value"],
+                },
+                "winning_prob": {
+                    "type": "object",
+                    "properties": {
+                        "value": {"type": "number", "minimum": 0, "maximum": 1},
+                        "comment": {"type": "string"},
+                    },
+                    "required": ["value"],
+                },
             },
-            "required": ["budget", "budget_period", "s", "dist_freq"],
+            "required": [
+                "budget",
+                "budget_period",
+                "s",
+                "dist_freq",
+                "ticket_price",
+                "winning_prob",
+            ],
         },
     },
     "required": ["parameters", "equations", "budget_param"],

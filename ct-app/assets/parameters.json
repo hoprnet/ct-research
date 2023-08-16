@@ -43,6 +43,14 @@
     "dist_freq": {
       "value": 2,
       "comment": "distribution frequency of rewards via the automatic distribution"
+    },
+    "ticket_price": {
+      "value": 0.5,
+      "comment": "Price of a ticket issued for relaying a packet"
+    },
+    "winning_prob": {
+      "value": 1,
+      "comment": "Probability that a ticket has a value"
     }
   }
 }

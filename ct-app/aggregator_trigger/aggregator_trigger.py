@@ -24,7 +24,7 @@ class AggregatorTrigger:
         self.tasks = set[asyncio.Task]()
         self.endpoint_url = endpoint
 
-    @formalin(sleep=300)
+    @formalin(sleep=60 * 60 * 2)
     async def send_list_to_db(self):
         """
         Sends a request to the aggregator to send its data to the db
