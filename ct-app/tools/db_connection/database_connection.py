@@ -75,7 +75,7 @@ class DatabaseConnection:
         :param columns: A list of tuples containing the column name and the column type.
         :raise: ValueError if the table already exists.
         """
-        if self.table_exists_guard(self._tablename):
+        if self.table_exists_guard():
             raise ValueError(f"Table '{self._tablename}' already exist")
 
         table_id = Identifier(self._tablename)
@@ -103,7 +103,7 @@ class DatabaseConnection:
         Drops a table from the database.
         :raise: ValueError if the table does not exist.
         """
-        if not self.table_exists_guard(self._tablename):
+        if not self.table_exists_guard():
             raise ValueError(f"Table '{self._tablename}' does not exist")
 
         table_id = Identifier(self._tablename)
@@ -143,7 +143,7 @@ class DatabaseConnection:
         :return: True if the column exists, False otherwise.
         :raise: ValueError if the table does not exist.
         """
-        if not self.table_exists_guard(self._tablename):
+        if not self.table_exists_guard():
             raise ValueError(f"Table '{self._tablename}' does not exist")
 
         command = SQL(
@@ -165,7 +165,7 @@ class DatabaseConnection:
         :return: A list of column names.
         :raise: ValueError if the table does not exist.
         """
-        if not self.table_exists_guard(self._tablename):
+        if not self.table_exists_guard():
             raise ValueError(f"Table '{self._tablename}' does not exist")
 
         command = SQL(
@@ -185,18 +185,18 @@ class DatabaseConnection:
         :raise: ValueError if the table does not exist or if a column does not exist.
         :raise: ValueError if a column is missing.
         """
-        if not self.table_exists_guard(self._tablename):
+        if not self.table_exists_guard():
             raise ValueError(f"Table '{self._tablename}' does not exist")
 
         # check if all columns are in table
         for key in kwargs.keys():
-            if not self.column_exists_guard(self._tablename, key):
+            if not self.column_exists_guard(key):
                 raise ValueError(
                     f"Column '{key}' does not exist in table '{self._tablename}'"
                 )
 
         # check that all table's column are in kwargs
-        for column in self.non_default_columns(self._tablename):
+        for column in self.non_default_columns():
             if column not in kwargs.keys():
                 raise ValueError(f"Column '{column}' is missing")
 
@@ -232,18 +232,18 @@ class DatabaseConnection:
         :raise: ValueError if the table does not exist or if a column does not exist.
         :raise: ValueError if a column is missing.
         """
-        if not self.table_exists_guard(self._tablename):
+        if not self.table_exists_guard():
             raise ValueError(f"Table '{self._tablename}' does not exist")
 
         # check if all columns are in table
         for key in keys:
-            if not self.column_exists_guard(self._tablename, key):
+            if not self.column_exists_guard(key):
                 raise ValueError(
                     f"Column '{key}' does not exist in table '{self._tablename}'"
                 )
 
         # check that all table's column are in kwargs
-        for column in self.non_default_columns(self._tablename):
+        for column in self.non_default_columns():
             if column not in keys:
                 raise ValueError(f"Column '{column}' is missing")
 
@@ -285,7 +285,7 @@ class DatabaseConnection:
         :return: The row as a tuple.
         :raise: ValueError if the table does not exist.
         """
-        if not self.table_exists_guard(self._tablename):
+        if not self.table_exists_guard():
             raise ValueError(f"Table '{self._tablename}' does not exist")
 
         table_id = Identifier(self._tablename)
@@ -314,7 +314,7 @@ class DatabaseConnection:
         :return: The row as a tuple.
         :raise: ValueError if the table does not exist.
         """
-        if not self.table_exists_guard(self._tablename):
+        if not self.table_exists_guard():
             raise ValueError(f"Table '{self._tablename}' does not exist")
 
         table_id = Identifier(self._tablename)
@@ -342,7 +342,7 @@ class DatabaseConnection:
         :return: The rows as a tuple.
         :raise: ValueError if the table does not exist.
         """
-        if not self.table_exists_guard(self._tablename):
+        if not self.table_exists_guard():
             raise ValueError(f"Table '{self._tablename}' does not exist")
 
         table_id = Identifier(self._tablename)
@@ -373,7 +373,7 @@ class DatabaseConnection:
         :return: The number of rows.
         :raise: ValueError if the table does not exist.
         """
-        if not self.table_exists_guard(self._tablename):
+        if not self.table_exists_guard():
             raise ValueError(f"Table '{self._tablename}' does not exist")
 
         table_id = Identifier(self._tablename)
@@ -399,10 +399,10 @@ class DatabaseConnection:
         :return: The number of unique values.
         :raise: ValueError if the table or the column does not exist.
         """
-        if not self.table_exists_guard(self._tablename):
+        if not self.table_exists_guard():
             raise ValueError(f"Table '{self._tablename}' does not exist")
 
-        if not self.column_exists_guard(self._tablename, column):
+        if not self.column_exists_guard(column):
             raise ValueError(
                 f"Column '{column}' does not exist in table '{self._tablename}'"
             )
@@ -433,10 +433,10 @@ class DatabaseConnection:
         :return: The number of unique values.
         :raise: ValueError if the table or the column does not exist.
         """
-        if not self.table_exists_guard(self._tablename):
+        if not self.table_exists_guard():
             raise ValueError(f"Table '{self._tablename}' does not exist")
 
-        if not self.column_exists_guard(self._tablename, column):
+        if not self.column_exists_guard(column):
             raise ValueError(
                 f"Column '{column}' does not exist in table '{self._tablename}'"
             )
@@ -468,10 +468,10 @@ class DatabaseConnection:
         :return: The rows as a tuple.
         :raise: ValueError if the table does not exist or if the timestamp is not a
         """
-        if not self.table_exists_guard(self._tablename):
+        if not self.table_exists_guard():
             raise ValueError(f"Table '{self._tablename}' does not exist")
         if not isinstance(timestamp, datetime.datetime):
-            raise ValueError("Timestamp must be a datetime.datetime object")
+            raise ValueError("Timestamp must be a    datetime.datetime object")
 
         table_id = Identifier(self._tablename)
 
