@@ -60,7 +60,7 @@ class NetWatcher(HOPRNode):
     @mock_mode.setter
     def mock_mode(self, value: bool):
         self._mock_mode = value
-
+        
         if self._mock_mode:
             index = random.randint(0, 100)
             self.peer_id = f"<mock-node-address-{index:03d}>"
@@ -163,16 +163,19 @@ class NetWatcher(HOPRNode):
     @connectguard
     async def transmit_balance(self):
         if self.mock_mode:
-            balance = random.randint(100, 1000)
+            native_balance = random.randint(100, 1000)
+            hopr_balance = random.randint(100, 1000)
+
+            balances = {"native": native_balance, "hopr": hopr_balance}
         else:
             balance = await self.api.balance("native")
+            balances = {"native": balance}
 
-        log.info(f"Got native balance: {balance}")
+        log.info(f"Got balances: {balances}")
 
         data = {"id": self.peer_id, "balances": {"native": balance}}
 
         # sends balance to aggregator.
-
         success = await post_dictionary(self.balanceurl, data)
 
         if not success:
@@ -210,5 +213,7 @@ class NetWatcher(HOPRNode):
 
         self.started = False
         for task in self.tasks:
+            task.add_done_callback(self.tasks.discard)
             task.cancel()
+
         self.tasks = set()

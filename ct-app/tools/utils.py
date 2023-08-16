@@ -23,13 +23,17 @@ def getlogger() -> logging.Logger:
         module = "main"
 
     # checks if a logger already exists with the given module name
+    logging.getLogger("httpx").setLevel(logging.WARNING)  # logs were flooded by httpx
+    logging.getLogger("swagger_client.rest").setLevel(logging.WARNING)
+    logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
+
     if logging.getLoggerClass() != ColoredLogger:
         logging.setLoggerClass(ColoredLogger)
-        logging.getLogger("httpx").setLevel(
-            logging.WARNING
-        )  # logs were flooded by httpx
 
-    return logging.getLogger(module)
+    logger = logging.getLogger(module)
+    logger.setLevel(logging.INFO)
+
+    return logger
 
 
 def envvar(name: str, type: type = None) -> str:
