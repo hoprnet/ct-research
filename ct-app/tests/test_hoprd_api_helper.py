@@ -82,9 +82,10 @@ async def test_get_peers_bad_param(api_helper: HoprdAPIHelper):
     This test checks that the peers method of the HoprdAPIHelper class returns the
     expected response when the peerId does not exist.
     """
-    result = await api_helper.peers("some_param")
+    peer_ids = await api_helper.peers("some_param")
 
-    assert result is None
+    assert isinstance(peer_ids, list)
+    assert len(peer_ids) == 0
 
 
 @pytest.mark.asyncio
@@ -95,7 +96,8 @@ async def test_ping_bad_status(api_helper: HoprdAPIHelper):
     """
     peer_ids: list = await api_helper.peers(status="some_status")
 
-    assert peer_ids is None
+    assert isinstance(peer_ids, list)
+    assert len(peer_ids) == 0
 
 
 @pytest.mark.asyncio

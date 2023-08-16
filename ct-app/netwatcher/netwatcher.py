@@ -1,10 +1,11 @@
 import asyncio
 import random
+import time
 
-from aiohttp import ClientSession
-from tools import getlogger
+
 from tools.decorator import connectguard, formalin
 from tools.hopr_node import HOPRNode
+from tools.utils import getlogger, post_dictionary
 
 log = getlogger()
 
@@ -31,11 +32,14 @@ class NetWatcher(HOPRNode):
         # a set to keep the peers of this node, see:
         self.peers = set[str]()
 
-        # a dict to keep the max_lat_count latency measures {peer: [51, 23, ...]}
-        self.latency = dict[str, list]()
+        # a dict to keep the max_lat_count latency measures {peer: 51, }
+        self.latency = dict[str, int]()
+        self.last_peer_transmission: float = 0
 
         self.max_lat_count = max_lat_count
         self._mock_mode = False
+
+        self.latency_lock = asyncio.Lock()
 
         ############### MOCKING ###################
         # set of 100 random peers
@@ -57,70 +61,9 @@ class NetWatcher(HOPRNode):
     def mock_mode(self, value: bool):
         self._mock_mode = value
 
-        if value is True:
+        if self._mock_mode:
             index = random.randint(0, 100)
             self.peer_id = f"<mock-node-address-{index:03d}>"
-
-    def wipe_peers(self):
-        """
-        Wipes the list of peers
-        """
-        log.info("Wiping peers")
-
-        self.peers.clear()
-        self.latency.clear()
-
-    async def _post_list(self, session: ClientSession):
-        """
-        Sends the detected peers to the Aggregator. For the moment, only the last
-        latency is transmitted for each peer.
-        :param session: the aiohttp session
-        :param peers: the list of peers
-        :param latencies: the list of latencies
-        """
-
-        # list standard peer ids (creating a secure copy of the list)
-        peers_copy = [p for p in self.peers]
-
-        latency_dict = {}
-        for peer in peers_copy:
-            if peer in self.latency and len(self.latency[peer]) > 0:
-                latency_dict[peer] = self.latency[peer][-1]
-
-        data = {"id": self.peer_id, "list": latency_dict}
-
-        if len(data["list"]) == 0:
-            log.info("No peers to transmit")
-            return True
-
-        try:
-            async with session.post(self.posturl, json=data) as response:
-                if response.status == 200:
-                    log.info(f"Transmitted peers: {', '.join(peers_copy)}")
-                    return True
-        except Exception:  # ClientConnectorError
-            log.exception("Error transmitting peers")
-
-        return False
-
-    async def _post_balance(self, session: ClientSession, balances: dict[str:int]):
-        """
-        Sends the node balance (xDai) to the Aggregator.
-        :param session: the aiohttp session
-        :param balance: the node balance
-        """
-        data = {"id": self.peer_id, "balances": balances}
-        try:
-            async with session.post(self.balanceurl, json=data) as response:
-                if response.status == 200:
-                    for key, value in data["balances"].items():
-                        log.info(f"Transmitted {key} balance: {value}")
-                    return True
-                log.error(f"{response}")
-        except Exception:  # ClientConnectorError
-            log.exception("Error transmitting balance")
-
-        return False
 
     @formalin(message="Gathering peers", sleep=60 * 0.5)
     @connectguard
@@ -138,15 +81,12 @@ class NetWatcher(HOPRNode):
         else:
             found_peers = await self.api.peers(param="peerId", quality=quality)
 
-        if found_peers:
-            new_peers = set(found_peers) - set(self.peers)
-            # vanished_peers = set(self.peers) - set(found_peers)
+        new_peers = set(found_peers) - set(self.peers)
 
-            for peer in new_peers:
-                self.peers.add(peer)
-                log.info(f"Found new peer {peer} (total of {len(self.peers)})")
+        [self.peers.add(peer) for peer in new_peers]
+        log.info(f"Found new peers {', '.join(new_peers)} (total of {len(self.peers)})")
 
-    @formalin(message="Pinging peers", sleep=60 * 0.2)
+    @formalin(message="Pinging peers", sleep=0.1)
     @connectguard
     async def ping_peers(self):
         """
@@ -158,47 +98,66 @@ class NetWatcher(HOPRNode):
         for each peer.
         """
 
-        # shuffle the peer set to converge towards a uniform distribution of pings among
-        # peers
-        sampled_peers = random.sample(sorted(self.peers), len(self.peers))
+        # pick a random peer to ping among all peers
+        rand_peer = random.choice(self.peers)
 
-        # create an array to keep the latency measures of new peers
-        for peer_id in sampled_peers:
-            if peer_id not in self.latency:
-                self.latency[peer_id] = []
+        if self.mock_mode:
+            latency = random.randint(10, 100) if random.random() < 0.8 else 0
+        else:
+            latency = await self.api.ping(rand_peer, "latency")
 
-        for peer_id in sampled_peers:
-            if not self.connected:
-                break
-
-            await asyncio.sleep(0.1)
-            # Above delay is set to allow the second peer's pinging from the test file
-            # before timeout (defined by test method). Can be changed.
-
-            if self.mock_mode:
-                latency = random.randint(10, 100) if random.random() < 0.8 else 0
+        async with self.latency_lock:
+            if latency is None:
+                log.warning(f"Failed to ping {rand_peer}")
+                self.latency.pop(rand_peer, None)
             else:
-                latency = await self.api.ping(peer_id, "latency")
+                log.debug(f"Measured latency to {rand_peer}: {latency}ms")
+                self.latency[rand_peer] = latency
 
-            self.latency[peer_id].append(latency)
-            self.latency[peer_id] = self.latency[peer_id][-self.max_lat_count :]
-
-    @formalin(message="Initiated peers transmission", sleep=60 * 1)
+    @formalin(message="Initiated peers transmission", sleep=5)
     @connectguard
     async def transmit_peers(self):
         """
         Sends the detected peers to the Aggregator
         """
-        async with ClientSession() as session:
-            success = await self._post_list(session)
+        peers_to_send: dict[str, int] = {}
 
-            if success:
-                return
+        # access the peers address in the latency dictionary in a thread-safe way
+        async with self.latency_lock:
+            latency_peers = self.latency.items()
 
-            await asyncio.sleep(5)
-            await self._post_list(session)
+        # pick the first `self.max_lat_count` peers from the latency dictionary
+        for (peer, latency), _ in zip(latency_peers, range(self.max_lat_count)):
+            peers_to_send[peer] = latency
 
-        # self.wipe_peers()
+        # checks if transmission needs to be triggered by peer-list size
+        if len(peers_to_send) == self.max_lat_count:
+            log.info("Peers transmission triggered by latency dictionary size")
+        # checks if transmission needs to be triggered by timestamp
+        elif time.time() - self.last_peer_transmission > 60 * 5:  # 5 minutes
+            log.info("Peers transmission triggered by timestamp")
+        else:
+            return
+
+        data = {"id": self.peer_id, "peers": peers_to_send}
+
+        # send peer list to aggregator.
+        success = await post_dictionary(self.posturl, data)
+
+        if not success:
+            log.error("Peers transmission failed")
+            return
+
+        log.info(
+            f"Transmitted {len(list(peers_to_send))} peers: {', '.join(peers_to_send)}"
+        )
+
+        # completely remove the transmitted key-value pair from self.latency in a
+        # thread-safe way
+        async with self.latency_lock:
+            self.last_peer_transmission = time.time()
+            for peer in peers_to_send:
+                self.latency.pop(peer, None)
 
     @formalin(message="Sending node balance", sleep=60 * 5)
     @connectguard
@@ -214,14 +173,16 @@ class NetWatcher(HOPRNode):
 
         log.info(f"Got balances: {balances}")
 
-        async with ClientSession() as session:
-            success = await self._post_balance(session, balances)
+        data = {"id": self.peer_id, "balances": {"native": balance}}
 
-            if success:
-                return
+        # sends balance to aggregator.
+        success = await post_dictionary(self.balanceurl, data)
 
-            await asyncio.sleep(5)
-            await self._post_balance(session, balance)
+        if not success:
+            log.error("Balance transmission failed")
+            return
+
+        log.info(f"Transmitted balances: {data['balances']}")
 
     async def start(self):
         """
@@ -234,6 +195,9 @@ class NetWatcher(HOPRNode):
         self.started = True
         if not self.mock_mode:
             self.tasks.add(asyncio.create_task(self.connect(address="hopr")))
+        else:
+            self.peer_id = "<mock_peer_id>"
+
         self.tasks.add(asyncio.create_task(self.gather_peers()))
         self.tasks.add(asyncio.create_task(self.ping_peers()))
         self.tasks.add(asyncio.create_task(self.transmit_peers()))

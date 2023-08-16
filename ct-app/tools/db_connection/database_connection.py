@@ -93,10 +93,14 @@ class DatabaseConnection:
             SQL("{} {}").format(Identifier(name), SQL(type_)) for name, type_ in columns
         )
 
-        self.cursor.execute(command.format(table_id, columns_sql))
-        self.conn.commit()
-
-        log.info(f"Table `{self._tablename}` created with {len(columns)} columns")
+        try:
+            self.cursor.execute(command.format(table_id, columns_sql))
+        except Exception:
+            log.exception("Error creating table")
+            self.conn.rollback()
+        else:
+            self.conn.commit()
+            log.info(f"Table `{table}` created with {len(columns)} columns")
 
     def drop_table(self):
         """
@@ -113,10 +117,14 @@ class DatabaseConnection:
         """
         )
 
-        self.cursor.execute(command.format(table_id))
-        self.conn.commit()
-
-        log.info(f"Table `{self._tablename}` dropped")
+        try:
+            self.cursor.execute(command.format(table_id))
+        except Exception:
+            log.exception("Error dropping table")
+            self.conn.rollback()
+        else:
+            self.conn.commit()
+            log.info(f"Table `{table}` dropped")
 
     def table_exists_guard(self):
         """
@@ -133,8 +141,15 @@ class DatabaseConnection:
                 );
         """
         )
-        self.cursor.execute(command, (self._tablename,))
-        return self.cursor.fetchone()[0]
+
+        try:
+            self.cursor.execute(command, (table,))
+        except Exception:
+            log.exception("Error checking if table exists")
+            self.conn.rollback()
+            return False
+        else:
+            return self.cursor.fetchone()[0]
 
     def column_exists_guard(self, column: str):
         """
@@ -156,8 +171,15 @@ class DatabaseConnection:
                 );
         """
         )
-        self.cursor.execute(command, (self._tablename, column))
-        return self.cursor.fetchone()[0]
+
+        try:
+            self.cursor.execute(command, (table, column))
+        except Exception:
+            log.exception("Error checking if column exists")
+            self.conn.rollback()
+            return False
+        else:
+            return self.cursor.fetchone()[0]
 
     def non_default_columns(self):
         """
@@ -175,8 +197,15 @@ class DatabaseConnection:
             WHERE table_name = %s AND column_default IS NULL;
         """
         )
-        self.cursor.execute(command, (self._tablename,))
-        return [row[0] for row in self.cursor.fetchall()]
+
+        try:
+            self.cursor.execute(command, (table,))
+        except Exception:
+            log.exception("Error getting non-default columns")
+            self.conn.rollback()
+            return []
+        else:
+            return [row[0] for row in self.cursor.fetchall()]
 
     def insert(self, **kwargs):
         """
@@ -212,17 +241,23 @@ class DatabaseConnection:
         """
         )
 
-        self.cursor.execute(
-            command.format(
-                table_id,
-                SQL(", ").join(Identifier(key) for key in keys),
-                SQL(", ").join(SQL("%s") for _ in values),
-            ),
-            values,
-        )
-        self.conn.commit()
-
-        log.info(f"Row inserted into `{self._tablename}`")
+        try:
+            self.cursor.execute(
+                command.format(
+                    table_id,
+                    SQL(", ").join(Identifier(key) for key in keys),
+                    SQL(", ").join(SQL("%s") for _ in values),
+                ),
+                values,
+            )
+        except Exception:
+            log.exception("Error inserting row")
+            self.conn.rollback()
+            return 0
+        else:
+            self.conn.commit()
+            log.info(f"Row inserted into `{table}`")
+            return 1
 
     def insert_many(self, keys: list[str], values: list[tuple]):
         """
@@ -271,13 +306,19 @@ class DatabaseConnection:
             value_joined,
         )
 
-        self.cursor.execute(
-            command_formatted,
-            separated_values,
-        )
-        self.conn.commit()
-
-        log.info(f"{len(values)} rows inserted into `{self._tablename}`")
+        try:
+            self.cursor.execute(
+                command_formatted,
+                separated_values,
+            )
+        except Exception:
+            log.exception("Error inserting rows")
+            self.conn.rollback()
+            return 0
+        else:
+            self.conn.commit()
+            log.info(f"{len(values)} rows inserted into `{table}`")
+            return len(values)
 
     def last_row(self):
         """
@@ -297,15 +338,22 @@ class DatabaseConnection:
             WHERE id = (SELECT MAX(id) FROM {})
         """
         )
-        self.cursor.execute(command.format(table_id, table_id))
-        result = self.cursor.fetchall()
 
-        if len(result) == 0:
+        try:
+            self.cursor.execute(command.format(table_id, table_id))
+        except Exception:
+            log.exception("Error getting last row")
+            self.conn.rollback()
             return None
+        else:
+            result = self.cursor.fetchall()
 
-        log.info(f"Last row fetched from `{self._tablename}`")
+            if len(result) == 0:
+                log.warning(f"No rows fetched from `{table}`")
+                return None
 
-        return result[0]
+            log.info(f"Last row fetched from `{table}`")
+            return result[0]
 
     def row(self, row: int):
         """
@@ -326,11 +374,19 @@ class DatabaseConnection:
             WHERE id = (%s)
         """
         )
-        self.cursor.execute(command.format(table_id), (row,))
-        result = self.cursor.fetchall()
 
-        if len(result) == 0:
+        try:
+            self.cursor.execute(command.format(table_id), (row,))
+        except Exception:
+            log.exception(f"Error getting row {row}")
+            self.conn.rollback()
             return None
+        else:
+            result = self.cursor.fetchall()
+
+            if len(result) == 0:
+                log.warning(f"No row fetched from `{table}`")
+                return None
 
         log.info(f"Row {row} fetched from `{self._tablename}`")
 
@@ -354,18 +410,24 @@ class DatabaseConnection:
             WHERE timestamp = (SELECT MAX(timestamp) FROM {})
         """
         )
-        self.cursor.execute(command.format(table_id, table_id))
-        result = self.cursor.fetchall()
 
-        if len(result) == 0:
-            log.warning(
-                f"No rows fetched from `{self._tablename}` because no data was found"
-            )
+        try:
+            self.cursor.execute(command.format(table_id, table_id))
+        except Exception:
+            log.exception("Error getting last added rows")
+            self.conn.rollback()
             return None
+        else:
+            result = self.cursor.fetchall()
 
-        log.info(f"Last added rows ({len(result)}) fetched from `{self._tablename}`")
+            if len(result) == 0:
+                log.warning(f"No rows fetched from `{table}`")
+                return []
 
-        return result
+
+            log.info(f"Last added rows ({len(result)}) fetched from `{table}`")
+
+            return result
 
     def count_last_added_rows(self):
         """
@@ -385,12 +447,18 @@ class DatabaseConnection:
             WHERE timestamp = (SELECT MAX(timestamp) FROM {})
         """
         )
-        self.cursor.execute(command.format(table_id, table_id))
-        count = self.cursor.fetchone()[0]
 
-        log.info(f"Counted last added rows from `{self._tablename}`: {count}")
+        try:
+            self.cursor.execute(command.format(table_id, table_id))
+        except Exception:
+            log.exception("Error counting last added rows")
+            self.conn.rollback()
+            return None
+        else:
+            count = self.cursor.fetchone()[0]
 
-        return count
+            log.info(f"Counted last added rows from `{table}`: {count}")
+            return count
 
     def count_uniques(self, column: str):
         """
@@ -416,14 +484,20 @@ class DatabaseConnection:
             FROM {}
         """
         )
-        self.cursor.execute(command.format(column_id, table_id))
-        count = self.cursor.fetchone()[0]
 
-        log.info(
-            f"Counted unique values in column `{column}` of `{self._tablename}`: {count}"
-        )
-
-        return count
+        try:
+            self.cursor.execute(command.format(column_id, table_id))
+        except Exception:
+            log.exception("Error counting unique values")
+            self.conn.rollback()
+            return None
+        else:
+            count = self.cursor.fetchone()[0]
+            log.info(
+                f"Counted unique values in column `{column}` of `{table}`: {count}"
+            )
+            
+            return count
 
     def count_uniques_in_last_added_rows(self, column: str):
         """
@@ -451,19 +525,27 @@ class DatabaseConnection:
             WHERE timestamp = (SELECT MAX(timestamp) FROM {})
         """
         )
-        self.cursor.execute(command.format(column_id, table_id, table_id))
-        count = self.cursor.fetchone()[0]
 
-        log.info(
-            f"Counted last unique values in column `{column}` of `{self._tablename}`: {count}"
-        )
+        try:
+            self.cursor.execute(command.format(column_id, table_id, table_id))
+        except Exception:
+            log.exception("Error counting unique values in last added rows")
+            self.conn.rollback()
+            return None
+        else:
+            count = self.cursor.fetchone()[0]
 
-        return count
+            log.info(
+                f"Counted last unique values in column `{column}` of `{table}`: {count}"
+            )
+
+            return count
 
     def rows_after_timestamp(self, timestamp: datetime.datetime):
         """
-        Gets the rows from the given table that have a timestamp more recent than the given
-        timestamp.
+        Gets the rows from the given table that have a timestamp more recent than the
+        given timestamp.
+        :param table: The name of the table to get the rows from.
         :param timestamp: The timestamp to compare to.
         :return: The rows as a tuple.
         :raise: ValueError if the table does not exist or if the timestamp is not a
@@ -482,9 +564,15 @@ class DatabaseConnection:
             WHERE timestamp > (%s)
         """
         )
-        self.cursor.execute(command.format(table_id), (timestamp,))
-        result = self.cursor.fetchall()
 
-        log.info(f"Rows after {timestamp} fetched from `{self._tablename}`")
+        try:
+            self.cursor.execute(command.format(table_id), (timestamp,))
+        except Exception:
+            log.exception(f"Error getting rows after {timestamp}")
+            self.conn.rollback()
+            return None
+        else:
+            result = self.cursor.fetchall()
+            log.info(f"Rows after {timestamp} fetched from `{table}`")
 
-        return result
+            return result

@@ -49,9 +49,8 @@ class HoprdAPIHelper:
         log.debug("Getting balance")
 
         try:
-            # thread = self.account_api.account_get_balances(async_req=True)
-            # response = thread.get()
-            response = self.account_api.account_get_balances()
+            thread = self.account_api.account_get_balances(async_req=True)
+            response = thread.get()
         except ApiException:
             log.exception("Exception when calling AccountApi->account_get_balances")
             return None
@@ -147,22 +146,22 @@ class HoprdAPIHelper:
             response = thread.get()
         except ApiException:
             log.exception("Exception when calling NodeApi->node_get_peers")
-            return None
+            return []
         except OSError:
             log.exception("Exception when calling ChannelsApi->channels_get_channels")
-            return None
+            return []
 
         if not hasattr(response, status):
             log.error(f"No `{status}` from {self.url}")
-            return None
+            return []
 
         if len(getattr(response, status)) == 0:
             log.info(f"No peer with status `{status}`")
-            return None
+            return []
 
         if not hasattr(getattr(response, status)[0], param):
             log.error(f"No param `{param}` found for peers")
-            return None
+            return []
 
         return [getattr(peer, param) for peer in getattr(response, status)]
 
@@ -190,15 +189,15 @@ class HoprdAPIHelper:
     ) -> bool:
         log.debug("Sending message")
 
-        body = swagger.MessagesBody(message, destination, hops)
+        body = swagger.MessagesBody(message, destination, path=hops)
         try:
-            thread = self.message_api.messages_send_message(body=body)
-            response = thread.get()
+            thread = self.message_api.messages_send_message(body=body, async_req=True)
+            thread.get()
         except ApiException:
             log.exception("Exception when calling MessageApi->messages_send_message")
-            return None
+            return False
         except OSError:
             log.exception("Exception when calling ChannelsApi->channels_get_channels")
-            return None
+            return False
 
-        return response
+        return True

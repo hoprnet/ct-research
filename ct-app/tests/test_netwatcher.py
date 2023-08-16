@@ -1,7 +1,7 @@
 import asyncio
 import functools
 from unittest.mock import MagicMock, patch
-
+import tools
 import pytest
 
 
@@ -29,39 +29,6 @@ from tools.hopr_api_helper import HoprdAPIHelper  # noqa: E402
 def FakeNetWatcher() -> NetWatcher:
     """Fixture that returns a mock instance of a NetWatcher"""
     return NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl", 10)
-
-
-@pytest.mark.asyncio
-async def test__post_list():
-    """
-    Test that the method _post_list works.
-    """
-    instance = FakeNetWatcher()
-    instance.peers = ["some_peer", "some_other_peer"]
-    instance.latency = {"some_peer": [10, 20], "some_other_peer": [30, 40]}
-
-    await instance._post_list(MagicMock())
-
-    assert len(instance.peers) == 2
-    assert len(instance.latency) == 2
-
-    # TODO add test if a post request has been sent
-
-
-def test_wipe_peers():
-    """
-    Test that the method wipes the peers and latency attributes.
-    """
-    instance = FakeNetWatcher()
-    instance.peers.add("some_peer")
-    instance.peers.add("some other peer")
-
-    instance.latency = {"some_peer_id": 10}
-
-    instance.wipe_peers()
-
-    assert len(instance.peers) == 0
-    assert len(instance.latency) == 0
 
 
 @pytest.fixture
@@ -110,6 +77,7 @@ def mock_instance_for_test_ping(mocker):
     instance = NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl")
     instance.peers = ["some_peer", "some_other_peer"]
     instance.api = api
+    instance.mock_mode = True
 
     return instance
 
@@ -125,13 +93,13 @@ async def test_ping_peers(mock_instance_for_test_ping: NetWatcher):
     instance.started = True
 
     asyncio.create_task(instance.ping_peers())
-    await asyncio.sleep(1)
+    await asyncio.sleep(2)
 
     # avoid infinite while loop by setting node.started = False
     instance.started = False
     await asyncio.sleep(1)
 
-    assert len(instance.latency) == 2
+    assert len(instance.latency) == 1
 
 
 @pytest.fixture
@@ -143,8 +111,6 @@ def mock_instance_for_test_transmit(mocker):
     instance = NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl")
     instance.peers = ["some_peer", "some_other_peer"]
     instance.latency = {"some_peer": 10, "some_other_peer": 20}
-    mocker.patch.object(instance, "_post_list", return_value=True)
-    mocker.patch.object(instance, "_post_balance", return_value=True)
 
     return instance
 
@@ -158,15 +124,16 @@ async def test_transmit_peers(mock_instance_for_test_transmit: NetWatcher):
 
     instance.peer_id = "some_peer_id"
     instance.started = True
+    instance.max_lat_count = 2
 
-    asyncio.create_task(instance.transmit_peers())
+    await asyncio.create_task(instance.transmit_peers())
     await asyncio.sleep(1)
 
     # avoid infinite while loop by setting node.started = False
     instance.started = False
     await asyncio.sleep(1)
 
-    assert instance._post_list.called
+    assert tools.utils.post_dictionary.called  # TODO: modify the called method
 
 
 @pytest.fixture
@@ -179,8 +146,6 @@ def mock_instance_for_test_transmit_balance(mocker):
 
     instance = NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl")
     instance.api = api
-
-    mocker.patch.object(instance, "_post_balance", return_value=True)
 
     return instance
 
@@ -202,7 +167,7 @@ async def test_transmit_balance(mock_instance_for_test_transmit_balance: NetWatc
     instance.started = False
     await asyncio.sleep(1)
 
-    assert instance._post_balance.called
+    assert tools.utils.post_dictionary.called  # TODO: modify the called method
 
 
 @pytest.fixture
