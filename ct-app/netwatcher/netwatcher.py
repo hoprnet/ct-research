@@ -71,7 +71,7 @@ class NetWatcher(HOPRNode):
         """
         Long-running task that continously updates the set of peers connected to this
         node.
-        :param quality:
+        :param quality: the minimum quality of the peers to be detected
         :returns: nothing; the set of connected peerIds is kept in self.peers.
         """
 
