@@ -59,8 +59,8 @@ def feedback_task(
             _table_name,
             peer_id=peer_id,
             node_address=node_address,
-            effective_count=effective_count,
             expected_count=expected_count,
+            effective_count=effective_count,
             status=status,
             timestamp=timestamp,
         )
