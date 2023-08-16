@@ -60,7 +60,7 @@ class NetWatcher(HOPRNode):
     @mock_mode.setter
     def mock_mode(self, value: bool):
         self._mock_mode = value
-        
+
         if self._mock_mode:
             index = random.randint(0, 100)
             self.peer_id = f"<mock-node-address-{index:03d}>"
@@ -106,7 +106,7 @@ class NetWatcher(HOPRNode):
         else:
             latency = await self.api.ping(rand_peer, "latency")
 
-        async with self.latency_lock.acquire():
+        async with self.latency_lock:
             if latency is None:
                 log.warning(f"Failed to ping {rand_peer}")
                 self.latency.pop(rand_peer, None)
@@ -123,7 +123,7 @@ class NetWatcher(HOPRNode):
         peers_to_send: dict[str, int] = {}
 
         # access the peers address in the latency dictionary in a thread-safe way
-        async with self.latency_lock.acquire():
+        async with self.latency_lock:
             latency_peers = self.latency.items()
 
         # pick the first `self.max_lat_count` peers from the latency dictionary
@@ -154,7 +154,7 @@ class NetWatcher(HOPRNode):
 
         # completely remove the transmitted key-value pair from self.latency in a
         # thread-safe way
-        async with self.latency_lock.acquire():
+        async with self.latency_lock:
             self.last_peer_transmission = time.time()
             for peer in peers_to_send:
                 self.latency.pop(peer, None)

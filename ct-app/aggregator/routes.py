@@ -25,7 +25,7 @@ def attach_endpoints(app):
     agg = Aggregator()
     log = getlogger()
 
-    @app.route("/aggregator/peers", methods=["POST"])
+    @app.post("/aggregator/peers")
     async def post_peers(request: Request):
         """
         Create a POST route to receive a list of peers from a pod.

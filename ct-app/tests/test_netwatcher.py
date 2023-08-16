@@ -77,6 +77,7 @@ def mock_instance_for_test_ping(mocker):
     instance = NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl")
     instance.peers = ["some_peer", "some_other_peer"]
     instance.api = api
+    instance.mock_mode = True
 
     return instance
 

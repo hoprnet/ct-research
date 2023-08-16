@@ -249,83 +249,77 @@ def test_cli(app):
     return app.test_client
 
 
-def test_sanic_post_list_missing_id(test_cli):
+def test_sanic_post_peers_missing_id(test_cli):
     """
-    This test checks that the post_list endpoint returns the correct data when
+    This test checks that the post_peers endpoint returns the correct data when
     the id is missing.
     """
-    _, response = test_cli.post("/aggregator/list", json={"list": []})
+    _, response = test_cli.post("/aggregator/peers", json={"peers": []})
 
     assert response.status == 400
     assert response.json["message"] == "`id` key not in body"
 
 
-def test_sanic_post_list_wrong_id_type(test_cli):
+def test_sanic_post_peers_wrong_id_type(test_cli):
     """
-    This test checks that the post_list endpoint returns the correct data when
+    This test checks that the post_peers endpoint returns the correct data when
     the value passed as id is not a string
     """
     _, response = test_cli.post(
-        "/aggregator/list", json={"id": 123, "list": {"peer": 1}}
+        "/aggregator/peers", json={"id": 123, "peers": {"peer": 1}}
     )
 
     assert response.status == 400
     assert response.json["message"] == "`id` must be a string"
 
 
-def test_sanic_post_list_missing_list(test_cli):
+def test_sanic_post_peers_missing_peers(test_cli):
     """
-    This test checks that the post_list endpoint returns the correct data when
-    the list is missing.
+    This test checks that the post_peers endpoint returns the correct data when
+    the peers is missing.
     """
-    _, response = test_cli.post("/aggregator/list", json={"id": "some_id"})
+    _, response = test_cli.post("/aggregator/peers", json={"id": "some_id"})
 
     assert response.status == 400
-    assert response.json["message"] == "`list` key not in body"
+    assert response.json["message"] == "`peers` key not in body"
 
 
-def test_sanic_post_list_wrong_list_type(test_cli):
+def test_sanic_post_peers_wrong_peers_type(test_cli):
     """
-    This test checks that the post_list endpoint returns the correct data when
-    the value passed as list is not a dict
-    """
-    _, response = test_cli.post("/aggregator/list", json={"id": "some_id", "list": 123})
-
-    assert response.status == 400
-    assert response.json["message"] == "`list` must be a dict"
-
-
-def test_sanic_post_list_empty_list(test_cli):
-    """
-    This test checks that the post_list endpoint returns the correct data when
-    the list is empty.
-    """
-    _, response = test_cli.post("/aggregator/list", json={"id": "some_id", "list": {}})
-
-    assert response.status == 400
-    assert response.json["message"] == "`list` must not be empty"
-
-
-def test_sanic_post_list(test_cli):
-    """
-    This test checks that the post_list endpoint returns the correct data when
-    the list is missing.
+    This test checks that the post_peers endpoint returns the correct data when
+    the value passed as peers is not a dict
     """
     _, response = test_cli.post(
-        "/aggregator/list", json={"id": "some_id", "list": {"peer": 1}}
+        "/aggregator/peers", json={"id": "some_id", "peers": 123}
+    )
+
+    assert response.status == 400
+    assert response.json["message"] == "`peers` must be a dict"
+
+
+def test_sanic_post_peers_empty_peers(test_cli):
+    """
+    This test checks that the post_peers endpoint returns the correct data when
+    the peers is empty.
+    """
+    _, response = test_cli.post(
+        "/aggregator/peers", json={"id": "some_id", "peers": {}}
+    )
+
+    assert response.status == 400
+    assert response.json["message"] == "`peers` must not be empty"
+
+
+def test_sanic_post_peers(test_cli):
+    """
+    This test checks that the post_peers endpoint returns the correct data when
+    the peers is missing.
+    """
+    _, response = test_cli.post(
+        "/aggregator/peers", json={"id": "some_id", "peers": {"peer": 1}}
     )
 
     assert response.status == 200
-
-
-def test_sanic_get_list(test_cli):
-    """
-    This test checks that the get_list endpoint returns the correct data.
-    """
-    _, response = test_cli.get("/aggregator/list")
-
-    assert response.status == 200
-    assert isinstance(response.json, dict)
 
 
 def test_sanic_post_to_db(test_cli):  # TODO: this still need to be implemented
