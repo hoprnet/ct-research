@@ -137,6 +137,10 @@ def attach_endpoints(app):
         """
         matchs_for_db = agg.convert_to_db_data()
 
+        if len(matchs_for_db) == 0:
+            log.info("No data to send to DB")
+            return sanic_text("No data to push to DB")
+
         with DatabaseConnection(
             envvar("DB_NAME"),
             envvar("DB_HOST"),
@@ -155,16 +159,17 @@ def attach_endpoints(app):
 
             log.info(f"Inserting {len(matchs_for_db)} rows into DB")
 
-            for peer, nodes, latencies in matchs_for_db:
-                log.info(f"Inserting {peer} into DB")
-                db.insert(
-                    "raw_data_table",
-                    peer_id=peer,
-                    node_addresses=nodes,
-                    latency_metric=latencies,
-                )
+            len_data = db.insert_many(
+                "raw_data_table",
+                ["peer_id", "node_addresses", "latency_metric"],
+                matchs_for_db,
+            )
 
-        return sanic_text("Sent to DB")
+            if len_data != len(matchs_for_db):
+                log.error("Error inserting into DB")
+                return sanic_text("Error inserting into DB", status=500)
+
+            return sanic_text("Data pushed to DB")
 
     @app.post("/aggregator/balances")
     async def post_balance(request: Request):
