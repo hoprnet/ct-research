@@ -32,7 +32,7 @@ class NetWatcher(HOPRNode):
         # a set to keep the peers of this node, see:
         self.peers = set[str]()
 
-        # a dict to keep the max_lat_count latency measures {peer: [51, 23, ...]}
+        # a dict to keep the max_lat_count latency measures {peer: 51, }
         self.latency = dict[str, int]()
         self.last_peer_transmission: float = 0
 
