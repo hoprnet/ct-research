@@ -307,7 +307,7 @@ def test_last_added_rows_empty(
         rows = db.last_added_rows("test_table")
         db.drop_table("test_table")
 
-        assert rows is None
+        assert len(rows) == 0
 
 
 def test_count_last_added_rows(

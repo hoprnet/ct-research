@@ -146,22 +146,22 @@ class HoprdAPIHelper:
             response = thread.get()
         except ApiException:
             log.exception("Exception when calling NodeApi->node_get_peers")
-            return None
+            return []
         except OSError:
             log.exception("Exception when calling ChannelsApi->channels_get_channels")
-            return None
+            return []
 
         if not hasattr(response, status):
             log.error(f"No `{status}` from {self.url}")
-            return None
+            return []
 
         if len(getattr(response, status)) == 0:
             log.info(f"No peer with status `{status}`")
-            return None
+            return []
 
         if not hasattr(getattr(response, status)[0], param):
             log.error(f"No param `{param}` found for peers")
-            return None
+            return []
 
         return [getattr(peer, param) for peer in getattr(response, status)]
 

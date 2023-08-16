@@ -91,9 +91,10 @@ async def test_peers(bad_api_helper: HoprdAPIHelper):
     This test checks that the peers method of the HoprdAPIHelper class returns the
     expected response.
     """
-    result = await bad_api_helper.peers("peerId")
+    peer_ids = await bad_api_helper.peers("peerId")
 
-    assert result is None
+    assert isinstance(peer_ids, list)
+    assert len(peer_ids) == 0
 
 
 @pytest.mark.asyncio
