@@ -100,7 +100,7 @@ class DatabaseConnection:
             self.conn.rollback()
         else:
             self.conn.commit()
-            log.info(f"Table `{table}` created with {len(columns)} columns")
+            log.info(f"Table `{self._tablename}` created with {len(columns)} columns")
 
     def drop_table(self):
         """
@@ -124,7 +124,7 @@ class DatabaseConnection:
             self.conn.rollback()
         else:
             self.conn.commit()
-            log.info(f"Table `{table}` dropped")
+            log.info(f"Table `{self._tablename}` dropped")
 
     def table_exists_guard(self):
         """
@@ -143,7 +143,7 @@ class DatabaseConnection:
         )
 
         try:
-            self.cursor.execute(command, (table,))
+            self.cursor.execute(command, (self._tablename,))
         except Exception:
             log.exception("Error checking if table exists")
             self.conn.rollback()
@@ -173,7 +173,7 @@ class DatabaseConnection:
         )
 
         try:
-            self.cursor.execute(command, (table, column))
+            self.cursor.execute(command, (self._tablename, column))
         except Exception:
             log.exception("Error checking if column exists")
             self.conn.rollback()
@@ -199,7 +199,7 @@ class DatabaseConnection:
         )
 
         try:
-            self.cursor.execute(command, (table,))
+            self.cursor.execute(command, (self._tablename,))
         except Exception:
             log.exception("Error getting non-default columns")
             self.conn.rollback()
@@ -256,7 +256,7 @@ class DatabaseConnection:
             return 0
         else:
             self.conn.commit()
-            log.info(f"Row inserted into `{table}`")
+            log.info(f"Row inserted into `{self._tablename}`")
             return 1
 
     def insert_many(self, keys: list[str], values: list[tuple]):
@@ -317,7 +317,7 @@ class DatabaseConnection:
             return 0
         else:
             self.conn.commit()
-            log.info(f"{len(values)} rows inserted into `{table}`")
+            log.info(f"{len(values)} rows inserted into `{self._tablename}`")
             return len(values)
 
     def last_row(self):
@@ -349,10 +349,10 @@ class DatabaseConnection:
             result = self.cursor.fetchall()
 
             if len(result) == 0:
-                log.warning(f"No rows fetched from `{table}`")
+                log.warning(f"No rows fetched from `{self._tablename}`")
                 return None
 
-            log.info(f"Last row fetched from `{table}`")
+            log.info(f"Last row fetched from `{self._tablename}`")
             return result[0]
 
     def row(self, row: int):
@@ -385,7 +385,7 @@ class DatabaseConnection:
             result = self.cursor.fetchall()
 
             if len(result) == 0:
-                log.warning(f"No row fetched from `{table}`")
+                log.warning(f"No row fetched from `{self._tablename}`")
                 return None
 
         log.info(f"Row {row} fetched from `{self._tablename}`")
@@ -421,11 +421,12 @@ class DatabaseConnection:
             result = self.cursor.fetchall()
 
             if len(result) == 0:
-                log.warning(f"No rows fetched from `{table}`")
+                log.warning(f"No rows fetched from `{self._tablename}`")
                 return []
 
-
-            log.info(f"Last added rows ({len(result)}) fetched from `{table}`")
+            log.info(
+                f"Last added rows ({len(result)}) fetched from `{self._tablename}`"
+            )
 
             return result
 
@@ -457,7 +458,7 @@ class DatabaseConnection:
         else:
             count = self.cursor.fetchone()[0]
 
-            log.info(f"Counted last added rows from `{table}`: {count}")
+            log.info(f"Counted last added rows from `{self._tablename}`: {count}")
             return count
 
     def count_uniques(self, column: str):
@@ -494,9 +495,9 @@ class DatabaseConnection:
         else:
             count = self.cursor.fetchone()[0]
             log.info(
-                f"Counted unique values in column `{column}` of `{table}`: {count}"
+                f"Counted unique values in column `{column}` of `{self._tablename}`: {count}"
             )
-            
+
             return count
 
     def count_uniques_in_last_added_rows(self, column: str):
@@ -536,7 +537,7 @@ class DatabaseConnection:
             count = self.cursor.fetchone()[0]
 
             log.info(
-                f"Counted last unique values in column `{column}` of `{table}`: {count}"
+                f"Counted last unique values in column `{column}` of `{self._tablename}`: {count}"
             )
 
             return count
@@ -573,6 +574,6 @@ class DatabaseConnection:
             return None
         else:
             result = self.cursor.fetchall()
-            log.info(f"Rows after {timestamp} fetched from `{table}`")
+            log.info(f"Rows after {timestamp} fetched from `{self._tablename}`")
 
             return result
