@@ -9,7 +9,7 @@ _db_columns = [
     ("peer_id", "VARCHAR(255) NOT NULL"),
     ("node_address", "VARCHAR(255) NOT NULL"),
     ("expected_count", "INTEGER NOT NULL"),
-    ("expected_count", "INTEGER NOT NULL"),
+    ("effective_count", "INTEGER NOT NULL"),
     ("status", "VARCHAR(255) NOT NULL"),
     ("timestamp", "FLOAT NOT NULL"),
 ]  # will be moved to DatabaseConnection attributes
