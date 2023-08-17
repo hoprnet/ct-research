@@ -98,11 +98,13 @@ class NetWatcher(HOPRNode):
         for each peer.
         """
 
-        # pick a random peer to ping among all peers
+        # if no peer is available, simply wait for 10 seconds and hope that new peers
+        # are found in the meantime
         if len(self.peers) == 0:
             await asyncio.sleep(10)
             return
 
+        # pick a random peer to ping among all peers
         rand_peer = random.choice(self.peers)
 
         if self.mock_mode:
@@ -118,7 +120,7 @@ class NetWatcher(HOPRNode):
                 log.debug(f"Measured latency to {rand_peer}: {latency}ms")
                 self.latency[rand_peer] = latency
 
-    @formalin(message="Initiated peers transmission", sleep=10)
+    @formalin(message="Initiated peers transmission", sleep=5)
     @connectguard
     async def transmit_peers(self):
         """
@@ -216,7 +218,7 @@ class NetWatcher(HOPRNode):
         self.tasks.add(asyncio.create_task(self.gather_peers()))
         self.tasks.add(asyncio.create_task(self.ping_peers()))
         self.tasks.add(asyncio.create_task(self.transmit_peers()))
-        # self.tasks.add(asyncio.create_task(self.transmit_balance()))
+        self.tasks.add(asyncio.create_task(self.transmit_balance()))
 
         await asyncio.gather(*self.tasks)
 
