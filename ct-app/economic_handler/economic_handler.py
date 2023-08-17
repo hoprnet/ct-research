@@ -236,19 +236,15 @@ class EconomicHandler(HOPRNode):
             envvar("DB_PASSWORD"),
             envvar("DB_PORT", int),
         ) as session:
-            try:
-                max_timestamp = session.query(
-                    func.max(NodePeerConnection.timestamp)
-                ).scalar()
+            max_timestamp = session.query(
+                func.max(NodePeerConnection.timestamp)
+            ).scalar()
 
-                last_added_rows = (
-                    session.query(NodePeerConnection)
-                    .filter_by(timestamp=max_timestamp)
-                    .all()
-                )
-            except ValueError:
-                log.exception("Error reading data from database table")
-                return "metricsDB", {}
+            last_added_rows = (
+                session.query(NodePeerConnection)
+                .filter_by(timestamp=max_timestamp)
+                .all()
+            )
 
             metrics_dict = {}
 
