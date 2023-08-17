@@ -187,7 +187,7 @@ class Aggregator(metaclass=Singleton):
                 peer_id=item[0],
                 node=item[1],
                 latency=item[2],
-                order=item[3],
+                priority=item[3],
                 timestamp=timestamp,
             )
             for item in matchs_for_db
