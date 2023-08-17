@@ -84,7 +84,7 @@ def test_array_to_db_list():
 
     matchs = utils.multiple_round_node_peer_match(input_array, max_iter=3)
 
-    expected_result = [("peer_0", ["pod_0"], [1]), ("peer_1", ["pod_0"], [2])]
+    expected_result = [("peer_0", "pod_0", 1, 0), ("peer_1", "pod_0", 2, 0)]
     result = utils.array_to_db_list(input_array, matchs, node_addresses, peer_ids)
 
     assert result == expected_result

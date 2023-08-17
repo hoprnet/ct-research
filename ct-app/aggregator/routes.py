@@ -6,8 +6,7 @@ from sanic.request import Request
 from sanic.response import html as sanic_html
 from sanic.response import json as sanic_json
 from sanic.response import text as sanic_text
-
-from tools.db_connection import DatabaseConnection, NodePeerConnection
+from tools.db_connection import DatabaseConnection
 from tools.utils import envvar, getlogger
 
 from .aggregator import Aggregator
@@ -135,9 +134,9 @@ def attach_endpoints(app):
         """
         Takes the peers and metrics from the _dict and sends them to the database.
         """
-        matchs_for_db = agg.convert_to_db_data()
+        db_entries = agg.convert_to_db_data()
 
-        if len(matchs_for_db) == 0:
+        if len(db_entries) == 0:
             log.info("No data to send to DB")
             return sanic_text("No data to push to DB")
 
@@ -148,25 +147,10 @@ def attach_endpoints(app):
             envvar("DB_PASSWORD"),
             envvar("DB_PORT", int),
         ) as session:
-            items = []
-            timestamp = datetime.now()
-
-            for item in matchs_for_db:
-                for idx, (node, latency) in enumerate(zip(item[1], item[2])):
-                    items.append(
-                        NodePeerConnection(
-                            peer_id=item[0],
-                            node=node,
-                            latency=latency,
-                            order=idx,
-                            timestamp=timestamp,
-                        )
-                    )
-
-            session.add_all(items)
+            session.add_all(db_entries)
             session.commit()
 
-            log.info(f"Inserted {len(items)} rows into DB")
+            log.info(f"Inserted {len(db_entries)} rows into DB")
 
             return sanic_text("Data pushed to DB")
 

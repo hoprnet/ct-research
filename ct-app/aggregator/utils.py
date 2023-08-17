@@ -99,11 +99,11 @@ def array_to_db_list(
     """
     matchs_for_db = []
     for peer_idx, node_idxs in matchs.items():
-        peer = peer_ids[peer_idx]
-        nodes = [node_addresses[idx] for idx in node_idxs]
-        latencies = [int(input_array[idx, peer_idx]) for idx in node_idxs]
+        addresses = np.array(node_addresses)[node_idxs]
+        latencies = np.array(input_array[:, peer_idx])[node_idxs]
 
-        matchs_for_db.append((peer, nodes, latencies))
+        for order, (node, latency) in enumerate(zip(addresses, latencies)):
+            matchs_for_db.append((peer_ids[peer_idx], node, latency, order))
 
     return matchs_for_db
 
