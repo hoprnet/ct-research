@@ -264,19 +264,21 @@ class EconomicHandler(HOPRNode):
                 metrics_dict[row.peer_id]["latency_metrics"].append(row.latency)
                 metrics_dict[row.peer_id]["temp_order"].append(row.order)
 
-            # TODO: sort node_addresses and latency based on temp_order
+            # sort node_addresses and latency based on temp_order
             for peer_id in metrics_dict:
-                request = metrics_dict[peer_id]["temp_order"]
+                order = metrics_dict[peer_id]["temp_order"]
                 addresses = metrics_dict[peer_id]["node_addresses"]
                 latency = metrics_dict[peer_id]["latency_metrics"]
 
-                addresses = [x for _, x in sorted(zip(request, addresses))]
-                latency = [x for _, x in sorted(zip(request, latency))]
+                addresses = [x for _, x in sorted(zip(order, addresses))]
+                latency = [x for _, x in sorted(zip(order, latency))]
 
                 metrics_dict[peer_id]["node_addresses"] = addresses
                 metrics_dict[peer_id]["latency_metrics"] = latency
 
-            # TODO: remove the temp order key from the dictionaries
+            # remove the temp order key from the dictionaries
+            for peer_id in metrics_dict:
+                del metrics_dict[peer_id]["temp_order"]
 
             return "metricsDB", metrics_dict
 
