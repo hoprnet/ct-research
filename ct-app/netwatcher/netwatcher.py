@@ -29,8 +29,8 @@ class NetWatcher(HOPRNode):
         self.posturl = posturl
         self.balanceurl = balanceurl
 
-        # a set to keep the peers of this node, see:
-        self.peers = set[str]()
+        # a list to keep the peers of this node
+        self.peers = list[str]()
 
         # a dict to keep the max_lat_count latency measures {peer: 51, }
         self.latency = dict[str, int]()
@@ -81,7 +81,7 @@ class NetWatcher(HOPRNode):
         else:
             found_peers = await self.api.peers(param="peerId", quality=quality)
 
-        self.peers = set(found_peers)
+        self.peers = found_peers
         log.info(f"Found {len(found_peers)} peers {', '.join(found_peers)}")
 
     @formalin(message="Pinging peers", sleep=0.1)
