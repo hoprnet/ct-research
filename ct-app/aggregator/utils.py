@@ -102,8 +102,8 @@ def array_to_db_list(
         addresses = np.array(node_addresses)[node_idxs]
         latencies = np.array(input_array[:, peer_idx])[node_idxs]
 
-        for order, (node, latency) in enumerate(zip(addresses, latencies)):
-            matchs_for_db.append((peer_ids[peer_idx], node, latency, order))
+        for priority, (node, latency) in enumerate(zip(addresses, latencies)):
+            matchs_for_db.append((peer_ids[peer_idx], node, latency, priority))
 
     return matchs_for_db
 
