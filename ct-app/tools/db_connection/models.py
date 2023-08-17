@@ -15,7 +15,7 @@ class NodePeerConnection(Base):
     peer_id: Mapped[str]
     node: Mapped[str]
     latency: Mapped[int]
-    order: Mapped[int]
+    priority: Mapped[int]
 
     timestamp: Mapped[datetime] = mapped_column(DateTime)
 
@@ -25,7 +25,7 @@ class NodePeerConnection(Base):
             + f"peer_id={self.peer_id!r}, "
             + f"node={self.node!r}, "
             + f"latency={self.latency!r}, "
-            + f"order={self.order!r}, "
+            + f"priority={self.priority!r}, "
             + f"timestamp={self.timestamp})"
         )
 
@@ -39,10 +39,10 @@ class NodePeerConnection(Base):
                 peer_id=peer_id,
                 node=f"random_node_{random.randint(0, 99):02}",
                 latency=random.randint(1, 100),
-                order=order,
+                priority=priority,
                 timestamp=timestamp,
             )
-            for order in range(count)
+            for priority in range(count)
         ]
 
         return instances
