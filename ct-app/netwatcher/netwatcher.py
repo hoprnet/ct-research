@@ -30,7 +30,7 @@ class NetWatcher(HOPRNode):
         self.balanceurl = balanceurl
 
         # a set to keep the peers of this node, see:
-        self.peers = set[str]()
+        self.peers = list[str]()
 
         # a dict to keep the max_lat_count latency measures {peer: 51, }
         self.latency = dict[str, int]()
@@ -83,7 +83,7 @@ class NetWatcher(HOPRNode):
 
         new_peers = set(found_peers) - set(self.peers)
 
-        [self.peers.add(peer) for peer in new_peers]
+        [self.peers.append(peer) for peer in new_peers]
         log.info(f"Found new peers {', '.join(new_peers)} (total of {len(self.peers)})")
 
     @formalin(message="Pinging peers", sleep=0.1)
@@ -99,6 +99,10 @@ class NetWatcher(HOPRNode):
         """
 
         # pick a random peer to ping among all peers
+        if len(self.peers) == 0:
+            await asyncio.sleep(10)
+            return
+
         rand_peer = random.choice(self.peers)
 
         if self.mock_mode:
@@ -114,7 +118,7 @@ class NetWatcher(HOPRNode):
                 log.debug(f"Measured latency to {rand_peer}: {latency}ms")
                 self.latency[rand_peer] = latency
 
-    @formalin(message="Initiated peers transmission", sleep=5)
+    @formalin(message="Initiated peers transmission", sleep=10)
     @connectguard
     async def transmit_peers(self):
         """
@@ -134,7 +138,10 @@ class NetWatcher(HOPRNode):
         if len(peers_to_send) == self.max_lat_count:
             log.info("Peers transmission triggered by latency dictionary size")
         # checks if transmission needs to be triggered by timestamp
-        elif time.time() - self.last_peer_transmission > 60 * 5:  # 5 minutes
+        elif (
+            time.time() - self.last_peer_transmission > 60 * 5
+            and len(peers_to_send) != 0
+        ):  # 5 minutes
             log.info("Peers transmission triggered by timestamp")
         else:
             return
@@ -142,7 +149,11 @@ class NetWatcher(HOPRNode):
         data = {"id": self.peer_id, "peers": peers_to_send}
 
         # send peer list to aggregator.
-        success = await post_dictionary(self.posturl, data)
+        try:
+            success = await post_dictionary(self.posturl, data)
+        except Exception:
+            log.error("Error transmitting peer dictionary")
+            return
 
         if not success:
             log.error("Peers transmission failed")
@@ -173,10 +184,14 @@ class NetWatcher(HOPRNode):
 
         log.info(f"Got balances: {balances}")
 
-        data = {"id": self.peer_id, "balances": {"native": balance}}
+        data = {"id": self.peer_id, "balances": {"native": balances}}
 
         # sends balance to aggregator.
-        success = await post_dictionary(self.balanceurl, data)
+        try:
+            success = await post_dictionary(self.balanceurl, data)
+        except Exception:
+            log.exception("Error transmitting balance dictionary")
+            return
 
         if not success:
             log.error("Balance transmission failed")
@@ -201,7 +216,7 @@ class NetWatcher(HOPRNode):
         self.tasks.add(asyncio.create_task(self.gather_peers()))
         self.tasks.add(asyncio.create_task(self.ping_peers()))
         self.tasks.add(asyncio.create_task(self.transmit_peers()))
-        self.tasks.add(asyncio.create_task(self.transmit_balance()))
+        # self.tasks.add(asyncio.create_task(self.transmit_balance()))
 
         await asyncio.gather(*self.tasks)
 

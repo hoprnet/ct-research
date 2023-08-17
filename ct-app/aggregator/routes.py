@@ -7,7 +7,7 @@ from sanic.response import html as sanic_html
 from sanic.response import json as sanic_json
 from sanic.response import text as sanic_text
 
-from tools.db_connection.database_connection import DatabaseConnection
+from tools.db_connection import DatabaseConnection, NodePeerConnection
 from tools.utils import envvar, getlogger
 
 from .aggregator import Aggregator
@@ -147,29 +147,26 @@ def attach_endpoints(app):
             envvar("DB_USER"),
             envvar("DB_PASSWORD"),
             envvar("DB_PORT", int),
-            "raw_data_table",
-        ) as db:
-            try:
-                db.create_table(_db_columns)
-            except ValueError as e:
-                log.warning(f"Error creating table: {e}")
+        ) as session:
+            items = []
+            timestamp = datetime.now()
 
-            if not db.table_exists_guard():
-                log.error("Table not available, not sending to DB")
-                return sanic_text("Table not available", status=500)
+            for item in matchs_for_db:
+                for idx, (node, latency) in enumerate(zip(item[1], item[2])):
+                    items.append(
+                        NodePeerConnection(
+                            peer_id=item[0],
+                            node=node,
+                            latency=latency,
+                            order=idx,
+                            timestamp=timestamp,
+                        )
+                    )
 
-            log.info(f"Inserting {len(matchs_for_db)} rows into DB")
+            session.add_all(items)
+            session.commit()
 
-
-            len_data = db.insert_many(
-                "raw_data_table",
-                ["peer_id", "node_addresses", "latency_metric"],
-                matchs_for_db,
-            )
-
-            if len_data != len(matchs_for_db):
-                log.error("Error inserting into DB")
-                return sanic_text("Error inserting into DB", status=500)
+            log.info(f"Inserted {len(items)} rows into DB")
 
             return sanic_text("Data pushed to DB")
 
