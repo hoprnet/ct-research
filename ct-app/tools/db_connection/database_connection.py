@@ -21,40 +21,25 @@ class DatabaseConnection:
         self._user = user
 
         url = URL(
-            drivername="postgresql",
+            drivername="postgresql+psycopg2",
             username=user,
             password=password,
             host=host,
             port=port,
             database=database,
-            query={"sslmode": envvar("PGSSLMODE")},
+            query={
+                "sslmode": "require",
+                "sslrootcert": envvar("PGSSLROOTCERT"),
+                "sslcert": envvar("PGSSLCERT"),
+                "sslkey": envvar("PGSSLKEY"),
+            },
         )
 
-        # ssl_context = ssl.SSLContext()
-        # ssl_context.verify_mode = ssl.CERT_REQUIRED
-        # ssl_context.check_hostname = True
-        # ssl_context.load_verify_locations(envvar("PGSSLROOTCERT"))
-        # ssl_context.load_cert_chain(envvar("PGSSLCERT"), envvar("PGSSLKEY"))
-
-        sql_args = {
-            "sslrootcert": envvar("PGSSLROOTCERT"),
-            "sslcert": envvar("PGSSLCERT"),
-            "sslkey": envvar("PGSSLKEY"),
-        }
-
-        self.engine = create_engine(url, connect_args=sql_args, echo=True)
-
-        log.info("AFTER ENGINE")
-
+        self.engine = create_engine(url)
         Base.metadata.create_all(self.engine)
-
-        log.info("AFTER CREATE ALL")
-
         self.session = Session(self.engine)
 
-        log.info("AFTER SESSION")
-
-        log.info(f"Database connection established as {self.user}")
+        log.info(f"Database connection established as `{self.user}`")
 
     @property
     def user(self):

@@ -1,5 +1,4 @@
 from functools import partial
-from tools.db_connection import DatabaseConnection, NodePeerConnection
 
 from sanic import Sanic
 from sanic.worker.loader import AppLoader
@@ -26,16 +25,6 @@ def main():
     except ValueError:
         log.exception("Error while loading environment variables")
         exit(1)
-
-    with DatabaseConnection(
-        envvar("PGDATABASE"),
-        envvar("PGHOST"),
-        envvar("PGUSER"),
-        envvar("PGPASSWORD"),
-        envvar("PGPORT", int),
-    ) as session:
-        session.query(NodePeerConnection).all()
-        session.commit()
 
     loader = AppLoader(factory=partial(create_app))
 
