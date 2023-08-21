@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm import Session
 
-from tools import getlogger
+from tools import envvar, getlogger
 
 from .models import Base
 
@@ -19,6 +19,7 @@ class DatabaseConnection:
         port: str,
     ):
         self._user = user
+
         url = URL(
             drivername="postgresql",
             username=user,
@@ -26,12 +27,32 @@ class DatabaseConnection:
             host=host,
             port=port,
             database=database,
-            query={"sslmode": "disable"},
+            query={"sslmode": envvar("PGSSLMODE")},
         )
 
-        self.engine = create_engine(url)
+        # ssl_context = ssl.SSLContext()
+        # ssl_context.verify_mode = ssl.CERT_REQUIRED
+        # ssl_context.check_hostname = True
+        # ssl_context.load_verify_locations(envvar("PGSSLROOTCERT"))
+        # ssl_context.load_cert_chain(envvar("PGSSLCERT"), envvar("PGSSLKEY"))
+
+        sql_args = {
+            "sslrootcert": envvar("PGSSLROOTCERT"),
+            "sslcert": envvar("PGSSLCERT"),
+            "sslkey": envvar("PGSSLKEY"),
+        }
+
+        self.engine = create_engine(url, connect_args=sql_args, echo=True)
+
+        log.info("AFTER ENGINE")
+
         Base.metadata.create_all(self.engine)
+
+        log.info("AFTER CREATE ALL")
+
         self.session = Session(self.engine)
+
+        log.info("AFTER SESSION")
 
         log.info(f"Database connection established as {self.user}")
 

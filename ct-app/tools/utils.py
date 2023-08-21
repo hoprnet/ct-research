@@ -27,14 +27,14 @@ def getlogger() -> logging.Logger:
     logging.getLogger("swagger_client.rest").setLevel(logging.WARNING)
     logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
     logging.getLogger("sqlalchemy.orm.mapper.Mapper").setLevel(logging.WARNING)
-    logging.getLogger("sqlalchemy.engine.Engine").setLevel(logging.WARNING)
+    # logging.getLogger("sqlalchemy.engine.Engine").setLevel(logging.DEBUG)
     logging.getLogger("sqlalchemy.pool.impl.QueuePool").setLevel(logging.WARNING)
 
     if logging.getLoggerClass() != ColoredLogger:
         logging.setLoggerClass(ColoredLogger)
 
     logger = logging.getLogger(module)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
     return logger
 

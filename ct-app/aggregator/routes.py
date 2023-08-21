@@ -11,14 +11,6 @@ from tools.utils import envvar, getlogger
 
 from .aggregator import Aggregator
 
-_db_columns = [
-    ("id", "SERIAL PRIMARY KEY"),
-    ("peer_id", "VARCHAR(255) NOT NULL"),
-    ("node_addresses", "VARCHAR(255)[] NOT NULL"),
-    ("latency_metric", "INTEGER[] NOT NULL"),
-    ("timestamp", "TIMESTAMP NOT NULL DEFAULT NOW()"),
-]
-
 
 def attach_endpoints(app):
     agg = Aggregator()
@@ -141,11 +133,11 @@ def attach_endpoints(app):
             return sanic_text("No data to push to DB")
 
         with DatabaseConnection(
-            envvar("DB_NAME"),
-            envvar("DB_HOST"),
-            envvar("DB_USER"),
-            envvar("DB_PASSWORD"),
-            envvar("DB_PORT", int),
+            envvar("PGDATABASE"),
+            envvar("PGHOST"),
+            envvar("PGUSER"),
+            envvar("PGPASSWORD"),
+            envvar("PGPORT", int),
         ) as session:
             session.add_all(db_entries)
             session.commit()
