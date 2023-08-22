@@ -67,11 +67,11 @@ class NetWatcher(HOPRNode):
 
     @formalin(message="Gathering peers", sleep=60)
     @connectguard
-    async def gather_peers(self, quality: float = 1.0):
+    async def gather_peers(self, quality: float = 0.2):
         """
         Long-running task that continously updates the set of peers connected to this
         node.
-        :param quality:
+        :param quality: the minimum quality of the peers to be detected
         :returns: nothing; the set of connected peerIds is kept in self.peers.
         """
 
