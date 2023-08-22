@@ -1,5 +1,7 @@
-import swagger_client as swagger
-from swagger_client.rest import ApiException
+from hoprd_sdk import Configuration, ApiClient
+from hoprd_sdk.models import MessageBody
+from hoprd_sdk.rest import ApiException
+from hoprd_sdk.api import NodeApi, MessagesApi, AccountApi, ChannelsApi, PeersApi
 
 from .utils import getlogger
 
@@ -18,14 +20,15 @@ class HoprdAPIHelper:
         self._token = token
 
     def _setup(self, url: str, token: str):
-        configuration = swagger.Configuration()
+        configuration = Configuration()
         configuration.host = f"{url}/api/v2"
         configuration.api_key["x-auth-token"] = token
 
-        self.node_api = swagger.NodeApi(swagger.ApiClient(configuration))
-        self.message_api = swagger.MessagesApi(swagger.ApiClient(configuration))
-        self.account_api = swagger.AccountApi(swagger.ApiClient(configuration))
-        self.channels_api = swagger.ChannelsApi(swagger.ApiClient(configuration))
+        self.node_api = NodeApi(ApiClient(configuration))
+        self.peers_api = PeersApi(ApiClient(configuration))
+        self.message_api = MessagesApi(ApiClient(configuration))
+        self.account_api = AccountApi(ApiClient(configuration))
+        self.channels_api = ChannelsApi(ApiClient(configuration))
 
     @property
     def url(self) -> str:
@@ -55,7 +58,7 @@ class HoprdAPIHelper:
             log.exception("Exception when calling AccountApi->account_get_balances")
             return None
         except OSError:
-            log.exception("Exception when calling ChannelsApi->account_get_balances")
+            log.exception("Exception when calling AccountApi->account_get_balances")
             return None
 
         return int(getattr(response, type))
@@ -117,16 +120,14 @@ class HoprdAPIHelper:
     async def ping(self, peer_id: str, metric: str = "latency"):
         log.debug(f"Pinging peer {peer_id}")
 
-        body = swagger.NodePingBody(peer_id)
-
         try:
-            thread = self.node_api.node_ping(body=body, async_req=True)
+            thread = self.peers_api.peers_ping_peer(peer_id, async_req=True)
             response = thread.get()
         except ApiException:
-            log.exception("Exception when calling NodeApi->node_ping")
+            log.exception("Exception when calling PeersApi->peers_ping_peer")
             return None
         except OSError:
-            log.exception("Exception when calling ChannelsApi->channels_get_channels")
+            log.exception("Exception when calling PeersApi->peers_ping_peer")
             return None
 
         if not hasattr(response, metric):
@@ -150,7 +151,7 @@ class HoprdAPIHelper:
             log.exception("Exception when calling NodeApi->node_get_peers")
             return []
         except OSError:
-            log.exception("Exception when calling ChannelsApi->channels_get_channels")
+            log.exception("Exception when calling NodeApi->node_get_peers")
             return []
 
         if not hasattr(response, status):
@@ -177,7 +178,7 @@ class HoprdAPIHelper:
             log.exception("Exception when calling AccountApi->account_get_address")
             return None
         except OSError:
-            log.exception("Exception when calling ChannelsApi->channels_get_channels")
+            log.exception("Exception when calling AccountApi->account_get_address")
             return None
 
         if not hasattr(response, address):
@@ -191,7 +192,7 @@ class HoprdAPIHelper:
     ) -> bool:
         log.debug("Sending message")
 
-        body = swagger.MessagesBody(message, destination, path=hops)
+        body = MessageBody(message, destination, path=hops)
         try:
             thread = self.message_api.messages_send_message(body=body, async_req=True)
             thread.get()
@@ -199,7 +200,7 @@ class HoprdAPIHelper:
             log.exception("Exception when calling MessageApi->messages_send_message")
             return False
         except OSError:
-            log.exception("Exception when calling ChannelsApi->channels_get_channels")
+            log.exception("Exception when calling MessageApi->messages_send_message")
             return False
 
         return True
