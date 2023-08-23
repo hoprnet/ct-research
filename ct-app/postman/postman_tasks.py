@@ -43,19 +43,6 @@ def loop_through_nodes(node_list: list[str], node_index: int) -> tuple[str, int]
     return node_list[node_index], node_index
 
 
-def loop_through_nodes(node_list: list[str], node_index: int) -> tuple[str, int]:
-    """
-    Get the next node address in the list of nodes. If the index is out of bounds, it
-    will be reset to 0.
-    :param node_list: List of nodes to loop through.
-    :param node_index: Index of the current node.
-    :return: Tuple containing the next node address and the next node index.
-    """
-    node_index = (node_index + 1) % len(node_list)
-
-    return node_list[node_index], node_index
-
-
 # the name of the task is the name of the "<task_name>.<node_address>"
 @app.task(name=f"{envvar('TASK_NAME')}.{envvar('NODE_ADDRESS')}")
 def send_1_hop_message(
