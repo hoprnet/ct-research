@@ -29,6 +29,7 @@ def getlogger() -> logging.Logger:
     logging.getLogger("sqlalchemy.orm.mapper.Mapper").setLevel(logging.WARNING)
     logging.getLogger("sqlalchemy.engine.Engine").setLevel(logging.WARNING)
     logging.getLogger("sqlalchemy.pool.impl.QueuePool").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.orm.path_registry").setLevel(logging.WARNING)
 
     if logging.getLoggerClass() != ColoredLogger:
         logging.setLoggerClass(ColoredLogger)
