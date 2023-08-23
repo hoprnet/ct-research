@@ -83,8 +83,12 @@ class Aggregator(metaclass=Singleton):
 
             for peer, lat in items.items():
                 if lat == -1:
-                    log.debug(f"Removing peer {peer} from latency data")
-                    self._node_peer_latency[node_id].pop(peer, None)
+                    if peer in self._node_peer_latency[node_id]:
+                        log.debug(
+                            f"Removing peer {peer} from latency data for {node_id}"
+                        )
+                        self._node_peer_latency[node_id].pop(peer, None)
+
                     if len(self._node_peer_latency[node_id]) == 0:
                         log.debug(f"Removing node {node_id} from latency data")
                         self._node_peer_latency.pop(node_id, None)

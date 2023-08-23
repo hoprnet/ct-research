@@ -107,11 +107,9 @@ class NetWatcher(HOPRNode):
 
         # latency update rule is:
         # - if latency measure fails:
-        #     - if the peer is not known, add it with value None and set timestamp
-        #     - if the peer is known and the last measure is too old, set value to -1
+        #     - if the peer is not known, add it with value -1 and set timestamp
         #     - if the peer is known and the last measure is recent, do nothing
         # - if latency measure succeeds, always update
-
         now = time.time()
         async with self.latency_lock:
             if latency is not None:
@@ -125,16 +123,8 @@ class NetWatcher(HOPRNode):
             if rand_peer not in self.latency:
                 log.debug(f"Adding {rand_peer} to latency dictionary with value None")
 
-                self.latency[rand_peer] = {"value": None, "timestamp": now}
+                self.latency[rand_peer] = {"value": -1, "timestamp": now}
                 return
-
-            if now() - self.latency[rand_peer]["timestamp"] > 60 * 5:
-                log.debug(f"Setting {rand_peer} to -1 in latency dictionary (too old)")
-
-                self.latency[rand_peer] = {
-                    "value": -1,
-                    "timestamp": 0,
-                }
 
             log.debug(f"Keeping {rand_peer} in latency dictionary (recent measure)")
 
@@ -151,7 +141,11 @@ class NetWatcher(HOPRNode):
             peers_measures = deepcopy(self.latency.items())
 
         # convert the latency dictionary to a simpler dictionary for the aggregator
+        now = time.time()
         for peer, measure in peers_measures:
+            if now - measure["timestamp"] > 60 * 60 * 2:
+                measure["value"] = -1
+
             if measure["value"] is not None:
                 peers_to_send[peer] = measure["value"]
 
