@@ -138,11 +138,13 @@ class HoprdAPIHelper:
         log.info(f"Measured {measure:3d}({metric}) from peer {peer_id}")
         return measure
 
-    async def peers(self, param: str = "peer_id", status: str = "connected"):
+    async def peers(
+        self, param: str = "peer_id", status: str = "connected", quality: int = 1
+    ):
         log.debug("Getting peers")
 
         try:
-            thread = self.node_api.node_get_peers(quality=1, async_req=True)
+            thread = self.node_api.node_get_peers(quality=quality, async_req=True)
             response = thread.get()
         except ApiException:
             log.exception("Exception when calling NodeApi->node_get_peers")

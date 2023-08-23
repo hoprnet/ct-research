@@ -29,7 +29,7 @@ class NetWatcher(HOPRNode):
         self.posturl = posturl
         self.balanceurl = balanceurl
 
-        # a set to keep the peers of this node, see:
+        # a list to keep the peers of this node
         self.peers = list[str]()
 
         # a dict to keep the max_lat_count latency measures {peer: 51, }
@@ -65,13 +65,13 @@ class NetWatcher(HOPRNode):
             index = random.randint(0, 100)
             self.peer_id = f"<mock-node-address-{index:03d}>"
 
-    @formalin(message="Gathering peers", sleep=60 * 0.5)
+    @formalin(message="Gathering peers", sleep=60)
     @connectguard
-    async def gather_peers(self, quality: float = 1.0):
+    async def gather_peers(self, quality: float = 0.2):
         """
         Long-running task that continously updates the set of peers connected to this
         node.
-        :param quality:
+        :param quality: the minimum quality of the peers to be detected
         :returns: nothing; the set of connected peerIds is kept in self.peers.
         """
 
@@ -81,10 +81,8 @@ class NetWatcher(HOPRNode):
         else:
             found_peers = await self.api.peers(param="peerId", quality=quality)
 
-        new_peers = set(found_peers) - set(self.peers)
-
-        [self.peers.append(peer) for peer in new_peers]
-        log.info(f"Found new peers {', '.join(new_peers)} (total of {len(self.peers)})")
+        self.peers = found_peers
+        log.info(f"Found {len(found_peers)} peers {', '.join(found_peers)}")
 
     @formalin(message="Pinging peers", sleep=0.1)
     @connectguard
