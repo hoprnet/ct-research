@@ -15,6 +15,7 @@ def db_fixture():
         user="postgres",
         password="admin",
         port="5432",
+        tablename="test_table",
     )
     yield instance
 
@@ -49,8 +50,8 @@ def test_create_table(db_fixture: DatabaseConnection, cols_fixture: list[tuple])
     Test DatabaseConnection create_table
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
-        assert db.table_exists_guard("test_table")
+        db.create_table(cols_fixture)
+        assert db.table_exists_guard()
 
 
 def test_drop_table(db_fixture: DatabaseConnection):
@@ -58,8 +59,8 @@ def test_drop_table(db_fixture: DatabaseConnection):
     Test DatabaseConnection drop_table
     """
     with db_fixture as db:
-        db.drop_table("test_table")
-        assert not db.table_exists_guard("test_table")
+        db.drop_table()
+        assert not db.table_exists_guard()
 
 
 def test_column_exists_guard(db_fixture: DatabaseConnection, cols_fixture: list[tuple]):
@@ -67,11 +68,11 @@ def test_column_exists_guard(db_fixture: DatabaseConnection, cols_fixture: list[
     Test DatabaseConnection column_exists_guard method.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
-        assert db.column_exists_guard("test_table", cols_fixture[0][0])
-        assert not db.column_exists_guard("test_table", cols_fixture[0][0] + "foo")
+        db.create_table(cols_fixture)
+        assert db.column_exists_guard(cols_fixture[0][0])
+        assert not db.column_exists_guard(cols_fixture[0][0] + "foo")
 
-        db.drop_table("test_table")
+        db.drop_table()
 
 
 def test_non_default_columns(db_fixture: DatabaseConnection, cols_fixture: list[tuple]):
@@ -79,11 +80,9 @@ def test_non_default_columns(db_fixture: DatabaseConnection, cols_fixture: list[
     Test DatabaseConnection test_get_non_default_columns method.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
-        assert db.non_default_columns("test_table") == [
-            col[0] for col in cols_fixture[1:-1]
-        ]
-        db.drop_table("test_table")
+        db.create_table(cols_fixture)
+        assert db.non_default_columns() == [col[0] for col in cols_fixture[1:-1]]
+        db.drop_table()
 
 
 def test_insert(db_fixture: DatabaseConnection, cols_fixture: list[tuple]):
@@ -91,14 +90,13 @@ def test_insert(db_fixture: DatabaseConnection, cols_fixture: list[tuple]):
     Test DatabaseConnection insert method.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
+        db.create_table(cols_fixture)
         db.insert(
-            "test_table",
             peer_id="0xF514",
             node_addresses=["0xF24", "0xF21"],
             latency_metric=[100, 13],
         )
-        db.drop_table("test_table")
+        db.drop_table()
 
 
 def test_insert_unknown_column(
@@ -108,16 +106,15 @@ def test_insert_unknown_column(
     Test DatabaseConnection insert method with unknown column.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
+        db.create_table(cols_fixture)
         with pytest.raises(ValueError):
             db.insert(
-                "test_table",
                 peer_id="0xF514",
                 node_addresses=["0xF24", "0xF21"],
                 latency_metric=[100, 13],
                 foo="bar",
             )
-        db.drop_table("test_table")
+        db.drop_table()
 
 
 def test_insert_missing_column(
@@ -127,14 +124,13 @@ def test_insert_missing_column(
     Test DatabaseConnection insert method with missing column.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
+        db.create_table(cols_fixture)
         with pytest.raises(ValueError):
             db.insert(
-                "test_table",
                 peer_id="0xF514",
                 node_addresses=["0xF24", "0xF21"],
             )
-        db.drop_table("test_table")
+        db.drop_table()
 
 
 def test_insert_many(db_fixture: DatabaseConnection, cols_fixture: list[tuple]):
@@ -142,9 +138,8 @@ def test_insert_many(db_fixture: DatabaseConnection, cols_fixture: list[tuple]):
     Test DatabaseConnection insert_many method.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
+        db.create_table(cols_fixture)
         db.insert_many(
-            "test_table",
             ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF516", ["0xF24", "0xF21"], [100, 13]),
@@ -153,7 +148,7 @@ def test_insert_many(db_fixture: DatabaseConnection, cols_fixture: list[tuple]):
                 ("0xF519", ["0xF24", "0xF21"], [100, 13]),
             ],
         )
-        db.drop_table("test_table")
+        db.drop_table()
 
 
 def test_insert_many_unknown_column(
@@ -163,10 +158,9 @@ def test_insert_many_unknown_column(
     Test DatabaseConnection insert_many method with unknown column.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
+        db.create_table(cols_fixture)
         with pytest.raises(ValueError):
             db.insert_many(
-                "test_table",
                 ["peer_id", "node_addresses", "latency_metric", "foo"],
                 [
                     ("0xF516", ["0xF24", "0xF21"], [100, 13], "bar"),
@@ -175,7 +169,7 @@ def test_insert_many_unknown_column(
                     ("0xF519", ["0xF24", "0xF21"], [100, 13], "bar"),
                 ],
             )
-        db.drop_table("test_table")
+        db.drop_table()
 
 
 def test_insert_many_missing_column(
@@ -185,10 +179,9 @@ def test_insert_many_missing_column(
     Test DatabaseConnection insert_many method with missing column.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
+        db.create_table(cols_fixture)
         with pytest.raises(ValueError):
             db.insert_many(
-                "test_table",
                 ["peer_id", "node_addresses"],
                 [
                     ("0xF516", ["0xF24", "0xF21"], [100, 13]),
@@ -197,7 +190,7 @@ def test_insert_many_missing_column(
                     ("0xF519", ["0xF24", "0xF21"], [100, 13]),
                 ],
             )
-        db.drop_table("test_table")
+        db.drop_table()
 
 
 def test_last_row(db_fixture: DatabaseConnection, cols_fixture: list[tuple]):
@@ -205,15 +198,14 @@ def test_last_row(db_fixture: DatabaseConnection, cols_fixture: list[tuple]):
     Test DatabaseConnection last_row method.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
+        db.create_table(cols_fixture)
         db.insert(
-            "test_table",
             peer_id="0xF514",
             node_addresses=["0xF24", "0xF21"],
             latency_metric=[100, 13],
         )
-        last_row = db.last_row("test_table")
-        db.drop_table("test_table")
+        last_row = db.last_row()
+        db.drop_table()
 
         assert last_row[1:-1] == ("0xF514", ["0xF24", "0xF21"], [100, 13])
 
@@ -223,9 +215,9 @@ def test_last_row_empty(db_fixture: DatabaseConnection, cols_fixture: list[tuple
     Test DatabaseConnection last_row method with empty table.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
-        last_row = db.last_row("test_table")
-        db.drop_table("test_table")
+        db.create_table(cols_fixture)
+        last_row = db.last_row()
+        db.drop_table()
 
         assert last_row is None
 
@@ -235,15 +227,14 @@ def test_row(db_fixture: DatabaseConnection, cols_fixture: list[tuple]):
     Test DatabaseConnection row method.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
+        db.create_table(cols_fixture)
         db.insert(
-            "test_table",
             peer_id="0xF514",
             node_addresses=["0xF24", "0xF21"],
             latency_metric=[100, 13],
         )
-        row = db.row("test_table", 1)
-        db.drop_table("test_table")
+        row = db.row(1)
+        db.drop_table()
 
         assert row[1:-1] == ("0xF514", ["0xF24", "0xF21"], [100, 13])
 
@@ -253,9 +244,9 @@ def test_row_empty(db_fixture: DatabaseConnection, cols_fixture: list[tuple]):
     Test DatabaseConnection row method with empty table.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
-        row = db.row("test_table", 1)
-        db.drop_table("test_table")
+        db.create_table(cols_fixture)
+        row = db.row(1)
+        db.drop_table()
 
         assert row is None
 
@@ -265,9 +256,8 @@ def test_last_added_rows(db_fixture: DatabaseConnection, cols_fixture: list[tupl
     Test DatabaseConnection last_added_rows method.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
+        db.create_table(cols_fixture)
         db.insert_many(
-            "test_table",
             ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF516", ["0xF24", "0xF21"], [100, 13]),
@@ -275,7 +265,6 @@ def test_last_added_rows(db_fixture: DatabaseConnection, cols_fixture: list[tupl
             ],
         )
         db.insert_many(
-            "test_table",
             ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF518", ["0xF24", "0xF21"], [100, 13]),
@@ -285,8 +274,8 @@ def test_last_added_rows(db_fixture: DatabaseConnection, cols_fixture: list[tupl
                 ("0xF522", ["0xF24", "0xF21"], [100, 13]),
             ],
         )
-        rows = db.last_added_rows("test_table")
-        db.drop_table("test_table")
+        rows = db.last_added_rows()
+        db.drop_table()
 
         assert len(rows) == 5
         assert rows[0][1] == "0xF518"
@@ -303,11 +292,11 @@ def test_last_added_rows_empty(
     Test DatabaseConnection last_added_rows method with empty table.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
-        rows = db.last_added_rows("test_table")
-        db.drop_table("test_table")
+        db.create_table(cols_fixture)
+        rows = db.last_added_rows()
+        db.drop_table()
 
-        assert rows is None
+        assert len(rows) == 0
 
 
 def test_count_last_added_rows(
@@ -317,9 +306,8 @@ def test_count_last_added_rows(
     Test DatabaseConnection count_last_added_rows method.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
+        db.create_table(cols_fixture)
         db.insert_many(
-            "test_table",
             ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF516", ["0xF24", "0xF21"], [100, 13]),
@@ -327,7 +315,6 @@ def test_count_last_added_rows(
             ],
         )
         db.insert_many(
-            "test_table",
             ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF518", ["0xF24", "0xF21"], [100, 13]),
@@ -337,8 +324,8 @@ def test_count_last_added_rows(
                 ("0xF522", ["0xF24", "0xF21"], [100, 13]),
             ],
         )
-        count = db.count_last_added_rows("test_table")
-        db.drop_table("test_table")
+        count = db.count_last_added_rows()
+        db.drop_table()
 
         assert count == 5
 
@@ -350,9 +337,9 @@ def test_count_last_added_rows_empty(
     Test DatabaseConnection count_last_added_rows method with empty table.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
-        count = db.count_last_added_rows("test_table")
-        db.drop_table("test_table")
+        db.create_table(cols_fixture)
+        count = db.count_last_added_rows()
+        db.drop_table()
 
         assert count == 0
 
@@ -362,9 +349,8 @@ def test_count_uniques(db_fixture: DatabaseConnection, cols_fixture: list[tuple]
     Test DatabaseConnection count_uniques method.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
+        db.create_table(cols_fixture)
         db.insert_many(
-            "test_table",
             ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF516", ["0xF24", "0xF21"], [100, 13]),
@@ -372,7 +358,6 @@ def test_count_uniques(db_fixture: DatabaseConnection, cols_fixture: list[tuple]
             ],
         )
         db.insert_many(
-            "test_table",
             ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF517", ["0xF24", "0xF21"], [100, 13]),
@@ -382,8 +367,8 @@ def test_count_uniques(db_fixture: DatabaseConnection, cols_fixture: list[tuple]
                 ("0xF519", ["0xF24", "0xF21"], [100, 13]),
             ],
         )
-        count = db.count_uniques("test_table", "peer_id")
-        db.drop_table("test_table")
+        count = db.count_uniques("peer_id")
+        db.drop_table()
 
         assert count == 4
 
@@ -393,9 +378,9 @@ def test_count_uniques_empty(db_fixture: DatabaseConnection, cols_fixture: list[
     Test DatabaseConnection count_uniques method with empty table.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
-        count = db.count_uniques("test_table", "peer_id")
-        db.drop_table("test_table")
+        db.create_table(cols_fixture)
+        count = db.count_uniques("peer_id")
+        db.drop_table()
 
         assert count == 0
 
@@ -407,9 +392,8 @@ def test_count_uniques_in_last_added_rows(
     Test DatabaseConnection count_uniques_in_last_added_rows method.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
+        db.create_table(cols_fixture)
         db.insert_many(
-            "test_table",
             ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF516", ["0xF24", "0xF21"], [100, 13]),
@@ -417,7 +401,6 @@ def test_count_uniques_in_last_added_rows(
             ],
         )
         db.insert_many(
-            "test_table",
             ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF517", ["0xF24", "0xF21"], [100, 13]),
@@ -427,8 +410,8 @@ def test_count_uniques_in_last_added_rows(
                 ("0xF519", ["0xF24", "0xF21"], [100, 13]),
             ],
         )
-        count = db.count_uniques_in_last_added_rows("test_table", "peer_id")
-        db.drop_table("test_table")
+        count = db.count_uniques_in_last_added_rows("peer_id")
+        db.drop_table()
 
         assert count == 3
 
@@ -440,9 +423,9 @@ def test_count_uniques_in_last_added_rows_empty(
     Test DatabaseConnection count_uniques_in_last_added_rows method with empty table.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
-        count = db.count_uniques_in_last_added_rows("test_table", "peer_id")
-        db.drop_table("test_table")
+        db.create_table(cols_fixture)
+        count = db.count_uniques_in_last_added_rows("peer_id")
+        db.drop_table()
 
         assert count == 0
 
@@ -454,9 +437,9 @@ def test_rows_after_timestamp_empty(
     Test DatabaseConnection rows_after_timestamp method when theres nothing in the db.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
-        rows = db.rows_after_timestamp("test_table", datetime(1970, 1, 1, 0, 0, 0, 0))
-        db.drop_table("test_table")
+        db.create_table(cols_fixture)
+        rows = db.rows_after_timestamp(datetime(1970, 1, 1, 0, 0, 0, 0))
+        db.drop_table()
 
         assert rows == []
 
@@ -468,17 +451,16 @@ def test_rows_after_timestamp_to_recent(
     Test DatabaseConnection rows_after_timestamp method when timestamp is to recent.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
+        db.create_table(cols_fixture)
         db.insert_many(
-            "test_table",
             ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF516", ["0xF24", "0xF21"], [100, 13]),
                 ("0xF517", ["0xF24", "0xF21"], [100, 13]),
             ],
         )
-        rows = db.rows_after_timestamp("test_table", datetime.now())
-        db.drop_table("test_table")
+        rows = db.rows_after_timestamp(datetime.now())
+        db.drop_table()
 
         assert rows == []
 
@@ -490,9 +472,8 @@ def test_rows_after_timestamp(
     Test DatabaseConnection rows_after_timestamp method when there is content to return.
     """
     with db_fixture as db:
-        db.create_table("test_table", cols_fixture)
+        db.create_table(cols_fixture)
         db.insert_many(
-            "test_table",
             ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF516", ["0xF24", "0xF21"], [100, 13]),
@@ -502,7 +483,6 @@ def test_rows_after_timestamp(
 
         time.sleep(5)
         db.insert_many(
-            "test_table",
             ["peer_id", "node_addresses", "latency_metric"],
             [
                 ("0xF518", ["0xF24", "0xF21"], [100, 13]),
@@ -510,10 +490,8 @@ def test_rows_after_timestamp(
                 ("0xF519", ["0xF24", "0xF21"], [100, 13]),
             ],
         )
-        rows = db.rows_after_timestamp(
-            "test_table", datetime.now() - timedelta(seconds=4)
-        )
-        db.drop_table("test_table")
+        rows = db.rows_after_timestamp(datetime.now() - timedelta(seconds=4))
+        db.drop_table()
 
         assert len(rows) == 3
 

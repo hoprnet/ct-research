@@ -138,30 +138,32 @@ class HoprdAPIHelper:
         log.info(f"Measured {measure:3d}({metric}) from peer {peer_id}")
         return measure
 
-    async def peers(self, param: str = "peer_id", status: str = "connected"):
+    async def peers(
+        self, param: str = "peer_id", status: str = "connected", quality: int = 1
+    ):
         log.debug("Getting peers")
 
         try:
-            thread = self.node_api.node_get_peers(quality=1, async_req=True)
+            thread = self.node_api.node_get_peers(quality=quality, async_req=True)
             response = thread.get()
         except ApiException:
             log.exception("Exception when calling NodeApi->node_get_peers")
-            return None
+            return []
         except OSError:
             log.exception("Exception when calling ChannelsApi->channels_get_channels")
-            return None
+            return []
 
         if not hasattr(response, status):
             log.error(f"No `{status}` from {self.url}")
-            return None
+            return []
 
         if len(getattr(response, status)) == 0:
             log.info(f"No peer with status `{status}`")
-            return None
+            return []
 
         if not hasattr(getattr(response, status)[0], param):
             log.error(f"No param `{param}` found for peers")
-            return None
+            return []
 
         return [getattr(peer, param) for peer in getattr(response, status)]
 

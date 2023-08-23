@@ -8,7 +8,7 @@ import aiohttp
 from celery import Celery
 
 from assets.parameters_schema import schema as schema_name
-from tools.decorator import connectguard, econ_handler_wakeupcall, wakeupcall
+from tools.decorator import connectguard, wakeupcall_from_file, wakeupcall
 from tools.hopr_node import HOPRNode
 from tools.db_connection.database_connection import DatabaseConnection
 from tools.utils import getlogger, read_json_file, envvar
@@ -53,7 +53,7 @@ class EconomicHandler(HOPRNode):
         print(f"{self.connected=}")
         return self.connected
 
-    @econ_handler_wakeupcall()
+    @wakeupcall_from_file(folder="/assets", filename="parameters.json")
     @connectguard
     async def scheduler(self, test_staging=True):
         """
@@ -88,11 +88,9 @@ class EconomicHandler(HOPRNode):
 
             parameters_equations_budget = ordered_tasks[0][1:]
             database_metrics = ordered_tasks[1][1]
-            print(database_metrics)
 
             # Add random stake and a random safe address to the metrics database
             _, new_database_metrics = self.add_random_data_to_metrics(database_metrics)
-            print(new_database_metrics)
 
             # Extract Parameters
             parameters, equations, budget_param = parameters_equations_budget
@@ -235,10 +233,10 @@ class EconomicHandler(HOPRNode):
             envvar("DB_USER"),
             envvar("DB_PASSWORD"),
             envvar("DB_PORT", int),
+            "raw_data_table",
         ) as db:
             try:
-                table_name = "raw_data_table"
-                last_added_rows = db.last_added_rows(table_name)
+                last_added_rows = db.last_added_rows()
 
                 metrics_dict = {}
                 for (

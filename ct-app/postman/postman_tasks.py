@@ -42,6 +42,19 @@ def loop_through_nodes(node_list: list[str], node_index: int) -> tuple[str, int]
     return node_list[node_index], node_index
 
 
+def loop_through_nodes(node_list: list[str], node_index: int) -> tuple[str, int]:
+    """
+    Get the next node address in the list of nodes. If the index is out of bounds, it
+    will be reset to 0.
+    :param node_list: List of nodes to loop through.
+    :param node_index: Index of the current node.
+    :return: Tuple containing the next node address and the next node index.
+    """
+    node_index = (node_index + 1) % len(node_list)
+
+    return node_list[node_index], node_index
+
+
 # the name of the task is the name of the "<task_name>.<node_address>"
 @app.task(name=f"{envvar('TASK_NAME')}.{envvar('NODE_ADDRESS')}")
 def send_1_hop_message(
@@ -53,8 +66,9 @@ def send_1_hop_message(
 ) -> TaskStatus:
     """
     Celery task to send `messages_count` 1-hop messages to a peer.
+    
     This method is the entry point for the celery worker. As the task that is executed
-    relies on asyncio, we need to run it in a decated event loop. The only call this
+    relies on asyncio, we need to run it in a dedicated event loop. The only call this
     method does is to run the async method `async_send_1_hop_message`.
     :param peer: Peer ID to send messages to.
     :param expected_count: Number of messages to send.
@@ -64,7 +78,7 @@ def send_1_hop_message(
     """
     return asyncio.run(
         async_send_1_hop_message(peer, expected_count, node_list, node_index, timestamp)
-    )
+
 
 
 async def async_send_1_hop_message(
@@ -76,7 +90,7 @@ async def async_send_1_hop_message(
 ) -> TaskStatus:
     """
     Celery task to send `count` 1-hop messages to a peer in an async manner. A timeout
-    mecanism is implemented to stop the task if sending a given buncn of messages takes
+    mecanism is implemented to stop the task if sending a given bunch of messages takes
     too long.
     :param peer_id: Peer ID to send messages to.
     :param expected_count: Number of messages to send.
