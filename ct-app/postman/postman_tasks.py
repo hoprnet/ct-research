@@ -1,9 +1,10 @@
 import asyncio
 import time
+from enum import Enum
 
 from celery import Celery
+
 from tools import HoprdAPIHelper, envvar, getlogger
-from enum import Enum
 
 log = getlogger()
 
@@ -19,27 +20,14 @@ class TaskStatus(Enum):
     RETRIED = "RETRIED"
     SPLITTED = "SPLITTED"
     TIMEOUT = "TIMEOUT"
+    FAILED = "FAILED"
 
 
 app = Celery(
     name=envvar("PROJECT_NAME"),
     broker=f"amqp://{envvar('RABBITMQ_USERNAME')}:{envvar('RABBITMQ_PASSWORD')}@{envvar('RABBITMQ_HOST')}/{envvar('RABBITMQ_VIRTUALHOST')}",
-    # backend=envvar("CELERY_RESULT_BACKEND"),
 )
 app.autodiscover_tasks(force=True)
-
-
-def loop_through_nodes(node_list: list[str], node_index: int) -> tuple[str, int]:
-    """
-    Get the next node address in the list of nodes. If the index is out of bounds, it
-    will be reset to 0.
-    :param node_list: List of nodes to loop through.
-    :param node_index: Index of the current node.
-    :return: Tuple containing the next node address and the next node index.
-    """
-    node_index = (node_index + 1) % len(node_list)
-
-    return node_list[node_index], node_index
 
 
 def loop_through_nodes(node_list: list[str], node_index: int) -> tuple[str, int]:
@@ -65,9 +53,8 @@ def send_1_hop_message(
     timestamp: float = time.time(),
 ) -> TaskStatus:
     """
-    Celery task to send `messages_count` 1-hop messages to a peer.
-    
-    This method is the entry point for the celery worker. As the task that is executed
+    Celery task to send `messages_count` 1-hop messages to a peer. This method is the
+    entry point for the celery worker. As the task that is executed
     relies on asyncio, we need to run it in a dedicated event loop. The only call this
     method does is to run the async method `async_send_1_hop_message`.
     :param peer: Peer ID to send messages to.
@@ -78,7 +65,7 @@ def send_1_hop_message(
     """
     return asyncio.run(
         async_send_1_hop_message(peer, expected_count, node_list, node_index, timestamp)
-
+    )
 
 
 async def async_send_1_hop_message(
@@ -102,14 +89,17 @@ async def async_send_1_hop_message(
     # at the first iteration, the timestamp is set to the current time. At each task
     # transfer, the method will check if the timestamp is recent enough to consider
     # trying to send a message
-    if time.time() - timestamp > 60 * 60 * 2:  # timestamp is older than 2 hours
-        log.error("Trying to send a message for more than 2 hours, stopping")
-        return TaskStatus.TIMEOUT
+    timeout = envvar("TIMEOUT", int)
+    if time.time() - timestamp > timeout:  # timestamp is older than timeout
+        log.error(f"Trying to send a message for more than {timeout}s, stopping")
+        return TaskStatus.TIMEOUT, TaskStatus.DEFAULT
 
     # initialize the API helper and task status
     api_host = envvar("API_HOST")
     api_token = envvar("API_TOKEN")
     status = TaskStatus.DEFAULT
+    feedback_status = TaskStatus.DEFAULT
+
     effective_count = 0
 
     api = HoprdAPIHelper(api_host, api_token)
@@ -121,7 +111,7 @@ async def async_send_1_hop_message(
     except Exception:
         log.error("Could not get address from API")
         address = None
-    finally:
+    else:
         log.info(f"Got address: {address}")
 
     # if the node is not reachable, the task is tranfered to the next node in the list
@@ -148,35 +138,46 @@ async def async_send_1_hop_message(
         + f"{address} ({api_host})"
     )
 
-    app.send_task(
-        "feedback_task",
-        args=(
-            peer_id,
-            address,
-            effective_count,
-            expected_count,
-            status.value,
-            timestamp,
-        ),
-        queue="feedback",
-    )
-
     if status != TaskStatus.SUCCESS:
         node_address, node_index = loop_through_nodes(node_list, node_index)
         log.info(
             f"Creating task for {node_address} to send {effective_count} messages."
         )
 
+        try:
+            app.send_task(
+                f"{envvar('TASK_NAME')}.{node_address}",
+                args=(
+                    peer_id,
+                    expected_count - effective_count,
+                    node_list,
+                    node_index,
+                    timestamp,
+                ),
+                queue=node_address,
+            )
+        except Exception:
+            # shoud never happen. If it does, it means that the targeted queue is not up
+            log.exception("Could not send task")
+
+    try:
         app.send_task(
-            f"{envvar('TASK_NAME')}.{node_address}",
+            "feedback_task",
             args=(
                 peer_id,
-                expected_count - effective_count,
-                node_list,
-                node_index,
+                address,
+                effective_count,
+                expected_count,
+                status.value,
                 timestamp,
             ),
-            queue=node_address,
+            queue="feedback",
         )
+    except Exception:
+        # shoud never happen. If it does, it means that the targeted queue is not up
+        log.exception("Could not send feedback task")
+        feedback_status = TaskStatus.FAILED
+    else:
+        feedback_status = TaskStatus.SUCCESS
 
-    return status
+    return status, feedback_status
