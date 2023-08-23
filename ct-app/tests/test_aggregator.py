@@ -174,6 +174,23 @@ def test_convert_to_data_multiple_peers_remove_more():
 
 
 @clear_instance
+def test_convert_to_data_multiple_peers_remove_unknown():
+    """
+    Test that the convert_to_db_data method works correctly when there are multiple
+    items and an unknown peer needs to be removed.
+    """
+
+    agg.handle_node_peer_latencies("pod_id_1", {"peer": 1, "peer2": 2})
+    agg.handle_node_peer_latencies("pod_id_2", {"peer": 4, "peer2": 3})
+    agg.handle_node_peer_latencies("pod_id_1", {"peer3": -1})
+
+    assert agg.convert_to_db_data() == [
+        ("peer", ["pod_id_1", "pod_id_2"], [1, 4]),
+        ("peer2", ["pod_id_2", "pod_id_1"], [3, 2]),
+    ]
+
+
+@clear_instance
 def test_convert_to_data_multiple_peers_remove_all():
     """
     Test that the convert_to_db_data method works correctly when there are multiple
