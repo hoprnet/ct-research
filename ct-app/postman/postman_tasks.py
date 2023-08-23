@@ -1,9 +1,10 @@
 import asyncio
 import time
+from enum import Enum
 
 from celery import Celery
+
 from tools import HoprdAPIHelper, envvar, getlogger
-from enum import Enum
 
 log = getlogger()
 
@@ -65,9 +66,8 @@ def send_1_hop_message(
     timestamp: float = time.time(),
 ) -> TaskStatus:
     """
-    Celery task to send `messages_count` 1-hop messages to a peer.
-    
-    This method is the entry point for the celery worker. As the task that is executed
+    Celery task to send `messages_count` 1-hop messages to a peer. This method is the
+    entry point for the celery worker. As the task that is executed
     relies on asyncio, we need to run it in a dedicated event loop. The only call this
     method does is to run the async method `async_send_1_hop_message`.
     :param peer: Peer ID to send messages to.
@@ -78,7 +78,7 @@ def send_1_hop_message(
     """
     return asyncio.run(
         async_send_1_hop_message(peer, expected_count, node_list, node_index, timestamp)
-
+    )
 
 
 async def async_send_1_hop_message(
