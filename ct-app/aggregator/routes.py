@@ -7,7 +7,7 @@ from sanic.response import html as sanic_html
 from sanic.response import json as sanic_json
 from sanic.response import text as sanic_text
 from tools.db_connection import DatabaseConnection
-from tools.utils import envvar, getlogger
+from tools.utils import getlogger
 
 from .aggregator import Aggregator
 
@@ -132,13 +132,7 @@ def attach_endpoints(app):
             log.info("No data to send to DB")
             return sanic_text("No data to push to DB")
 
-        with DatabaseConnection(
-            envvar("PGDATABASE"),
-            envvar("PGHOST"),
-            envvar("PGUSER"),
-            envvar("PGPASSWORD"),
-            envvar("PGPORT", int),
-        ) as session:
+        with DatabaseConnection() as session:
             session.add_all(db_entries)
             session.commit()
 

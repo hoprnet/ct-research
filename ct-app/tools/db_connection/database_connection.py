@@ -10,25 +10,31 @@ log = getlogger()
 
 
 class DatabaseConnection:
-    def __init__(
-        self,
-        database: str,
-        host: str,
-        user: str,
-        password: str,
-        port: str,
-    ):
-        self._user = user
+    """
+    Database connection class.
 
+    This class requires the following environment variables to be set:
+    - PGUSER: the database user name
+    - PGPASSWORD: the database user password
+    - PGHOST: the database host
+    - PGPORT: the database port
+    - PGDATABASE: the database name
+    - PGSSLMODE: the SSL mode
+    - PGSSLROOTCERT: the SSL root certificate
+    - PGSSLCERT: the SSL certificate
+    - PGSSLKEY: the SSL key
+    """
+
+    def __init__(self):
         url = URL(
             drivername="postgresql+psycopg2",
-            username=user,
-            password=password,
-            host=host,
-            port=port,
-            database=database,
+            username=envvar("PGUSER"),
+            password=envvar("PGPASSWORD"),
+            host=envvar("PGHOST"),
+            port=envvar("PGPORT", int),
+            database=envvar("PGDATABASE"),
             query={
-                "sslmode": "require",
+                "sslmode": envvar("PGSSLMODE"),
                 "sslrootcert": envvar("PGSSLROOTCERT"),
                 "sslcert": envvar("PGSSLCERT"),
                 "sslkey": envvar("PGSSLKEY"),
@@ -44,7 +50,7 @@ class DatabaseConnection:
     @property
     def user(self):
         """User name getter"""
-        return self._user
+        return envvar("PGUSER")
 
     def __enter__(self):
         return self.session

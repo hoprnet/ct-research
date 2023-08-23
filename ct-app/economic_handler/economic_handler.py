@@ -229,13 +229,7 @@ class EconomicHandler(HOPRNode):
         connection details, retrieves the latest peer information from the database
         table, and returns the data as a dictionary.
         """
-        with DatabaseConnection(
-            envvar("DB_NAME"),
-            envvar("DB_HOST"),
-            envvar("DB_USER"),
-            envvar("DB_PASSWORD"),
-            envvar("DB_PORT", int),
-        ) as session:
+        with DatabaseConnection() as session:
             max_timestamp = session.query(
                 func.max(NodePeerConnection.timestamp)
             ).scalar()
