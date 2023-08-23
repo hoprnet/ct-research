@@ -46,7 +46,7 @@ def test_singleton_update():
     agg1 = Aggregator()
     agg2 = Aggregator()
 
-    agg1.add_node_peer_latencies("pod_id", {"peer": 1})
+    agg1.handle_node_peer_latencies("pod_id", {"peer": 1})
     agg2.set_node_update("pod_id", datetime.now())
 
     assert agg1.get_node_peer_latencies() == agg2.get_node_peer_latencies()
@@ -60,7 +60,7 @@ def test_add():
     pod_id = "pod_id"
     items = {"peer": 1}
 
-    agg.add_node_peer_latencies(pod_id, items)
+    agg.handle_node_peer_latencies(pod_id, items)
 
     assert agg._node_peer_latency.get(pod_id) == items
 
@@ -122,7 +122,7 @@ def test_convert_to_db_data_simple():
     pod_id = "pod_id"
     items = {"peer": 1}
 
-    agg.add_node_peer_latencies(pod_id, items)
+    agg.handle_node_peer_latencies(pod_id, items)
 
     assert agg.convert_to_db_data() == [("peer", ["pod_id"], [1])]
 
@@ -136,12 +136,53 @@ def test_convert_to_db_data_multiple_peers():
     pod_id = "pod_id"
     items = {"peer": 1, "peer2": 2}
 
-    agg.add_node_peer_latencies(pod_id, items)
+    agg.handle_node_peer_latencies(pod_id, items)
 
     assert agg.convert_to_db_data() == [
         ("peer", ["pod_id"], [1]),
         ("peer2", ["pod_id"], [2]),
     ]
+
+
+@clear_instance
+def test_convert_to_data_multiple_peers_remove():
+    """
+    Test that the convert_to_db_data method works correctly when there are multiple
+    items and one of them needs to be removed.
+    """
+    agg.handle_node_peer_latencies("pod_id", {"peer": 1, "peer2": 2})
+    agg.handle_node_peer_latencies("pod_id", {"peer": -1, "peer2": 3})
+
+    assert agg.convert_to_db_data() == [("peer2", ["pod_id"], [3])]
+
+
+@clear_instance
+def test_convert_to_data_multiple_peers_remove_more():
+    """
+    Test that the convert_to_db_data method works correctly when there are multiple
+    items and one of them needs to be removed.
+    """
+
+    agg.handle_node_peer_latencies("pod_id_1", {"peer": 1, "peer2": 2})
+    agg.handle_node_peer_latencies("pod_id_2", {"peer": 4, "peer2": 3})
+    agg.handle_node_peer_latencies("pod_id_1", {"peer2": -1})
+
+    assert agg.convert_to_db_data() == [
+        ("peer", ["pod_id_1", "pod_id_2"], [1, 4]),
+        ("peer2", ["pod_id_2"], [3]),
+    ]
+
+
+@clear_instance
+def test_convert_to_data_multiple_peers_remove_all():
+    """
+    Test that the convert_to_db_data method works correctly when there are multiple
+    items and one of them needs to be removed. In this test, all pods should be removed.
+    """
+    agg.handle_node_peer_latencies("pod_id", {"peer": 1, "peer2": 2})
+    agg.handle_node_peer_latencies("pod_id", {"peer": -1, "peer2": -1})
+
+    assert agg.convert_to_db_data() == []
 
 
 @clear_instance
@@ -155,8 +196,8 @@ def test_convert_to_db_data_multiple_pods():
     items = {"peer": 1}
     items2 = {"peer2": 2}
 
-    agg.add_node_peer_latencies(pod_id, items)
-    agg.add_node_peer_latencies(pod_id2, items2)
+    agg.handle_node_peer_latencies(pod_id, items)
+    agg.handle_node_peer_latencies(pod_id2, items2)
 
     assert agg.convert_to_db_data() == [
         ("peer", ["pod_id"], [1]),
@@ -172,7 +213,7 @@ def test_add_multiple():
     pod_id = "pod_id"
     items = {"peer": 1, "peer2": 2}
 
-    agg.add_node_peer_latencies(pod_id, items)
+    agg.handle_node_peer_latencies(pod_id, items)
 
     assert agg.get_node_peer_latencies()[pod_id] == items
 
@@ -187,8 +228,8 @@ def test_add_multiple_pods():
     items = {"peer": 1}
     items2 = {"peer2": 2}
 
-    agg.add_node_peer_latencies(pod_id, items)
-    agg.add_node_peer_latencies(pod_id2, items2)
+    agg.handle_node_peer_latencies(pod_id, items)
+    agg.handle_node_peer_latencies(pod_id2, items2)
 
     assert agg.get_node_peer_latencies()[pod_id] == items
     assert agg.get_node_peer_latencies()[pod_id2] == items2
@@ -203,8 +244,8 @@ def test_add_to_existing_pod():
     items = {"peer": 1}
     items2 = {"peer2": 2}
 
-    agg.add_node_peer_latencies(pod_id, items)
-    agg.add_node_peer_latencies(pod_id, items2)
+    agg.handle_node_peer_latencies(pod_id, items)
+    agg.handle_node_peer_latencies(pod_id, items2)
 
     assert agg.get_node_peer_latencies()[pod_id] == {"peer": 1, "peer2": 2}
 
@@ -220,9 +261,9 @@ def test_add_to_existing_pod_multiple():
     items2 = {"peer": 2, "peer2": 1}
     items3 = {"peer2": 2}
 
-    agg.add_node_peer_latencies(pod_id, items)
-    agg.add_node_peer_latencies(pod_id, items2)
-    agg.add_node_peer_latencies(pod_id, items3)
+    agg.handle_node_peer_latencies(pod_id, items)
+    agg.handle_node_peer_latencies(pod_id, items2)
+    agg.handle_node_peer_latencies(pod_id, items3)
 
     assert agg.get_node_peer_latencies()[pod_id] == {"peer": 2, "peer2": 2}
 
