@@ -217,7 +217,7 @@ class HoprdAPIHelper:
         return getattr(response, address)
 
     async def send_message(
-        self, destination: str, message: str, hops: list[str], tag: int = 320
+        self, destination: str, message: str, hops: list[str], tag: int = 0x0320
     ) -> bool:
         log.debug("Sending message")
 
