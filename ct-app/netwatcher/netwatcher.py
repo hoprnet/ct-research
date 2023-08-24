@@ -124,7 +124,7 @@ class NetWatcher(HOPRNode):
                 rand_peer not in self.latency
                 or self.latency[rand_peer]["value"] is None
             ):
-                log.debug(f"Adding {rand_peer} to latency dictionary with value None")
+                log.debug(f"Adding {rand_peer} to latency dictionary with value -1")
 
                 self.latency[rand_peer] = {"value": -1, "timestamp": now}
                 return
