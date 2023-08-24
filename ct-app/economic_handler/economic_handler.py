@@ -10,8 +10,10 @@ from celery import Celery
 from assets.parameters_schema import schema as schema_name
 from tools.decorator import connectguard, wakeupcall_from_file, wakeupcall
 from tools.hopr_node import HOPRNode
-from tools.db_connection.database_connection import DatabaseConnection
+from tools.db_connection import DatabaseConnection, NodePeerConnection
 from tools.utils import getlogger, read_json_file, envvar
+
+from sqlalchemy import func
 
 log = getlogger()
 
@@ -227,37 +229,48 @@ class EconomicHandler(HOPRNode):
         connection details, retrieves the latest peer information from the database
         table, and returns the data as a dictionary.
         """
-        with DatabaseConnection(
-            envvar("DB_NAME"),
-            envvar("DB_HOST"),
-            envvar("DB_USER"),
-            envvar("DB_PASSWORD"),
-            envvar("DB_PORT", int),
-            "raw_data_table",
-        ) as db:
-            try:
-                last_added_rows = db.last_added_rows()
+        with DatabaseConnection() as session:
+            max_timestamp = session.query(
+                func.max(NodePeerConnection.timestamp)
+            ).scalar()
 
-                metrics_dict = {}
-                for (
-                    id,
-                    peer_id,
-                    node_addresses,
-                    latency_metrics,
-                    timestamp,
-                ) in last_added_rows:
-                    metrics_dict[peer_id] = {
-                        "node_addresses": node_addresses,
-                        "latency_metrics": latency_metrics,
-                        "id": id,
-                        "Timestamp": timestamp,
+            last_added_rows = (
+                session.query(NodePeerConnection)
+                .filter_by(timestamp=max_timestamp)
+                .all()
+            )
+
+            metrics_dict = {}
+
+            for row in last_added_rows:
+                if row.peer_id not in metrics_dict:
+                    metrics_dict[row.peer_id] = {
+                        "node_addresses": [],
+                        "latency_metrics": [],
+                        "Timestamp": row.timestamp,
+                        "order": [],
                     }
+                metrics_dict[row.peer_id]["node_addresses"].append(row.node)
+                metrics_dict[row.peer_id]["latency_metrics"].append(row.latency)
+                metrics_dict[row.peer_id]["temp_order"].append(row.order)
 
-                return "metricsDB", metrics_dict
+            # sort node_addresses and latency based on temp_order
+            for peer_id in metrics_dict:
+                order = metrics_dict[peer_id]["temp_order"]
+                addresses = metrics_dict[peer_id]["node_addresses"]
+                latency = metrics_dict[peer_id]["latency_metrics"]
 
-            except ValueError:
-                log.exception("Error reading data from database table")
-            return "metricsDB", {}
+                addresses = [x for _, x in sorted(zip(order, addresses))]
+                latency = [x for _, x in sorted(zip(order, latency))]
+
+                metrics_dict[peer_id]["node_addresses"] = addresses
+                metrics_dict[peer_id]["latency_metrics"] = latency
+
+            # remove the temp order key from the dictionaries
+            for peer_id in metrics_dict:
+                del metrics_dict[peer_id]["temp_order"]
+
+            return "metricsDB", metrics_dict
 
     def add_random_data_to_metrics(self, metrics_dict):
         """
