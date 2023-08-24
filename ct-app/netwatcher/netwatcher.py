@@ -120,7 +120,10 @@ class NetWatcher(HOPRNode):
 
             log.warning(f"Failed to ping {rand_peer}")
 
-            if rand_peer not in self.latency:
+            if (
+                rand_peer not in self.latency
+                or self.latency[rand_peer]["value"] is None
+            ):
                 log.debug(f"Adding {rand_peer} to latency dictionary with value None")
 
                 self.latency[rand_peer] = {"value": -1, "timestamp": now}
