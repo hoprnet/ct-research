@@ -15,31 +15,9 @@ class HoprdAPIHelper:
     """
 
     def __init__(self, url: str, token: str):
-        self._setup(url, token)
-
-        self._url = url
-        self._token = token
-
-    def _setup(self, url: str, token: str):
-        configuration = Configuration()
-        configuration.host = f"{url}/api/v2"
-        configuration.api_key["x-auth-token"] = token
-
-        api_client = ApiClient(configuration)
-
-        self.node_api = NodeApi(api_client)
-        self.peers_api = PeersApi(api_client)
-        self.message_api = MessagesApi(api_client)
-        self.account_api = AccountApi(api_client)
-        self.channels_api = ChannelsApi(api_client)
-
-    @property
-    def url(self) -> str:
-        return self._url
-
-    @property
-    def token(self) -> str:
-        return self._token
+        self.configuration = Configuration()
+        self.configuration.host = f"{url}/api/v3"
+        self.configuration.api_key["x-auth-token"] = token
 
     async def balance(self, type: str = "native"):
         """
@@ -55,8 +33,10 @@ class HoprdAPIHelper:
         log.debug("Getting balance")
 
         try:
-            thread = self.account_api.account_get_balances(async_req=True)
-            response = thread.get()
+            with ApiClient(self.configuration) as client:
+                account_api = AccountApi(client)
+                thread = account_api.account_get_balances(async_req=True)
+                response = thread.get()
         except ApiException:
             log.exception("ApiException when calling AccountApi->account_get_balances")
             return None
@@ -73,10 +53,12 @@ class HoprdAPIHelper:
         log.debug("Getting all channels")
 
         try:
-            thread = self.channels_api.channels_get_channels(
-                including_closed=include_closed, async_req=True
-            )
-            response = thread.get()
+            async with ApiClient(self.configuration) as client:
+                channels_api = ChannelsApi(client)
+                thread = channels_api.channels_get_channels(
+                    including_closed=include_closed, async_req=True
+                )
+                response = thread.get()
         except ApiException:
             log.exception(
                 "ApiException when calling ChannelsApi->channels_get_channels"
@@ -101,10 +83,12 @@ class HoprdAPIHelper:
         log.debug("Getting channel topology")
 
         try:
-            thread = self.channels_api.channels_get_channels(
-                full_topology="true", async_req=True
-            )
-            response = thread.get()
+            with ApiClient(self.configuration) as client:
+                channels_api = ChannelsApi(client)
+                thread = channels_api.channels_get_channels(
+                    full_topology="true", async_req=True
+                )
+                response = thread.get()
         except ApiException:
             log.exception(
                 "ApiException when calling ChannelsApi->channels_get_channels"
@@ -141,8 +125,10 @@ class HoprdAPIHelper:
         log.debug(f"Pinging peer {peer_id}")
 
         try:
-            thread = self.peers_api.peers_ping_peer(peer_id, async_req=True)
-            response = thread.get()
+            with ApiClient(self.configuration) as client:
+                peers_api = PeersApi(client)
+                thread = peers_api.peers_ping_peer(peer_id, async_req=True)
+                response = thread.get()
         except ApiException:
             log.exception("ApiException when calling PeersApi->peers_ping_peer")
             return None
@@ -168,8 +154,10 @@ class HoprdAPIHelper:
         log.debug("Getting peers")
 
         try:
-            thread = self.node_api.node_get_peers(quality=quality, async_req=True)
-            response = thread.get()
+            with ApiClient(self.configuration) as client:
+                node_api = NodeApi(client)
+                thread = node_api.node_get_peers(quality=quality, async_req=True)
+                response = thread.get()
         except ApiException:
             log.exception("ApiException when calling NodeApi->node_get_peers")
             return []
@@ -181,7 +169,7 @@ class HoprdAPIHelper:
             return []
 
         if not hasattr(response, status):
-            log.error(f"No `{status}` from {self.url}")
+            log.error(f"No `{status}` returned from the API")
             return []
 
         if len(getattr(response, status)) == 0:
@@ -198,8 +186,10 @@ class HoprdAPIHelper:
         log.debug("Getting address")
 
         try:
-            thread = self.account_api.account_get_address(async_req=True)
-            response = thread.get()
+            with ApiClient(self.configuration) as client:
+                account_api = AccountApi(client)
+                thread = account_api.account_get_address(async_req=True)
+                response = thread.get()
         except ApiException:
             log.exception("ApiException when calling AccountApi->account_get_address")
             return None
@@ -223,8 +213,10 @@ class HoprdAPIHelper:
 
         body = MessagesBody(tag, message, destination, path=hops)
         try:
-            thread = self.message_api.messages_send_message(body=body, async_req=True)
-            thread.get()
+            with ApiClient(self.configuration) as client:
+                message_api = MessagesApi(client)
+                thread = message_api.messages_send_message(body=body, async_req=True)
+                thread.get()
         except ApiException:
             log.exception("ApiException when calling MessageApi->messages_send_message")
             return False
