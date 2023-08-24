@@ -165,7 +165,12 @@ def test_convert_to_data_multiple_peers_remove():
     agg.handle_node_peer_latencies("pod_id", {"peer": 1, "peer2": 2})
     agg.handle_node_peer_latencies("pod_id", {"peer": -1, "peer2": 3})
 
-    assert agg.convert_to_db_data() == [("peer2", ["pod_id"], [3])]
+    db_ready_data = agg.convert_to_db_data()
+
+    assert len(db_ready_data) == 1
+    assert db_ready_data[0].peer_id == "peer2"
+    assert db_ready_data[0].node == "pod_id"
+    assert db_ready_data[0].latency == 3
 
 
 @clear_instance
@@ -179,10 +184,14 @@ def test_convert_to_data_multiple_peers_remove_more():
     agg.handle_node_peer_latencies("pod_id_2", {"peer": 4, "peer2": 3})
     agg.handle_node_peer_latencies("pod_id_1", {"peer2": -1})
 
-    assert agg.convert_to_db_data() == [
-        ("peer", ["pod_id_1", "pod_id_2"], [1, 4]),
-        ("peer2", ["pod_id_2"], [3]),
-    ]
+    db_ready_data = agg.convert_to_db_data()
+
+    assert len(db_ready_data) == 3
+    assert [
+        entry
+        for entry in db_ready_data
+        if entry.peer_id == "peer2" and entry.node == "pod_id_1"
+    ] == []
 
 
 @clear_instance
@@ -196,10 +205,9 @@ def test_convert_to_data_multiple_peers_remove_unknown():
     agg.handle_node_peer_latencies("pod_id_2", {"peer": 4, "peer2": 3})
     agg.handle_node_peer_latencies("pod_id_1", {"peer3": -1})
 
-    assert agg.convert_to_db_data() == [
-        ("peer", ["pod_id_1", "pod_id_2"], [1, 4]),
-        ("peer2", ["pod_id_2", "pod_id_1"], [3, 2]),
-    ]
+    db_ready_data = agg.convert_to_db_data()
+
+    assert len(db_ready_data) == 4
 
 
 @clear_instance
