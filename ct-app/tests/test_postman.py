@@ -82,6 +82,9 @@ async def test_async_send_1_hop_message_hit_splitted(mocker):
     mocker.patch(
         "postman.postman_tasks.HoprdAPIHelper.get_address", return_value="foo_address"
     )
+    mocker.patch(
+        "postman.postman_tasks.HoprdAPIHelper.send_message", return_value=False
+    )
 
     status, fb_status = await pm.async_send_1_hop_message(
         peer_id="foo_peer_id",
