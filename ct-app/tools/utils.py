@@ -4,10 +4,10 @@ import logging
 import logging.config
 import os
 import sys
-from aiohttp.client import ClientSession
-from aiohttp.client_exceptions import InvalidURL
 
 import jsonschema
+from aiohttp.client import ClientSession
+from aiohttp.client_exceptions import InvalidURL
 
 from .logger import ColoredLogger
 
@@ -26,6 +26,11 @@ def getlogger() -> logging.Logger:
     logging.getLogger("httpx").setLevel(logging.WARNING)  # logs were flooded by httpx
     logging.getLogger("swagger_client.rest").setLevel(logging.WARNING)
     logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
+    logging.getLogger("urllib3.util.retry").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.orm.mapper.Mapper").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.engine.Engine").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.pool.impl.QueuePool").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.orm.path_registry").setLevel(logging.WARNING)
 
     if logging.getLoggerClass() != ColoredLogger:
         logging.setLoggerClass(ColoredLogger)

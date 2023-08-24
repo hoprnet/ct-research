@@ -6,19 +6,10 @@ from sanic.request import Request
 from sanic.response import html as sanic_html
 from sanic.response import json as sanic_json
 from sanic.response import text as sanic_text
-
-from tools.db_connection.database_connection import DatabaseConnection
-from tools.utils import envvar, getlogger
+from tools.db_connection import DatabaseConnection
+from tools.utils import getlogger
 
 from .aggregator import Aggregator
-
-_db_columns = [
-    ("id", "SERIAL PRIMARY KEY"),
-    ("peer_id", "VARCHAR(255) NOT NULL"),
-    ("node_addresses", "VARCHAR(255)[] NOT NULL"),
-    ("latency_metric", "INTEGER[] NOT NULL"),
-    ("timestamp", "TIMESTAMP NOT NULL DEFAULT NOW()"),
-]
 
 
 def attach_endpoints(app):
@@ -135,40 +126,17 @@ def attach_endpoints(app):
         """
         Takes the peers and metrics from the _dict and sends them to the database.
         """
-        matchs_for_db = agg.convert_to_db_data()
+        db_entries = agg.convert_to_db_data()
 
-        if len(matchs_for_db) == 0:
+        if len(db_entries) == 0:
             log.info("No data to send to DB")
             return sanic_text("No data to push to DB")
 
-        with DatabaseConnection(
-            envvar("DB_NAME"),
-            envvar("DB_HOST"),
-            envvar("DB_USER"),
-            envvar("DB_PASSWORD"),
-            envvar("DB_PORT", int),
-            "raw_data_table",
-        ) as db:
-            try:
-                db.create_table(_db_columns)
-            except ValueError as e:
-                log.warning(f"Error creating table: {e}")
+        with DatabaseConnection() as session:
+            session.add_all(db_entries)
+            session.commit()
 
-            if not db.table_exists_guard():
-                log.error("Table not available, not sending to DB")
-                return sanic_text("Table not available", status=500)
-
-            log.info(f"Inserting {len(matchs_for_db)} rows into DB")
-
-            len_data = db.insert_many(
-                "raw_data_table",
-                ["peer_id", "node_addresses", "latency_metric"],
-                matchs_for_db,
-            )
-
-            if len_data != len(matchs_for_db):
-                log.error("Error inserting into DB")
-                return sanic_text("Error inserting into DB", status=500)
+            log.info(f"Inserted {len(db_entries)} rows into DB")
 
             return sanic_text("Data pushed to DB")
 

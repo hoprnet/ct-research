@@ -4,6 +4,7 @@ import threading
 from prometheus_client.metrics import Gauge
 
 from tools import getlogger
+from tools.db_connection import NodePeerConnection
 
 from .utils import (
     array_to_db_list,
@@ -180,7 +181,7 @@ class Aggregator(metaclass=Singleton):
             lat_as_array = dict_to_array(
                 self._node_peer_latency, node_addresses, peer_ids
             )
-            log.info(f"Latency data converted into an array:\n{lat_as_array}")
+            log.debug(f"Latency data converted into an array:\n{lat_as_array}")
 
             # create a dict with the best 'peer: [node]' matchs
             matchs = multiple_round_node_peer_match(lat_as_array, max_iter=3)
@@ -192,4 +193,15 @@ class Aggregator(metaclass=Singleton):
             )
             log.info(f"Matchs for db:\n{matchs_for_db}")
 
-        return matchs_for_db
+        timestamp = datetime.datetime.now()
+
+        return [
+            NodePeerConnection(
+                peer_id=item[0],
+                node=item[1],
+                latency=item[2],
+                priority=item[3],
+                timestamp=timestamp,
+            )
+            for item in matchs_for_db
+        ]
