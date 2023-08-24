@@ -2,6 +2,7 @@ from hoprd_sdk import Configuration, ApiClient
 from hoprd_sdk.models import MessageBody
 from hoprd_sdk.rest import ApiException
 from hoprd_sdk.api import NodeApi, MessagesApi, AccountApi, ChannelsApi, PeersApi
+from urllib3.exceptions import MaxRetryError
 
 from .utils import getlogger
 
@@ -24,11 +25,13 @@ class HoprdAPIHelper:
         configuration.host = f"{url}/api/v2"
         configuration.api_key["x-auth-token"] = token
 
-        self.node_api = NodeApi(ApiClient(configuration))
-        self.peers_api = PeersApi(ApiClient(configuration))
-        self.message_api = MessagesApi(ApiClient(configuration))
-        self.account_api = AccountApi(ApiClient(configuration))
-        self.channels_api = ChannelsApi(ApiClient(configuration))
+        api_client = ApiClient(configuration)
+        
+        self.node_api = NodeApi(api_client)
+        self.peers_api = PeersApi(api_client)
+        self.message_api = MessagesApi(api_client)
+        self.account_api = AccountApi(api_client)
+        self.channels_api = ChannelsApi(api_client)
 
     @property
     def url(self) -> str:
@@ -55,10 +58,13 @@ class HoprdAPIHelper:
             thread = self.account_api.account_get_balances(async_req=True)
             response = thread.get()
         except ApiException:
-            log.exception("Exception when calling AccountApi->account_get_balances")
+            log.exception("ApiException when calling AccountApi->account_get_balances")
             return None
         except OSError:
-            log.exception("Exception when calling AccountApi->account_get_balances")
+            log.exception("OSError when calling AccountApi->account_get_balances")
+            return None
+        except MaxRetryError:
+            log.exception("MaxRetryError when calling AccountApi->account_get_balances")
             return None
 
         return int(getattr(response, type))
@@ -72,10 +78,15 @@ class HoprdAPIHelper:
             )
             response = thread.get()
         except ApiException:
-            log.exception("Exception when calling ChannelsApi->channels_get_channels")
+            log.exception("ApiException when calling ChannelsApi->channels_get_channels")
             return None
         except OSError:
-            log.exception("Exception when calling ChannelsApi->channels_get_channels")
+            log.exception("OSError when calling ChannelsApi->channels_get_channels")
+            return None
+        except MaxRetryError:
+            log.exception(
+                "MaxRetryError when calling ChannelsApi->channels_get_channels"
+            )
             return None
         else:
             return response
@@ -93,10 +104,15 @@ class HoprdAPIHelper:
             )
             response = thread.get()
         except ApiException:
-            log.exception("Exception when calling ChannelsApi->channels_get_channels")
+            log.exception("ApiException when calling ChannelsApi->channels_get_channels")
             return None
         except OSError:
-            log.exception("Exception when calling ChannelsApi->channels_get_channels")
+            log.exception("OSError when calling ChannelsApi->channels_get_channels")
+            return None
+        except MaxRetryError:
+            log.exception(
+                "MaxRetryError when calling ChannelsApi->channels_get_channels"
+            )
             return None
 
         if not hasattr(response, "all"):
@@ -124,10 +140,13 @@ class HoprdAPIHelper:
             thread = self.peers_api.peers_ping_peer(peer_id, async_req=True)
             response = thread.get()
         except ApiException:
-            log.exception("Exception when calling PeersApi->peers_ping_peer")
+            log.exception("ApiException when calling PeersApi->peers_ping_peer")
             return None
         except OSError:
-            log.exception("Exception when calling PeersApi->peers_ping_peer")
+            log.exception("OSError when calling PeersApi->peers_ping_peer")
+            return None
+        except MaxRetryError:
+            log.exception("MaxRetryError when calling PeersApi->peers_ping_peer")
             return None
 
         if not hasattr(response, metric):
@@ -148,10 +167,13 @@ class HoprdAPIHelper:
             thread = self.node_api.node_get_peers(quality=quality, async_req=True)
             response = thread.get()
         except ApiException:
-            log.exception("Exception when calling NodeApi->node_get_peers")
+            log.exception("ApiException when calling NodeApi->node_get_peers")
             return []
         except OSError:
-            log.exception("Exception when calling NodeApi->node_get_peers")
+            log.exception("OSError when calling NodeApi->node_get_peers")
+            return []
+        except MaxRetryError:
+            log.exception("MaxRetryError when calling NodeApi->node_get_peers")
             return []
 
         if not hasattr(response, status):
@@ -175,10 +197,13 @@ class HoprdAPIHelper:
             thread = self.account_api.account_get_address(async_req=True)
             response = thread.get()
         except ApiException:
-            log.exception("Exception when calling AccountApi->account_get_address")
+            log.exception("ApiException when calling AccountApi->account_get_address")
             return None
         except OSError:
-            log.exception("Exception when calling AccountApi->account_get_address")
+            log.exception("OSError when calling AccountApi->account_get_address")
+            return None
+        except MaxRetryError:
+            log.exception("MaxRetryError when calling AccountApi->account_get_address")
             return None
 
         if not hasattr(response, address):
@@ -197,10 +222,15 @@ class HoprdAPIHelper:
             thread = self.message_api.messages_send_message(body=body, async_req=True)
             thread.get()
         except ApiException:
-            log.exception("Exception when calling MessageApi->messages_send_message")
+            log.exception("ApiException when calling MessageApi->messages_send_message")
             return False
         except OSError:
-            log.exception("Exception when calling MessageApi->messages_send_message")
+            log.exception("OSError when calling MessageApi->messages_send_message")
+            return False
+        except MaxRetryError:
+            log.exception(
+                "MaxRetryError when calling MessageApi->messages_send_message"
+            )
             return False
 
         return True

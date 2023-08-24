@@ -96,6 +96,12 @@ class NetWatcher(HOPRNode):
         for each peer.
         """
 
+        # if no peer is available, simply wait for 10 seconds and hope that new peers
+        # are found in the meantime
+        if len(self.peers) == 0:
+            await asyncio.sleep(10)
+            return
+
         # pick a random peer to ping among all peers
         rand_peer = random.choice(self.peers)
 
@@ -132,7 +138,10 @@ class NetWatcher(HOPRNode):
         if len(peers_to_send) == self.max_lat_count:
             log.info("Peers transmission triggered by latency dictionary size")
         # checks if transmission needs to be triggered by timestamp
-        elif time.time() - self.last_peer_transmission > 60 * 5:  # 5 minutes
+        elif (
+            time.time() - self.last_peer_transmission > 60 * 5
+            and len(peers_to_send) != 0
+        ):  # 5 minutes
             log.info("Peers transmission triggered by timestamp")
         else:
             return
@@ -140,7 +149,11 @@ class NetWatcher(HOPRNode):
         data = {"id": self.peer_id, "peers": peers_to_send}
 
         # send peer list to aggregator.
-        success = await post_dictionary(self.posturl, data)
+        try:
+            success = await post_dictionary(self.posturl, data)
+        except Exception:
+            log.error("Error transmitting peer dictionary")
+            return
 
         if not success:
             log.error("Peers transmission failed")
@@ -171,10 +184,14 @@ class NetWatcher(HOPRNode):
 
         log.info(f"Got balances: {balances}")
 
-        data = {"id": self.peer_id, "balances": {"native": balance}}
+        data = {"id": self.peer_id, "balances": {"native": balances}}
 
         # sends balance to aggregator.
-        success = await post_dictionary(self.balanceurl, data)
+        try:
+            success = await post_dictionary(self.balanceurl, data)
+        except Exception:
+            log.exception("Error transmitting balance dictionary")
+            return
 
         if not success:
             log.error("Balance transmission failed")
