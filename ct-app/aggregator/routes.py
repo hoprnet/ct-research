@@ -41,7 +41,7 @@ def attach_endpoints(app):
 
         log.info(f"Received peers from {request.json['id']}")
 
-        agg.add_node_peer_latencies(request.json["id"], request.json["peers"])
+        agg.handle_node_peer_latencies(request.json["id"], request.json["peers"])
         agg.set_node_update(request.json["id"], datetime.now())
 
         return sanic_text("Received peers")
