@@ -1,5 +1,5 @@
 from hoprd_sdk import Configuration, ApiClient
-from hoprd_sdk.models import MessageBody
+from hoprd_sdk.models import MessagesBody
 from hoprd_sdk.rest import ApiException
 from hoprd_sdk.api import NodeApi, MessagesApi, AccountApi, ChannelsApi, PeersApi
 from urllib3.exceptions import MaxRetryError
@@ -26,7 +26,7 @@ class HoprdAPIHelper:
         configuration.api_key["x-auth-token"] = token
 
         api_client = ApiClient(configuration)
-        
+
         self.node_api = NodeApi(api_client)
         self.peers_api = PeersApi(api_client)
         self.message_api = MessagesApi(api_client)
@@ -78,7 +78,9 @@ class HoprdAPIHelper:
             )
             response = thread.get()
         except ApiException:
-            log.exception("ApiException when calling ChannelsApi->channels_get_channels")
+            log.exception(
+                "ApiException when calling ChannelsApi->channels_get_channels"
+            )
             return None
         except OSError:
             log.exception("OSError when calling ChannelsApi->channels_get_channels")
@@ -104,7 +106,9 @@ class HoprdAPIHelper:
             )
             response = thread.get()
         except ApiException:
-            log.exception("ApiException when calling ChannelsApi->channels_get_channels")
+            log.exception(
+                "ApiException when calling ChannelsApi->channels_get_channels"
+            )
             return None
         except OSError:
             log.exception("OSError when calling ChannelsApi->channels_get_channels")
@@ -213,11 +217,11 @@ class HoprdAPIHelper:
         return getattr(response, address)
 
     async def send_message(
-        self, destination: str, message: str, hops: list[str]
+        self, destination: str, message: str, hops: list[str], tag: int = 320
     ) -> bool:
         log.debug("Sending message")
 
-        body = MessageBody(message, destination, path=hops)
+        body = MessagesBody(tag, message, destination, path=hops)
         try:
             thread = self.message_api.messages_send_message(body=body, async_req=True)
             thread.get()
