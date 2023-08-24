@@ -55,7 +55,7 @@ class EconomicHandler(HOPRNode):
 
     @wakeupcall_from_file(folder="/assets", filename="parameters.json")
     @connectguard
-    async def scheduler(self, test_staging=True):
+    async def scheduler(self, test_staging=False):
         """
         Schedules the tasks of the EconomicHandler in two different modes
         :param: staging (bool): If True, it uses the data returned by the database
@@ -118,13 +118,17 @@ class EconomicHandler(HOPRNode):
             tasks = set[asyncio.Task]()
 
             expected_order = [
-                "unique_peer_safe_links",
+                "unique_nodeAddress_peerId_aggbalance_links",
                 "params",
                 "rpch",
                 "subgraph_data",
             ]
 
-            tasks.add(asyncio.create_task(self.get_unique_safe_peerId_links()))
+            tasks.add(
+                asyncio.create_task(
+                    self.get_unique_nodeAddress_peerId_aggbalance_links()
+                )
+            )
             tasks.add(asyncio.create_task(self.read_parameters_and_equations()))
             tasks.add(
                 asyncio.create_task(self.blacklist_rpch_nodes(self.rpch_endpoint))
@@ -151,8 +155,8 @@ class EconomicHandler(HOPRNode):
                 unordered_tasks, key=lambda x: expected_order.index(x[0])
             )
 
-            unique_safe_peerId_links = ordered_tasks[0][1]
-            print(unique_safe_peerId_links)
+            unique_nodeAddress_peerId_aggbalance_links = ordered_tasks[0][1]
+            print(unique_nodeAddress_peerId_aggbalance_links)
             parameters_equations_budget = ordered_tasks[1][1:]
             rpch_nodes_blacklist = ordered_tasks[2][1]
             # staking_participations = ordered_tasks[3][1]
@@ -160,66 +164,71 @@ class EconomicHandler(HOPRNode):
             # helper functions that allow to test the code by inserting
             # the peerIDs of the pluto nodes (SUBJECT TO REMOVAL)
             pluto_keys_in_mockdb_data = self.replace_keys_in_mock_data(
-                unique_safe_peerId_links
+                unique_nodeAddress_peerId_aggbalance_links
             )
-            pluto_keys_in_mocksubraph_data = self.replace_keys_in_mock_data_subgraph(
-                unique_safe_peerId_links
+            print(pluto_keys_in_mockdb_data)
+            pluto_addresses_in_mocksubraph_data = (
+                self.replace_addresses_in_mock_data_subgraph(
+                    unique_nodeAddress_peerId_aggbalance_links
+                )
             )
+            print(pluto_addresses_in_mocksubraph_data)
 
             # merge unique_safe_peerId_links with database metrics and subgraph data
             _, metrics_dict = self.merge_topology_metricdb_subgraph(
-                unique_safe_peerId_links,
+                unique_nodeAddress_peerId_aggbalance_links,
                 pluto_keys_in_mockdb_data,
-                pluto_keys_in_mocksubraph_data,
+                pluto_addresses_in_mocksubraph_data,
             )
-            # print(metrics_dict)
+            print(metrics_dict)
 
-            # Exclude RPCh entry and exit nodes from the reward computation
-            _, metrics_dict_excluding_rpch = self.block_rpch_nodes(
-                rpch_nodes_blacklist, metrics_dict
-            )
+            # # Exclude RPCh entry and exit nodes from the reward computation
+            # _, metrics_dict_excluding_rpch = self.block_rpch_nodes(
+            #     rpch_nodes_blacklist, metrics_dict
+            # )
 
-            # update the metrics dictionary to allow for 1 to many safe address peerID links
-            _, one_to_many_safe_peerid_links = self.safe_address_split_stake(
-                metrics_dict_excluding_rpch
-            )
-            # print(one_to_many_safe_peerid_links)
+            # # update the metrics dictionary to allow for 1 to many safe address peerID links
+            # _, one_to_many_safe_peerid_links = self.safe_address_split_stake(
+            #     metrics_dict_excluding_rpch
+            # )
+            # # print(one_to_many_safe_peerid_links)
 
-            # Extract Parameters
-            parameters, equations, budget_param = parameters_equations_budget
+            # # Extract Parameters
+            # parameters, equations, budget_param = parameters_equations_budget
 
-            # computation of cover traffic probability
-            _, ct_prob_dict = self.compute_ct_prob(
-                parameters,
-                equations,
-                one_to_many_safe_peerid_links,
-            )
+            # # computation of cover traffic probability
+            # _, ct_prob_dict = self.compute_ct_prob(
+            #     parameters,
+            #     equations,
+            #     one_to_many_safe_peerid_links,
+            # )
 
-            # calculate expected rewards
-            _, expected_rewards = self.compute_expected_reward(
-                ct_prob_dict, budget_param
-            )
+            # # calculate expected rewards
+            # _, expected_rewards = self.compute_expected_reward(
+            #     ct_prob_dict, budget_param
+            # )
 
-            # calculate number of jobs per peer for the celery queue
-            _, job_distribution = self.compute_job_distribution(
-                expected_rewards, budget_param
-            )
+            # # calculate number of jobs per peer for the celery queue
+            # _, job_distribution = self.compute_job_distribution(
+            #     expected_rewards, budget_param
+            # )
 
-            # output expected rewards as a csv file
-            self.save_expected_reward_csv(expected_rewards)
+            # # output expected rewards as a csv file
+            # self.save_expected_reward_csv(expected_rewards)
 
-            # print(f"{staking_participations}")
-            print(f"{job_distribution=}")
-            # print(f"{rpch_nodes_blacklist=}")
+            # # print(f"{staking_participations}")
+            # # print(f"{job_distribution=}")
+            # # print(f"{rpch_nodes_blacklist=}")
 
-    async def get_unique_safe_peerId_links(self):
+    async def get_unique_nodeAddress_peerId_aggbalance_links(self):
         """
         Returns a dictionary containing all unique
-        source_peerId-source_address links
+        source_peerId-source_address links including
+        the aggregated balance of "Open" outgoing payment channels
         """
-        response = await self.api.get_unique_safe_peerId_links()
+        response = await self.api.get_unique_nodeAddress_peerId_aggbalance_links()
 
-        return "unique_peer_safe_links", response
+        return "unique_nodeAddress_peerId_aggbalance_links", response
 
     async def get_database_metrics(self):
         """
@@ -300,18 +309,20 @@ class EconomicHandler(HOPRNode):
         """
         Generates a dictionary that mocks the metrics received form the subgraph.
         :returns: a dictionary containing the data with safe stake addresses as key
-                  and stake as value.
+                  and node_address as well as balance as the value.
         """
         subgraph_dict = {
-            "safe_1": 10,
-            "safe_2": 55,
-            "safe_3": 23,
-            "safe_4": 85,
-            "safe_5": 62,
+            "safe_1": {"node_address": "address_1", "balance": 10},
+            "safe_2": {"node_address": "address_2", "balance": 55},
+            "safe_3": {"node_address": "address_3", "balance": 23},
+            "safe_4": {"node_address": "address_4", "balance": 85},
+            "safe_5": {"node_address": "address_5", "balance": 62},
         }
         return subgraph_dict
 
-    def replace_keys_in_mock_data(self, unique_peerId_address: dict):
+    def replace_keys_in_mock_data(
+        self, unique_nodeAddress_peerId_aggbalance_links: dict
+    ):
         """
         Just a helper function that allows me to replace my invented peerID's
         with the peerId's from Pluto.
@@ -319,7 +330,7 @@ class EconomicHandler(HOPRNode):
         [NO NEED TO CHECK CODING STYLE NOR EFFICIENCY OF THE FUNCTION]
         """
         metrics_dict = self.mock_data_metrics_db()
-        channel_topology_keys = list(unique_peerId_address.keys())
+        channel_topology_keys = list(unique_nodeAddress_peerId_aggbalance_links.keys())
 
         new_metrics_dict = {}
         for i, key in enumerate(metrics_dict.keys()):
@@ -328,7 +339,9 @@ class EconomicHandler(HOPRNode):
 
         return new_metrics_dict
 
-    def replace_keys_in_mock_data_subgraph(self, channel_topology_result):
+    def replace_addresses_in_mock_data_subgraph(
+        self, unique_nodeAddress_peerId_aggbalance_links: dict
+    ):
         """
         Just a helper function that allows me to replace my invented safe_addresses
         with the safe addresses from Pluto.
@@ -336,12 +349,18 @@ class EconomicHandler(HOPRNode):
         [NO NEED TO CHECK CODING STYLE NOR EFFICIENCY OF THE FUNCTION]
         """
         subgraph_dict = self.mock_data_subgraph()
-        channel_topology_values = list(channel_topology_result.values())
+
+        source_addresses_list = [
+            data["source_address"]
+            for data in unique_nodeAddress_peerId_aggbalance_links.values()
+        ]
 
         new_subgraph_dict = {}
-        for i, data in enumerate(subgraph_dict.values()):
-            new_key = channel_topology_values[i]
-            new_subgraph_dict[new_key] = data
+        for safe_key, data in subgraph_dict.items():
+            new_subgraph_dict[safe_key] = {
+                "node_address": source_addresses_list.pop(0),
+                "balance": data["balance"],
+            }
 
         return new_subgraph_dict
 
