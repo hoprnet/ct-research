@@ -14,6 +14,7 @@ os.environ["RABBITMQ_HOST"] = "foo_host"
 os.environ["RABBITMQ_VIRTUALHOST"] = "foo_virtualhost"
 os.environ["API_HOST"] = "foo_api_host"
 os.environ["API_TOKEN"] = "foo_api_token"
+os.environ["TIMEOUT"] = "5"
 
 import postman as pm  # noqa: E402
 
