@@ -10,8 +10,10 @@ from celery import Celery
 from assets.parameters_schema import schema as schema_name
 from tools.decorator import connectguard, wakeupcall_from_file, wakeupcall
 from tools.hopr_node import HOPRNode
-from tools.db_connection.database_connection import DatabaseConnection
+from tools.db_connection import DatabaseConnection, NodePeerConnection
 from tools.utils import getlogger, read_json_file, envvar
+
+from sqlalchemy import func
 
 log = getlogger()
 
@@ -194,6 +196,12 @@ class EconomicHandler(HOPRNode):
             )
             print(f"{metrics_dict_including_total_balance=}")
 
+            # Exclude ct-app nodes from the reward computation
+            _, metrics_dict_excluding_ct_nodes = self.block_ct_nodes(
+                metrics_dict_excluding_rpch
+            )
+            print(metrics_dict_excluding_ct_nodes)
+
             # update the metrics dictionary to allow for 1 to many safe address peerID links
             _, one_to_many_safe_peerid_links = self.safe_address_split_stake(
                 metrics_dict_including_total_balance
@@ -244,37 +252,48 @@ class EconomicHandler(HOPRNode):
         connection details, retrieves the latest peer information from the database
         table, and returns the data as a dictionary.
         """
-        with DatabaseConnection(
-            envvar("DB_NAME"),
-            envvar("DB_HOST"),
-            envvar("DB_USER"),
-            envvar("DB_PASSWORD"),
-            envvar("DB_PORT", int),
-            "raw_data_table",
-        ) as db:
-            try:
-                last_added_rows = db.last_added_rows()
+        with DatabaseConnection() as session:
+            max_timestamp = session.query(
+                func.max(NodePeerConnection.timestamp)
+            ).scalar()
 
-                metrics_dict = {}
-                for (
-                    id,
-                    peer_id,
-                    node_addresses,
-                    latency_metrics,
-                    timestamp,
-                ) in last_added_rows:
-                    metrics_dict[peer_id] = {
-                        "node_addresses": node_addresses,
-                        "latency_metrics": latency_metrics,
-                        "id": id,
-                        "Timestamp": timestamp,
+            last_added_rows = (
+                session.query(NodePeerConnection)
+                .filter_by(timestamp=max_timestamp)
+                .all()
+            )
+
+            metrics_dict = {}
+
+            for row in last_added_rows:
+                if row.peer_id not in metrics_dict:
+                    metrics_dict[row.peer_id] = {
+                        "node_addresses": [],
+                        "latency_metrics": [],
+                        "Timestamp": row.timestamp,
+                        "order": [],
                     }
+                metrics_dict[row.peer_id]["node_addresses"].append(row.node)
+                metrics_dict[row.peer_id]["latency_metrics"].append(row.latency)
+                metrics_dict[row.peer_id]["temp_order"].append(row.order)
 
-                return "metricsDB", metrics_dict
+            # sort node_addresses and latency based on temp_order
+            for peer_id in metrics_dict:
+                order = metrics_dict[peer_id]["temp_order"]
+                addresses = metrics_dict[peer_id]["node_addresses"]
+                latency = metrics_dict[peer_id]["latency_metrics"]
 
-            except ValueError:
-                log.exception("Error reading data from database table")
-            return "metricsDB", {}
+                addresses = [x for _, x in sorted(zip(order, addresses))]
+                latency = [x for _, x in sorted(zip(order, latency))]
+
+                metrics_dict[peer_id]["node_addresses"] = addresses
+                metrics_dict[peer_id]["latency_metrics"] = latency
+
+            # remove the temp order key from the dictionaries
+            for peer_id in metrics_dict:
+                del metrics_dict[peer_id]["temp_order"]
+
+            return "metricsDB", metrics_dict
 
     def add_random_data_to_metrics(self, metrics_dict):
         """
@@ -601,6 +620,28 @@ class EconomicHandler(HOPRNode):
             dict_including_total_balance[key] = data
 
         return "dict_excluding_rpch_nodes", dict_including_total_balance
+
+    def block_ct_nodes(self, merged_metrics_dict: dict):
+        """
+        Exludes nodes from the ct distribution that are connected to
+        Netwatcher/Postman modules.
+        :param: merged_metrics_dict (dict): merged topology, subgraph, database data
+        :returns: (dict): dictionary excluding ct-app instances
+        """
+        excluded_nodes = set()  # update a set to avoid duplicates
+
+        # Collect all unique node_addresses from the input data
+        for data in merged_metrics_dict.values():
+            excluded_nodes.update(data["node_addresses"])
+
+        # New dictionary excluding entries with keys in the exclusion set
+        metrics_dict_excluding_ct_nodes = {
+            key: value
+            for key, value in merged_metrics_dict.items()
+            if key not in excluded_nodes
+        }
+
+        return "dict_excluding_ct_nodes", metrics_dict_excluding_ct_nodes
 
     def safe_address_split_stake(self, input_dict: dict):
         """

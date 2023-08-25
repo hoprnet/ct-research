@@ -12,11 +12,14 @@ def main():
     log = getlogger()
 
     try:
-        envvar("DB_NAME")
-        envvar("DB_HOST")
-        envvar("DB_USER")
-        envvar("DB_PASSWORD")
-        envvar("DB_PORT", int)
+        envvar("PGHOST")
+        envvar("PGPORT", int)
+        envvar("PGSSLCERT")
+        envvar("PGSSLKEY")
+        envvar("PGSSLROOTCERT")
+        envvar("PGUSER")
+        envvar("PGDATABASE")
+        envvar("PGPASSWORD")
         host = envvar("API_HOST")
         port = envvar("API_PORT", int)
     except ValueError:

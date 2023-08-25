@@ -1,4 +1,5 @@
 import asyncio
+from copy import deepcopy
 import random
 import time
 
@@ -32,8 +33,8 @@ class NetWatcher(HOPRNode):
         # a list to keep the peers of this node
         self.peers = list[str]()
 
-        # a dict to keep the max_lat_count latency measures {peer: 51, }
-        self.latency = dict[str, int]()
+        # a dict to keep the max_lat_count latency measures along with the timestamp
+        self.latency = dict[str, dict]()
         self.last_peer_transmission: float = 0
 
         self.max_lat_count = max_lat_count
@@ -96,6 +97,12 @@ class NetWatcher(HOPRNode):
         for each peer.
         """
 
+        # if no peer is available, simply wait for 10 seconds and hope that new peers
+        # are found in the meantime
+        if len(self.peers) == 0:
+            await asyncio.sleep(10)
+            return
+
         # pick a random peer to ping among all peers
         rand_peer = random.choice(self.peers)
 
@@ -104,13 +111,31 @@ class NetWatcher(HOPRNode):
         else:
             latency = await self.api.ping(rand_peer, "latency")
 
+        # latency update rule is:
+        # - if latency measure fails:
+        #     - if the peer is not known, add it with value -1 and set timestamp
+        #     - if the peer is known and the last measure is recent, do nothing
+        # - if latency measure succeeds, always update
+        now = time.time()
         async with self.latency_lock:
-            if latency is None:
-                log.warning(f"Failed to ping {rand_peer}")
-                self.latency.pop(rand_peer, None)
-            else:
+            if latency is not None:
                 log.debug(f"Measured latency to {rand_peer}: {latency}ms")
-                self.latency[rand_peer] = latency
+
+                self.latency[rand_peer] = {"value": latency, "timestamp": now}
+                return
+
+            log.warning(f"Failed to ping {rand_peer}")
+
+            if (
+                rand_peer not in self.latency
+                or self.latency[rand_peer]["value"] is None
+            ):
+                log.debug(f"Adding {rand_peer} to latency dictionary with value -1")
+
+                self.latency[rand_peer] = {"value": -1, "timestamp": now}
+                return
+
+            log.debug(f"Keeping {rand_peer} in latency dictionary (recent measure)")
 
     @formalin(message="Initiated peers transmission", sleep=5)
     @connectguard
@@ -122,25 +147,41 @@ class NetWatcher(HOPRNode):
 
         # access the peers address in the latency dictionary in a thread-safe way
         async with self.latency_lock:
-            latency_peers = self.latency.items()
+            peers_measures = deepcopy(self.latency.items())
 
-        # pick the first `self.max_lat_count` peers from the latency dictionary
-        for (peer, latency), _ in zip(latency_peers, range(self.max_lat_count)):
-            peers_to_send[peer] = latency
+        # convert the latency dictionary to a simpler dictionary for the aggregator
+        now = time.time()
+        for peer, measure in peers_measures:
+            if now - measure["timestamp"] > 60 * 60 * 2:
+                measure["value"] = -1
+
+            if measure["value"] is not None:
+                peers_to_send[peer] = measure["value"]
 
         # checks if transmission needs to be triggered by peer-list size
-        if len(peers_to_send) == self.max_lat_count:
+        if len(peers_to_send) >= self.max_lat_count:
             log.info("Peers transmission triggered by latency dictionary size")
+
         # checks if transmission needs to be triggered by timestamp
-        elif time.time() - self.last_peer_transmission > 60 * 5:  # 5 minutes
+        elif (
+            time.time() - self.last_peer_transmission > 60 * 5
+            and len(peers_to_send) != 0
+        ):  # 5 minutes
             log.info("Peers transmission triggered by timestamp")
         else:
             return
 
+        # pick the first `self.max_lat_count` peers from peer values
+        peers_to_send = peers_to_send[: self.max_lat_count]
+
         data = {"id": self.peer_id, "peers": peers_to_send}
 
         # send peer list to aggregator.
-        success = await post_dictionary(self.posturl, data)
+        try:
+            success = await post_dictionary(self.posturl, data)
+        except Exception:
+            log.error("Error transmitting peer dictionary")
+            return
 
         if not success:
             log.error("Peers transmission failed")
@@ -155,7 +196,7 @@ class NetWatcher(HOPRNode):
         async with self.latency_lock:
             self.last_peer_transmission = time.time()
             for peer in peers_to_send:
-                self.latency.pop(peer, None)
+                self.latency[peer] = {"value": None, "timestamp": 0}
 
     @formalin(message="Sending node balance", sleep=60 * 5)
     @connectguard
@@ -171,10 +212,14 @@ class NetWatcher(HOPRNode):
 
         log.info(f"Got balances: {balances}")
 
-        data = {"id": self.peer_id, "balances": {"native": balance}}
+        data = {"id": self.peer_id, "balances": {"native": balances}}
 
         # sends balance to aggregator.
-        success = await post_dictionary(self.balanceurl, data)
+        try:
+            success = await post_dictionary(self.balanceurl, data)
+        except Exception:
+            log.exception("Error transmitting balance dictionary")
+            return
 
         if not success:
             log.error("Balance transmission failed")
