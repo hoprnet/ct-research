@@ -53,7 +53,7 @@ class HoprdAPIHelper:
         log.debug("Getting all channels")
 
         try:
-            async with ApiClient(self.configuration) as client:
+            with ApiClient(self.configuration) as client:
                 channels_api = ChannelsApi(client)
                 thread = channels_api.channels_get_channels(
                     including_closed=include_closed, async_req=True
