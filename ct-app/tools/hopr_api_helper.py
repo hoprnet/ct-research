@@ -130,7 +130,7 @@ class HoprdAPIHelper:
         log.debug("Getting open channels")
 
         try:
-            async with ApiClient(self.configuration) as client:
+            with ApiClient(self.configuration) as client:
                 channels_api = ChannelsApi(client)
                 thread = channels_api.channels_get_channels(async_req=True)
                 response = thread.get()
@@ -170,7 +170,7 @@ class HoprdAPIHelper:
         log.debug(f"Getting all channels (include_closed={include_closed})")
 
         try:
-            async with ApiClient(self.configuration) as client:
+            with ApiClient(self.configuration) as client:
                 channels_api = ChannelsApi(client)
                 thread = channels_api.channels_get_channels(
                     including_closed=include_closed, async_req=True
