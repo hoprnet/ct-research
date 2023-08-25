@@ -8,7 +8,7 @@ import aiohttp
 from celery import Celery
 
 from assets.parameters_schema import schema as schema_name
-from tools.decorator import connectguard, wakeupcall_from_file, wakeupcall
+from tools.decorator import connectguard, wakeupcall_from_file, wakeupcall, formalin
 from tools.hopr_node import HOPRNode
 from tools.db_connection import DatabaseConnection, NodePeerConnection
 from tools.utils import getlogger, read_json_file, envvar
@@ -738,6 +738,18 @@ class EconomicHandler(HOPRNode):
                 queue=node_list[node_index],
             )
 
+    @formalin(message="Closing incoming channels", sleep=60 * 5)
+    @connectguard
+    async def close_incoming_channels(self):
+        """
+        Closes all incoming channels.
+        """
+
+        incoming_channels_ids = await self.api.incoming_channels(only_id=True)
+
+        for channel_id in incoming_channels_ids:
+            await self.api.close_channel(channel_id)
+
     async def start(self):
         """
         Starts the tasks of this node
@@ -751,6 +763,7 @@ class EconomicHandler(HOPRNode):
         self.tasks.add(asyncio.create_task(self.connect(address="hopr")))
         self.tasks.add(asyncio.create_task(self.host_available()))
         self.tasks.add(asyncio.create_task(self.scheduler()))
+        self.tasks.add(asyncio.create_task(self.close_incoming_channels())
 
         await asyncio.gather(*self.tasks)
 
