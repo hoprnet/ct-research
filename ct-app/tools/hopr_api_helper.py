@@ -30,7 +30,7 @@ class HoprdAPIHelper:
             log.error(f"Type `{type}` not supported. Use `hopr` or `native`")
             return None
 
-        log.debug("Getting balance")
+        log.debug("Getting own balance")
 
         try:
             with ApiClient(self.configuration) as client:
@@ -56,14 +56,14 @@ class HoprdAPIHelper:
         :param: amount: int
         :return: bool
         """
-        log.debug("Opening channel")
+        log.debug(f"Opening channel to '{peer_id}'")
 
         body = ChannelsBody(peer_id, amount)
         try:
             with ApiClient(self.configuration) as client:
                 channels_api = ChannelsApi(client)
                 thread = channels_api.channels_open_channel(body, async_req=True)
-                thread.get()
+                response = thread.get()
         except ApiException:
             log.exception(
                 "ApiException when calling ChannelsApi->channels_open_channel"
@@ -78,7 +78,20 @@ class HoprdAPIHelper:
             )
             return False
 
-        return True
+        if hasattr(response, "channelId"):
+            log.debug(f"Channel opened: {response.channelId}")
+            return True
+
+        if not hasattr(response, "status"):
+            log.error("Can not read `status` from response")
+            return False
+
+        if response.status == "CHANNEL_ALREADY_OPEN":
+            log.warning(f"Channel could not be opened: {response.status}")
+            return True
+
+        log.error(f"Channel could not be opened: {response.status}")
+        return False
 
     async def close_channel(self, channel_id: str):
         """
@@ -86,7 +99,7 @@ class HoprdAPIHelper:
         :param: channel_id: str
         :return: bool
         """
-        log.debug("Closing channel")
+        log.debug(f"Closing channel with id {channel_id}")
 
         try:
             with ApiClient(self.configuration) as client:
@@ -109,7 +122,7 @@ class HoprdAPIHelper:
 
         return True
 
-    async def get_incoming_channels(self, only_id: bool = False):
+    async def incoming_channels(self, only_id: bool = False):
         """
         Returns all open incoming channels.
         :return: channels: list
@@ -148,13 +161,13 @@ class HoprdAPIHelper:
         else:
             return response.incoming
 
-    async def get_all_channels(self, include_closed: bool):
+    async def all_channels(self, include_closed: bool):
         """
         Returns all channels.
         :param: include_closed: bool
         :return: channels: list
         """
-        log.debug("Getting all channels")
+        log.debug(f"Getting all channels (include_closed={include_closed})")
 
         try:
             async with ApiClient(self.configuration) as client:
@@ -179,7 +192,7 @@ class HoprdAPIHelper:
         else:
             return response
 
-    async def get_unique_safe_peerId_links(self):
+    async def unique_safe_peerId_links(self):
         """
         Returns a dict containing all unique source_peerId-source_address links.
         """
