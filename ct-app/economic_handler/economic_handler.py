@@ -120,13 +120,17 @@ class EconomicHandler(HOPRNode):
             tasks = set[asyncio.Task]()
 
             expected_order = [
-                "unique_peer_safe_links",
+                "unique_nodeAddress_peerId_aggbalance_links",
                 "params",
                 "rpch",
                 "subgraph_data",
             ]
 
-            tasks.add(asyncio.create_task(self.get_unique_safe_peerId_links()))
+            tasks.add(
+                asyncio.create_task(
+                    self.get_unique_nodeAddress_peerId_aggbalance_links()
+                )
+            )
             tasks.add(asyncio.create_task(self.read_parameters_and_equations()))
             tasks.add(
                 asyncio.create_task(self.blacklist_rpch_nodes(self.rpch_endpoint))
@@ -153,8 +157,8 @@ class EconomicHandler(HOPRNode):
                 unordered_tasks, key=lambda x: expected_order.index(x[0])
             )
 
-            unique_safe_peerId_links = ordered_tasks[0][1]
-            print(unique_safe_peerId_links)
+            unique_nodeAddress_peerId_aggbalance_links = ordered_tasks[0][1]
+            print(unique_nodeAddress_peerId_aggbalance_links)
             parameters_equations_budget = ordered_tasks[1][1:]
             rpch_nodes_blacklist = ordered_tasks[2][1]
             # staking_participations = ordered_tasks[3][1]
@@ -162,25 +166,35 @@ class EconomicHandler(HOPRNode):
             # helper functions that allow to test the code by inserting
             # the peerIDs of the pluto nodes (SUBJECT TO REMOVAL)
             pluto_keys_in_mockdb_data = self.replace_keys_in_mock_data(
-                unique_safe_peerId_links
+                unique_nodeAddress_peerId_aggbalance_links
             )
-            pluto_keys_in_mocksubraph_data = self.replace_keys_in_mock_data_subgraph(
-                unique_safe_peerId_links
+            print(pluto_keys_in_mockdb_data)
+            pluto_addresses_in_mocksubraph_data = (
+                self.replace_addresses_in_mock_data_subgraph(
+                    unique_nodeAddress_peerId_aggbalance_links
+                )
             )
+            print(pluto_addresses_in_mocksubraph_data)
 
             # merge unique_safe_peerId_links with database metrics and subgraph data
             _, metrics_dict = self.merge_topology_metricdb_subgraph(
-                unique_safe_peerId_links,
+                unique_nodeAddress_peerId_aggbalance_links,
                 pluto_keys_in_mockdb_data,
-                pluto_keys_in_mocksubraph_data,
+                pluto_addresses_in_mocksubraph_data,
             )
-            # print(metrics_dict)
+            print(metrics_dict)
 
             # Exclude RPCh entry and exit nodes from the reward computation
             _, metrics_dict_excluding_rpch = self.block_rpch_nodes(
                 rpch_nodes_blacklist, metrics_dict
             )
-            print(metrics_dict_excluding_rpch)
+            print(f"{metrics_dict_excluding_rpch=}")
+
+            # Calculate total balance
+            _, metrics_dict_including_total_balance = self.calculate_total_balance(
+                metrics_dict_excluding_rpch
+            )
+            print(f"{metrics_dict_including_total_balance=}")
 
             # Exclude ct-app nodes from the reward computation
             _, metrics_dict_excluding_ct_nodes = self.block_ct_nodes(
@@ -190,9 +204,9 @@ class EconomicHandler(HOPRNode):
 
             # update the metrics dictionary to allow for 1 to many safe address peerID links
             _, one_to_many_safe_peerid_links = self.safe_address_split_stake(
-                metrics_dict_excluding_rpch
+                metrics_dict_including_total_balance
             )
-            # print(one_to_many_safe_peerid_links)
+            print(one_to_many_safe_peerid_links)
 
             # Extract Parameters
             parameters, equations, budget_param = parameters_equations_budget
@@ -203,6 +217,7 @@ class EconomicHandler(HOPRNode):
                 equations,
                 one_to_many_safe_peerid_links,
             )
+            print(f"{ct_prob_dict=}")
 
             # calculate expected rewards
             _, expected_rewards = self.compute_expected_reward(
@@ -221,14 +236,15 @@ class EconomicHandler(HOPRNode):
             print(f"{job_distribution=}")
             # print(f"{rpch_nodes_blacklist=}")
 
-    async def get_unique_safe_peerId_links(self):
+    async def get_unique_nodeAddress_peerId_aggbalance_links(self):
         """
         Returns a dictionary containing all unique
-        source_peerId-source_address links
+        source_peerId-source_address links including
+        the aggregated balance of "Open" outgoing payment channels
         """
-        response = await self.api.get_unique_safe_peerId_links()
+        response = await self.api.get_unique_nodeAddress_peerId_aggbalance_links()
 
-        return "unique_peer_safe_links", response
+        return "unique_nodeAddress_peerId_aggbalance_links", response
 
     async def get_database_metrics(self):
         """
@@ -320,18 +336,35 @@ class EconomicHandler(HOPRNode):
         """
         Generates a dictionary that mocks the metrics received form the subgraph.
         :returns: a dictionary containing the data with safe stake addresses as key
-                  and stake as value.
+                  and node_address as well as balance as the value.
         """
         subgraph_dict = {
-            "safe_1": 10,
-            "safe_2": 55,
-            "safe_3": 23,
-            "safe_4": 85,
-            "safe_5": 62,
+            "safe_1": {
+                "node_address": "address_1",
+                "balance": int(2000000000000000000),
+            },
+            "safe_2": {
+                "node_address": "address_2",
+                "balance": int(3000000000000000000),
+            },
+            "safe_3": {
+                "node_address": "address_3",
+                "balance": int(4000000000000000000),
+            },
+            "safe_4": {
+                "node_address": "address_4",
+                "balance": int(4000000000000000000),
+            },
+            "safe_5": {
+                "node_address": "address_5",
+                "balance": int(8000000000000000000),
+            },
         }
         return subgraph_dict
 
-    def replace_keys_in_mock_data(self, unique_peerId_address: dict):
+    def replace_keys_in_mock_data(
+        self, unique_nodeAddress_peerId_aggbalance_links: dict
+    ):
         """
         Just a helper function that allows me to replace my invented peerID's
         with the peerId's from Pluto.
@@ -339,7 +372,7 @@ class EconomicHandler(HOPRNode):
         [NO NEED TO CHECK CODING STYLE NOR EFFICIENCY OF THE FUNCTION]
         """
         metrics_dict = self.mock_data_metrics_db()
-        channel_topology_keys = list(unique_peerId_address.keys())
+        channel_topology_keys = list(unique_nodeAddress_peerId_aggbalance_links.keys())
 
         new_metrics_dict = {}
         for i, key in enumerate(metrics_dict.keys()):
@@ -348,20 +381,28 @@ class EconomicHandler(HOPRNode):
 
         return new_metrics_dict
 
-    def replace_keys_in_mock_data_subgraph(self, channel_topology_result):
+    def replace_addresses_in_mock_data_subgraph(
+        self, unique_nodeAddress_peerId_aggbalance_links: dict
+    ):
         """
-        Just a helper function that allows me to replace my invented safe_addresses
-        with the safe addresses from Pluto.
+        Just a helper function that allows me to replace my invented node_addresses
+        with the node addresses from Pluto.
         This function will be deleted when working with the real data.
         [NO NEED TO CHECK CODING STYLE NOR EFFICIENCY OF THE FUNCTION]
         """
         subgraph_dict = self.mock_data_subgraph()
-        channel_topology_values = list(channel_topology_result.values())
+
+        source_addresses_list = [
+            data["source_node_address"]
+            for data in unique_nodeAddress_peerId_aggbalance_links.values()
+        ]
 
         new_subgraph_dict = {}
-        for i, data in enumerate(subgraph_dict.values()):
-            new_key = channel_topology_values[i]
-            new_subgraph_dict[new_key] = data
+        for safe_key, data in subgraph_dict.items():
+            new_subgraph_dict[safe_key] = {
+                "node_address": source_addresses_list.pop(0),
+                "balance": data["balance"],
+            }
 
         return new_subgraph_dict
 
@@ -517,8 +558,9 @@ class EconomicHandler(HOPRNode):
         new_subgraph_dict: dict,
     ):
         """
-        Merge metrics and subgraph data with the unique peer IDs - addresses link.
-        :param: unique_peerId_address: A dict mapping peer IDs to safe addresses.
+        Merge metrics and subgraph data with the unique peer IDs, addresses,
+        balance links.
+        :param: unique_peerId_address: A dict mapping peer IDs to node addresses.
         :param: new_metrics_dict: A dict containing metrics with peer ID as the key.
         :param: new_subgraph_dict: A dict containing subgraph data with
                 safe address as the key.
@@ -527,17 +569,22 @@ class EconomicHandler(HOPRNode):
         merged_result = {}
 
         try:
-            # Merge based on peer ID
-            for peer_id, safe_address in unique_peerId_address.items():
-                if peer_id in new_metrics_dict and safe_address in new_subgraph_dict:
-                    merged_result[peer_id] = {
-                        "safe_address": safe_address,
-                        "node_addresses": new_metrics_dict[peer_id]["netw"],
-                        "stake": new_subgraph_dict[safe_address],
-                    }
-        except Exception as e:
-            log.error(f"Error occurred while merging: {e}")
-            log.error(traceback.format_exc())
+            # Merge based on peer ID with the channel topology as the baseline
+            for peer_id, data in unique_peerId_address.items():
+                source_node_address = data["source_node_address"]
+
+                if peer_id in new_metrics_dict:
+                    data["netw"] = new_metrics_dict[peer_id]["netw"]
+
+                for safe, subgraph_data in new_subgraph_dict.items():
+                    if subgraph_data["node_address"] == source_node_address:
+                        data["safe_address"] = safe
+                        data["safe_balance"] = subgraph_data["balance"]
+
+                merged_result[peer_id] = data
+
+        except Exception:
+            log.exception("Error occurred while merging")
             return "merged_data", {}
 
         return "merged_data", merged_result
@@ -558,6 +605,21 @@ class EconomicHandler(HOPRNode):
             if k not in blacklist_rpch_nodes
         }
         return "dict_excluding_rpch_nodes", merged_metrics_subgraph_topology
+
+    def calculate_total_balance(self, input_dict: dict):
+        """
+        Calculates the total balance by adding the aggregated balance in
+        payment channels to the safe balance.
+        :param: input_dict (dict): dictionary excluding rpch nodes
+        :returns: dictionary with the total balance included as a value.
+        """
+        dict_including_total_balance = {}
+        for key, data in input_dict.items():
+            total_balance = data["aggregated_balance"] + data["safe_balance"]
+            data["total_balance"] = total_balance
+            dict_including_total_balance[key] = data
+
+        return "dict_excluding_rpch_nodes", dict_including_total_balance
 
     def block_ct_nodes(self, merged_metrics_dict: dict):
         """
@@ -585,12 +647,13 @@ class EconomicHandler(HOPRNode):
         """
         Split the stake managed by a safe address equaly between the nodes
         that the safe manages.
-        :param: input_dict: dictionary containing peerID, safeAdress and stake.
+        :param: input_dict: dictionary containing peerID, nodeAddress, safeAdress
+            and total balance.
         :returns: updated dictionary with the splitted stake and the node counts
         """
         safe_address_counts = {}
 
-        # Calculate the number of safe_addresses by peer_id
+        # Calculate the number of safe_addresses related to a node address
         for value in input_dict.values():
             safe_address = value["safe_address"]
 
@@ -602,10 +665,10 @@ class EconomicHandler(HOPRNode):
         # Update the input_dict with the calculated splitted_stake
         for value in input_dict.values():
             safe_address = value["safe_address"]
-            stake = value["stake"]
+            total_balance = value["total_balance"]
             value["safe_address_count"] = safe_address_counts[safe_address]
 
-            value["splitted_stake"] = stake / value["safe_address_count"]
+            value["splitted_stake"] = total_balance / value["safe_address_count"]
 
         return "split_stake_dict", input_dict
 
