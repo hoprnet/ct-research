@@ -517,6 +517,7 @@ def mock_node_for_test_start(mocker):
     mocker.patch.object(EconomicHandler, "connect", return_value=None)
     mocker.patch.object(EconomicHandler, "host_available", return_value=None)
     mocker.patch.object(EconomicHandler, "scheduler", return_value=None)
+    mocker.patch.object(EconomicHandler, "close_incoming_channels", return_value=None)
 
     return EconomicHandler(
         "some_url",
@@ -538,7 +539,8 @@ async def test_start(mock_node_for_test_start):
     assert node.connect.called
     assert node.host_available.called
     assert node.scheduler.called
-    assert len(node.tasks) == 3
+    assert node.close_incoming_channels.called
+    assert len(node.tasks) == 4
     assert node.started
 
 
