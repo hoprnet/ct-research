@@ -67,9 +67,11 @@ class Aggregator(metaclass=Singleton):
             "node_update", "Last node update received", ["node_address"]
         )
 
-    def add_node_peer_latencies(self, node_id: str, items: dict):
+    def handle_node_peer_latencies(self, node_id: str, items: dict):
         """
-        Add latency data to the aggregator for a specific node.
+        Handle latency data to the aggregator for a specific node. If for a node the
+        latency is -1, the node is considered unreachable and is removed from the
+        latency data stored. Otherwise, the latency data is added to the latency data
         Concurrent access is managed using a lock.
         :param node_id: the node id to add the latency data for
         :param items: the latency data to add
@@ -81,9 +83,20 @@ class Aggregator(metaclass=Singleton):
                 self._node_peer_latency[node_id] = {}
 
             for peer, lat in items.items():
-                self._node_peer_latency[node_id][peer] = lat
+                if lat == -1:
+                    if peer in self._node_peer_latency[node_id]:
+                        log.debug(
+                            f"Removing peer {peer} from latency data for {node_id}"
+                        )
+                        self._node_peer_latency[node_id].pop(peer, None)
 
-            log.info(f"Added latency data for node {node_id}")
+                    if len(self._node_peer_latency[node_id]) == 0:
+                        log.debug(f"Removing node {node_id} from latency data")
+                        self._node_peer_latency.pop(node_id, None)
+
+                else:
+                    log.debug(f"Adding peer {peer} to latency data")
+                    self._node_peer_latency[node_id][peer] = lat
 
         for peer, lat in items.items():
             self.prometheus_latency.labels(node_id, peer).set(lat)
