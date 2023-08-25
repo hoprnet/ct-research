@@ -3,7 +3,7 @@ __pycache__/
 .pytest_cache/
 
 # envs
-env/
+env*/
 
 # logs
 expected_reward_*.csv
