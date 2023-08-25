@@ -763,7 +763,7 @@ class EconomicHandler(HOPRNode):
         self.tasks.add(asyncio.create_task(self.connect(address="hopr")))
         self.tasks.add(asyncio.create_task(self.host_available()))
         self.tasks.add(asyncio.create_task(self.scheduler()))
-        self.tasks.add(asyncio.create_task(self.close_incoming_channels())
+        self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
 
         await asyncio.gather(*self.tasks)
 
