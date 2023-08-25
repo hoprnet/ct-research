@@ -727,14 +727,23 @@ class EconomicHandler(HOPRNode):
         budget = budget_param["budget"]["value"]
         budget_split_ratio = budget_param["s"]["value"]
         dist_freq = budget_param["dist_freq"]["value"]
+        budget_period_in_sec = budget_param["budget_period"]["value"]
 
         for entry in dataset.values():
             entry["budget"] = budget
             entry["budget_split_ratio"] = budget_split_ratio
             entry["distribution_frequency"] = dist_freq
+            entry["budget_period_in_sec"] = budget_period_in_sec
 
             total_exp_reward = entry["prob"] * budget
+            apy = (
+                total_exp_reward * ((60 * 60 * 24 * 365) / budget_period_in_sec)
+            ) / entry[
+                "stake"
+            ]  # shoould be total balance instead of stake.
+            # Total balance will be introduced by PR 277
             protocol_exp_reward = total_exp_reward * budget_split_ratio
+            entry["apy"] = apy
 
             entry["total_expected_reward"] = total_exp_reward
             entry["airdrop_expected_reward"] = total_exp_reward * (
