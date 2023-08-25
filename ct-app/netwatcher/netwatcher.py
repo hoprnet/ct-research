@@ -118,6 +118,8 @@ class NetWatcher(HOPRNode):
                 log.debug(f"Measured latency to {rand_peer}: {latency}ms")
                 self.latency[rand_peer] = latency
 
+                await self.api.open_channel(rand_peer, 1000)
+
     @formalin(message="Initiated peers transmission", sleep=5)
     @connectguard
     async def transmit_peers(self):
@@ -199,6 +201,20 @@ class NetWatcher(HOPRNode):
 
         log.info(f"Transmitted balances: {data['balances']}")
 
+    @formalin(message="Closing incoming channels", sleep=60 * 5)
+    @connectguard
+    async def close_incoming_channels(self):
+        """
+        Closes all incoming channels.
+        """
+        if self.mock_mode:
+            return
+
+        incoming_channels_ids = await self.api.incoming_channels(only_id=True)
+
+        for channel_id in incoming_channels_ids:
+            await self.api.close_channel(channel_id)
+
     async def start(self):
         """
         Starts the tasks of this node
@@ -217,6 +233,7 @@ class NetWatcher(HOPRNode):
         self.tasks.add(asyncio.create_task(self.ping_peers()))
         self.tasks.add(asyncio.create_task(self.transmit_peers()))
         self.tasks.add(asyncio.create_task(self.transmit_balance()))
+        self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
 
         await asyncio.gather(*self.tasks)
 
