@@ -34,7 +34,7 @@ async def test_get_all_channels(api_helper: HoprdAPIHelper):
     This test checks that the get_all_channels method of the HoprdAPIHelper class returns
     the expected response.
     """
-    await api_helper.get_all_channels(True)
+    await api_helper.all_channels(True)
 
 
 @pytest.mark.asyncio

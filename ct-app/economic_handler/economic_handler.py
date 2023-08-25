@@ -219,7 +219,7 @@ class EconomicHandler(HOPRNode):
         Returns a dictionary containing all unique
         source_peerId-source_address links
         """
-        response = await self.api.get_unique_safe_peerId_links()
+        response = await self.api.unique_safe_peerId_links()
 
         return "unique_peer_safe_links", response
 
