@@ -1,5 +1,5 @@
 from hoprd_sdk import Configuration, ApiClient
-from hoprd_sdk.models import MessagesBody
+from hoprd_sdk.models import MessagesBody, ChannelsBody
 from hoprd_sdk.rest import ApiException
 from hoprd_sdk.api import NodeApi, MessagesApi, AccountApi, ChannelsApi, PeersApi
 from urllib3.exceptions import MaxRetryError
@@ -49,7 +49,111 @@ class HoprdAPIHelper:
 
         return int(getattr(response, type))
 
+    async def open_channel(self, peer_id: str, amount: int):
+        """
+        Opens a channel with the given peer_id and amount.
+        :param: peer_id: str
+        :param: amount: int
+        :return: bool
+        """
+        log.debug("Opening channel")
+
+        body = ChannelsBody(peer_id, amount)
+        try:
+            with ApiClient(self.configuration) as client:
+                channels_api = ChannelsApi(client)
+                thread = channels_api.channels_open_channel(body, async_req=True)
+                thread.get()
+        except ApiException:
+            log.exception(
+                "ApiException when calling ChannelsApi->channels_open_channel"
+            )
+            return False
+        except OSError:
+            log.exception("OSError when calling ChannelsApi->channels_open_channel")
+            return False
+        except MaxRetryError:
+            log.exception(
+                "MaxRetryError when calling ChannelsApi->channels_open_channel"
+            )
+            return False
+
+        return True
+
+    async def close_channel(self, channel_id: str):
+        """
+        Closes a given channel.
+        :param: channel_id: str
+        :return: bool
+        """
+        log.debug("Closing channel")
+
+        try:
+            with ApiClient(self.configuration) as client:
+                channels_api = ChannelsApi(client)
+                thread = channels_api.channels_close_channel(channel_id, async_req=True)
+                thread.get()
+        except ApiException:
+            log.exception(
+                "ApiException when calling ChannelsApi->channels_close_channel"
+            )
+            return False
+        except OSError:
+            log.exception("OSError when calling ChannelsApi->channels_close_channel")
+            return False
+        except MaxRetryError:
+            log.exception(
+                "MaxRetryError when calling ChannelsApi->channels_close_channel"
+            )
+            return False
+
+        return True
+
+    async def get_incoming_channels(self, only_id: bool = False):
+        """
+        Returns all open incoming channels.
+        :return: channels: list
+        """
+        log.debug("Getting open channels")
+
+        try:
+            async with ApiClient(self.configuration) as client:
+                channels_api = ChannelsApi(client)
+                thread = channels_api.channels_get_channels(async_req=True)
+                response = thread.get()
+        except ApiException:
+            log.exception(
+                "ApiException when calling ChannelsApi->channels_get_channels"
+            )
+            return []
+        except OSError:
+            log.exception("OSError when calling ChannelsApi->channels_get_channels")
+            return []
+        except MaxRetryError:
+            log.exception(
+                "MaxRetryError when calling ChannelsApi->channels_get_channels"
+            )
+            return []
+
+        if not hasattr(response, "incoming"):
+            log.warning("Response does not contain `incoming`")
+            return []
+
+        if len(response.incoming) == 0:
+            log.info("No incoming channels")
+            return []
+
+        if only_id:
+            return [channel.id for channel in response.incoming]
+        else:
+            return response.incoming
+
     async def get_all_channels(self, include_closed: bool):
+        """
+        Returns all channels.
+        :param: include_closed: bool
+        :return: channels: list
+        """
         log.debug("Getting all channels")
 
         try:
@@ -63,15 +167,15 @@ class HoprdAPIHelper:
             log.exception(
                 "ApiException when calling ChannelsApi->channels_get_channels"
             )
-            return None
+            return []
         except OSError:
             log.exception("OSError when calling ChannelsApi->channels_get_channels")
-            return None
+            return []
         except MaxRetryError:
             log.exception(
                 "MaxRetryError when calling ChannelsApi->channels_get_channels"
             )
-            return None
+            return []
         else:
             return response
 
@@ -79,7 +183,6 @@ class HoprdAPIHelper:
         """
         Returns a dict containing all unique source_peerId-source_address links.
         """
-
         log.debug("Getting channel topology")
 
         try:
@@ -122,6 +225,12 @@ class HoprdAPIHelper:
         return address_for_peer_id
 
     async def ping(self, peer_id: str, metric: str = "latency"):
+        """
+        Pings the given peer_id and returns the measure.
+        :param: peer_id: str
+        :param: metric: str = "latency"
+        :return: measure: int
+        """
         log.debug(f"Pinging peer {peer_id}")
 
         try:
@@ -151,6 +260,13 @@ class HoprdAPIHelper:
     async def peers(
         self, param: str = "peer_id", status: str = "connected", quality: int = 1
     ):
+        """
+        Returns a list of peers.
+        :param: param: str = "peer_id"
+        :param: status: str = "connected"
+        :param: quality: int = 0..1
+        :return: peers: list
+        """
         log.debug("Getting peers")
 
         try:
@@ -183,6 +299,11 @@ class HoprdAPIHelper:
         return [getattr(peer, param) for peer in getattr(response, status)]
 
     async def get_address(self, address: str):
+        """
+        Returns the address of the node.
+        :param: address: str = "hopr" | "native"
+        :return: address: str
+        """
         log.debug("Getting address")
 
         try:
@@ -209,6 +330,14 @@ class HoprdAPIHelper:
     async def send_message(
         self, destination: str, message: str, hops: list[str], tag: int = 0x0320
     ) -> bool:
+        """
+        Sends a message to the given destination.
+        :param: destination: str
+        :param: message: str
+        :param: hops: list[str]
+        :param: tag: int = 0x0320
+        :return: bool
+        """
         log.debug("Sending message")
 
         body = MessagesBody(tag, message, destination, path=hops)
