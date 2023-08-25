@@ -55,7 +55,7 @@ class EconomicHandler(HOPRNode):
 
     @wakeupcall_from_file(folder="/assets", filename="parameters.json")
     @connectguard
-    async def scheduler(self, test_staging=True):
+    async def scheduler(self, test_staging=False):
         """
         Schedules the tasks of the EconomicHandler in two different modes
         :param: staging (bool): If True, it uses the data returned by the database
@@ -178,6 +178,13 @@ class EconomicHandler(HOPRNode):
             _, metrics_dict_excluding_rpch = self.block_rpch_nodes(
                 rpch_nodes_blacklist, metrics_dict
             )
+            print(metrics_dict_excluding_rpch)
+
+            # Exclude ct-app nodes from the reward computation
+            _, metrics_dict_excluding_ct_nodes = self.block_ct_nodes(
+                metrics_dict_excluding_rpch
+            )
+            print(metrics_dict_excluding_ct_nodes)
 
             # update the metrics dictionary to allow for 1 to many safe address peerID links
             _, one_to_many_safe_peerid_links = self.safe_address_split_stake(
@@ -538,6 +545,28 @@ class EconomicHandler(HOPRNode):
             if k not in blacklist_rpch_nodes
         }
         return "dict_excluding_rpch_nodes", merged_metrics_subgraph_topology
+
+    def block_ct_nodes(self, merged_metrics_dict: dict):
+        """
+        Exludes nodes from the ct distribution that are connected to
+        Netwatcher/Postman modules.
+        :param: merged_metrics_dict (dict): merged topology, subgraph, database data
+        :returns: (dict): dictionary excluding ct-app instances
+        """
+        excluded_nodes = set()  # update a set to avoid duplicates
+
+        # Collect all unique node_addresses from the input data
+        for data in merged_metrics_dict.values():
+            excluded_nodes.update(data["node_addresses"])
+
+        # New dictionary excluding entries with keys in the exclusion set
+        metrics_dict_excluding_ct_nodes = {
+            key: value
+            for key, value in merged_metrics_dict.items()
+            if key not in excluded_nodes
+        }
+
+        return "dict_excluding_ct_nodes", metrics_dict_excluding_ct_nodes
 
     def safe_address_split_stake(self, input_dict: dict):
         """
