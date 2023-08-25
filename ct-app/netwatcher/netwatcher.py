@@ -2,7 +2,6 @@ import asyncio
 import random
 import time
 
-
 from tools.decorator import connectguard, formalin
 from tools.hopr_node import HOPRNode
 from tools.utils import getlogger, post_dictionary
@@ -117,7 +116,6 @@ class NetWatcher(HOPRNode):
             else:
                 log.debug(f"Measured latency to {rand_peer}: {latency}ms")
                 self.latency[rand_peer] = latency
-
                 await self.api.open_channel(rand_peer, 1000)
 
     @formalin(message="Initiated peers transmission", sleep=5)
