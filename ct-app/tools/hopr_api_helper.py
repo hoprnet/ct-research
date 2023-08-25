@@ -125,7 +125,7 @@ class HoprdAPIHelper:
 
             if source_peer_id not in peerid_address_aggbalance_links:
                 peerid_address_aggbalance_links[source_peer_id] = {
-                    "source_address": source_address,
+                    "source_node_address": source_address,
                     "aggregated_balance": balance,
                 }
 

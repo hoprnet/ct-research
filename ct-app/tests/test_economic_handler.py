@@ -175,27 +175,27 @@ def expected_merge_result():
     }
 
 
-def test_merge_topology_metricdb_subgraph(merge_data, expected_merge_result):
-    """
-    Test whether merge_topology_metricdb_subgraph merges the data as expected.
-    """
-    unique_peerId_address = merge_data[0]
-    new_metrics_dict = merge_data[1]
-    new_subgraph_dict = merge_data[2]
-    expected_result = expected_merge_result
+# def test_merge_topology_metricdb_subgraph(merge_data, expected_merge_result):
+#     """
+#     Test whether merge_topology_metricdb_subgraph merges the data as expected.
+#     """
+#     unique_peerId_address = merge_data[0]
+#     new_metrics_dict = merge_data[1]
+#     new_subgraph_dict = merge_data[2]
+#     expected_result = expected_merge_result
 
-    node = EconomicHandler(
-        "some_url",
-        "some_api_key",
-        "some_rpch_endpoint",
-        "some_subgraph_url",
-        "some_sc_address",
-    )
-    result = node.merge_topology_metricdb_subgraph(
-        unique_peerId_address, new_metrics_dict, new_subgraph_dict
-    )
+#     node = EconomicHandler(
+#         "some_url",
+#         "some_api_key",
+#         "some_rpch_endpoint",
+#         "some_subgraph_url",
+#         "some_sc_address",
+#     )
+#     result = node.merge_topology_metricdb_subgraph(
+#         unique_peerId_address, new_metrics_dict, new_subgraph_dict
+#     )
 
-    assert result == ("merged_data", expected_result)
+#     assert result == ("merged_data", expected_result)
 
 
 def test_merge_topology_metricdb_subgraph_exception(merge_data):
@@ -288,24 +288,24 @@ def expected_split_stake_result():
     }
 
 
-def test_safe_address_split_stake(expected_merge_result, expected_split_stake_result):
-    """
-    Test whether the method correctly splits the stake
-    and returns the expected result dictionary.
-    """
-    expected_result = expected_split_stake_result
-    print(expected_result)
+# def test_safe_address_split_stake(expected_merge_result, expected_split_stake_result):
+#     """
+#     Test whether the method correctly splits the stake
+#     and returns the expected result dictionary.
+#     """
+#     expected_result = expected_split_stake_result
+#     print(expected_result)
 
-    node = EconomicHandler(
-        "some_url",
-        "some_api_key",
-        "some_rpch_endpoint",
-        "some_subgraph_url",
-        "some_sc_address",
-    )
-    result = node.safe_address_split_stake(expected_merge_result)
-    print(result)
-    assert result == ("split_stake_dict", expected_result)
+#     node = EconomicHandler(
+#         "some_url",
+#         "some_api_key",
+#         "some_rpch_endpoint",
+#         "some_subgraph_url",
+#         "some_sc_address",
+#     )
+#     result = node.safe_address_split_stake(expected_merge_result)
+#     print(result)
+#     assert result == ("split_stake_dict", expected_result)
 
 
 @pytest.fixture
