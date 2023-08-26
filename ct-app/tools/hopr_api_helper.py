@@ -192,7 +192,7 @@ class HoprdAPIHelper:
         else:
             return response
 
-    async def unique_safe_peerId_links(self):
+    async def get_unique_nodeAddress_peerId_aggbalance_links(self):
         """
         Returns a dict containing all unique source_peerId-source_address links.
         """
@@ -223,19 +223,41 @@ class HoprdAPIHelper:
             log.error("Response does not contain `all`")
             return None
 
-        address_for_peer_id = {}
+        peerid_address_aggbalance_links = {}
         for item in response.all:
-            if not hasattr(item, "source_peer_id"):
-                log.error("Response does not contain `source_peer_id`")
+            if not hasattr(item, "source_peer_id") or not hasattr(
+                item, "source_address"
+            ):
+                log.error(
+                    "Response does not contain `source_peerid` or `source_address`"
+                )
                 continue
 
-            if not hasattr(item, "source_address"):
-                log.error("Response does not contain `source_address`")
+            if not hasattr(item, "status"):
+                log.error("Response does not contain `status`")
                 continue
 
-            address_for_peer_id[item.source_peer_id] = item.source_address
+            source_peer_id = item.source_peer_id
+            source_address = item.source_address
+            balance = int(item.balance)
 
-        return address_for_peer_id
+            if item.status != "Open":
+                # Other Statuses: "Waiting for commitment", "Closed", "Pending to close"
+                # Ensures that nodes must have at least 1 open channel in to receive ct
+                continue
+
+            if source_peer_id not in peerid_address_aggbalance_links:
+                peerid_address_aggbalance_links[source_peer_id] = {
+                    "source_node_address": source_address,
+                    "aggregated_balance": balance,
+                }
+
+            else:
+                peerid_address_aggbalance_links[source_peer_id][
+                    "aggregated_balance"
+                ] += balance
+
+        return peerid_address_aggbalance_links
 
     async def ping(self, peer_id: str, metric: str = "latency"):
         """
