@@ -1,5 +1,4 @@
 from datetime import datetime
-import random
 
 from sqlalchemy import DateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -29,24 +28,6 @@ class NodePeerConnection(Base):
             + f"timestamp={self.timestamp})"
         )
 
-    @classmethod
-    def random(cls, count: int):
-        timestamp = datetime.now()
-        peer_id = f"peer_id_{random.randint(0, 99):02}"
-
-        instances = [
-            cls(
-                peer_id=peer_id,
-                node=f"random_node_{random.randint(0, 99):02}",
-                latency=random.randint(1, 100),
-                priority=priority,
-                timestamp=timestamp,
-            )
-            for priority in range(count)
-        ]
-
-        return instances
-
 
 class Reward(Base):
     __tablename__ = "rewardTable"
@@ -66,16 +47,4 @@ class Reward(Base):
             + f"effective_count={self.effective_count!r}, "
             + f"status={self.status!r}, "
             + f"timestamp={self.timestamp})"
-        )
-
-    @classmethod
-    def random(cls):
-        expected_count = random.randint(10, 20)
-        return cls(
-            peer_id=f"peer_id_{random.randint(0, 99):02}",
-            node_address=f"node_address_{random.randint(0, 99):02}",
-            expected_count=expected_count,
-            effective_count=random.randint(0, expected_count),
-            status="TEST",
-            timestamp=datetime.now(),
         )
