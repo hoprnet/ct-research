@@ -44,7 +44,7 @@ class NetWatcher(HOPRNode):
 
         ############### MOCKING ###################
         # set of 100 random peers
-        self.mocking_peers = set(
+        self.mocking_peers = list(
             [
                 "0x" + "".join(random.choices("0123456789abcdef", k=20))
                 for _ in range(20)
@@ -147,11 +147,11 @@ class NetWatcher(HOPRNode):
 
         # access the peers address in the latency dictionary in a thread-safe way
         async with self.latency_lock:
-            peers_measures = deepcopy(self.latency.items())
+            peers_measures = deepcopy(self.latency)
 
         # convert the latency dictionary to a simpler dictionary for the aggregator
         now = time.time()
-        for peer, measure in peers_measures:
+        for peer, measure in peers_measures.items():
             if now - measure["timestamp"] > 60 * 60 * 2:
                 measure["value"] = -1
 
@@ -172,7 +172,12 @@ class NetWatcher(HOPRNode):
             return
 
         # pick the first `self.max_lat_count` peers from peer values
-        peers_to_send = peers_to_send[: self.max_lat_count]
+        peers_to_send = {
+            peer: value
+            for _, (peer, value) in zip(
+                range(self.max_lat_count), peers_to_send.items()
+            )
+        }
 
         data = {"id": self.peer_id, "peers": peers_to_send}
 
@@ -212,7 +217,7 @@ class NetWatcher(HOPRNode):
 
         log.info(f"Got balances: {balances}")
 
-        data = {"id": self.peer_id, "balances": {"native": balances}}
+        data = {"id": self.peer_id, "balances": balances}
 
         # sends balance to aggregator.
         try:
