@@ -1,5 +1,7 @@
-import swagger_client as swagger
-from swagger_client.rest import ApiException
+from hoprd_sdk import Configuration, ApiClient
+from hoprd_sdk.models import MessagesBody
+from hoprd_sdk.rest import ApiException
+from hoprd_sdk.api import NodeApi, MessagesApi, AccountApi, ChannelsApi, PeersApi
 from urllib3.exceptions import MaxRetryError
 
 from .utils import getlogger
@@ -13,29 +15,9 @@ class HoprdAPIHelper:
     """
 
     def __init__(self, url: str, token: str):
-        self._setup(url, token)
-
-        self._url = url
-        self._token = token
-
-    def _setup(self, url: str, token: str):
-        configuration = swagger.Configuration()
-        configuration.host = f"{url}/api/v2"
-        configuration.api_key["x-auth-token"] = token
-
-        api_client = swagger.ApiClient(configuration)
-        self.node_api = swagger.NodeApi(api_client)
-        self.message_api = swagger.MessagesApi(api_client)
-        self.account_api = swagger.AccountApi(api_client)
-        self.channels_api = swagger.ChannelsApi(api_client)
-
-    @property
-    def url(self) -> str:
-        return self._url
-
-    @property
-    def token(self) -> str:
-        return self._token
+        self.configuration = Configuration()
+        self.configuration.host = f"{url}/api/v3"
+        self.configuration.api_key["x-auth-token"] = token
 
     async def balance(self, type: str = "native"):
         """
@@ -51,13 +33,15 @@ class HoprdAPIHelper:
         log.debug("Getting balance")
 
         try:
-            thread = self.account_api.account_get_balances(async_req=True)
-            response = thread.get()
+            with ApiClient(self.configuration) as client:
+                account_api = AccountApi(client)
+                thread = account_api.account_get_balances(async_req=True)
+                response = thread.get()
         except ApiException:
-            log.exception("Exception when calling AccountApi->account_get_balances")
+            log.exception("ApiException when calling AccountApi->account_get_balances")
             return None
         except OSError:
-            log.exception("Exception when calling AccountApi->account_get_balances")
+            log.exception("OSError when calling AccountApi->account_get_balances")
             return None
         except MaxRetryError:
             log.exception("MaxRetryError when calling AccountApi->account_get_balances")
@@ -69,15 +53,19 @@ class HoprdAPIHelper:
         log.debug("Getting all channels")
 
         try:
-            thread = self.channels_api.channels_get_channels(
-                including_closed=include_closed, async_req=True
-            )
-            response = thread.get()
+            with ApiClient(self.configuration) as client:
+                channels_api = ChannelsApi(client)
+                thread = channels_api.channels_get_channels(
+                    including_closed=include_closed, async_req=True
+                )
+                response = thread.get()
         except ApiException:
-            log.exception("Exception when calling ChannelsApi->channels_get_channels")
+            log.exception(
+                "ApiException when calling ChannelsApi->channels_get_channels"
+            )
             return None
         except OSError:
-            log.exception("Exception when calling ChannelsApi->channels_get_channels")
+            log.exception("OSError when calling ChannelsApi->channels_get_channels")
             return None
         except MaxRetryError:
             log.exception(
@@ -95,15 +83,19 @@ class HoprdAPIHelper:
         log.debug("Getting channel topology")
 
         try:
-            thread = self.channels_api.channels_get_channels(
-                full_topology="true", async_req=True
-            )
-            response = thread.get()
+            with ApiClient(self.configuration) as client:
+                channels_api = ChannelsApi(client)
+                thread = channels_api.channels_get_channels(
+                    full_topology="true", async_req=True
+                )
+                response = thread.get()
         except ApiException:
-            log.exception("Exception when calling ChannelsApi->channels_get_channels")
+            log.exception(
+                "ApiException when calling ChannelsApi->channels_get_channels"
+            )
             return None
         except OSError:
-            log.exception("Exception when calling ChannelsApi->channels_get_channels")
+            log.exception("OSError when calling ChannelsApi->channels_get_channels")
             return None
         except MaxRetryError:
             log.exception(
@@ -154,19 +146,19 @@ class HoprdAPIHelper:
     async def ping(self, peer_id: str, metric: str = "latency"):
         log.debug(f"Pinging peer {peer_id}")
 
-        body = swagger.NodePingBody(peer_id)
-
         try:
-            thread = self.node_api.node_ping(body=body, async_req=True)
-            response = thread.get()
+            with ApiClient(self.configuration) as client:
+                peers_api = PeersApi(client)
+                thread = peers_api.peers_ping_peer(peer_id, async_req=True)
+                response = thread.get()
         except ApiException:
-            log.exception("Exception when calling NodeApi->node_ping")
+            log.exception("ApiException when calling PeersApi->peers_ping_peer")
             return None
         except OSError:
-            log.exception("Exception when calling NodeApi->node_ping")
+            log.exception("OSError when calling PeersApi->peers_ping_peer")
             return None
         except MaxRetryError:
-            log.exception("MaxRetryError when calling NodeApi->node_ping")
+            log.exception("MaxRetryError when calling PeersApi->peers_ping_peer")
             return None
 
         if not hasattr(response, metric):
@@ -184,20 +176,22 @@ class HoprdAPIHelper:
         log.debug("Getting peers")
 
         try:
-            thread = self.node_api.node_get_peers(quality=quality, async_req=True)
-            response = thread.get()
+            with ApiClient(self.configuration) as client:
+                node_api = NodeApi(client)
+                thread = node_api.node_get_peers(quality=quality, async_req=True)
+                response = thread.get()
         except ApiException:
-            log.exception("Exception when calling NodeApi->node_get_peers")
+            log.exception("ApiException when calling NodeApi->node_get_peers")
             return []
         except OSError:
-            log.exception("Exception when calling NodeApi->node_get_peers")
+            log.exception("OSError when calling NodeApi->node_get_peers")
             return []
         except MaxRetryError:
             log.exception("MaxRetryError when calling NodeApi->node_get_peers")
             return []
 
         if not hasattr(response, status):
-            log.error(f"No `{status}` from {self.url}")
+            log.error(f"No `{status}` returned from the API")
             return []
 
         if len(getattr(response, status)) == 0:
@@ -214,13 +208,15 @@ class HoprdAPIHelper:
         log.debug("Getting address")
 
         try:
-            thread = self.account_api.account_get_address(async_req=True)
-            response = thread.get()
+            with ApiClient(self.configuration) as client:
+                account_api = AccountApi(client)
+                thread = account_api.account_get_address(async_req=True)
+                response = thread.get()
         except ApiException:
-            log.exception("Exception when calling AccountApi->account_get_address")
+            log.exception("ApiException when calling AccountApi->account_get_address")
             return None
         except OSError:
-            log.exception("Exception when calling AccountApi->account_get_address")
+            log.exception("OSError when calling AccountApi->account_get_address")
             return None
         except MaxRetryError:
             log.exception("MaxRetryError when calling AccountApi->account_get_address")
@@ -233,14 +229,16 @@ class HoprdAPIHelper:
         return getattr(response, address)
 
     async def send_message(
-        self, destination: str, message: str, hops: list[str]
+        self, destination: str, message: str, hops: list[str], tag: int = 0x0320
     ) -> bool:
         log.debug("Sending message")
 
-        body = swagger.MessagesBody(message, destination, path=hops)
+        body = MessagesBody(tag, message, destination, path=hops)
         try:
-            thread = self.message_api.messages_send_message(body=body, async_req=True)
-            thread.get()
+            with ApiClient(self.configuration) as client:
+                message_api = MessagesApi(client)
+                thread = message_api.messages_send_message(body=body, async_req=True)
+                thread.get()
         except ApiException:
             log.exception("ApiException when calling MessageApi->messages_send_message")
             return False
