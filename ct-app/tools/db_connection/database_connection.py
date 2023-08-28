@@ -45,25 +45,15 @@ class DatabaseConnection:
         Base.metadata.create_all(self.engine)
         self.session = Session(self.engine)
 
-        log.info(f"Database connection established as `{self.user}`")
+        # get connected user from session
+        self.session.execute("SELECT current_user;")
 
-    @property
-    def user(self):
-        """User name getter"""
-        return envvar("PGUSER")
+        log.info("Database connection established.")
 
     def __enter__(self):
         return self.session
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.session.close()
-
-    def close_connection(self):
-        """
-        Closes the database connection.
-        """
-        self.conn.commit()
-        self.cursor.close()
-        self.conn.close()
-
-        log.info(f"Database connection closed as {self.user}")
+        self.engine.dispose()
+        log.info("Database connection closed.")
