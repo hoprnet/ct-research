@@ -39,7 +39,8 @@ def attach_endpoints(app):
         if len(request.json["peers"]) == 0:
             raise exceptions.BadRequest("`peers` must not be empty")
 
-        log.info(f"Received peers from {request.json['id']}")
+        n_peer = len(request.json["peers"])
+        log.info(f"Received update for {n_peer} peers from {request.json['id']}")
 
         agg.handle_node_peer_latencies(request.json["id"], request.json["peers"])
         agg.set_node_update(request.json["id"], datetime.now())

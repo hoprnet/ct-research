@@ -22,8 +22,7 @@ def getlogger() -> logging.Logger:
     if not module:
         module = "main"
 
-    # checks if a logger already exists with the given module name
-    logging.getLogger("httpx").setLevel(logging.WARNING)  # logs were flooded by httpx
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("swagger_client.rest").setLevel(logging.WARNING)
     logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
     logging.getLogger("urllib3.util.retry").setLevel(logging.WARNING)
@@ -32,6 +31,7 @@ def getlogger() -> logging.Logger:
     logging.getLogger("sqlalchemy.pool.impl.QueuePool").setLevel(logging.WARNING)
     logging.getLogger("sqlalchemy.orm.path_registry").setLevel(logging.WARNING)
 
+    # checks if a logger already exists with the given module name
     if logging.getLoggerClass() != ColoredLogger:
         logging.setLoggerClass(ColoredLogger)
 

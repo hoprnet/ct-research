@@ -65,7 +65,7 @@ class NetWatcher(HOPRNode):
             index = random.randint(0, 100)
             self.peer_id = f"<mock-node-address-{index:03d}>"
 
-    @formalin(message="Gathering peers", sleep=60)
+    @formalin(message="Gathering peers", sleep=20)
     @connectguard
     async def gather_peers(self, quality: float = 0.2):
         """
@@ -84,7 +84,7 @@ class NetWatcher(HOPRNode):
         self.peers = found_peers
         log.info(f"Found {len(found_peers)} peers {', '.join(found_peers)}")
 
-    @formalin(message="Pinging peers", sleep=0.1)
+    @formalin(message="Pinging peers", sleep=1)
     @connectguard
     async def ping_peers(self):
         """
@@ -117,7 +117,7 @@ class NetWatcher(HOPRNode):
         # - if latency measure succeeds, always update
         now = time.time()
         async with self.latency_lock:
-            if latency is not None:
+            if latency != 0:
                 log.debug(f"Measured latency to {rand_peer}: {latency}ms")
                 self.latency[rand_peer] = {"value": latency, "timestamp": now}
                 await self.api.open_channel(rand_peer, 1000)
@@ -151,34 +151,43 @@ class NetWatcher(HOPRNode):
         # convert the latency dictionary to a simpler dictionary for the aggregator
         now = time.time()
         for peer, measure in peers_measures.items():
-            if now - measure["timestamp"] > 60 * 60 * 2:
+            if (
+                now - measure["timestamp"] > 60 * 60 * 2
+                and measure["value"] is not None
+            ):
                 measure["value"] = -1
 
-            if measure["value"] is not None:
-                peers_to_send[peer] = measure["value"]
+            if measure["value"] is None:
+                continue
+            if measure["value"] == 0:
+                continue
+
+            peers_to_send[peer] = measure["value"]
+
+        # pick randomly `self.max_lat_count` peers from peer values
+        selected_peers_values = random.sample(
+            list(peers_to_send.items()), k=min(self.max_lat_count, len(peers_to_send))
+        )
 
         # checks if transmission needs to be triggered by peer-list size
-        if len(peers_to_send) >= self.max_lat_count:
+        if len(selected_peers_values) == self.max_lat_count:
             log.info("Peers transmission triggered by latency dictionary size")
-
         # checks if transmission needs to be triggered by timestamp
         elif (
             time.time() - self.last_peer_transmission > 60 * 5
-            and len(peers_to_send) != 0
+            and len(selected_peers_values) != 0
         ):  # 5 minutes
             log.info("Peers transmission triggered by timestamp")
         else:
+            log.info(
+                f"Transmission skipped. {len(selected_peers_values)} peers waiting.."
+            )
             return
 
-        # pick the first `self.max_lat_count` peers from peer values
-        peers_to_send = {
-            peer: value
-            for _, (peer, value) in zip(
-                range(self.max_lat_count), peers_to_send.items()
-            )
+        data = {
+            "id": self.peer_id,
+            "peers": {peer: value for peer, value in selected_peers_values},
         }
-
-        data = {"id": self.peer_id, "peers": peers_to_send}
 
         # send peer list to aggregator.
         try:
@@ -191,15 +200,17 @@ class NetWatcher(HOPRNode):
             log.error("Peers transmission failed")
             return
 
+        filtered_peers = [peer for peer, _ in selected_peers_values]
+
         log.info(
-            f"Transmitted {len(list(peers_to_send))} peers: {', '.join(peers_to_send)}"
+            f"Transmitted {len(filtered_peers)} peers: {', '.join(filtered_peers)}"
         )
 
-        # completely remove the transmitted key-value pair from self.latency in a
+        # reset the transmitted key-value pair from self.latency in a
         # thread-safe way
         async with self.latency_lock:
             self.last_peer_transmission = time.time()
-            for peer in peers_to_send:
+            for peer in filtered_peers:
                 self.latency[peer] = {"value": None, "timestamp": 0}
 
     @formalin(message="Sending node balance", sleep=60 * 5)
@@ -256,8 +267,6 @@ class NetWatcher(HOPRNode):
         self.started = True
         if not self.mock_mode:
             self.tasks.add(asyncio.create_task(self.connect(address="hopr")))
-        else:
-            self.peer_id = "<mock_peer_id>"
 
         self.tasks.add(asyncio.create_task(self.gather_peers()))
         self.tasks.add(asyncio.create_task(self.ping_peers()))
