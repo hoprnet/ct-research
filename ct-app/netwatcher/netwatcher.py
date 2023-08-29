@@ -258,7 +258,7 @@ class NetWatcher(HOPRNode):
         self.tasks.add(asyncio.create_task(self.gather_peers()))
         self.tasks.add(asyncio.create_task(self.ping_peers()))
         self.tasks.add(asyncio.create_task(self.transmit_peers()))
-        # self.tasks.add(asyncio.create_task(self.transmit_balance()))
+        self.tasks.add(asyncio.create_task(self.transmit_balance()))
 
         await asyncio.gather(*self.tasks)
 
