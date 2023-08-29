@@ -243,8 +243,6 @@ class NetWatcher(HOPRNode):
         self.started = True
         if not self.mock_mode:
             self.tasks.add(asyncio.create_task(self.connect(address="hopr")))
-        else:
-            self.peer_id = "<mock_peer_id>"
 
         self.tasks.add(asyncio.create_task(self.gather_peers()))
         self.tasks.add(asyncio.create_task(self.ping_peers()))
