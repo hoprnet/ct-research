@@ -275,17 +275,17 @@ class HoprdAPIHelper:
                 response = thread.get()
         except ApiException:
             log.exception("ApiException when calling PeersApi->peers_ping_peer")
-            return None
+            return 0
         except OSError:
             log.exception("OSError when calling PeersApi->peers_ping_peer")
-            return None
+            return 0
         except MaxRetryError:
             log.exception("MaxRetryError when calling PeersApi->peers_ping_peer")
-            return None
+            return 0
 
         if not hasattr(response, metric):
             log.error(f"No `{metric}` measure from peer {peer_id}")
-            return None
+            return 0
 
         measure = int(getattr(response, metric))
 
