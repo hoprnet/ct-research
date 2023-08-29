@@ -23,7 +23,7 @@ def getlogger() -> logging.Logger:
         module = "main"
 
     logging.getLogger("httpx").setLevel(logging.WARNING)
-    logging.getLogger("swagger_client.rest").setLevel(logging.WARNING)
+    logging.getLogger("hoprd_sdk.rest").setLevel(logging.WARNING)
     logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
     logging.getLogger("urllib3.util.retry").setLevel(logging.WARNING)
     logging.getLogger("sqlalchemy.orm.mapper.Mapper").setLevel(logging.WARNING)
