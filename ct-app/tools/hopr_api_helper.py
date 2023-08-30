@@ -19,16 +19,25 @@ class HoprdAPIHelper:
         self.configuration.host = f"{url}/api/v3"
         self.configuration.api_key["x-auth-token"] = token
 
-    async def balance(self, type: str = "native"):
+    async def balances(self, type: str | list[str] = "all"):
         """
         Returns the balance of the node.
-        :param: type: str =  "hopr" | "native"
-        :return: balance: int
+        :param: type: str =  "all" | "hopr" | "native" | ("safeNative" | "safeHopr")
+        :return: balances: dict | int
         """
+        all_types = ["hopr", "native"]  # , "safeNative", "safeHopr"]
+        if type == "all":
+            type = all_types
+        elif isinstance(type, str):
+            type = [type]
 
-        if type not in ["hopr", "native"]:
-            log.error(f"Type `{type}` not supported. Use `hopr` or `native`")
-            return None
+        for t in type:
+            if t not in all_types:
+                log.error(
+                    f"Type `{type}` not supported. Use `all`, `hopr`, `native`, "
+                    # + "`safeNative` or `safeHopr`"
+                )
+                return None
 
         log.debug("Getting own balance")
 
@@ -47,7 +56,12 @@ class HoprdAPIHelper:
             log.exception("MaxRetryError when calling AccountApi->account_get_balances")
             return None
 
-        return int(getattr(response, type))
+        return_dict = {}
+
+        for t in type:
+            return_dict[t] = int(getattr(response, t))
+
+        return return_dict if len(return_dict) > 1 else return_dict[type[0]]
 
     async def open_channel(self, peer_id: str, amount: int):
         """

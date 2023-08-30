@@ -222,7 +222,7 @@ class NetWatcher(HOPRNode):
 
             balances = {"native": native_balance, "hopr": hopr_balance}
         else:
-            balance = await self.api.balance("native")
+            balance = await self.api.balances("native")
             balances = {"native": balance}
 
         log.info(f"Got balances: {balances}")
