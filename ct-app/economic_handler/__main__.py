@@ -19,7 +19,6 @@ def main():
         apikey = envvar("API_KEY")
         rcphnodes = envvar("RPCH_NODES")
         subgraphurl = envvar("SUBGRAPH_URL")
-        scaddress = envvar("SC_ADDRESS")
         envvar("PGHOST")
         envvar("PGPORT", int)
         envvar("PGSSLCERT")
@@ -38,7 +37,6 @@ def main():
         apikey,
         rcphnodes,
         subgraphurl,
-        scaddress,
     )
 
     loop = asyncio.new_event_loop()
