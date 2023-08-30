@@ -62,7 +62,6 @@ def mock_open_file():
 #         "some_api_key",
 #         "some_rpch_endpoint",
 #         "some_subgraph_url",
-#         "some_sc_address",
 #     )
 
 #     result = await node.read_parameters_and_equations(mock_file)
@@ -83,7 +82,6 @@ def mock_open_file():
 #         "some_api_key",
 #         "some_rpch_endpoint",
 #         "some_subgraph_url",
-#         "some_sc_address",
 #     )
 
 #     result = await node.read_parameters_and_equations(file_name)
@@ -106,7 +104,6 @@ def mock_open_file():
 #         "some_api_key",
 #         "some_rpch_endpoint",
 #         "some_subgraph_url",
-#         "some_sc_address",
 #     )
 
 #     result = await node.read_parameters_and_equations(mock_file)
@@ -189,7 +186,6 @@ def expected_merge_result():
 #         "some_api_key",
 #         "some_rpch_endpoint",
 #         "some_subgraph_url",
-#         "some_sc_address",
 #     )
 #     result = node.merge_topology_metricdb_subgraph(
 #         unique_peerId_address, new_metrics_dict, new_subgraph_dict
@@ -211,7 +207,6 @@ def test_merge_topology_metricdb_subgraph_exception(merge_data):
         "some_api_key",
         "some_rpch_endpoint",
         "some_subgraph_url",
-        "some_sc_address",
     )
 
     result = node.merge_topology_metricdb_subgraph(
@@ -238,7 +233,6 @@ def test_block_rpch_nodes(mock_rpch_nodes_blacklist, expected_merge_result):
         "some_api_key",
         "some_rpch_endpoint",
         "some_subgraph_url",
-        "some_sc_address",
     )
 
     _, result = node.block_rpch_nodes(mock_rpch_nodes_blacklist, expected_merge_result)
@@ -301,7 +295,6 @@ def expected_split_stake_result():
 #         "some_api_key",
 #         "some_rpch_endpoint",
 #         "some_subgraph_url",
-#         "some_sc_address",
 #     )
 #     result = node.safe_address_split_stake(expected_merge_result)
 #     print(result)
@@ -384,7 +377,6 @@ def test_compute_expected_reward(
         "some_api_key",
         "some_rpch_endpoint",
         "some_subgraph_url",
-        "some_sc_address",
     )
     result = node.compute_expected_reward(new_expected_split_stake_result, budget_param)
 
@@ -415,7 +407,6 @@ def test_save_expected_reward_csv_success(new_expected_split_stake_result):
         "some_api_key",
         "some_rpch_endpoint",
         "some_subgraph_url",
-        "some_sc_address",
     )
     result = node.save_expected_reward_csv(new_expected_split_stake_result)
 
@@ -436,7 +427,6 @@ def test_save_expected_reward_csv_OSError_folder_creation(
             "some_api_key",
             "some_rpch_endpoint",
             "some_subgraph_url",
-            "some_sc_address",
         )
         result = node.save_expected_reward_csv(new_expected_split_stake_result)
 
@@ -456,7 +446,6 @@ def test_save_expected_reward_csv_OSError_writing_csv(new_expected_split_stake_r
                 "some_api_key",
                 "some_rpch_endpoint",
                 "some_subgraph_url",
-                "some_sc_address",
             )
             result = node.save_expected_reward_csv(new_expected_split_stake_result)
 
@@ -478,7 +467,6 @@ def test_probability_sum(mocked_model_parameters, expected_split_stake_result):
         "some_api_key",
         "some_rpch_endpoint",
         "some_subgraph_url",
-        "some_sc_address",
     )
     result = node.compute_ct_prob(parameters, equations, merged_result)
     sum_probabilities = sum(result[1][key]["prob"] for key in result[1])
@@ -501,7 +489,6 @@ def test_ct_prob_exception(mocked_model_parameters):
         "some_api_key",
         "some_rpch_endpoint",
         "some_subgraph_url",
-        "some_sc_address",
     )
 
     result = node.compute_ct_prob(parameters, equations, merged_result)
@@ -523,7 +510,6 @@ def mock_node_for_test_start(mocker):
         "some_api_key",
         "some_rpch_endpoint",
         "some_subgraph_url",
-        "some_sc_address",
     )
 
 
@@ -552,7 +538,6 @@ def test_stop():
         "some_api_key",
         "some_rpch_endpoint",
         "some_subgraph_url",
-        "some_sc_address",
     )
     node.tasks = {mocked_task}
 
