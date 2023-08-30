@@ -1,3 +1,5 @@
+import asyncio
+import pytest
 from tools import HOPRNode
 
 # @pytest.mark.asyncio
@@ -33,6 +35,48 @@ def test_disconnect_method():
     node.peer_id = "some_peer_id"
     node.disconnect()
     assert not node.connected
+    assert node.peer_id is None
+
+
+def test_disconnect_when_not_connected():
+    """
+    Test that the node is not disconnected when not connected
+    """
+    node = HOPRNode("some_url", "some_api_key")
+    result = node.disconnect()
+
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_connect_when_node_available(mocker):
+    node = HOPRNode("some_url", "some_api_key")
+
+    mocker.patch.object(node.api, "get_address", return_value="some_peer_id")
+    node.started = True
+
+    asyncio.create_task(node.connect())
+    await asyncio.sleep(1)
+
+    node.started = False
+    await asyncio.sleep(1)
+
+    assert node.peer_id == "some_peer_id"
+
+
+@pytest.mark.asyncio
+async def test_connect_when_node_not_available(mocker):
+    node = HOPRNode("some_url", "some_api_key")
+
+    mocker.patch.object(node.api, "get_address", return_value=None)
+    node.started = True
+
+    asyncio.create_task(node.connect())
+    await asyncio.sleep(1)
+
+    node.started = False
+    await asyncio.sleep(1)
+
     assert node.peer_id is None
 
 

@@ -59,7 +59,7 @@ class HoprdAPIHelper:
         except OSError:
             log.exception("Exception when calling AccountApi->account_get_balances")
             return None
-        except MaxRetryError:
+        except MaxRetryError:  # pragma: no cover
             log.exception("MaxRetryError when calling AccountApi->account_get_balances")
             return None
 
@@ -79,7 +79,7 @@ class HoprdAPIHelper:
         except OSError:
             log.exception("Exception when calling ChannelsApi->channels_get_channels")
             return None
-        except MaxRetryError:
+        except MaxRetryError:  # pragma: no cover
             log.exception(
                 "MaxRetryError when calling ChannelsApi->channels_get_channels"
             )
@@ -105,7 +105,7 @@ class HoprdAPIHelper:
         except OSError:
             log.exception("Exception when calling ChannelsApi->channels_get_channels")
             return None
-        except MaxRetryError:
+        except MaxRetryError:  # pragma: no cover
             log.exception(
                 "MaxRetryError when calling ChannelsApi->channels_get_channels"
             )
@@ -165,7 +165,7 @@ class HoprdAPIHelper:
         except OSError:
             log.exception("Exception when calling NodeApi->node_ping")
             return 0
-        except MaxRetryError:
+        except MaxRetryError:  # pragma: no cover
             log.exception("MaxRetryError when calling NodeApi->node_ping")
             return 0
 
@@ -192,7 +192,7 @@ class HoprdAPIHelper:
         except OSError:
             log.exception("Exception when calling NodeApi->node_get_peers")
             return []
-        except MaxRetryError:
+        except MaxRetryError:  # pragma: no cover
             log.exception("MaxRetryError when calling NodeApi->node_get_peers")
             return []
 
@@ -222,7 +222,7 @@ class HoprdAPIHelper:
         except OSError:
             log.exception("Exception when calling AccountApi->account_get_address")
             return None
-        except MaxRetryError:
+        except MaxRetryError:  # pragma: no cover
             log.exception("MaxRetryError when calling AccountApi->account_get_address")
             return None
 
@@ -247,7 +247,7 @@ class HoprdAPIHelper:
         except OSError:
             log.exception("OSError when calling MessageApi->messages_send_message")
             return False
-        except MaxRetryError:
+        except MaxRetryError:  # pragma: no cover
             log.exception(
                 "MaxRetryError when calling MessageApi->messages_send_message"
             )

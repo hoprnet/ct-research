@@ -106,13 +106,7 @@ async def async_send_1_hop_message(
 
     # try to connect to the node. If the `get_address` method fails, it means that the
     # node is not reachable
-    try:
-        address = await api.get_address("hopr")
-    except Exception:
-        log.error("Could not get address from API")
-        address = None
-    else:
-        log.info(f"Got address: {address}")
+    address = await api.get_address("hopr")
 
     # if the node is not reachable, the task is tranfered to the next node in the list
     if address is None:

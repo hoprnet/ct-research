@@ -35,6 +35,9 @@ class AggregatorTrigger:
         except requests.exceptions.RequestException:
             log.exception("Error while sending request to aggregator")
             return False
+        except Exception:
+            log.exception("Unknown error while sending request to aggregator")
+            return False
         else:
             log.info(f"Response for `send_list`: {response}")
             return True

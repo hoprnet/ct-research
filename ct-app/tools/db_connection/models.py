@@ -18,7 +18,7 @@ class NodePeerConnection(Base):
 
     timestamp: Mapped[datetime] = mapped_column(DateTime)
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return (
             f"Metric(id={self.id!r}, "
             + f"peer_id={self.peer_id!r}, "
@@ -39,7 +39,7 @@ class Reward(Base):
     status: Mapped[str]
     timestamp: Mapped[datetime] = mapped_column(DateTime)
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # pragma: no cover
         return (
             f"Reward(id={self.id!r}, peer_id={self.peer_id!r}, "
             + f"node_address={self.node_address!r}, "

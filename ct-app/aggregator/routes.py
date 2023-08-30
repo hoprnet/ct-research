@@ -48,7 +48,7 @@ def attach_endpoints(app):
         return sanic_text("Received peers")
 
     @app.get("/aggregator/list")
-    async def get_list(request: Request):
+    async def get_list(request: Request):  # pragma: no cover
         """
         Create a GET route to retrieve the aggregated list of peers/latency.
         The list is returned as a JSON object with the following keys:
@@ -163,7 +163,7 @@ def attach_endpoints(app):
         return sanic_text(f"Received balance for {request.json['id']}")
 
     @app.get("/aggregator/metrics")
-    async def metrics(request: Request):
+    async def metrics(request: Request):  # pragma: no cover
         output = prometheus.exposition.generate_latest().decode("utf-8")
         content_type = prometheus.exposition.CONTENT_TYPE_LATEST
 

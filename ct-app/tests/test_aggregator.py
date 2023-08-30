@@ -115,6 +115,22 @@ def test_get_update_not_in_dict():
 
 
 @clear_instance
+def test_clear_node_update():
+    """
+    Test that the clear_node_update method works correctly.
+    """
+    pod_id = "pod_id"
+    timestamp = datetime.now()
+
+    agg.set_node_update(pod_id, timestamp)
+    agg.clear_node_update()
+
+    last_update = agg.get_node_update(pod_id)
+
+    assert last_update is None
+
+
+@clear_instance
 def test_convert_to_db_data_simple():
     """
     Test that the convert_to_db_data method works correctly.
