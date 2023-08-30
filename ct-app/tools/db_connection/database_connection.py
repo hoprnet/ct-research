@@ -45,9 +45,6 @@ class DatabaseConnection:
         Base.metadata.create_all(self.engine)
         self.session = Session(self.engine)
 
-        # get connected user from session
-        self.session.execute("SELECT current_user;")
-
         log.info("Database connection established.")
 
     def __enter__(self):
