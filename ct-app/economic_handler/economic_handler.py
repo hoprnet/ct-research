@@ -25,7 +25,6 @@ class EconomicHandler(HOPRNode):
         key: str,
         rpch_endpoint: str,
         subgraph_url: str,
-        sc_address: str,
     ):
         """
         :param url: the url of the HOPR node
@@ -37,7 +36,6 @@ class EconomicHandler(HOPRNode):
         self.tasks = set[asyncio.Task]()
         self.rpch_endpoint = rpch_endpoint
         self.subgraph_url = subgraph_url
-        self.sc_address = sc_address
 
         super().__init__(url=url, key=key)
 
@@ -138,9 +136,8 @@ class EconomicHandler(HOPRNode):
             """
             tasks.add(
                 asyncio.create_task(
-                    self.get_staking_participations(
+                    self.get_subgraph_data(
                         subgraph_url=self.subgraph_url,
-                        staking_season=self.sc_address,
                         pagination_skip_size=1000,  # Maximum entries per query allowed by TheGraph
                     )
                 )
@@ -462,48 +459,56 @@ class EconomicHandler(HOPRNode):
 
         return "rpch", []
 
-    async def get_staking_participations(
+    async def get_subgraph_data(
         self,
         subgraph_url: str,
-        staking_season: str,
         pagination_skip_size: int,
     ):
         """
-        This function retrieves staking participation data from the specified
-        staking_season smart contract deployed on gnosis chain using The Graph API.
-        The function uses pagination to handle large result sets, allowing retrieval of
-        all staking participation records incrementally.
+        This function retrieves safe_address-node_address-balance links from the specified
+        subgraph using pagination.
         :param: subgraph_url (str): The url for accessing The Graph API.
-        :param: staking_season (str): The sc address of a given staking season.
         :param: pagination_skip_size (int): The number of records per pagination step.
-        :returns: Tuple[str, Dict[str, int]]: A tuple containing the result identifier
-        and a dictionary with account IDs of stakers and the amount of staked tokens.
+        :returns: dict: A dictionary with the node_address as the key and the safe_address
+        and the wxHOPR balance as values.
         """
 
         query = """
-            query GetStakingParticipations($stakingSeason: String, $first: Int, $skip: Int) {
-                stakingParticipations(first: $first, skip: $skip, where: { stakingSeason: $stakingSeason }) {
-                    id
-                    account {
+            query SafeNodeBalance($first: Int, $skip: Int) {
+                safes(first: $first, skip: $skip) {
+                    registeredNodesInNetworkRegistry {
+                    node {
                         id
                     }
-                    stakingSeason {
+                    safe {
+                        id
+                        balances {
+                        wxHoprBalance
+                        }
+                    }
+                    }
+                    registeredNodesInSafeRegistry {
+                    node {
                         id
                     }
-                    actualLockedTokenAmount
+                    safe {
+                        id
+                        balances {
+                        wxHoprBalance
+                        }
+                    }
+                    }
                 }
             }
         """
         url = subgraph_url
         variables = {
-            "stakingSeason": staking_season,
             "first": pagination_skip_size,
             "skip": 0,
         }
 
         data = {"query": query, "variables": variables}  # noqa: F841
         subgraph_dict = {}
-        staking_participations = []
         more_content_available = True
 
         while more_content_available:
@@ -534,19 +539,24 @@ class EconomicHandler(HOPRNode):
                     log.exception("An unexpected error occurred")
                     return "subgraph_data", {}
                 else:
-                    staking_info = json_data["data"]["stakingParticipations"]
+                    safes = json_data["data"]["safes"]
+                    for safe in safes:
+                        for node in (
+                            safe["registeredNodesInNetworkRegistry"]
+                            + safe["registeredNodesInSafeRegistry"]
+                        ):
+                            node_address = node["node"]["id"]
+                            wxHoprBalance = node["safe"]["balances"]["wxHoprBalance"]
+                            safe_address = node["safe"]["id"]
+                            subgraph_dict[node_address] = {
+                                "safe_address": safe_address,
+                                "wxHOPR_balance": wxHoprBalance,
+                            }
 
-                    staking_participations.extend(staking_info)
                     variables[
                         "skip"
                     ] += pagination_skip_size  # Increment skip for next iter
-                    more_content_available = len(staking_info) == pagination_skip_size
-
-        for item in staking_participations:
-            account_id = item["account"]["id"]
-            subgraph_dict[account_id] = (
-                int(item["actualLockedTokenAmount"]) / 1e18
-            )  # 1e18: Decimal Precision of the HOPR token
+                    more_content_available = len(safes) == pagination_skip_size
 
         log.info("Subgraph data dictionary generated")
         return "subgraph_data", subgraph_dict
