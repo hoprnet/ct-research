@@ -1,6 +1,11 @@
+import os
 import pytest
 from tools.hopr_api_helper import HoprdAPIHelper
 from tools import envvar
+
+os.environ["API_HOST"] = "foo_host"
+os.environ["API_PORT"] = "foo_port"
+os.environ["API_TOKEN"] = "foo_token"
 
 
 @pytest.fixture

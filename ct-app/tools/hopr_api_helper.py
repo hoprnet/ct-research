@@ -20,7 +20,7 @@ class HoprdAPIHelper:
         self.configuration.host = f"{url}/api/v3"
         self.configuration.api_key["x-auth-token"] = token
 
-    async def balances(self, type: str | list[str] = "all"):
+    async def balances(self, type: str or list[str] = "all"):
         """
         Returns the balance of the node.
         :param: type: str =  "all" | "hopr" | "native" | "safe_native" | "safe_hopr"
