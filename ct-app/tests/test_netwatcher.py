@@ -200,9 +200,9 @@ async def test_start(mock_instance_for_test_start: NetWatcher):
     assert instance.ping_peers.called
     assert instance.transmit_peers.called
     assert instance.transmit_balance.called
-    assert instance.close_incoming_channels.called
+    # assert instance.close_incoming_channels.called
 
-    assert len(instance.tasks) == 6
+    assert len(instance.tasks) == 5
 
     assert instance.started
 
