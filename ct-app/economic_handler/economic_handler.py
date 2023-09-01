@@ -55,7 +55,7 @@ class EconomicHandler(HOPRNode):
 
     @wakeupcall_from_file(folder="/assets", filename="parameters.json")
     @connectguard
-    async def scheduler(self, test_staging=False):
+    async def scheduler(self, test_staging=True):
         """
         Schedules the tasks of the EconomicHandler in two different modes
         :param: staging (bool): If True, it uses the data returned by the database
@@ -88,6 +88,7 @@ class EconomicHandler(HOPRNode):
 
             parameters_equations_budget = ordered_tasks[0][1:]
             database_metrics = ordered_tasks[1][1]
+            print(f"\033[92m{database_metrics=}\033[0m")
 
             # Add random stake and a random safe address to the metrics database
             _, new_database_metrics = self.add_random_data_to_metrics(database_metrics)
@@ -270,11 +271,11 @@ class EconomicHandler(HOPRNode):
                         "node_peerIds": [],
                         "latency_metrics": [],
                         "timestamp": row.timestamp,
-                        "order": [],
+                        "temp_order": [],
                     }
                 metrics_dict[row.peer_id]["node_peerIds"].append(row.node)
                 metrics_dict[row.peer_id]["latency_metrics"].append(row.latency)
-                metrics_dict[row.peer_id]["temp_order"].append(row.order)
+                metrics_dict[row.peer_id]["temp_order"].append(row.priority)
 
             # sort node_addresses and latency based on temp_order
             for peer_id in metrics_dict:
