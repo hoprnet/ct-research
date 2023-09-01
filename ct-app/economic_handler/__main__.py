@@ -27,6 +27,7 @@ def main():
         envvar("PGUSER")
         envvar("PGDATABASE")
         envvar("PGPASSWORD")
+        envvar("PGSSLMODE")
         mock_mode = envvar("MOCK_MODE", int)
     except KeyError:
         log.exception("Missing environment variables")

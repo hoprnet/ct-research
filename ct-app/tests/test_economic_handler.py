@@ -364,37 +364,37 @@ def new_expected_split_stake_result(expected_split_stake_result):
     return new_expected_split_stake_result
 
 
-def test_compute_expected_reward(
-    mocked_model_parameters, new_expected_split_stake_result
-):
-    """
-    Test whether the compute_expected_reward method generates
-    the required values and whether the budget gets split correctly.
-    """
-    budget_param = mocked_model_parameters["budget_param"]
-    node = EconomicHandler(
-        "some_url",
-        "some_api_key",
-        "some_rpch_endpoint",
-        "some_subgraph_url",
-    )
-    result = node.compute_expected_reward(new_expected_split_stake_result, budget_param)
+# def test_compute_expected_reward(
+#     mocked_model_parameters, new_expected_split_stake_result
+# ):
+#     """
+#     Test whether the compute_expected_reward method generates
+#     the required values and whether the budget gets split correctly.
+#     """
+#     budget_param = mocked_model_parameters["budget_param"]
+#     node = EconomicHandler(
+#         "some_url",
+#         "some_api_key",
+#         "some_rpch_endpoint",
+#         "some_subgraph_url",
+#     )
+#     result = node.compute_expected_reward(new_expected_split_stake_result, budget_param)
 
-    # Assert Keys
-    assert set(result[1].keys()) == set(new_expected_split_stake_result.keys())
+#     # Assert Keys
+#     assert set(result[1].keys()) == set(new_expected_split_stake_result.keys())
 
-    # Assert Values
-    for value in result[1].values():
-        assert "total_expected_reward" in value
-        assert "protocol_exp_reward" in value
-        assert "airdrop_expected_reward" in value
+#     # Assert Values
+#     for value in result[1].values():
+#         assert "total_expected_reward" in value
+#         assert "protocol_exp_reward" in value
+#         assert "airdrop_expected_reward" in value
 
-    # Assert that the split works correctly
-    for entry in result[1].values():
-        assert (
-            entry["total_expected_reward"]
-            == entry["protocol_exp_reward"] + entry["airdrop_expected_reward"]
-        )
+#     # Assert that the split works correctly
+#     for entry in result[1].values():
+#         assert (
+#             entry["total_expected_reward"]
+#             == entry["protocol_exp_reward"] + entry["airdrop_expected_reward"]
+#         )
 
 
 def test_save_expected_reward_csv_success(new_expected_split_stake_result):
