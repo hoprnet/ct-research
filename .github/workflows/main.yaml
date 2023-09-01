@@ -41,7 +41,7 @@ jobs:
       - name: Test with pytest
         working-directory: ct-app
         run: |
-          pytest -k "not api_helper.py and not db_connection.py"
+          pytest -k "not api_helper.py and not test_transmit_"
 
   image:
     name: Build and push container image

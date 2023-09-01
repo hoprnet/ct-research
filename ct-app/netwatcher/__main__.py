@@ -1,13 +1,12 @@
 import asyncio
 from signal import SIGINT, SIGTERM, Signals
 
-
 from tools.exit_codes import ExitCode
-from tools.utils import _getlogger, envvar
+from tools.utils import envvar, getlogger
 
 from .netwatcher import NetWatcher
 
-log = _getlogger()
+log = getlogger()
 
 
 def stop(instance: NetWatcher, caught_signal: Signals):
@@ -30,7 +29,7 @@ def main():
         apihost = envvar("API_HOST")
         apikey = envvar("API_KEY")
         latcount = envvar("LAT_COUNT", int)
-        mock_mode = envvar("MOCK_MODE", bool)
+        mock_mode = envvar("MOCK_MODE", int)
     except KeyError:
         log.exception("Missing environment variables")
         exit(ExitCode.ERROR_MISSING_ENV_VARS)

@@ -1,12 +1,11 @@
 from sanic import Sanic
-
+from tools import getlogger
 
 from .aggregator import Aggregator
 from .middlewares import attach_middlewares
 from .routes import attach_endpoints
-from tools import _getlogger
 
-log = _getlogger()
+log = getlogger()
 
 
 def create_app():  # pragma: no cover

@@ -2,11 +2,12 @@ import asyncio
 from signal import SIGINT, SIGTERM
 
 from tools.exit_codes import ExitCode
-from tools.utils import _getlogger, envvar
+from tools.utils import envvar, getlogger
+
 from .economic_handler import EconomicHandler
 from .utils_econhandler import stop_instance
 
-log = _getlogger()
+log = getlogger()
 
 
 def main():
@@ -18,7 +19,16 @@ def main():
         apikey = envvar("API_KEY")
         rcphnodes = envvar("RPCH_NODES")
         subgraphurl = envvar("SUBGRAPH_URL")
-        scaddress = envvar("SC_ADDRESS")
+        envvar("PGHOST")
+        envvar("PGPORT", int)
+        envvar("PGSSLCERT")
+        envvar("PGSSLKEY")
+        envvar("PGSSLROOTCERT")
+        envvar("PGUSER")
+        envvar("PGDATABASE")
+        envvar("PGPASSWORD")
+        envvar("PGSSLMODE")
+        mock_mode = envvar("MOCK_MODE", int)
     except KeyError:
         log.exception("Missing environment variables")
         exit(ExitCode.ERROR_MISSING_ENV_VARS)
@@ -28,7 +38,6 @@ def main():
         apikey,
         rcphnodes,
         subgraphurl,
-        scaddress,
     )
 
     loop = asyncio.new_event_loop()
@@ -37,8 +46,10 @@ def main():
 
     # start the node and run the event loop until the node stops
     try:
-        loop.run_until_complete(economic_handler.start())
-
+        if mock_mode:
+            loop.run_until_complete(economic_handler.mockstart())
+        else:
+            loop.run_until_complete(economic_handler.start())
     except Exception as e:
         print("Uncaught exception ocurred", str(e))
         exit_code = ExitCode.ERROR_UNCAUGHT_EXCEPTION

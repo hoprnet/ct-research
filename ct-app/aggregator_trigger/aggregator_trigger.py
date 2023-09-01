@@ -1,9 +1,11 @@
 import asyncio
-import requests
-from tools.decorator import formalin
-from tools import _getlogger
 
-log = _getlogger()
+import requests
+
+from tools import getlogger
+from tools.decorator import formalin
+
+log = getlogger()
 
 
 class AggregatorTrigger:
@@ -22,7 +24,7 @@ class AggregatorTrigger:
         self.tasks = set[asyncio.Task]()
         self.endpoint_url = endpoint
 
-    @formalin(sleep=300)
+    @formalin(sleep=60 * 15)
     async def send_list_to_db(self):
         """
         Sends a request to the aggregator to send its data to the db

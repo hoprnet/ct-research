@@ -1,6 +1,9 @@
-from sanic.app import Sanic
-from aggregator import Aggregator
+from datetime import datetime
+
 import pytest
+from sanic.app import Sanic
+
+from aggregator import Aggregator
 from aggregator.middlewares import attach_middlewares
 from aggregator.routes import attach_endpoints
 
@@ -43,8 +46,8 @@ def test_singleton_update():
     agg1 = Aggregator()
     agg2 = Aggregator()
 
-    agg1.add_node_peer_latencies("pod_id", {"peer": 1})
-    agg2.set_node_update("pod_id", "timestamp")
+    agg1.handle_node_peer_latencies("pod_id", {"peer": 1})
+    agg2.set_node_update("pod_id", datetime.now())
 
     assert agg1.get_node_peer_latencies() == agg2.get_node_peer_latencies()
 
@@ -57,7 +60,7 @@ def test_add():
     pod_id = "pod_id"
     items = {"peer": 1}
 
-    agg.add_node_peer_latencies(pod_id, items)
+    agg.handle_node_peer_latencies(pod_id, items)
 
     assert agg._node_peer_latency.get(pod_id) == items
 
@@ -76,27 +79,12 @@ def test_get():
 
 
 @clear_instance
-def test_clear():
-    """
-    Test that the clear method works correctly.
-    """
-    pod_id = "pod_id"
-    items = {"peer": 1}
-
-    agg.add_node_peer_latencies(pod_id, items)
-
-    agg.clear_node_peer_latencies()
-
-    assert agg._node_peer_latency == {}
-
-
-@clear_instance
 def test_set_update():
     """
     Test that the set_update method works correctly.
     """
     pod_id = "pod_id"
-    timestamp = "timestamp"
+    timestamp = datetime.now()
 
     agg.set_node_update(pod_id, timestamp)
 
@@ -127,14 +115,6 @@ def test_get_update_not_in_dict():
 
 
 @clear_instance
-def test_get_metric():
-    """
-    Test that the get_metric method works correctly.
-    """
-    assert isinstance(agg.get_metrics(), dict)
-
-
-@clear_instance
 def test_convert_to_db_data_simple():
     """
     Test that the convert_to_db_data method works correctly.
@@ -142,9 +122,15 @@ def test_convert_to_db_data_simple():
     pod_id = "pod_id"
     items = {"peer": 1}
 
-    agg.add_node_peer_latencies(pod_id, items)
+    agg.handle_node_peer_latencies(pod_id, items)
 
-    assert agg.convert_to_db_data() == [("peer", ["pod_id"], [1])]
+    db_ready_data = agg.convert_to_db_data()
+
+    assert len(db_ready_data) == 1
+
+    assert db_ready_data[0].peer_id == "peer"
+    assert db_ready_data[0].node == "pod_id"
+    assert db_ready_data[0].latency == 1
 
 
 @clear_instance
@@ -156,12 +142,84 @@ def test_convert_to_db_data_multiple_peers():
     pod_id = "pod_id"
     items = {"peer": 1, "peer2": 2}
 
-    agg.add_node_peer_latencies(pod_id, items)
+    agg.handle_node_peer_latencies(pod_id, items)
 
-    assert agg.convert_to_db_data() == [
-        ("peer", ["pod_id"], [1]),
-        ("peer2", ["pod_id"], [2]),
-    ]
+    db_ready_data = agg.convert_to_db_data()
+
+    assert len(db_ready_data) == 2
+    assert db_ready_data[0].peer_id == "peer"
+    assert db_ready_data[0].node == "pod_id"
+    assert db_ready_data[0].latency == 1
+
+    assert db_ready_data[1].peer_id == "peer2"
+    assert db_ready_data[1].node == "pod_id"
+    assert db_ready_data[1].latency == 2
+
+
+@clear_instance
+def test_convert_to_data_multiple_peers_remove():
+    """
+    Test that the convert_to_db_data method works correctly when there are multiple
+    items and one of them needs to be removed.
+    """
+    agg.handle_node_peer_latencies("pod_id", {"peer": 1, "peer2": 2})
+    agg.handle_node_peer_latencies("pod_id", {"peer": -1, "peer2": 3})
+
+    db_ready_data = agg.convert_to_db_data()
+
+    assert len(db_ready_data) == 1
+    assert db_ready_data[0].peer_id == "peer2"
+    assert db_ready_data[0].node == "pod_id"
+    assert db_ready_data[0].latency == 3
+
+
+@clear_instance
+def test_convert_to_data_multiple_peers_remove_more():
+    """
+    Test that the convert_to_db_data method works correctly when there are multiple
+    items and one of them needs to be removed.
+    """
+
+    agg.handle_node_peer_latencies("pod_id_1", {"peer": 1, "peer2": 2})
+    agg.handle_node_peer_latencies("pod_id_2", {"peer": 4, "peer2": 3})
+    agg.handle_node_peer_latencies("pod_id_1", {"peer2": -1})
+
+    db_ready_data = agg.convert_to_db_data()
+
+    assert len(db_ready_data) == 3
+    assert [
+        entry
+        for entry in db_ready_data
+        if entry.peer_id == "peer2" and entry.node == "pod_id_1"
+    ] == []
+
+
+@clear_instance
+def test_convert_to_data_multiple_peers_remove_unknown():
+    """
+    Test that the convert_to_db_data method works correctly when there are multiple
+    items and an unknown peer needs to be removed.
+    """
+
+    agg.handle_node_peer_latencies("pod_id_1", {"peer": 1, "peer2": 2})
+    agg.handle_node_peer_latencies("pod_id_2", {"peer": 4, "peer2": 3})
+    agg.handle_node_peer_latencies("pod_id_1", {"peer3": -1})
+
+    db_ready_data = agg.convert_to_db_data()
+
+    assert len(db_ready_data) == 4
+
+
+@clear_instance
+def test_convert_to_data_multiple_peers_remove_all():
+    """
+    Test that the convert_to_db_data method works correctly when there are multiple
+    items and one of them needs to be removed. In this test, all pods should be removed.
+    """
+    agg.handle_node_peer_latencies("pod_id", {"peer": 1, "peer2": 2})
+    agg.handle_node_peer_latencies("pod_id", {"peer": -1, "peer2": -1})
+
+    assert agg.convert_to_db_data() == []
 
 
 @clear_instance
@@ -175,13 +233,19 @@ def test_convert_to_db_data_multiple_pods():
     items = {"peer": 1}
     items2 = {"peer2": 2}
 
-    agg.add_node_peer_latencies(pod_id, items)
-    agg.add_node_peer_latencies(pod_id2, items2)
+    agg.handle_node_peer_latencies(pod_id, items)
+    agg.handle_node_peer_latencies(pod_id2, items2)
 
-    assert agg.convert_to_db_data() == [
-        ("peer", ["pod_id"], [1]),
-        ("peer2", ["pod_id2"], [2]),
-    ]
+    db_data_ready = agg.convert_to_db_data()
+
+    assert len(db_data_ready) == 2
+    assert db_data_ready[0].peer_id == "peer"
+    assert db_data_ready[0].node == "pod_id"
+    assert db_data_ready[0].latency == 1
+
+    assert db_data_ready[1].peer_id == "peer2"
+    assert db_data_ready[1].node == "pod_id2"
+    assert db_data_ready[1].latency == 2
 
 
 @clear_instance
@@ -192,7 +256,7 @@ def test_add_multiple():
     pod_id = "pod_id"
     items = {"peer": 1, "peer2": 2}
 
-    agg.add_node_peer_latencies(pod_id, items)
+    agg.handle_node_peer_latencies(pod_id, items)
 
     assert agg.get_node_peer_latencies()[pod_id] == items
 
@@ -207,8 +271,8 @@ def test_add_multiple_pods():
     items = {"peer": 1}
     items2 = {"peer2": 2}
 
-    agg.add_node_peer_latencies(pod_id, items)
-    agg.add_node_peer_latencies(pod_id2, items2)
+    agg.handle_node_peer_latencies(pod_id, items)
+    agg.handle_node_peer_latencies(pod_id2, items2)
 
     assert agg.get_node_peer_latencies()[pod_id] == items
     assert agg.get_node_peer_latencies()[pod_id2] == items2
@@ -223,8 +287,8 @@ def test_add_to_existing_pod():
     items = {"peer": 1}
     items2 = {"peer2": 2}
 
-    agg.add_node_peer_latencies(pod_id, items)
-    agg.add_node_peer_latencies(pod_id, items2)
+    agg.handle_node_peer_latencies(pod_id, items)
+    agg.handle_node_peer_latencies(pod_id, items2)
 
     assert agg.get_node_peer_latencies()[pod_id] == {"peer": 1, "peer2": 2}
 
@@ -240,9 +304,9 @@ def test_add_to_existing_pod_multiple():
     items2 = {"peer": 2, "peer2": 1}
     items3 = {"peer2": 2}
 
-    agg.add_node_peer_latencies(pod_id, items)
-    agg.add_node_peer_latencies(pod_id, items2)
-    agg.add_node_peer_latencies(pod_id, items3)
+    agg.handle_node_peer_latencies(pod_id, items)
+    agg.handle_node_peer_latencies(pod_id, items2)
+    agg.handle_node_peer_latencies(pod_id, items3)
 
     assert agg.get_node_peer_latencies()[pod_id] == {"peer": 2, "peer2": 2}
 
@@ -269,93 +333,77 @@ def test_cli(app):
     return app.test_client
 
 
-def test_sanic_get_metrics(test_cli):
+def test_sanic_post_peers_missing_id(test_cli):
     """
-    This test checks that the get metrics endpoint returns the correct data.
-    """
-    _, response = test_cli.get("/aggregator/metrics")
-
-    assert response.status == 200
-    assert isinstance(response.json, dict)
-
-
-def test_sanic_post_list_missing_id(test_cli):
-    """
-    This test checks that the post_list endpoint returns the correct data when
+    This test checks that the post_peers endpoint returns the correct data when
     the id is missing.
     """
-    _, response = test_cli.post("/aggregator/list", json={"list": []})
+    _, response = test_cli.post("/aggregator/peers", json={"peers": []})
 
     assert response.status == 400
     assert response.json["message"] == "`id` key not in body"
 
 
-def test_sanic_post_list_wrong_id_type(test_cli):
+def test_sanic_post_peers_wrong_id_type(test_cli):
     """
-    This test checks that the post_list endpoint returns the correct data when
+    This test checks that the post_peers endpoint returns the correct data when
     the value passed as id is not a string
     """
     _, response = test_cli.post(
-        "/aggregator/list", json={"id": 123, "list": {"peer": 1}}
+        "/aggregator/peers", json={"id": 123, "peers": {"peer": 1}}
     )
 
     assert response.status == 400
     assert response.json["message"] == "`id` must be a string"
 
 
-def test_sanic_post_list_missing_list(test_cli):
+def test_sanic_post_peers_missing_peers(test_cli):
     """
-    This test checks that the post_list endpoint returns the correct data when
-    the list is missing.
+    This test checks that the post_peers endpoint returns the correct data when
+    the peers is missing.
     """
-    _, response = test_cli.post("/aggregator/list", json={"id": "some_id"})
+    _, response = test_cli.post("/aggregator/peers", json={"id": "some_id"})
 
     assert response.status == 400
-    assert response.json["message"] == "`list` key not in body"
+    assert response.json["message"] == "`peers` key not in body"
 
 
-def test_sanic_post_list_wrong_list_type(test_cli):
+def test_sanic_post_peers_wrong_peers_type(test_cli):
     """
-    This test checks that the post_list endpoint returns the correct data when
-    the value passed as list is not a dict
-    """
-    _, response = test_cli.post("/aggregator/list", json={"id": "some_id", "list": 123})
-
-    assert response.status == 400
-    assert response.json["message"] == "`list` must be a dict"
-
-
-def test_sanic_post_list_empty_list(test_cli):
-    """
-    This test checks that the post_list endpoint returns the correct data when
-    the list is empty.
-    """
-    _, response = test_cli.post("/aggregator/list", json={"id": "some_id", "list": {}})
-
-    assert response.status == 400
-    assert response.json["message"] == "`list` must not be empty"
-
-
-def test_sanic_post_list(test_cli):
-    """
-    This test checks that the post_list endpoint returns the correct data when
-    the list is missing.
+    This test checks that the post_peers endpoint returns the correct data when
+    the value passed as peers is not a dict
     """
     _, response = test_cli.post(
-        "/aggregator/list", json={"id": "some_id", "list": {"peer": 1}}
+        "/aggregator/peers", json={"id": "some_id", "peers": 123}
+    )
+
+    assert response.status == 400
+    assert response.json["message"] == "`peers` must be a dict"
+
+
+def test_sanic_post_peers_empty_peers(test_cli):
+    """
+    This test checks that the post_peers endpoint returns the correct data when
+    the peers is empty.
+    """
+    _, response = test_cli.post(
+        "/aggregator/peers", json={"id": "some_id", "peers": {}}
+    )
+
+    assert response.status == 400
+    assert response.json["message"] == "`peers` must not be empty"
+
+
+def test_sanic_post_peers(test_cli):
+    """
+    This test checks that the post_peers endpoint returns the correct data when
+    the peers is missing.
+    """
+    _, response = test_cli.post(
+        "/aggregator/peers", json={"id": "some_id", "peers": {"peer": 1}}
     )
 
     assert response.status == 200
-
-
-def test_sanic_get_list(test_cli):
-    """
-    This test checks that the get_list endpoint returns the correct data.
-    """
-    _, response = test_cli.get("/aggregator/list")
-
-    assert response.status == 200
-    assert isinstance(response.json, dict)
 
 
 def test_sanic_post_to_db(test_cli):  # TODO: this still need to be implemented
@@ -374,7 +422,7 @@ def test_sanic_post_balance(test_cli):
     nothing is missing.
     """
     _, response = test_cli.post(
-        "/aggregator/balance", json={"id": "some_id", "balances": {"xdai": 1}}
+        "/aggregator/balances", json={"id": "some_id", "balances": {"xdai": 1}}
     )
 
     assert response.status == 200
@@ -385,7 +433,7 @@ def test_sanic_post_balance_id_missing(test_cli):
     This test checks that the post_balances endpoint returns the correct data when
     the id is missing.
     """
-    _, response = test_cli.post("/aggregator/balance", json={"balances": {"xdai": 1}})
+    _, response = test_cli.post("/aggregator/balances", json={"balances": {"xdai": 1}})
 
     assert response.status == 400
     assert response.json["message"] == "`id` key not in body"
@@ -397,7 +445,7 @@ def test_sanic_post_balance_id_wrong_type(test_cli):
     the id is not a string.
     """
     _, response = test_cli.post(
-        "/aggregator/balance", json={"id": 123, "balances": {"xdai": 1}}
+        "/aggregator/balances", json={"id": 123, "balances": {"xdai": 1}}
     )
 
     assert response.status == 400
@@ -409,7 +457,7 @@ def test_sanic_post_balance_balances_missing(test_cli):
     This test checks that the post_balances endpoint returns the correct data when
     the balances are missing.
     """
-    _, response = test_cli.post("/aggregator/balance", json={"id": "some_id"})
+    _, response = test_cli.post("/aggregator/balances", json={"id": "some_id"})
 
     assert response.status == 400
     assert response.json["message"] == "`balances` key not in body"
@@ -421,7 +469,7 @@ def test_sanic_post_balance_balances_wrong_type(test_cli):
     the balances are not a dict.
     """
     _, response = test_cli.post(
-        "/aggregator/balance", json={"id": "some_id", "balances": 123}
+        "/aggregator/balances", json={"id": "some_id", "balances": 123}
     )
 
     assert response.status == 400

@@ -1,5 +1,11 @@
+import os
 import pytest
 from tools.hopr_api_helper import HoprdAPIHelper
+from tools import envvar
+
+os.environ["API_HOST"] = "foo_host"
+os.environ["API_PORT"] = "foo_port"
+os.environ["API_TOKEN"] = "foo_token"
 
 
 @pytest.fixture
@@ -7,35 +13,14 @@ def api_helper():
     """
     This fixture returns an instance of the HoprdAPIHelper class.
     """
-    apihost = "localhost"
-    port = "13301"
-    apikey = "%th1s-IS-a-S3CR3T-ap1-PUSHING-b1ts-TO-you%"
 
-    helper = HoprdAPIHelper(f"http://{apihost}:{port}", apikey)
+    apihost = envvar("API_HOST")
+    apiport = envvar("API_PORT")
+    apikey = envvar("API_TOKEN")
+
+    helper = HoprdAPIHelper(f"http://{apihost}:{apiport}", apikey)
 
     yield helper
-
-
-@pytest.mark.asyncio
-async def test_withdraw(api_helper: HoprdAPIHelper):
-    """
-    This test checks that the withdraw method of the HoprdAPIHelper class returns the
-    expected response.
-    """
-    pass
-
-
-@pytest.mark.asyncio
-async def test_balance(api_helper: HoprdAPIHelper):
-    """
-    This test checks that the balance method of the HoprdAPIHelper class returns the
-    expected response.
-    """
-    balance = await api_helper.balance()
-
-    assert balance is not None
-    assert "native" in balance
-    assert "hopr" in balance
 
 
 @pytest.mark.asyncio
@@ -44,49 +29,10 @@ async def test_balance_native(api_helper: HoprdAPIHelper):
     This test checks that the balance method of the HoprdAPIHelper class returns the
     expected response when only the native balance is requested.
     """
-    native_balance = await api_helper.balance("native")
+    native_balance = await api_helper.balances("native")
 
     assert native_balance is not None
     assert isinstance(native_balance, int)
-
-
-@pytest.mark.asyncio
-async def test_set_alias(api_helper: HoprdAPIHelper):
-    """
-    This test checks that the set_alias method of the HoprdAPIHelper class returns the
-    expected response.
-    """
-    pass
-
-
-@pytest.mark.asyncio
-async def test_get_alias(api_helper: HoprdAPIHelper):
-    """
-    This test checks that the get_alias method of the HoprdAPIHelper class returns the
-    expected response.
-    """
-    pass
-
-
-@pytest.mark.asyncio
-async def test_remove_alias(api_helper: HoprdAPIHelper):
-    """
-    This test checks that the remove_alias method of the HoprdAPIHelper class returns
-    the expected response.
-    """
-    pass
-
-
-@pytest.mark.asyncio
-async def test_get_settings(api_helper: HoprdAPIHelper):
-    """
-    This test checks that the get_settings method of the HoprdAPIHelper class returns
-    the expected response.
-    """
-    settings = await api_helper.get_settings()
-
-    assert settings is not None
-    assert isinstance(settings, dict)
 
 
 @pytest.mark.asyncio
@@ -95,34 +41,7 @@ async def test_get_all_channels(api_helper: HoprdAPIHelper):
     This test checks that the get_all_channels method of the HoprdAPIHelper class returns
     the expected response.
     """
-    await api_helper.get_all_channels(True)
-
-
-@pytest.mark.asyncio
-async def test_get_tickets_in_channel(api_helper: HoprdAPIHelper):
-    """
-    This test checks that the get_tickets_in_channel method of the HoprdAPIHelper class
-    returns the expected response.
-    """
-    await api_helper.get_tickets_in_channel(True)
-
-
-@pytest.mark.asyncio
-async def test_redeem_tickets_in_channel(api_helper: HoprdAPIHelper):
-    """
-    This test checks that the redeem_tickets_in_channel method of the HoprdAPIHelper
-    class returns the expected response.
-    """
-    pass
-
-
-@pytest.mark.asyncio
-async def test_redeem_tickets(api_helper: HoprdAPIHelper):
-    """
-    This test checks that the redeem_tickets method of the HoprdAPIHelper class returns
-    the expected response.
-    """
-    await api_helper.redeem_tickets()
+    await api_helper.all_channels(True)
 
 
 @pytest.mark.asyncio
@@ -131,10 +50,10 @@ async def test_ping(api_helper: HoprdAPIHelper):
     This test checks that the ping method of the HoprdAPIHelper class returns the
     expected response.
     """
-    peer_ids: list = await api_helper.peers("peerId")
+    peer_ids: list = await api_helper.peers("peer_id")
     latency = await api_helper.ping(peer_ids.pop())
 
-    assert latency is not None
+    assert latency != 0
     assert isinstance(latency, int)
 
 
@@ -144,10 +63,10 @@ async def test_ping_bad_metric(api_helper: HoprdAPIHelper):
     This test checks that the ping method of the HoprdAPIHelper class returns the
     expected response when the peerId does not exist.
     """
-    peer_ids: list = await api_helper.peers("peerId")
+    peer_ids: list = await api_helper.peers("peer_id")
     latency = await api_helper.ping(peer_ids.pop(), metric="some_param")
 
-    assert latency is None
+    assert latency == 0
 
 
 @pytest.mark.asyncio
@@ -156,7 +75,7 @@ async def test_peers(api_helper: HoprdAPIHelper):
     This test checks that the peers method of the HoprdAPIHelper class returns the
     expected response.
     """
-    peer_ids = await api_helper.peers("peerId")
+    peer_ids = await api_helper.peers("peer_id")
 
     assert peer_ids is not None
     assert isinstance(peer_ids, list)
@@ -170,9 +89,10 @@ async def test_get_peers_bad_param(api_helper: HoprdAPIHelper):
     This test checks that the peers method of the HoprdAPIHelper class returns the
     expected response when the peerId does not exist.
     """
-    result = await api_helper.peers("some_param")
+    peer_ids = await api_helper.peers("some_param")
 
-    assert result is None
+    assert isinstance(peer_ids, list)
+    assert len(peer_ids) == 0
 
 
 @pytest.mark.asyncio
@@ -183,7 +103,8 @@ async def test_ping_bad_status(api_helper: HoprdAPIHelper):
     """
     peer_ids: list = await api_helper.peers(status="some_status")
 
-    assert peer_ids is None
+    assert isinstance(peer_ids, list)
+    assert len(peer_ids) == 0
 
 
 @pytest.mark.asyncio
