@@ -25,7 +25,6 @@ class EconomicHandler(HOPRNode):
         key: str,
         rpch_endpoint: str,
         subgraph_url: str,
-        sc_address: str,
     ):
         """
         :param url: the url of the HOPR node
@@ -37,7 +36,6 @@ class EconomicHandler(HOPRNode):
         self.tasks = set[asyncio.Task]()
         self.rpch_endpoint = rpch_endpoint
         self.subgraph_url = subgraph_url
-        self.sc_address = sc_address
 
         super().__init__(url=url, key=key)
 
@@ -57,7 +55,7 @@ class EconomicHandler(HOPRNode):
 
     @wakeupcall_from_file(folder="/assets", filename="parameters.json")
     @connectguard
-    async def scheduler(self, test_staging=False):
+    async def scheduler(self, test_staging=True):
         """
         Schedules the tasks of the EconomicHandler in two different modes
         :param: staging (bool): If True, it uses the data returned by the database
@@ -90,6 +88,7 @@ class EconomicHandler(HOPRNode):
 
             parameters_equations_budget = ordered_tasks[0][1:]
             database_metrics = ordered_tasks[1][1]
+            print(f"\033[92m{database_metrics=}\033[0m")
 
             # Add random stake and a random safe address to the metrics database
             _, new_database_metrics = self.add_random_data_to_metrics(database_metrics)
@@ -138,9 +137,8 @@ class EconomicHandler(HOPRNode):
             """
             tasks.add(
                 asyncio.create_task(
-                    self.get_staking_participations(
+                    self.get_subgraph_data(
                         subgraph_url=self.subgraph_url,
-                        staking_season=self.sc_address,
                         pagination_skip_size=1000,  # Maximum entries per query allowed by TheGraph
                     )
                 )
@@ -158,23 +156,25 @@ class EconomicHandler(HOPRNode):
             )
 
             unique_nodeAddress_peerId_aggbalance_links = ordered_tasks[0][1]
-            print(unique_nodeAddress_peerId_aggbalance_links)
+            print(f"\033[92m{unique_nodeAddress_peerId_aggbalance_links=}\033[0m")
             parameters_equations_budget = ordered_tasks[1][1:]
             rpch_nodes_blacklist = ordered_tasks[2][1]
-            # staking_participations = ordered_tasks[3][1]
+            # print(f"\033[92m{rpch_nodes_blacklist=}\033[0m")
+            # subgraph_data = ordered_tasks[3][1]
+            # print(f"\033[92m{subgraph_data=}\033[0m")
 
             # helper functions that allow to test the code by inserting
             # the peerIDs of the pluto nodes (SUBJECT TO REMOVAL)
             pluto_keys_in_mockdb_data = self.replace_keys_in_mock_data(
                 unique_nodeAddress_peerId_aggbalance_links
             )
-            print(pluto_keys_in_mockdb_data)
+            print(f"{pluto_keys_in_mockdb_data=}")
             pluto_addresses_in_mocksubraph_data = (
                 self.replace_addresses_in_mock_data_subgraph(
                     unique_nodeAddress_peerId_aggbalance_links
                 )
             )
-            print(pluto_addresses_in_mocksubraph_data)
+            print(f"{pluto_addresses_in_mocksubraph_data=}")
 
             # merge unique_safe_peerId_links with database metrics and subgraph data
             _, metrics_dict = self.merge_topology_metricdb_subgraph(
@@ -182,7 +182,7 @@ class EconomicHandler(HOPRNode):
                 pluto_keys_in_mockdb_data,
                 pluto_addresses_in_mocksubraph_data,
             )
-            print(metrics_dict)
+            print(f"{metrics_dict=}")
 
             # Exclude RPCh entry and exit nodes from the reward computation
             _, metrics_dict_excluding_rpch = self.block_rpch_nodes(
@@ -194,7 +194,7 @@ class EconomicHandler(HOPRNode):
             _, metrics_dict_including_total_balance = self.calculate_total_balance(
                 metrics_dict_excluding_rpch
             )
-            print(f"{metrics_dict_including_total_balance=}")
+            print(f"\033[92m{metrics_dict_including_total_balance=}\033[0m")
 
             # Exclude ct-app nodes from the reward computation
             _, metrics_dict_excluding_ct_nodes = self.block_ct_nodes(
@@ -268,25 +268,25 @@ class EconomicHandler(HOPRNode):
             for row in last_added_rows:
                 if row.peer_id not in metrics_dict:
                     metrics_dict[row.peer_id] = {
-                        "node_addresses": [],
+                        "node_peerIds": [],
                         "latency_metrics": [],
-                        "Timestamp": row.timestamp,
-                        "order": [],
+                        "timestamp": row.timestamp,
+                        "temp_order": [],
                     }
-                metrics_dict[row.peer_id]["node_addresses"].append(row.node)
+                metrics_dict[row.peer_id]["node_peerIds"].append(row.node)
                 metrics_dict[row.peer_id]["latency_metrics"].append(row.latency)
-                metrics_dict[row.peer_id]["temp_order"].append(row.order)
+                metrics_dict[row.peer_id]["temp_order"].append(row.priority)
 
             # sort node_addresses and latency based on temp_order
             for peer_id in metrics_dict:
                 order = metrics_dict[peer_id]["temp_order"]
-                addresses = metrics_dict[peer_id]["node_addresses"]
+                addresses = metrics_dict[peer_id]["node_peerIds"]
                 latency = metrics_dict[peer_id]["latency_metrics"]
 
                 addresses = [x for _, x in sorted(zip(order, addresses))]
                 latency = [x for _, x in sorted(zip(order, latency))]
 
-                metrics_dict[peer_id]["node_addresses"] = addresses
+                metrics_dict[peer_id]["node_peerIds"] = addresses
                 metrics_dict[peer_id]["latency_metrics"] = latency
 
             # remove the temp order key from the dictionaries
@@ -324,11 +324,31 @@ class EconomicHandler(HOPRNode):
         watcher IDs odered by a statistical measure computed on latency
         """
         metrics_dict = {
-            "peer_id_1": {"netw": ["node_1", "node_3"]},
-            "peer_id_2": {"netw": ["node_1", "node_2", "node_4"]},
-            "peer_id_3": {"netw": ["node_2", "node_3", "node_4"]},
-            "peer_id_4": {"netw": ["node_1", "node_2", "node_3"]},
-            "peer_id_5": {"netw": ["node_1", "node_2", "node_3", "node_4"]},
+            "peer_id_1": {
+                "node_peerIds": ["peerID_1", "peerID_2", "peerID_3"],
+                "latency_metrics": [10, 15, 8],
+                "timestamp": "2023-09-01 12:00:00",
+            },
+            "peer_id_2": {
+                "node_peerIds": ["peerID_1", "peerID_3"],
+                "latency_metrics": [5, 12, 7],
+                "timestamp": "2023-09-01 12:00:00",
+            },
+            "peer_id_3": {
+                "node_peerIds": ["peerID_1", "peerID_2", "peerID_3", "peerID_4"],
+                "latency_metrics": [8, 18, 9],
+                "timestamp": "2023-09-01 12:00:00",
+            },
+            "peer_id_4": {
+                "node_peerIds": ["peerID_2", "peerID_3", "peerID_4"],
+                "latency_metrics": [9, 14, 6],
+                "timestamp": "2023-09-01 12:00:00",
+            },
+            "peer_id_5": {
+                "node_peerIds": ["peerID_1", "peerID_3", "peerID_4"],
+                "latency_metrics": [12, 20, 11],
+                "timestamp": "2023-09-01 12:00:00",
+            },
         }
         return metrics_dict
 
@@ -339,25 +359,25 @@ class EconomicHandler(HOPRNode):
                   and node_address as well as balance as the value.
         """
         subgraph_dict = {
-            "safe_1": {
-                "node_address": "address_1",
-                "balance": int(2000000000000000000),
+            "address_1": {
+                "safe_address": "safe_1",
+                "wxHOPR_balance": int(20),
             },
-            "safe_2": {
-                "node_address": "address_2",
-                "balance": int(3000000000000000000),
+            "address_2": {
+                "safe_address": "safe_1",
+                "wxHOPR_balance": int(30),
             },
-            "safe_3": {
-                "node_address": "address_3",
-                "balance": int(4000000000000000000),
+            "address_3": {
+                "safe_address": "safe_3",
+                "wxHOPR_balance": int(40),
             },
-            "safe_4": {
-                "node_address": "address_4",
-                "balance": int(4000000000000000000),
+            "address_4": {
+                "safe_address": "safe_4",
+                "wxHOPR_balance": int(50),
             },
-            "safe_5": {
-                "node_address": "address_5",
-                "balance": int(8000000000000000000),
+            "address_5": {
+                "safe_address": "safe_5",
+                "wxHOPR_balance": int(80),
             },
         }
         return subgraph_dict
@@ -398,11 +418,9 @@ class EconomicHandler(HOPRNode):
         ]
 
         new_subgraph_dict = {}
-        for safe_key, data in subgraph_dict.items():
-            new_subgraph_dict[safe_key] = {
-                "node_address": source_addresses_list.pop(0),
-                "balance": data["balance"],
-            }
+        for i, data in enumerate(subgraph_dict.values()):
+            new_key = source_addresses_list[i]
+            new_subgraph_dict[new_key] = data
 
         return new_subgraph_dict
 
@@ -462,48 +480,56 @@ class EconomicHandler(HOPRNode):
 
         return "rpch", []
 
-    async def get_staking_participations(
+    async def get_subgraph_data(
         self,
         subgraph_url: str,
-        staking_season: str,
         pagination_skip_size: int,
     ):
         """
-        This function retrieves staking participation data from the specified
-        staking_season smart contract deployed on gnosis chain using The Graph API.
-        The function uses pagination to handle large result sets, allowing retrieval of
-        all staking participation records incrementally.
+        This function retrieves safe_address-node_address-balance links from the specified
+        subgraph using pagination.
         :param: subgraph_url (str): The url for accessing The Graph API.
-        :param: staking_season (str): The sc address of a given staking season.
         :param: pagination_skip_size (int): The number of records per pagination step.
-        :returns: Tuple[str, Dict[str, int]]: A tuple containing the result identifier
-        and a dictionary with account IDs of stakers and the amount of staked tokens.
+        :returns: dict: A dictionary with the node_address as the key and the safe_address
+        and the wxHOPR balance as values.
         """
 
         query = """
-            query GetStakingParticipations($stakingSeason: String, $first: Int, $skip: Int) {
-                stakingParticipations(first: $first, skip: $skip, where: { stakingSeason: $stakingSeason }) {
-                    id
-                    account {
+            query SafeNodeBalance($first: Int, $skip: Int) {
+                safes(first: $first, skip: $skip) {
+                    registeredNodesInNetworkRegistry {
+                    node {
                         id
                     }
-                    stakingSeason {
+                    safe {
+                        id
+                        balances {
+                        wxHoprBalance
+                        }
+                    }
+                    }
+                    registeredNodesInSafeRegistry {
+                    node {
                         id
                     }
-                    actualLockedTokenAmount
+                    safe {
+                        id
+                        balances {
+                        wxHoprBalance
+                        }
+                    }
+                    }
                 }
             }
         """
         url = subgraph_url
         variables = {
-            "stakingSeason": staking_season,
             "first": pagination_skip_size,
             "skip": 0,
         }
 
         data = {"query": query, "variables": variables}  # noqa: F841
         subgraph_dict = {}
-        staking_participations = []
         more_content_available = True
 
         while more_content_available:
@@ -534,19 +560,24 @@ class EconomicHandler(HOPRNode):
                     log.exception("An unexpected error occurred")
                     return "subgraph_data", {}
                 else:
-                    staking_info = json_data["data"]["stakingParticipations"]
+                    safes = json_data["data"]["safes"]
+                    for safe in safes:
+                        for node in (
+                            safe["registeredNodesInNetworkRegistry"]
+                            + safe["registeredNodesInSafeRegistry"]
+                        ):
+                            node_address = node["node"]["id"]
+                            wxHoprBalance = node["safe"]["balances"]["wxHoprBalance"]
+                            safe_address = node["safe"]["id"]
+                            subgraph_dict[node_address] = {
+                                "safe_address": safe_address,
+                                "wxHOPR_balance": wxHoprBalance,
+                            }
 
-                    staking_participations.extend(staking_info)
                     variables[
                         "skip"
                     ] += pagination_skip_size  # Increment skip for next iter
-                    more_content_available = len(staking_info) == pagination_skip_size
-
-        for item in staking_participations:
-            account_id = item["account"]["id"]
-            subgraph_dict[account_id] = (
-                int(item["actualLockedTokenAmount"]) / 1e18
-            )  # 1e18: Decimal Precision of the HOPR token
+                    more_content_available = len(safes) == pagination_skip_size
 
         log.info("Subgraph data dictionary generated")
         return "subgraph_data", subgraph_dict
@@ -574,12 +605,13 @@ class EconomicHandler(HOPRNode):
                 source_node_address = data["source_node_address"]
 
                 if peer_id in new_metrics_dict:
-                    data["netw"] = new_metrics_dict[peer_id]["netw"]
+                    metrics_data = new_metrics_dict[peer_id]
+                    data["node_peerIds"] = metrics_data["node_peerIds"]
 
-                for safe, subgraph_data in new_subgraph_dict.items():
-                    if subgraph_data["node_address"] == source_node_address:
-                        data["safe_address"] = safe
-                        data["safe_balance"] = subgraph_data["balance"]
+                if source_node_address in new_subgraph_dict:
+                    subgraph_data = new_subgraph_dict[source_node_address]
+                    data["safe_address"] = subgraph_data["safe_address"]
+                    data["wxHOPR_balance"] = subgraph_data["wxHOPR_balance"]
 
                 merged_result[peer_id] = data
 
@@ -615,7 +647,7 @@ class EconomicHandler(HOPRNode):
         """
         dict_including_total_balance = {}
         for key, data in input_dict.items():
-            total_balance = data["aggregated_balance"] + data["safe_balance"]
+            total_balance = data["aggregated_balance"] + data["wxHOPR_balance"]
             data["total_balance"] = total_balance
             dict_including_total_balance[key] = data
 
@@ -632,7 +664,7 @@ class EconomicHandler(HOPRNode):
 
         # Collect all unique node_addresses from the input data
         for data in merged_metrics_dict.values():
-            excluded_nodes.update(data["node_addresses"])
+            excluded_nodes.update(data["node_peerIds"])
 
         # New dictionary excluding entries with keys in the exclusion set
         metrics_dict_excluding_ct_nodes = {
@@ -738,10 +770,7 @@ class EconomicHandler(HOPRNode):
             total_exp_reward = entry["prob"] * budget
             apy = (
                 total_exp_reward * ((60 * 60 * 24 * 365) / budget_period_in_sec)
-            ) / entry[
-                "stake"
-            ]  # shoould be total balance instead of stake.
-            # Total balance will be introduced by PR 277
+            ) / entry["total_balance"]
             protocol_exp_reward = total_exp_reward * budget_split_ratio
             entry["apy"] = apy
 

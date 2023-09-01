@@ -46,7 +46,7 @@ async def test_ping(api_helper: HoprdAPIHelper):
     peer_ids: list = await api_helper.peers("peer_id")
     latency = await api_helper.ping(peer_ids.pop())
 
-    assert latency is not None
+    assert latency != 0
     assert isinstance(latency, int)
 
 
@@ -59,7 +59,7 @@ async def test_ping_bad_metric(api_helper: HoprdAPIHelper):
     peer_ids: list = await api_helper.peers("peer_id")
     latency = await api_helper.ping(peer_ids.pop(), metric="some_param")
 
-    assert latency is None
+    assert latency == 0
 
 
 @pytest.mark.asyncio
