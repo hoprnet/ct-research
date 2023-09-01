@@ -324,27 +324,27 @@ class EconomicHandler(HOPRNode):
         """
         metrics_dict = {
             "peer_id_1": {
-                "node_peerIds": ["node1_peer1", "node2_peer1", "node3_peer1"],
+                "node_peerIds": ["peerID_1", "peerID_2", "peerID_3"],
                 "latency_metrics": [10, 15, 8],
                 "timestamp": "2023-09-01 12:00:00",
             },
             "peer_id_2": {
-                "node_peerIds": ["node1_peer2", "node2_peer2", "node3_peer2"],
+                "node_peerIds": ["peerID_1", "peerID_3"],
                 "latency_metrics": [5, 12, 7],
                 "timestamp": "2023-09-01 12:00:00",
             },
             "peer_id_3": {
-                "node_peerIds": ["node1_peer3", "node2_peer3", "node3_peer3"],
+                "node_peerIds": ["peerID_1", "peerID_2", "peerID_3", "peerID_4"],
                 "latency_metrics": [8, 18, 9],
                 "timestamp": "2023-09-01 12:00:00",
             },
             "peer_id_4": {
-                "node_peerIds": ["node1_peer4", "node2_peer4", "node3_peer4"],
+                "node_peerIds": ["peerID_2", "peerID_3", "peerID_4"],
                 "latency_metrics": [9, 14, 6],
                 "timestamp": "2023-09-01 12:00:00",
             },
             "peer_id_5": {
-                "node_peerIds": ["node1_peer5", "node2_peer5", "node3_peer5"],
+                "node_peerIds": ["peerID_1", "peerID_3", "peerID_4"],
                 "latency_metrics": [12, 20, 11],
                 "timestamp": "2023-09-01 12:00:00",
             },
