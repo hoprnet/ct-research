@@ -3,8 +3,6 @@ import time
 
 import pytest
 
-# set before importing postman, otherwise the envvars are not taken into account and
-# postman crashes before the tests are run
 os.environ["TASK_NAME"] = "foo_task"
 os.environ["NODE_ADDRESS"] = "0x1234567890"
 os.environ["PROJECT_NAME"] = "foo_project"
@@ -12,9 +10,11 @@ os.environ["RABBITMQ_USERNAME"] = "foo_username"
 os.environ["RABBITMQ_PASSWORD"] = "foo_password"
 os.environ["RABBITMQ_HOST"] = "foo_host"
 os.environ["RABBITMQ_VIRTUALHOST"] = "foo_virtualhost"
+os.environ["TIMEOUT"] = "5"
 os.environ["API_HOST"] = "foo_api_host"
 os.environ["API_TOKEN"] = "foo_api_token"
 os.environ["TIMEOUT"] = "10"
+
 
 import postman as pm  # noqa: E402
 
@@ -81,6 +81,9 @@ async def test_async_send_1_hop_message_hit_splitted(mocker):
     targeted node is reachable but messages could not be sent."""
     mocker.patch(
         "postman.postman_tasks.HoprdAPIHelper.get_address", return_value="foo_address"
+    )
+    mocker.patch(
+        "postman.postman_tasks.HoprdAPIHelper.send_message", return_value=False
     )
 
     status, fb_status = await pm.async_send_1_hop_message(

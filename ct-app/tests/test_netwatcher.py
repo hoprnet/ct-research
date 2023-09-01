@@ -142,7 +142,7 @@ def mock_instance_for_test_transmit_balance(mocker):
     Create a mock for each coroutine that should be executed.
     """
     api = HoprdAPIHelper("some_url", "some_key")
-    mocker.patch.object(api, "balance", return_value=10)
+    mocker.patch.object(api, "balances", return_value=10)
 
     instance = NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl")
     instance.api = api
@@ -180,6 +180,7 @@ def mock_instance_for_test_start(mocker):
     mocker.patch.object(NetWatcher, "ping_peers", return_value=None)
     mocker.patch.object(NetWatcher, "transmit_peers", return_value=None)
     mocker.patch.object(NetWatcher, "transmit_balance", return_value=None)
+    mocker.patch.object(NetWatcher, "close_incoming_channels", return_value=None)
 
     return NetWatcher("some_url", "some_api_key", "some_posturl", "some_balanceurl")
 
@@ -199,6 +200,7 @@ async def test_start(mock_instance_for_test_start: NetWatcher):
     assert instance.ping_peers.called
     assert instance.transmit_peers.called
     assert instance.transmit_balance.called
+    # assert instance.close_incoming_channels.called
 
     assert len(instance.tasks) == 5
 

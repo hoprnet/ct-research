@@ -1,6 +1,12 @@
+import os
 import pytest
 from swagger_client.rest import ApiException
 from tools.hopr_api_helper import HoprdAPIHelper
+from tools import envvar
+
+os.environ["API_HOST"] = "foo_host"
+os.environ["API_PORT"] = "foo_port"
+os.environ["API_TOKEN"] = "foo_token"
 
 
 @pytest.fixture
@@ -8,11 +14,12 @@ def api_helper():
     """
     This fixture returns an instance of the HoprdAPIHelper class.
     """
-    apihost = "localhost"
-    port = "13304"
-    apikey = "%th1s-IS-a-S3CR3T-ap1-PUSHING-b1ts-TO-you%"
 
-    helper = HoprdAPIHelper(f"http://{apihost}:{port}", apikey)
+    apihost = envvar("API_HOST")
+    apiport = envvar("API_PORT")
+    apikey = envvar("API_TOKEN")
+
+    helper = HoprdAPIHelper(f"http://{apihost}:{apiport}", apikey)
 
     yield helper
 
@@ -76,7 +83,7 @@ async def test_balance_native(api_helper: HoprdAPIHelper):
     This test checks that the balance method of the HoprdAPIHelper class returns the
     expected response when only the native balance is requested.
     """
-    native_balance = await api_helper.balance("native")
+    native_balance = await api_helper.balances("native")
 
     assert native_balance is not None
     assert isinstance(native_balance, int)
@@ -88,7 +95,7 @@ async def test_get_all_channels(api_helper: HoprdAPIHelper):
     This test checks that the get_all_channels method of the HoprdAPIHelper class returns
     the expected response.
     """
-    await api_helper.get_all_channels(True)
+    await api_helper.all_channels(True)
 
 
 @pytest.mark.asyncio
@@ -135,7 +142,6 @@ async def test_ping_bad_metric(api_helper: HoprdAPIHelper):
 
     assert latency == 0
 
-
 @pytest.mark.asyncio
 async def test_ping_exceptions(mocker, api_helper: HoprdAPIHelper):
     """
@@ -150,6 +156,7 @@ async def test_ping_exceptions(mocker, api_helper: HoprdAPIHelper):
     mocker.patch.object(api_helper.node_api, "node_ping", side_effect=OSError)
     latency = await api_helper.ping("peer_id")
     assert latency == 0
+
 
 
 @pytest.mark.asyncio

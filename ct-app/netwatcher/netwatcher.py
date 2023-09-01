@@ -3,7 +3,6 @@ from copy import deepcopy
 import random
 import time
 
-
 from tools.decorator import connectguard, formalin
 from tools.hopr_node import HOPRNode
 from tools.utils import getlogger, post_dictionary
@@ -80,10 +79,11 @@ class NetWatcher(HOPRNode):
             number_to_pick = random.randint(5, 10)
             found_peers = random.sample(self.mocking_peers, number_to_pick)
         else:
-            found_peers = await self.api.peers(param="peerId", quality=quality)
+            found_peers = await self.api.peers(param="peer_id", quality=quality)
 
+        _short_peers = [".." + peer[-5:] for peer in found_peers]
         self.peers = found_peers
-        log.info(f"Found {len(found_peers)} peers {', '.join(found_peers)}")
+        log.info(f"Found {len(found_peers)} peers {', '.join(_short_peers)}")
 
     @formalin(message="Pinging peers", sleep=1)
     @connectguard
@@ -119,9 +119,12 @@ class NetWatcher(HOPRNode):
         now = time.time()
         async with self.latency_lock:
             if latency != 0:
-                log.debug(f"Measured latency to {rand_peer}: {latency}ms")
-
+                log.debug(f"Measured latency to {rand_peer[-5:]}: {latency}ms")
                 self.latency[rand_peer] = {"value": latency, "timestamp": now}
+                # try:
+                #     await self.api.open_channel(eth_address, 1000)
+                # except Exception:
+                #     log.error(f"Error opening channel to {rand_peer}")
                 return
 
             log.warning(f"Failed to ping {rand_peer}")
@@ -181,7 +184,7 @@ class NetWatcher(HOPRNode):
             log.info("Peers transmission triggered by timestamp")
         else:
             log.info(
-                f"Transmission skipped. {len(selected_peers_values)} peers waiting.."
+                f"Peer transmission skipped. {len(selected_peers_values)} peers waiting.."
             )
             return
 
@@ -193,8 +196,8 @@ class NetWatcher(HOPRNode):
         # send peer list to aggregator.
         try:
             success = await post_dictionary(self.posturl, data)
-        except Exception:
-            log.error("Error transmitting peer dictionary")
+        except Exception as e:
+            log.error(f"Exception while transmitting peers: {e}")
             return
 
         if not success:
@@ -203,8 +206,9 @@ class NetWatcher(HOPRNode):
 
         filtered_peers = [peer for peer, _ in selected_peers_values]
 
+        _short_filter_peers = [".." + peer[-5:] for peer in filtered_peers]
         log.info(
-            f"Transmitted {len(filtered_peers)} peers: {', '.join(filtered_peers)}"
+            f"Transmitted {len(filtered_peers)} peers: {', '.join(_short_filter_peers)}"
         )
 
         # reset the transmitted key-value pair from self.latency in a
@@ -223,8 +227,7 @@ class NetWatcher(HOPRNode):
 
             balances = {"native": native_balance, "hopr": hopr_balance}
         else:
-            balance = await self.api.balance("native")
-            balances = {"native": balance}
+            balances = await self.api.balances(["native", "hopr"])
 
         log.info(f"Got balances: {balances}")
 
@@ -241,13 +244,36 @@ class NetWatcher(HOPRNode):
             log.error("Balance transmission failed")
             return
 
-        log.info(f"Transmitted balances: {data['balances']}")
+        log.info("Transmitted balances")
+
+    @formalin(message="Closing incoming channels", sleep=60 * 5)
+    @connectguard
+    async def close_incoming_channels(self):
+        """
+        Closes all incoming channels.
+        """
+        if self.mock_mode:
+            return
+
+        incoming_channels_ids = await self.api.incoming_channels(only_id=True)
+
+        log.warning(f"Discovered {len(incoming_channels_ids)} incoming channels")
+
+        if len(incoming_channels_ids) == 0:
+            return
+
+        log.info("Closing discovered incoming channels")
+
+        for channel_id in incoming_channels_ids:
+            await self.api.close_channel(channel_id)
+
+        log.info(f"Closed {len(incoming_channels_ids)} incoming channels")
 
     async def start(self):
         """
         Starts the tasks of this node
         """
-        log.info(f"Starting instance connected to '{self.peer_id}'")
+        log.info("Starting instance")
         if self.tasks:
             return
 
@@ -259,6 +285,7 @@ class NetWatcher(HOPRNode):
         self.tasks.add(asyncio.create_task(self.ping_peers()))
         self.tasks.add(asyncio.create_task(self.transmit_peers()))
         self.tasks.add(asyncio.create_task(self.transmit_balance()))
+        # self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
 
         await asyncio.gather(*self.tasks)
 
@@ -266,7 +293,7 @@ class NetWatcher(HOPRNode):
         """
         Stops the tasks of this instance
         """
-        log.debug(f"Stopping instance {self.peer_id}")
+        log.debug("Stopping instance")
 
         self.started = False
         for task in self.tasks:
