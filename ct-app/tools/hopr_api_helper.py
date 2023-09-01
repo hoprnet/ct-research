@@ -78,8 +78,8 @@ class HoprdAPIHelper:
         try:
             with ApiClient(self.configuration) as client:
                 channels_api = ChannelsApi(client)
-                response = channels_api.channels_open_channel(body=body)
-                print(response)
+                thread = channels_api.channels_open_channel(body=body, async_req=True)
+                response = thread.get()
         except ApiException as e:
             log.error("ApiException when calling ChannelsApi->channels_open_channel")
             status = json.loads(e.body.decode())["status"]
@@ -207,6 +207,35 @@ class HoprdAPIHelper:
             return []
         else:
             return response
+
+    # async def native_address_from_peer_id(self, peer_id: str):
+    #     """
+    #     Returns the native address of the given peer_id.
+    #     :param: peer_id: str
+    #     :return: address: str
+    #     """
+    #     log.debug(f"Getting native address from peer id {peer_id}")
+
+    #     try:
+    #         with ApiClient(self.configuration) as client:
+    #             peers_api = PeersApi(client)
+    #             thread = peers_api.peers_get_peer(peer_id, async_req=True)
+    #             response = thread.get()
+    #     except ApiException:
+    #         log.exception("ApiException when calling PeersApi->peers_get_peer")
+    #         return None
+    #     except OSError:
+    #         log.exception("OSError when calling PeersApi->peers_get_peer")
+    #         return None
+    #     except MaxRetryError:
+    #         log.exception("MaxRetryError when calling PeersApi->peers_get_peer")
+    #         return None
+
+    #     if not hasattr(response, "address"):
+    #         log.error("Response does not contain `address`")
+    #         return None
+
+    #     return getattr(response, "address")
 
     async def get_unique_nodeAddress_peerId_aggbalance_links(self):
         """
