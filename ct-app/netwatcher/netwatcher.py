@@ -79,10 +79,11 @@ class NetWatcher(HOPRNode):
             number_to_pick = random.randint(5, 10)
             found_peers = random.sample(self.mocking_peers, number_to_pick)
         else:
-            found_peers = await self.api.peers(param="peerId", quality=quality)
+            found_peers = await self.api.peers(param="peer_id", quality=quality)
 
+        _short_peers = [".." + peer[-5:] for peer in found_peers]
         self.peers = found_peers
-        log.info(f"Found {len(found_peers)} peers {', '.join(found_peers)}")
+        log.info(f"Found {len(found_peers)} peers {', '.join(_short_peers)}")
 
     @formalin(message="Pinging peers", sleep=1)
     @connectguard
@@ -120,7 +121,10 @@ class NetWatcher(HOPRNode):
             if latency != 0:
                 log.debug(f"Measured latency to {rand_peer}: {latency}ms")
                 self.latency[rand_peer] = {"value": latency, "timestamp": now}
-                await self.api.open_channel(rand_peer, 1000)
+                try:
+                    await self.api.open_channel(rand_peer, 1000)
+                except Exception:
+                    log.error(f"Error opening channel to {rand_peer}")
                 return
 
             log.warning(f"Failed to ping {rand_peer}")
@@ -202,8 +206,9 @@ class NetWatcher(HOPRNode):
 
         filtered_peers = [peer for peer, _ in selected_peers_values]
 
+        _short_filter_peers = [".." + peer[-5:] for peer in filtered_peers]
         log.info(
-            f"Transmitted {len(filtered_peers)} peers: {', '.join(filtered_peers)}"
+            f"Transmitted {len(filtered_peers)} peers: {', '.join(_short_filter_peers)}"
         )
 
         # reset the transmitted key-value pair from self.latency in a
@@ -222,8 +227,7 @@ class NetWatcher(HOPRNode):
 
             balances = {"native": native_balance, "hopr": hopr_balance}
         else:
-            balance = await self.api.balances("native")
-            balances = {"native": balance}
+            balances = await self.api.balances(["native", "hopr"])
 
         log.info(f"Got balances: {balances}")
 
@@ -260,7 +264,7 @@ class NetWatcher(HOPRNode):
         """
         Starts the tasks of this node
         """
-        log.info(f"Starting instance connected to '{self.peer_id}'")
+        log.info("Starting instance")
         if self.tasks:
             return
 
@@ -280,7 +284,7 @@ class NetWatcher(HOPRNode):
         """
         Stops the tasks of this instance
         """
-        log.debug(f"Stopping instance {self.peer_id}")
+        log.debug("Stopping instance")
 
         self.started = False
         for task in self.tasks:
