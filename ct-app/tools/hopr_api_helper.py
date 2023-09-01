@@ -1,3 +1,4 @@
+import json
 from hoprd_sdk import Configuration, ApiClient
 from hoprd_sdk.models import MessagesBody, ChannelsBody
 from hoprd_sdk.rest import ApiException
@@ -19,16 +20,25 @@ class HoprdAPIHelper:
         self.configuration.host = f"{url}/api/v3"
         self.configuration.api_key["x-auth-token"] = token
 
-    async def balance(self, type: str = "native"):
+    async def balances(self, type: str or list[str] = "all"):
         """
         Returns the balance of the node.
-        :param: type: str =  "hopr" | "native"
-        :return: balance: int
+        :param: type: str =  "all" | "hopr" | "native" | "safe_native" | "safe_hopr"
+        :return: balances: dict | int
         """
+        all_types = ["hopr", "native", "safe_native", "safe_hopr"]
+        if type == "all":
+            type = all_types
+        elif isinstance(type, str):
+            type = [type]
 
-        if type not in ["hopr", "native"]:
-            log.error(f"Type `{type}` not supported. Use `hopr` or `native`")
-            return None
+        for t in type:
+            if t not in all_types:
+                log.error(
+                    f"Type `{type}` not supported. Use `all`, `hopr`, `native`, "
+                    + "`safeNative` or `safeHopr`"
+                )
+                return None
 
         log.debug("Getting own balance")
 
@@ -47,36 +57,42 @@ class HoprdAPIHelper:
             log.exception("MaxRetryError when calling AccountApi->account_get_balances")
             return None
 
-        return int(getattr(response, type))
+        return_dict = {}
 
-    async def open_channel(self, peer_id: str, amount: int):
+        for t in type:
+            return_dict[t] = int(getattr(response, t))
+
+        return return_dict if len(return_dict) > 1 else return_dict[type[0]]
+
+    async def open_channel(self, peer_address: str, amount: int):
         """
-        Opens a channel with the given peer_id and amount.
-        :param: peer_id: str
+        Opens a channel with the given peer_address and amount.
+        :param: peer_address: str
         :param: amount: int
         :return: bool
         """
-        log.debug(f"Opening channel to '{peer_id}'")
+        log.debug(f"Opening channel to '{peer_address}'")
 
-        body = ChannelsBody(peer_id, amount)
+        status = None
+        body = ChannelsBody(peer_address, amount)
         try:
             with ApiClient(self.configuration) as client:
                 channels_api = ChannelsApi(client)
-                thread = channels_api.channels_open_channel(body, async_req=True)
+                thread = channels_api.channels_open_channel(body=body, async_req=True)
                 response = thread.get()
-        except ApiException:
-            log.exception(
-                "ApiException when calling ChannelsApi->channels_open_channel"
-            )
-            return False
+        except ApiException as e:
+            log.error("ApiException when calling ChannelsApi->channels_open_channel")
+            status = json.loads(e.body.decode())["status"]
         except OSError:
-            log.exception("OSError when calling ChannelsApi->channels_open_channel")
+            log.error("OSError when calling ChannelsApi->channels_open_channel")
             return False
         except MaxRetryError:
-            log.exception(
-                "MaxRetryError when calling ChannelsApi->channels_open_channel"
-            )
+            log.error("MaxRetryError when calling ChannelsApi->channels_open_channel")
             return False
+
+        if status == "CHANNEL_ALREADY_OPEN":
+            log.warning("Channel already opened")
+            return True
 
         if hasattr(response, "channelId"):
             log.debug(f"Channel opened: {response.channelId}")
@@ -85,10 +101,6 @@ class HoprdAPIHelper:
         if not hasattr(response, "status"):
             log.error("Can not read `status` from response")
             return False
-
-        if response.status == "CHANNEL_ALREADY_OPEN":
-            log.warning(f"Channel could not be opened: {response.status}")
-            return True
 
         log.error(f"Channel could not be opened: {response.status}")
         return False
@@ -132,7 +144,9 @@ class HoprdAPIHelper:
         try:
             with ApiClient(self.configuration) as client:
                 channels_api = ChannelsApi(client)
-                thread = channels_api.channels_get_channels(async_req=True)
+                thread = channels_api.channels_get_channels(
+                    full_topology="false", including_closed="false", async_req=True
+                )
                 response = thread.get()
         except ApiException:
             log.exception(
@@ -173,7 +187,9 @@ class HoprdAPIHelper:
             with ApiClient(self.configuration) as client:
                 channels_api = ChannelsApi(client)
                 thread = channels_api.channels_get_channels(
-                    including_closed=include_closed, async_req=True
+                    full_topology="true",
+                    including_closed=include_closed,
+                    async_req=True,
                 )
                 response = thread.get()
         except ApiException:
@@ -191,6 +207,35 @@ class HoprdAPIHelper:
             return []
         else:
             return response
+
+    # async def native_address_from_peer_id(self, peer_id: str):
+    #     """
+    #     Returns the native address of the given peer_id.
+    #     :param: peer_id: str
+    #     :return: address: str
+    #     """
+    #     log.debug(f"Getting native address from peer id {peer_id}")
+
+    #     try:
+    #         with ApiClient(self.configuration) as client:
+    #             peers_api = PeersApi(client)
+    #             thread = peers_api.peers_get_peer(peer_id, async_req=True)
+    #             response = thread.get()
+    #     except ApiException:
+    #         log.exception("ApiException when calling PeersApi->peers_get_peer")
+    #         return None
+    #     except OSError:
+    #         log.exception("OSError when calling PeersApi->peers_get_peer")
+    #         return None
+    #     except MaxRetryError:
+    #         log.exception("MaxRetryError when calling PeersApi->peers_get_peer")
+    #         return None
+
+    #     if not hasattr(response, "address"):
+    #         log.error("Response does not contain `address`")
+    #         return None
+
+    #     return getattr(response, "address")
 
     async def get_unique_nodeAddress_peerId_aggbalance_links(self):
         """
@@ -289,7 +334,7 @@ class HoprdAPIHelper:
 
         measure = int(getattr(response, metric))
 
-        log.info(f"Measured {measure:3d}({metric}) from peer {peer_id}")
+        log.debug(f"Measured {measure:3d}({metric}) from peer {peer_id}")
         return measure
 
     async def peers(
