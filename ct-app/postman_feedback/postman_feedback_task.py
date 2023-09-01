@@ -12,7 +12,6 @@ app = Celery(
 )
 
 
-# the name of the task is the name of the "<task_name>"
 @app.task(name="feedback_task")
 def feedback_task(
     peer_id: str,
