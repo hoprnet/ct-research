@@ -1,6 +1,15 @@
+import os
+
 import pytest
-from tools.hopr_api_helper import HoprdAPIHelper
-from tools import envvar
+
+from tools import HoprdAPIHelper, envvar
+
+if "API_HOST" not in os.environ:
+    os.environ["API_HOST"] = "foo_host"
+if "API_PORT" not in os.environ:
+    os.environ["API_PORT"] = "foo_port"
+if "API_TOKEN" not in os.environ:
+    os.environ["API_TOKEN"] = "foo_token"
 
 
 @pytest.fixture
@@ -8,7 +17,7 @@ def bad_api_helper():
     """
     This fixture returns an instance of the HoprdAPIHelper class.
     """
-    apihost = envvar("API_HOST") + "foo"
+    apihost = envvar("API_HOST")
     apiport = envvar("API_PORT")
     apikey = envvar("API_TOKEN")
 

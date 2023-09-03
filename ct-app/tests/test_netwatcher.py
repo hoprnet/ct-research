@@ -1,8 +1,10 @@
 import asyncio
 import functools
 from unittest.mock import MagicMock, patch
-import tools
+
 import pytest
+
+import tools
 
 
 def mock_decorator(*args, **kwargs):

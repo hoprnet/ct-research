@@ -1,6 +1,8 @@
-import pytest
-import aiohttp
 from unittest.mock import patch
+
+import aiohttp
+import pytest
+
 from economic_handler.economic_handler import EconomicHandler
 
 

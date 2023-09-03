@@ -1,5 +1,5 @@
-from unittest.mock import MagicMock
 from signal import SIGINT
+from unittest.mock import MagicMock
 
 from economic_handler.economic_handler import EconomicHandler
 from economic_handler.utils_econhandler import stop_instance

@@ -1,8 +1,7 @@
 # import json
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest import mock
-from unittest.mock import MagicMock
-from unittest.mock import patch
 
 from economic_handler.economic_handler import EconomicHandler
 
@@ -44,7 +43,7 @@ def file_contents():
 
 @pytest.fixture
 def mock_open_file():
-    with mock.patch("builtins.open") as mock_open_func:
+    with patch("builtins.open") as mock_open_func:
         yield mock_open_func
 
 

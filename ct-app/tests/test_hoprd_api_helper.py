@@ -1,12 +1,16 @@
 import os
+
 import pytest
 from hoprd_sdk.rest import ApiException
-from tools.hopr_api_helper import HoprdAPIHelper
-from tools import envvar
 
-os.environ["API_HOST"] = "foo_host"
-os.environ["API_PORT"] = "foo_port"
-os.environ["API_TOKEN"] = "foo_token"
+from tools import HoprdAPIHelper, envvar
+
+if "API_HOST" not in os.environ:
+    os.environ["API_HOST"] = "foo_host"
+if "API_PORT" not in os.environ:
+    os.environ["API_PORT"] = "foo_port"
+if "API_TOKEN" not in os.environ:
+    os.environ["API_TOKEN"] = "foo_token"
 
 
 @pytest.fixture
