@@ -53,7 +53,7 @@ class HoprdAPIHelper:
         except OSError:
             log.exception("OSError when calling AccountApi->account_get_balances")
             return None
-        except MaxRetryError: # pragma: no cover
+        except MaxRetryError:  # pragma: no cover
             log.exception("MaxRetryError when calling AccountApi->account_get_balances")
             return None
 
@@ -86,7 +86,7 @@ class HoprdAPIHelper:
         except OSError:
             log.error("OSError when calling ChannelsApi->channels_open_channel")
             return False
-        except MaxRetryError: # pragma: no cover
+        except MaxRetryError:  # pragma: no cover
             log.error("MaxRetryError when calling ChannelsApi->channels_open_channel")
             return False
 
@@ -126,7 +126,7 @@ class HoprdAPIHelper:
         except OSError:
             log.exception("OSError when calling ChannelsApi->channels_close_channel")
             return False
-        except MaxRetryError: # pragma: no cover
+        except MaxRetryError:  # pragma: no cover
             log.exception(
                 "MaxRetryError when calling ChannelsApi->channels_close_channel"
             )
@@ -156,7 +156,7 @@ class HoprdAPIHelper:
         except OSError:
             log.exception("OSError when calling ChannelsApi->channels_get_channels")
             return []
-        except MaxRetryError: # pragma: no cover
+        except MaxRetryError:  # pragma: no cover
             log.exception(
                 "MaxRetryError when calling ChannelsApi->channels_get_channels"
             )
@@ -200,7 +200,7 @@ class HoprdAPIHelper:
         except OSError:
             log.exception("OSError when calling ChannelsApi->channels_get_channels")
             return []
-        except MaxRetryError: # pragma: no cover
+        except MaxRetryError:  # pragma: no cover
             log.exception(
                 "MaxRetryError when calling ChannelsApi->channels_get_channels"
             )

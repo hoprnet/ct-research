@@ -1,6 +1,6 @@
 import os
 import pytest
-from swagger_client.rest import ApiException
+from hoprd_sdk.rest import ApiException
 from tools.hopr_api_helper import HoprdAPIHelper
 from tools import envvar
 
@@ -142,6 +142,7 @@ async def test_ping_bad_metric(api_helper: HoprdAPIHelper):
 
     assert latency == 0
 
+
 @pytest.mark.asyncio
 async def test_ping_exceptions(mocker, api_helper: HoprdAPIHelper):
     """
@@ -156,7 +157,6 @@ async def test_ping_exceptions(mocker, api_helper: HoprdAPIHelper):
     mocker.patch.object(api_helper.node_api, "node_ping", side_effect=OSError)
     latency = await api_helper.ping("peer_id")
     assert latency == 0
-
 
 
 @pytest.mark.asyncio
