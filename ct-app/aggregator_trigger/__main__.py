@@ -21,12 +21,12 @@ def stop(trigger: AggregatorTrigger, caught_signal: Signals):
 
 def main():
     try:
-        endpoint = envvar("POST_TO_DB_ENDPOINT")
+        aggregator_url = envvar("AGGREGATOR_URL")
     except ValueError:
         log.exception("Missing environment variables")
         exit()
 
-    trigger = AggregatorTrigger(endpoint)
+    trigger = AggregatorTrigger(aggregator_url)
 
     # create the event loop and register the signal handlers
     loop = asyncio.new_event_loop()

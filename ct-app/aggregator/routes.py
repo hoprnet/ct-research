@@ -64,8 +64,8 @@ def attach_endpoints(app):
 
             return sanic_text("Data pushed to DB")
 
-    @app.get("/aggregator/check_last_updates")
-    async def check_nodes_last_update(request: Request):
+    @app.get("/aggregator/check_timestamps")
+    async def check_nodes_timestamps(request: Request):
         """
         Create a GET route to check the last update timestamp for all pods.
         """
