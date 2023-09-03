@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import prometheus_client as prometheus
 from sanic import exceptions, response
@@ -69,7 +69,13 @@ def attach_endpoints(app):
         """
         Create a GET route to check the last update timestamp for all pods.
         """
-        pass
+        delta = timedelta(hours=2)
+        removed_node_lat, removed_nodes_time = agg.remove_too_old_nodes(delta)
+
+        return sanic_text(
+            f"Removed {removed_node_lat} nodes from latency data "
+            + f"({removed_nodes_time} from timestamp data)"
+        )
 
     @app.post("/aggregator/balances")
     async def post_balance(request: Request):
