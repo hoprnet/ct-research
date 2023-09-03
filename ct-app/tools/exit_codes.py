@@ -7,4 +7,5 @@ class ExitCode(Enum):
     ERROR_TIMEOUT = 2
     ERROR_BAD_ARGUMENTS = 3
     ERROR_UNCAUGHT_EXCEPTION = 4
+    ERROR_MISSING_ENV_VARS = 5
     

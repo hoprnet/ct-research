@@ -6,9 +6,9 @@ def test_url_construction():
     """
     Test that the url is constructed correctly.
     """
-    instance = AggregatorTrigger("http://gcp.host.com:5000/agg/send_list_to_db")
+    instance = AggregatorTrigger("http://gcp.host.com:5000/")
 
-    assert validators.url(instance.endpoint_url)
+    assert validators.url(instance.endpoint)
 
 
 # the send_list_to_db() method is not tested here, but the accessed endpoint is tested

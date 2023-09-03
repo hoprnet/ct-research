@@ -9,7 +9,7 @@ log = getlogger()
 
 class HOPRNode:
     """
-    Implements the functionality of a HOPR node through the hoprd-api-python and WebSocket
+    Implements the functionality of a HOPR node through the hoprd-api-python
     """
 
     def __init__(self, url: str, key: str):
