@@ -3,7 +3,8 @@ import csv
 import os
 import time
 import traceback
-import random
+
+# import random
 import aiohttp
 from celery import Celery
 
@@ -70,10 +71,31 @@ class EconomicHandler(HOPRNode):
             expected_order = [
                 "params",
                 "metricsDB",
+                "unique_nodeAddress_peerId_aggbalance_links",
+                "rpch",
+                "subgraph_data",
+                "channels",
             ]
 
             tasks.add(asyncio.create_task(self.read_parameters_and_equations()))
             tasks.add(asyncio.create_task(self.get_database_metrics()))
+            tasks.add(
+                asyncio.create_task(
+                    self.get_unique_nodeAddress_peerId_aggbalance_links()
+                )
+            )
+            tasks.add(
+                asyncio.create_task(self.blacklist_rpch_nodes(self.rpch_endpoint))
+            )
+            tasks.add(
+                asyncio.create_task(
+                    self.get_subgraph_data(
+                        subgraph_url=self.subgraph_url,
+                        pagination_skip_size=1000,  # Max allowed entries by TheGraph
+                    )
+                )
+            )
+            tasks.add(asyncio.create_task(self.get_channels()))
 
             await asyncio.sleep(0)
 
@@ -89,9 +111,14 @@ class EconomicHandler(HOPRNode):
             parameters_equations_budget = ordered_tasks[0][1:]
             database_metrics = ordered_tasks[1][1]
             print(f"\033[92m{database_metrics=}\033[0m")
-
-            # Add random stake and a random safe address to the metrics database
-            _, new_database_metrics = self.add_random_data_to_metrics(database_metrics)
+            unique_nodeAddress_peerId_aggbalance_links = ordered_tasks[2][1]
+            print(f"\033[92m{unique_nodeAddress_peerId_aggbalance_links=}\033[0m")
+            rpch_nodes_blacklist = ordered_tasks[3][1]
+            print(f"\033[92m{rpch_nodes_blacklist=}\033[0m")
+            subgraph_data = ordered_tasks[4][1]
+            print(f"\033[92m{subgraph_data=}\033[0m")
+            channels = ordered_tasks[5][1]
+            print(f"\033[92m{channels=}\033[0m")
 
             # Extract Parameters
             parameters, equations, budget_param = parameters_equations_budget
@@ -295,27 +322,27 @@ class EconomicHandler(HOPRNode):
 
             return "metricsDB", metrics_dict
 
-    def add_random_data_to_metrics(self, metrics_dict):
-        """
-        Adds random stake and safe address to the metrics dict to mock the
-        information returned by the channel topology and subgraph.
-        :param metrics_dict: The metrics dict retrieved from the database.
-        :return: The updated metrics dict with stake and safe address.
-        """
-        for peer_id, data in metrics_dict.items():
-            # Add a random number between 1 and 100 to the "stake" key
-            stake = random.randint(1, 100)
-            data["stake"] = stake
-            data["splitted_stake"] = stake / 2
-            data["safe_address_count"] = random.randint(1, 5)
+    # def add_random_data_to_metrics(self, metrics_dict):
+    #     """
+    #     Adds random stake and safe address to the metrics dict to mock the
+    #     information returned by the channel topology and subgraph.
+    #     :param metrics_dict: The metrics dict retrieved from the database.
+    #     :return: The updated metrics dict with stake and safe address.
+    #     """
+    #     for peer_id, data in metrics_dict.items():
+    #         # Add a random number between 1 and 100 to the "stake" key
+    #         stake = random.randint(1, 100)
+    #         data["stake"] = stake
+    #         data["splitted_stake"] = stake / 2
+    #         data["safe_address_count"] = random.randint(1, 5)
 
-            # Generate a random 5-letter lowercase combination for "safe_address"
-            safe_address = "0x" + "".join(
-                random.choice("abcdefghijklmnopqrstuvwxyz") for _ in range(5)
-            )
-            data["safe_address"] = safe_address
+    #         # Generate a random 5-letter lowercase combination for "safe_address"
+    #         safe_address = "0x" + "".join(
+    #             random.choice("abcdefghijklmnopqrstuvwxyz") for _ in range(5)
+    #         )
+    #         data["safe_address"] = safe_address
 
-        return "new_metrics_dict", metrics_dict
+    #     return "new_metrics_dict", metrics_dict
 
     def mock_data_metrics_db(self):
         """
@@ -503,7 +530,7 @@ class EconomicHandler(HOPRNode):
                     }
                     safe {
                         id
-                        balances {
+                        balance {
                         wxHoprBalance
                         }
                     }
@@ -514,7 +541,7 @@ class EconomicHandler(HOPRNode):
                     }
                     safe {
                         id
-                        balances {
+                        balance {
                         wxHoprBalance
                         }
                     }
@@ -567,7 +594,7 @@ class EconomicHandler(HOPRNode):
                             + safe["registeredNodesInSafeRegistry"]
                         ):
                             node_address = node["node"]["id"]
-                            wxHoprBalance = node["safe"]["balances"]["wxHoprBalance"]
+                            wxHoprBalance = node["safe"]["balance"]["wxHoprBalance"]
                             safe_address = node["safe"]["id"]
                             subgraph_dict[node_address] = {
                                 "safe_address": safe_address,

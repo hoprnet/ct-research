@@ -284,7 +284,7 @@ class HoprdAPIHelper:
 
             source_peer_id = item.source_peer_id
             source_address = item.source_address
-            balance = int(item.balance) / 1e18
+            balance = int(item.balance)
 
             if item.status != "Open":
                 # Other Statuses: "Waiting for commitment", "Closed", "Pending to close"
