@@ -44,7 +44,7 @@ def loop_through_nodes(node_list: list[str], node_index: int) -> tuple[str, int]
 
 
 # the name of the task is the name of the "<task_name>.<node_address>"
-@app.task(name=f"{envvar('TASK_NAME')}.{envvar('NODE_ADDRESS')}")
+@app.task(name=f"{envvar('TASK_NAME')}")
 def send_1_hop_message(
     peer: str,
     expected_count: int,
