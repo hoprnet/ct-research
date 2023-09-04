@@ -3,7 +3,7 @@ import csv
 import os
 import time
 import traceback
-import random
+
 import aiohttp
 from celery import Celery
 
@@ -70,10 +70,29 @@ class EconomicHandler(HOPRNode):
             expected_order = [
                 "params",
                 "metricsDB",
+                "unique_nodeAddress_peerId_aggbalance_links",
+                "rpch",
+                "subgraph_data",
             ]
 
             tasks.add(asyncio.create_task(self.read_parameters_and_equations()))
             tasks.add(asyncio.create_task(self.get_database_metrics()))
+            tasks.add(
+                asyncio.create_task(
+                    self.get_unique_nodeAddress_peerId_aggbalance_links()
+                )
+            )
+            tasks.add(
+                asyncio.create_task(self.blacklist_rpch_nodes(self.rpch_endpoint))
+            )
+            tasks.add(
+                asyncio.create_task(
+                    self.get_subgraph_data(
+                        subgraph_url=self.subgraph_url,
+                        pagination_skip_size=1000,  # Max allowed entries by TheGraph
+                    )
+                )
+            )
 
             await asyncio.sleep(0)
 
@@ -86,12 +105,39 @@ class EconomicHandler(HOPRNode):
                 unordered_tasks, key=lambda x: expected_order.index(x[0])
             )
 
+            # gather tasks
             parameters_equations_budget = ordered_tasks[0][1:]
             database_metrics = ordered_tasks[1][1]
-            print(f"\033[92m{database_metrics=}\033[0m")
+            unique_nodeAddress_peerId_aggbalance_links = ordered_tasks[2][1]
+            rpch_nodes_blacklist = ordered_tasks[3][1]
+            subgraph_data = ordered_tasks[4][1]
 
-            # Add random stake and a random safe address to the metrics database
-            _, new_database_metrics = self.add_random_data_to_metrics(database_metrics)
+            # merge unique_safe_peerId_links with database metrics and subgraph data
+            _, metrics_dict = self.merge_topology_metricdb_subgraph(
+                unique_nodeAddress_peerId_aggbalance_links,
+                database_metrics,
+                subgraph_data,
+            )
+
+            # Exclude RPCh entry and exit nodes from the reward computation
+            _, metrics_dict_excluding_rpch = self.block_rpch_nodes(
+                rpch_nodes_blacklist, metrics_dict
+            )
+
+            # Calculate total balance
+            _, metrics_dict_including_total_balance = self.calculate_total_balance(
+                metrics_dict_excluding_rpch
+            )
+
+            # Exclude ct-app nodes from the reward computation
+            _, metrics_dict_excluding_ct_nodes = self.block_ct_nodes(
+                metrics_dict_excluding_rpch
+            )
+
+            # update metrics dictionary to allow for 1 to many safe/node address links
+            _, one_to_many_safe_peerid_links = self.safe_address_split_stake(
+                metrics_dict_including_total_balance
+            )
 
             # Extract Parameters
             parameters, equations, budget_param = parameters_equations_budget
@@ -100,7 +146,7 @@ class EconomicHandler(HOPRNode):
             _, ct_prob_dict = self.compute_ct_prob(
                 parameters,
                 equations,
-                new_database_metrics,
+                one_to_many_safe_peerid_links,
             )
 
             # calculate expected rewards
@@ -113,7 +159,8 @@ class EconomicHandler(HOPRNode):
                 expected_rewards, budget_param
             )
 
-            print(f"{job_distribution=}")
+            # output expected rewards as a csv file
+            self.save_expected_reward_csv(expected_rewards)
 
         else:
             tasks = set[asyncio.Task]()
@@ -139,7 +186,7 @@ class EconomicHandler(HOPRNode):
                 asyncio.create_task(
                     self.get_subgraph_data(
                         subgraph_url=self.subgraph_url,
-                        pagination_skip_size=1000,  # Maximum entries per query allowed by TheGraph
+                        pagination_skip_size=1000,  # Max allowed entries by TheGraph
                     )
                 )
             )
@@ -156,12 +203,9 @@ class EconomicHandler(HOPRNode):
             )
 
             unique_nodeAddress_peerId_aggbalance_links = ordered_tasks[0][1]
-            print(f"\033[92m{unique_nodeAddress_peerId_aggbalance_links=}\033[0m")
             parameters_equations_budget = ordered_tasks[1][1:]
             rpch_nodes_blacklist = ordered_tasks[2][1]
-            # print(f"\033[92m{rpch_nodes_blacklist=}\033[0m")
             # subgraph_data = ordered_tasks[3][1]
-            # print(f"\033[92m{subgraph_data=}\033[0m")
 
             # helper functions that allow to test the code by inserting
             # the peerIDs of the pluto nodes (SUBJECT TO REMOVAL)
@@ -182,31 +226,26 @@ class EconomicHandler(HOPRNode):
                 pluto_keys_in_mockdb_data,
                 pluto_addresses_in_mocksubraph_data,
             )
-            print(f"{metrics_dict=}")
 
             # Exclude RPCh entry and exit nodes from the reward computation
             _, metrics_dict_excluding_rpch = self.block_rpch_nodes(
                 rpch_nodes_blacklist, metrics_dict
             )
-            print(f"{metrics_dict_excluding_rpch=}")
 
             # Calculate total balance
             _, metrics_dict_including_total_balance = self.calculate_total_balance(
                 metrics_dict_excluding_rpch
             )
-            print(f"\033[92m{metrics_dict_including_total_balance=}\033[0m")
 
             # Exclude ct-app nodes from the reward computation
             _, metrics_dict_excluding_ct_nodes = self.block_ct_nodes(
                 metrics_dict_excluding_rpch
             )
-            print(metrics_dict_excluding_ct_nodes)
 
-            # update the metrics dictionary to allow for 1 to many safe address peerID links
+            # update metrics dict to allow for 1 to many safe/node address links
             _, one_to_many_safe_peerid_links = self.safe_address_split_stake(
                 metrics_dict_including_total_balance
             )
-            print(one_to_many_safe_peerid_links)
 
             # Extract Parameters
             parameters, equations, budget_param = parameters_equations_budget
@@ -217,7 +256,6 @@ class EconomicHandler(HOPRNode):
                 equations,
                 one_to_many_safe_peerid_links,
             )
-            print(f"{ct_prob_dict=}")
 
             # calculate expected rewards
             _, expected_rewards = self.compute_expected_reward(
@@ -232,10 +270,6 @@ class EconomicHandler(HOPRNode):
             # output expected rewards as a csv file
             self.save_expected_reward_csv(expected_rewards)
 
-            # print(f"{staking_participations}")
-            print(f"{job_distribution=}")
-            # print(f"{rpch_nodes_blacklist=}")
-
     async def get_unique_nodeAddress_peerId_aggbalance_links(self):
         """
         Returns a dictionary containing all unique
@@ -245,6 +279,16 @@ class EconomicHandler(HOPRNode):
         response = await self.api.get_unique_nodeAddress_peerId_aggbalance_links()
 
         return "unique_nodeAddress_peerId_aggbalance_links", response
+
+    async def get_channels(self):
+        """
+        Returns a dictionary containing all unique
+        source_peerId-source_address links including
+        the aggregated balance of "Open" outgoing payment channels
+        """
+        response = await self.api.all_channels(include_closed=True)
+
+        return "channels", response
 
     async def get_database_metrics(self):
         """
@@ -294,28 +338,6 @@ class EconomicHandler(HOPRNode):
                 del metrics_dict[peer_id]["temp_order"]
 
             return "metricsDB", metrics_dict
-
-    def add_random_data_to_metrics(self, metrics_dict):
-        """
-        Adds random stake and safe address to the metrics dict to mock the
-        information returned by the channel topology and subgraph.
-        :param metrics_dict: The metrics dict retrieved from the database.
-        :return: The updated metrics dict with stake and safe address.
-        """
-        for peer_id, data in metrics_dict.items():
-            # Add a random number between 1 and 100 to the "stake" key
-            stake = random.randint(1, 100)
-            data["stake"] = stake
-            data["splitted_stake"] = stake / 2
-            data["safe_address_count"] = random.randint(1, 5)
-
-            # Generate a random 5-letter lowercase combination for "safe_address"
-            safe_address = "0x" + "".join(
-                random.choice("abcdefghijklmnopqrstuvwxyz") for _ in range(5)
-            )
-            data["safe_address"] = safe_address
-
-        return "new_metrics_dict", metrics_dict
 
     def mock_data_metrics_db(self):
         """
@@ -486,11 +508,11 @@ class EconomicHandler(HOPRNode):
         pagination_skip_size: int,
     ):
         """
-        This function retrieves safe_address-node_address-balance links from the specified
-        subgraph using pagination.
+        This function retrieves safe_address-node_address-balance links from the
+        specified subgraph using pagination.
         :param: subgraph_url (str): The url for accessing The Graph API.
         :param: pagination_skip_size (int): The number of records per pagination step.
-        :returns: dict: A dictionary with the node_address as the key and the safe_address
+        :returns: dict: A dictionary with the node_address as the key, the safe_address
         and the wxHOPR balance as values.
         """
 
@@ -503,7 +525,7 @@ class EconomicHandler(HOPRNode):
                     }
                     safe {
                         id
-                        balances {
+                        balance {
                         wxHoprBalance
                         }
                     }
@@ -514,7 +536,7 @@ class EconomicHandler(HOPRNode):
                     }
                     safe {
                         id
-                        balances {
+                        balance {
                         wxHoprBalance
                         }
                     }
@@ -567,7 +589,7 @@ class EconomicHandler(HOPRNode):
                             + safe["registeredNodesInSafeRegistry"]
                         ):
                             node_address = node["node"]["id"]
-                            wxHoprBalance = node["safe"]["balances"]["wxHoprBalance"]
+                            wxHoprBalance = node["safe"]["balance"]["wxHoprBalance"]
                             safe_address = node["safe"]["id"]
                             subgraph_dict[node_address] = {
                                 "safe_address": safe_address,
@@ -611,7 +633,7 @@ class EconomicHandler(HOPRNode):
                 if source_node_address in new_subgraph_dict:
                     subgraph_data = new_subgraph_dict[source_node_address]
                     data["safe_address"] = subgraph_data["safe_address"]
-                    data["wxHOPR_balance"] = subgraph_data["wxHOPR_balance"]
+                    data["wxHOPR_balance"] = float(subgraph_data["wxHOPR_balance"])
 
                 merged_result[peer_id] = data
 
