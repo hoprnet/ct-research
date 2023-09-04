@@ -15,9 +15,9 @@ async def retrieve_address():
     """
     try:
         api_host = envvar("API_HOST")
-        api_token = envvar("API_TOKEN")
+        api_token = envvar("API_KEY")
     except ValueError:
-        log.exception("Could not get API_HOST or API_TOKEN from environment")
+        log.exception("Could not get API_HOST or API_KEY from environment")
         return None
 
     api = HoprdAPIHelper(api_host, api_token)
