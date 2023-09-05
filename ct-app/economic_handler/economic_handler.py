@@ -53,7 +53,7 @@ class EconomicHandler(HOPRNode):
         return self.connected
 
     @connectguard
-    @wakeupcall_from_file(folder="/assets", filename="parameters.json")
+    @wakeupcall_from_file(folder="assets", filename="parameters.json")
     # @formalin("Running the economic model", sleep=10)
     async def apply_economic_model(self):
         # merge unique_safe_peerId_links with database metrics and subgraph data
@@ -145,7 +145,7 @@ class EconomicHandler(HOPRNode):
         if data and isinstance(data, list):
             self.rpch_nodes = [item["id"] for item in data if "id" in item]
 
-        log.info(f"Fetched list of {len(self.rpch)} RPCh nodes.")
+        log.info(f"Fetched list of {len(self.rpch_nodes)} RPCh nodes.")
 
     @formalin(message="Getting CT nodes list", sleep=60 * 5)
     async def get_ct_nodes(self):
@@ -338,13 +338,13 @@ class EconomicHandler(HOPRNode):
 
         self.started = True
         self.tasks.add(asyncio.create_task(self.connect()))
-        self.tasks.add(asyncio.create_task(self.host_available()))
-        self.tasks.add(asyncio.create_task(self.get_database_metrics()))
-        self.tasks.add(asyncio.create_task(self.get_topology_links_with_balance()))
-        self.tasks.add(asyncio.create_task(self.get_rpch_nodes()))
-        self.tasks.add(asyncio.create_task(self.get_ct_nodes()))
-        self.tasks.add(asyncio.create_task(self.get_subgraph_data()))
-        self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
+        # self.tasks.add(asyncio.create_task(self.host_available()))
+        # self.tasks.add(asyncio.create_task(self.get_database_metrics()))
+        # self.tasks.add(asyncio.create_task(self.get_topology_links_with_balance()))
+        # self.tasks.add(asyncio.create_task(self.get_rpch_nodes()))
+        # self.tasks.add(asyncio.create_task(self.get_ct_nodes()))
+        # self.tasks.add(asyncio.create_task(self.get_subgraph_data()))
+        # self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
         self.tasks.add(asyncio.create_task(self.apply_economic_model()))
 
         await asyncio.gather(*self.tasks)
