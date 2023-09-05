@@ -2,7 +2,7 @@ import asyncio
 
 import aiohttp
 
-from tools.decorator import connectguard, formalin
+from tools.decorator import connectguard, formalin, wakeupcall_from_file  # noqa: F401
 from tools.hopr_node import HOPRNode
 from tools.utils import getlogger
 from tools.db_connection import DatabaseConnection, NodePeerConnection
@@ -55,9 +55,9 @@ class EconomicHandler(HOPRNode):
         return self.connected
 
     @connectguard
-    # @wakeupcall_from_file(folder="/assets", filename="parameters.json")
-    @formalin("Running scheduler", sleep=10)
-    async def scheduler(self):
+    @wakeupcall_from_file(folder="/assets", filename="parameters.json")
+    # @formalin("Running the economic model", sleep=10)
+    async def apply_economic_model(self):
         # merge unique_safe_peerId_links with database metrics and subgraph data
 
         if not self.topology_links_with_balance:
@@ -97,8 +97,8 @@ class EconomicHandler(HOPRNode):
             expected_rewards, "expected_reward", foldername="expected_rewards"
         )
 
-        print(f"{eligible_peers=}")
-        print(f"{expected_rewards=}")
+        # print(f"{eligible_peers=}")
+        # print(f"{expected_rewards=}")
 
     @connectguard
     @formalin(message="Getting subgraph data", sleep=60 * 5)
@@ -132,11 +132,15 @@ class EconomicHandler(HOPRNode):
                         return
                     data = await response.json()
         except aiohttp.ClientError:
-            log.exception("An error occurred while making the request")
+            log.exception("An error occurred while making the request to rpch endpoint")
         except OSError:
-            log.exception("An error occurred while reading the response")
+            log.exception(
+                "An error occurred while reading the response from rpch endpoint"
+            )
         except Exception:
-            log.exception("An unexpected error occurred")
+            log.exception(
+                "An unexpected error occurred while making the request rpch endpoint"
+            )
         else:
             if data and isinstance(data, list):
                 self.rpch_nodes = [item["id"] for item in data if "id" in item]
@@ -171,39 +175,39 @@ class EconomicHandler(HOPRNode):
                 .all()
             )
 
-        new_metric_dict = {}
+        metric_dict = {}
 
         for row in last_added_rows:
-            if row.peer_id not in new_metric_dict:
-                new_metric_dict[row.peer_id] = {
-                    "node_peerIds": [],
+            if row.peer_id not in metric_dict:
+                metric_dict[row.peer_id] = {
+                    "node_peer_ids": [],
                     "latency_metrics": [],
                     "timestamp": row.timestamp,
                     "temp_order": [],
                 }
 
-            new_metric_dict[row.peer_id]["node_peerIds"].append(row.node)
-            new_metric_dict[row.peer_id]["latency_metrics"].append(row.latency)
-            new_metric_dict[row.peer_id]["temp_order"].append(row.priority)
+            metric_dict[row.peer_id]["node_peer_ids"].append(row.node)
+            metric_dict[row.peer_id]["latency_metrics"].append(row.latency)
+            metric_dict[row.peer_id]["temp_order"].append(row.priority)
 
         # sort node_addresses and latency based on temp_order
-        for peer_id in new_metric_dict:
-            order = new_metric_dict[peer_id]["temp_order"]
-            addresses = new_metric_dict[peer_id]["node_peerIds"]
-            latency = new_metric_dict[peer_id]["latency_metrics"]
+        for peer_id in metric_dict:
+            order = metric_dict[peer_id]["temp_order"]
+            addresses = metric_dict[peer_id]["node_peer_ids"]
+            latency = metric_dict[peer_id]["latency_metrics"]
 
             addresses = [x for _, x in sorted(zip(order, addresses))]
             latency = [x for _, x in sorted(zip(order, latency))]
 
-            new_metric_dict[peer_id]["node_peerIds"] = addresses
-            new_metric_dict[peer_id]["latency_metrics"] = latency
+            metric_dict[peer_id]["node_peer_ids"] = addresses
+            metric_dict[peer_id]["latency_metrics"] = latency
 
         # remove the temp order key from the dictionaries
-        for peer_id in new_metric_dict:
-            del new_metric_dict[peer_id]["temp_order"]
+        for peer_id in metric_dict:
+            del metric_dict[peer_id]["temp_order"]
 
         # TODO: ADD LOCK
-        self.database_metrics = new_metric_dict
+        self.database_metrics = metric_dict
 
     @formalin(message="Getting subgraph data", sleep=60 * 5)
     async def get_subgraph_data(self):
@@ -270,37 +274,41 @@ class EconomicHandler(HOPRNode):
                         json_data = await response.json()
 
                 except aiohttp.ClientError:
-                    log.exception("An error occurred while sending the request")
-                    return "subgraph_data", {}
+                    log.exception(
+                        "An error occurred while sending the request to "
+                        + "subgraph endpoint"
+                    )
+                    return {}
                 except ValueError:
                     log.exception(
-                        "An error occurred while parsing the response as JSON"
+                        "An error occurred while parsing the response as JSON from "
+                        + "subgraph endpoint"
                     )
-                    return "subgraph_data", {}
+                    return
                 except OSError:
                     log.exception("An error occurred while reading the response")
-                    return "subgraph_data", {}
+                    return
                 except Exception:
                     log.exception("An unexpected error occurred")
-                    return "subgraph_data", {}
-                else:
-                    safes = json_data["data"]["safes"]
-                    for safe in safes:
-                        for node in (
-                            safe["registeredNodesInNetworkRegistry"]
-                            + safe["registeredNodesInSafeRegistry"]
-                        ):
-                            node_address = node["node"]["id"]
-                            wxHoprBalance = node["safe"]["balance"]["wxHoprBalance"]
-                            safe_address = node["safe"]["id"]
-                            subgraph_dict[node_address] = {
-                                "safe_address": safe_address,
-                                "wxHOPR_balance": wxHoprBalance,
-                            }
+                    return
 
-                    # Increment skip for next iteration
-                    data["variables"]["skip"] += pagination_skip_size
-                    more_content_available = len(safes) == pagination_skip_size
+                safes = json_data["data"]["safes"]
+                for safe in safes:
+                    for node in (
+                        safe["registeredNodesInNetworkRegistry"]
+                        + safe["registeredNodesInSafeRegistry"]
+                    ):
+                        node_address = node["node"]["id"]
+                        wxHoprBalance = node["safe"]["balance"]["wxHoprBalance"]
+                        safe_address = node["safe"]["id"]
+                        subgraph_dict[node_address] = {
+                            "safe_address": safe_address,
+                            "wxHOPR_balance": wxHoprBalance,
+                        }
+
+                # Increment skip for next iteration
+                data["variables"]["skip"] += pagination_skip_size
+                more_content_available = len(safes) == pagination_skip_size
 
         log.info("Subgraph data dictionary generated")
 
@@ -329,7 +337,7 @@ class EconomicHandler(HOPRNode):
             return
 
         self.started = True
-        self.tasks.add(asyncio.create_task(self.connect(address="hopr")))
+        self.tasks.add(asyncio.create_task(self.connect()))
         self.tasks.add(asyncio.create_task(self.host_available()))
         self.tasks.add(asyncio.create_task(self.get_database_metrics()))
         self.tasks.add(asyncio.create_task(self.get_topology_links_with_balance()))
@@ -337,7 +345,7 @@ class EconomicHandler(HOPRNode):
         self.tasks.add(asyncio.create_task(self.blacklist_ct_nodes()))
         self.tasks.add(asyncio.create_task(self.get_subgraph_data()))
         self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
-        self.tasks.add(asyncio.create_task(self.scheduler()))
+        self.tasks.add(asyncio.create_task(self.apply_economic_model()))
 
         await asyncio.gather(*self.tasks)
 

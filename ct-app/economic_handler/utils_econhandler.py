@@ -33,7 +33,7 @@ def merge_topology_database_subgraph(
 
         if peer_id in database_dict:
             metrics_data = database_dict[peer_id]
-            data["node_peerIds"] = metrics_data["node_peerIds"]
+            data["node_peer_ids"] = metrics_data["node_peer_ids"]
 
         if source_node_address in subgraph_dict:
             subgraph_data = subgraph_dict[source_node_address]
@@ -247,25 +247,25 @@ async def get_database_metrics():
         for row in last_added_rows:
             if row.peer_id not in metrics_dict:
                 metrics_dict[row.peer_id] = {
-                    "node_peerIds": [],
+                    "node_peer_ids": [],
                     "latency_metrics": [],
                     "timestamp": row.timestamp,
                     "temp_order": [],
                 }
-            metrics_dict[row.peer_id]["node_peerIds"].append(row.node)
+            metrics_dict[row.peer_id]["node_peer_ids"].append(row.node)
             metrics_dict[row.peer_id]["latency_metrics"].append(row.latency)
             metrics_dict[row.peer_id]["temp_order"].append(row.priority)
 
         # sort node_addresses and latency based on temp_order
         for peer_id in metrics_dict:
             order = metrics_dict[peer_id]["temp_order"]
-            addresses = metrics_dict[peer_id]["node_peerIds"]
+            addresses = metrics_dict[peer_id]["node_peer_ids"]
             latency = metrics_dict[peer_id]["latency_metrics"]
 
             addresses = [x for _, x in sorted(zip(order, addresses))]
             latency = [x for _, x in sorted(zip(order, latency))]
 
-            metrics_dict[peer_id]["node_peerIds"] = addresses
+            metrics_dict[peer_id]["node_peer_ids"] = addresses
             metrics_dict[peer_id]["latency_metrics"] = latency
 
         # remove the temp order key from the dictionaries
@@ -283,27 +283,27 @@ def mock_data_metrics_db():
     """
     metrics_dict = {
         "peer_id_1": {
-            "node_peerIds": ["peerID_1", "peerID_2", "peerID_3"],
+            "node_peer_ids": ["peerID_1", "peerID_2", "peerID_3"],
             "latency_metrics": [10, 15, 8],
             "timestamp": "2023-09-01 12:00:00",
         },
         "peer_id_2": {
-            "node_peerIds": ["peerID_1", "peerID_3"],
+            "node_peer_ids": ["peerID_1", "peerID_3"],
             "latency_metrics": [5, 12, 7],
             "timestamp": "2023-09-01 12:00:00",
         },
         "peer_id_3": {
-            "node_peerIds": ["peerID_1", "peerID_2", "peerID_3", "peerID_4"],
+            "node_peer_ids": ["peerID_1", "peerID_2", "peerID_3", "peerID_4"],
             "latency_metrics": [8, 18, 9],
             "timestamp": "2023-09-01 12:00:00",
         },
         "peer_id_4": {
-            "node_peerIds": ["peerID_2", "peerID_3", "peerID_4"],
+            "node_peer_ids": ["peerID_2", "peerID_3", "peerID_4"],
             "latency_metrics": [9, 14, 6],
             "timestamp": "2023-09-01 12:00:00",
         },
         "peer_id_5": {
-            "node_peerIds": ["peerID_1", "peerID_3", "peerID_4"],
+            "node_peer_ids": ["peerID_1", "peerID_3", "peerID_4"],
             "latency_metrics": [12, 20, 11],
             "timestamp": "2023-09-01 12:00:00",
         },
