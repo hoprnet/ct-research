@@ -338,13 +338,13 @@ class EconomicHandler(HOPRNode):
 
         self.started = True
         self.tasks.add(asyncio.create_task(self.connect()))
-        # self.tasks.add(asyncio.create_task(self.host_available()))
-        # self.tasks.add(asyncio.create_task(self.get_database_metrics()))
-        # self.tasks.add(asyncio.create_task(self.get_topology_links_with_balance()))
-        # self.tasks.add(asyncio.create_task(self.get_rpch_nodes()))
-        # self.tasks.add(asyncio.create_task(self.get_ct_nodes()))
-        # self.tasks.add(asyncio.create_task(self.get_subgraph_data()))
-        # self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
+        self.tasks.add(asyncio.create_task(self.host_available()))
+        self.tasks.add(asyncio.create_task(self.get_database_metrics()))
+        self.tasks.add(asyncio.create_task(self.get_topology_links_with_balance()))
+        self.tasks.add(asyncio.create_task(self.get_rpch_nodes()))
+        self.tasks.add(asyncio.create_task(self.get_ct_nodes()))
+        self.tasks.add(asyncio.create_task(self.get_subgraph_data()))
+        self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
         self.tasks.add(asyncio.create_task(self.apply_economic_model()))
 
         await asyncio.gather(*self.tasks)
