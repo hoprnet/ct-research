@@ -144,9 +144,8 @@ class EconomicHandler(HOPRNode):
 
         if data and isinstance(data, list):
             self.rpch_nodes = [item["id"] for item in data if "id" in item]
-           
-    log.info(f"Fetched list of {len(rpch_node_peerID)} RPCh nodes.")
 
+        log.info(f"Fetched list of {len(self.rpch)} RPCh nodes.")
 
     @formalin(message="Getting CT nodes list", sleep=60 * 5)
     async def get_ct_nodes(self):
@@ -159,7 +158,6 @@ class EconomicHandler(HOPRNode):
         # TODO: ADD LOCK
         self.ct_nodes = [node[0] for node in nodes]
         log.info(f"Fetched list of {len(nodes)} CT nodes.")
-        
 
     @formalin(message="Getting database metrics", sleep=60 * 5)
     async def get_database_metrics(self):
@@ -312,7 +310,7 @@ class EconomicHandler(HOPRNode):
                 # Increment skip for next iteration
                 data["variables"]["skip"] += pagination_skip_size
                 more_content_available = len(safes) == pagination_skip_size
-                
+
         log.info("Subgraph data dictionary generated")
         # TODO: ADD LOCK
         self.subgraph_dict = subgraph_dict
