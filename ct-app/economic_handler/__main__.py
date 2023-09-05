@@ -5,7 +5,6 @@ from tools.exit_codes import ExitCode
 from tools.utils import envvar, getlogger
 
 from .economic_handler import EconomicHandler
-from .utils_econhandler import stop_instance
 
 log = getlogger()
 
@@ -33,7 +32,7 @@ def main():
         log.exception("Missing environment variables")
         exit(ExitCode.ERROR_MISSING_ENV_VARS)
 
-    economic_handler = EconomicHandler(
+    instance = EconomicHandler(
         apihost,
         apikey,
         rcphnodes,
@@ -41,21 +40,21 @@ def main():
     )
 
     loop = asyncio.new_event_loop()
-    loop.add_signal_handler(SIGINT, stop_instance, economic_handler, SIGINT)
-    loop.add_signal_handler(SIGTERM, stop_instance, economic_handler, SIGTERM)
+    loop.add_signal_handler(SIGINT, instance.stop)
+    loop.add_signal_handler(SIGTERM, instance.stop)
 
     # start the node and run the event loop until the node stops
     try:
         if mock_mode:
-            loop.run_until_complete(economic_handler.mockstart())
+            loop.run_until_complete(instance.mockstart())
         else:
-            loop.run_until_complete(economic_handler.start())
+            loop.run_until_complete(instance.start())
     except Exception as e:
         print("Uncaught exception ocurred", str(e))
         exit_code = ExitCode.ERROR_UNCAUGHT_EXCEPTION
 
     finally:
-        economic_handler.stop()
+        instance.stop()
         loop.close()
         exit(exit_code)
 
