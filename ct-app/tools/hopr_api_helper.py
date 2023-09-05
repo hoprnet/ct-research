@@ -238,8 +238,10 @@ class HoprdAPIHelper:
         try:
             with ApiClient(self.configuration) as client:
                 channels_api = ChannelsApi(client)
-                channels_api.channels_get_channels(full_topology="true", async_req=True)
-                response = awaitthread.get()
+                thread = channels_api.channels_get_channels(
+                    full_topology="true", including_closed="false", async_req=True
+                )
+                response = thread.get()
         except ApiException:
             log.exception(
                 "ApiException when calling ChannelsApi->channels_get_channels"
