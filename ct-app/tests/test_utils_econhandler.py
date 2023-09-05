@@ -409,7 +409,7 @@ def test_reward_probablity_exception(mocked_model_parameters):
     assert merged_result == ({})
 
 
-def test_save_expected_reward_csv_success(new_expected_split_stake_result):
+def test_gcp_save_expected_reward_csv_success(new_expected_split_stake_result):
     """
     Test whether the save_expected_reward_csv function returns the confirmation
     message in case of no errors.
