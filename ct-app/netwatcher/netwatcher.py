@@ -30,7 +30,7 @@ class NetWatcher(HOPRNode):
         self.balanceurl = balanceurl
 
         # a list to keep the peers of this node
-        self.peers = list[str]()
+        self.peers = list[dict]()
 
         # a dict to keep the max_lat_count latency measures along with the timestamp
         self.latency = dict[str, dict]()
@@ -79,9 +79,11 @@ class NetWatcher(HOPRNode):
             number_to_pick = random.randint(5, 10)
             found_peers = random.sample(self.mocking_peers, number_to_pick)
         else:
-            found_peers = await self.api.peers(param="peer_id", quality=quality)
+            found_peers = await self.api.peers(
+                params=["peer_id", "peer_address"], quality=quality
+            )
 
-        _short_peers = [".." + peer[-5:] for peer in found_peers]
+        _short_peers = [".." + peer["peer_id"][-5:] for peer in found_peers]
         self.peers = found_peers
         log.info(f"Found {len(found_peers)} peers {', '.join(_short_peers)}")
 
@@ -105,11 +107,13 @@ class NetWatcher(HOPRNode):
 
         # pick a random peer to ping among all peers
         rand_peer = random.choice(self.peers)
+        rand_peer_id = rand_peer["peer_id"]
+        rand_peer_address = rand_peer["peer_address"]  # noqa: F841
 
         if self.mock_mode:
             latency = random.randint(10, 100) if random.random() < 0.8 else 0
         else:
-            latency = await self.api.ping(rand_peer, "latency")
+            latency = await self.api.ping(rand_peer_id, "latency")
 
         # latency update rule is:
         # - if latency measure fails:
@@ -119,26 +123,30 @@ class NetWatcher(HOPRNode):
         now = time.time()
         async with self.latency_lock:
             if latency != 0:
-                log.debug(f"Measured latency to {rand_peer[-5:]}: {latency}ms")
-                self.latency[rand_peer] = {"value": latency, "timestamp": now}
-                # try:
-                #     await self.api.open_channel(eth_address, 1000)
-                # except Exception:
-                #     log.error(f"Error opening channel to {rand_peer}")
+                log.info(f"Measured latency to {rand_peer_id[-5:]}: {latency}ms")
+                self.latency[rand_peer_id] = {"value": latency, "timestamp": now}
+                try:
+                    log.info(f"Opening channel to {rand_peer_address}")
+                    await self.api.open_channel(rand_peer_address, "10")
+                except Exception:
+                    log.error(
+                        f"Error opening channel to {rand_peer_address} "
+                        + f"(id: {rand_peer_id}))"
+                    )
                 return
 
-            log.warning(f"Failed to ping {rand_peer}")
+            log.warning(f"Failed to ping {rand_peer_id}")
 
             if (
-                rand_peer not in self.latency
-                or self.latency[rand_peer]["value"] is None
+                rand_peer_id not in self.latency
+                or self.latency[rand_peer_id]["value"] is None
             ):
-                log.debug(f"Adding {rand_peer} to latency dictionary with value -1")
+                log.debug(f"Adding {rand_peer_id} to latency dictionary with value -1")
 
-                self.latency[rand_peer] = {"value": -1, "timestamp": now}
+                self.latency[rand_peer_id] = {"value": -1, "timestamp": now}
                 return
 
-            log.debug(f"Keeping {rand_peer} in latency dictionary (recent measure)")
+            log.debug(f"Keeping {rand_peer_id} in latency dictionary (recent measure)")
 
     @formalin(message="Initiated peers transmission", sleep=5)
     @connectguard
@@ -283,8 +291,8 @@ class NetWatcher(HOPRNode):
 
         self.tasks.add(asyncio.create_task(self.gather_peers()))
         self.tasks.add(asyncio.create_task(self.ping_peers()))
-        self.tasks.add(asyncio.create_task(self.transmit_peers()))
-        self.tasks.add(asyncio.create_task(self.transmit_balance()))
+        # self.tasks.add(asyncio.create_task(self.transmit_peers()))
+        # self.tasks.add(asyncio.create_task(self.transmit_balance()))
         # self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
 
         await asyncio.gather(*self.tasks)
