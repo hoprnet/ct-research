@@ -1,5 +1,6 @@
 import asyncio
 import aiohttp
+from copy import deepcopy
 
 from tools.decorator import connectguard, formalin, wakeupcall_from_file  # noqa: F401
 from tools.hopr_node import HOPRNode
@@ -45,6 +46,12 @@ class EconomicHandler(HOPRNode):
         self.rpch_nodes = None
         self.ct_nodes = None
 
+        self.topology_lock = asyncio.Lock()
+        self.database_lock = asyncio.Lock()
+        self.subgraph_lock = asyncio.Lock()
+        self.rpch_node_lock = asyncio.Lock()
+        self.ct_node_lock = asyncio.Lock()
+
         super().__init__(url=url, key=key)
 
     @formalin(sleep=10 * 60)
@@ -74,14 +81,26 @@ class EconomicHandler(HOPRNode):
             log.warning("No CT nodes available for scheduler")
             return
 
+        # wait for topolofy, database, and subgraph locks to be released
+        async with self.topology_lock:
+            local_topology = deepcopy(self.topology_links_with_balance)
+        async with self.database_lock:
+            local_database = deepcopy(self.database_metrics)
+        async with self.subgraph_lock:
+            local_subgraph = deepcopy(self.subgraph_dict)
+        async with self.rpch_node_lock:
+            local_rpch = deepcopy(self.rpch_nodes)
+        async with self.ct_node_lock:
+            local_ct = deepcopy(self.ct_nodes)
+
         eligible_peers = merge_topology_database_subgraph(
-            self.topology_links_with_balance,
-            self.database_metrics,
-            self.subgraph_dict,
+            local_topology,
+            local_database,
+            local_subgraph,
         )
 
         allow_many_node_per_safe(eligible_peers)
-        exclude_elements(eligible_peers, self.rpch_nodes + self.ct_nodes)
+        exclude_elements(eligible_peers, local_rpch + local_ct)
 
         # computation of cover traffic probability
         equations, parameters, budget_parameters = economic_model_from_file()
@@ -105,9 +124,10 @@ class EconomicHandler(HOPRNode):
         Gets a dictionary containing all unique source_peerId-source_address links
         including the aggregated balance of "Open" outgoing payment channels.
         """
-        self.topology_links_with_balance = (
-            await self.api.get_unique_nodeAddress_peerId_aggbalance_links()
-        )
+        topology = await self.api.get_unique_nodeAddress_peerId_aggbalance_links()
+
+        async with self.topology_lock:
+            self.topology_links_with_balance = topology
         log.info("Fetched unique nodeAddress-peerId links from topology.")
 
     @formalin(message="Getting RPCh nodes list", sleep=60 * 5)
@@ -143,7 +163,8 @@ class EconomicHandler(HOPRNode):
             return
 
         if data and isinstance(data, list):
-            self.rpch_nodes = [item["id"] for item in data if "id" in item]
+            async with self.rpch_node_lock:
+                self.rpch_nodes = [item["id"] for item in data if "id" in item]
 
         log.info(f"Fetched list of {len(self.rpch)} RPCh nodes.")
 
@@ -155,8 +176,8 @@ class EconomicHandler(HOPRNode):
         with DatabaseConnection() as session:
             nodes = session.query(NodePeerConnection.node).distinct().all()
 
-        # TODO: ADD LOCK
-        self.ct_nodes = [node[0] for node in nodes]
+        async with self.ct_node_lock:
+            self.ct_nodes = [node[0] for node in nodes]
         log.info(f"Fetched list of {len(nodes)} CT nodes.")
 
     @formalin(message="Getting database metrics", sleep=60 * 5)
@@ -209,8 +230,9 @@ class EconomicHandler(HOPRNode):
             del metric_dict[peer_id]["temp_order"]
 
         log.info("Fetched data from Database.")
-        # TODO: ADD LOCK
-        self.database_metrics = metric_dict
+
+        async with self.database_lock:
+            self.database_metrics = metric_dict
 
     @formalin(message="Getting subgraph data", sleep=60 * 5)
     async def get_subgraph_data(self):
@@ -312,8 +334,9 @@ class EconomicHandler(HOPRNode):
                 more_content_available = len(safes) == pagination_skip_size
 
         log.info("Subgraph data dictionary generated")
-        # TODO: ADD LOCK
-        self.subgraph_dict = subgraph_dict
+
+        async with self.subgraph_lock:
+            self.subgraph_dict = subgraph_dict
 
     @formalin(message="Closing incoming channels", sleep=60 * 5)
     @connectguard
