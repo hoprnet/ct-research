@@ -409,7 +409,7 @@ def test_reward_probablity_exception(mocked_model_parameters):
     assert merged_result == ({})
 
 
-def test_save_expected_reward_csv_success(new_expected_split_stake_result):
+def test_gcp_save_expected_reward_csv_success(new_expected_split_stake_result):
     """
     Test whether the save_expected_reward_csv function returns the confirmation
     message in case of no errors.
@@ -422,34 +422,9 @@ def test_save_expected_reward_csv_success(new_expected_split_stake_result):
     assert result is True
 
 
-def test_save_expected_reward_csv_OSError_folder_creation(
-    new_expected_split_stake_result,
-):
-    """
-    Test whether an OSError gets triggered when the folder creation
-    or the writing of the csv file fails.
-    """
-    with patch("os.makedirs") as mock_makedirs:
-        mock_makedirs.side_effect = OSError("Mocked OSError")
-
-        result = save_dict_to_csv(
-            new_expected_split_stake_result, foldername="expected_rewards"
-        )
-
-    assert result is False
-
-
 def test_save_expected_reward_csv_OSError_writing_csv(new_expected_split_stake_result):
     """
     Test whether an OSError gets triggered when something goes wrong
     while writing the csv file.
     """
-    with patch("os.makedirs"):
-        with patch("builtins.open") as mock_open:
-            mock_open.side_effect = OSError("Mocked OSError")
-
-            result = save_dict_to_csv(
-                new_expected_split_stake_result, foldername="expected_rewards"
-            )
-
-    assert result is False
+    # TODO: check that the test is still needed

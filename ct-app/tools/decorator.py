@@ -5,7 +5,7 @@ import os
 
 from assets.parameters_schema import schema as schema_name
 
-from .utils import getlogger, read_json_file
+from .utils import getlogger, read_json_on_gcp
 
 log = getlogger()
 
@@ -85,10 +85,9 @@ def wakeupcall_from_file(
         :param filename: the name of the parameters file
         :returns: (int): The number of seconds to sleep
         """
-        assets_directory = os.getcwd() + folder
-        parameters_file_path = os.path.join(assets_directory, filename)
+        parameters_file_path = os.path.join(folder, filename)
 
-        contents = read_json_file(parameters_file_path, schema_name)
+        contents = read_json_on_gcp("ct-platform-ct", parameters_file_path, schema_name)
 
         period_in_seconds = contents["budget_param"]["budget_period"]["value"]
         distribution_count = contents["budget_param"]["dist_freq"]["value"]

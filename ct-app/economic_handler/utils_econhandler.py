@@ -1,4 +1,3 @@
-import csv
 import os
 import time
 
@@ -6,7 +5,7 @@ from celery import Celery
 from sqlalchemy import func
 
 from assets.parameters_schema import schema as schema_name
-from tools import envvar, getlogger, read_json_file
+from tools import envvar, getlogger, write_csv_on_gcp, read_json_on_gcp
 from tools.db_connection import DatabaseConnection, NodePeerConnection
 
 log = getlogger()
@@ -61,7 +60,7 @@ def exclude_elements(source_data: dict, blacklist: list):
         if key not in source_data:
             continue
         del source_data[key]
-        
+
     log.info(f"Excluded up to {len(blacklist)} entries.")
 
 
@@ -131,7 +130,7 @@ def reward_probability(eligible_peers: dict, equations: dict, parameters: dict):
     for key in eligible_peers:
         if key in results:
             eligible_peers[key].update(results[key])
-            
+
     log.info("Reward probabilty calculated successfully.")
 
 
@@ -190,26 +189,16 @@ def save_dict_to_csv(
     :returns: bool: No meaning except that it allows testing of the function.
     """
     timestamp = time.strftime("%Y%m%d%H%M%S")
-    folder_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), foldername)
     filename = f"{filename_prefix}_{timestamp}.csv"
-    file_path = os.path.join(folder_path, filename)
+    file_path = os.path.join(foldername, filename)
 
-    try:
-        os.makedirs(folder_path, exist_ok=True)
-    except OSError:
-        log.exception("Error occurred while creating the folder")
-        return False
+    column_names = ["peer_id"] + list(list(data.values())[0].keys())
 
-    try:
-        with open(file_path, "w", newline="") as csvfile:
-            writer = csv.writer(csvfile)
-            column_names = list(data.values())[0].keys()
-            writer.writerow(["peer_id"] + list(column_names))
-            for key, value in data.items():
-                writer.writerow([key] + list(value.values()))
-    except OSError:
-        log.exception("Error occurred while writing to the CSV file")
-        return False
+    lines = [column_names]
+    for key, value in data.items():
+        lines.append([key] + list(value.values()))
+
+    write_csv_on_gcp("ct-platform-ct", file_path, lines)
 
     log.info("CSV file saved successfully")
     return True
@@ -380,11 +369,9 @@ def economic_model_from_file(filename: str = "parameters.json"):
     dictionary contains the equations, and the third dictionary
     contains the budget parameters.
     """
-    script_directory = os.path.dirname(os.path.abspath(__file__))
-    assets_directory = os.path.join(script_directory, "../assets")
-    parameters_file_path = os.path.join(assets_directory, filename)
+    parameters_file_path = os.path.join("assets", filename)
 
-    contents = read_json_file(parameters_file_path, schema_name)
+    contents = read_json_on_gcp("ct-platform-ct", parameters_file_path, schema_name)
 
     log.info("Fetched parameters and equations.")
     return contents["equations"], contents["parameters"], contents["budget_param"]
