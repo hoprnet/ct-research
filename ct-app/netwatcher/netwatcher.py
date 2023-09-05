@@ -125,14 +125,14 @@ class NetWatcher(HOPRNode):
             if latency != 0:
                 log.info(f"Measured latency to {rand_peer_id[-5:]}: {latency}ms")
                 self.latency[rand_peer_id] = {"value": latency, "timestamp": now}
-                try:
-                    log.info(f"Opening channel to {rand_peer_address}")
-                    await self.api.open_channel(rand_peer_address, "10")
-                except Exception:
-                    log.error(
-                        f"Error opening channel to {rand_peer_address} "
-                        + f"(id: {rand_peer_id}))"
-                    )
+                # try:
+                #     log.info(f"Opening channel to {rand_peer_address}")
+                #     await self.api.open_channel(rand_peer_address, "10")
+                # except Exception:
+                #     log.error(
+                #         f"Error opening channel to {rand_peer_address} "
+                #         + f"(id: {rand_peer_id}))"
+                #     )
                 return
 
             log.warning(f"Failed to ping {rand_peer_id}")
@@ -291,8 +291,8 @@ class NetWatcher(HOPRNode):
 
         self.tasks.add(asyncio.create_task(self.gather_peers()))
         self.tasks.add(asyncio.create_task(self.ping_peers()))
-        # self.tasks.add(asyncio.create_task(self.transmit_peers()))
-        # self.tasks.add(asyncio.create_task(self.transmit_balance()))
+        self.tasks.add(asyncio.create_task(self.transmit_peers()))
+        self.tasks.add(asyncio.create_task(self.transmit_balance()))
         # self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
 
         await asyncio.gather(*self.tasks)
