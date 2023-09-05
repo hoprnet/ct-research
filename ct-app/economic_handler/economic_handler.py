@@ -34,7 +34,6 @@ class EconomicHandler(HOPRNode):
         :param url: the url of the HOPR node
         :param key: the API key of the HOPR node
         :param rpch_endpoint: endpoint returning rpch entry and exit nodes
-        :returns: a new instance of the Economic Handler
         """
 
         self.tasks = set[asyncio.Task]()
@@ -104,19 +103,17 @@ class EconomicHandler(HOPRNode):
     @formalin(message="Getting subgraph data", sleep=60 * 5)
     async def get_topology_links_with_balance(self):
         """
-        Returns a dictionary containing all unique
-        source_peerId-source_address links including
-        the aggregated balance of "Open" outgoing payment channels
+        Gets a dictionary containing all unique source_peerId-source_address links
+        including the aggregated balance of "Open" outgoing payment channels.
         """
         self.topology_links_with_balance = (
             await self.api.get_unique_nodeAddress_peerId_aggbalance_links()
         )
 
     @formalin(message="Getting RPCh nodes list", sleep=60 * 5)
-    async def blacklist_rpch_nodes(self):
+    async def get_rpch_nodes(self):
         """
         Retrieves a list of RPCH node peer IDs from the specified API endpoint.
-        :returns: A list of RPCH node peer IDs extracted from the response.
         Notes:
         - The function sends a GET request to the provided `api_endpoint`.
         - Expects the response to be a JSON-encoded list of items.
@@ -133,28 +130,31 @@ class EconomicHandler(HOPRNode):
                     data = await response.json()
         except aiohttp.ClientError:
             log.exception("An error occurred while making the request to rpch endpoint")
+            return
         except OSError:
             log.exception(
                 "An error occurred while reading the response from rpch endpoint"
             )
+            return
         except Exception:
             log.exception(
                 "An unexpected error occurred while making the request rpch endpoint"
             )
-        else:
-            if data and isinstance(data, list):
-                self.rpch_nodes = [item["id"] for item in data if "id" in item]
+            return
+
+        if data and isinstance(data, list):
+            self.rpch_nodes = [item["id"] for item in data if "id" in item]
 
     @formalin(message="Getting CT nodes list", sleep=60 * 5)
-    async def blacklist_ct_nodes(self):
+    async def get_ct_nodes(self):
         """
         Retrieves a list of CT node based on the content of the database
-        :returns: A list of CT node peer IDs.
         """
 
         with DatabaseConnection() as session:
             nodes = session.query(NodePeerConnection.node).distinct().all()
 
+        # TODO: ADD LOCK
         self.ct_nodes = [node[0] for node in nodes]
 
     @formalin(message="Getting database metrics", sleep=60 * 5)
@@ -162,7 +162,7 @@ class EconomicHandler(HOPRNode):
         """
         This function establishes a connection to the database using the provided
         connection details, retrieves the latest peer information from the database
-        table, and returns the data as a dictionary.
+        table.
         """
         with DatabaseConnection() as session:
             max_timestamp = session.query(
@@ -214,8 +214,6 @@ class EconomicHandler(HOPRNode):
         """
         This function retrieves safe_address-node_address-balance links from the
         specified subgraph using pagination.
-        :returns: dict: A dictionary with the node_address as the key, the safe_address
-        and the wxHOPR balance as values.
         """
 
         query = """
@@ -278,7 +276,7 @@ class EconomicHandler(HOPRNode):
                         "An error occurred while sending the request to "
                         + "subgraph endpoint"
                     )
-                    return {}
+                    return
                 except ValueError:
                     log.exception(
                         "An error occurred while parsing the response as JSON from "
@@ -341,8 +339,8 @@ class EconomicHandler(HOPRNode):
         self.tasks.add(asyncio.create_task(self.host_available()))
         self.tasks.add(asyncio.create_task(self.get_database_metrics()))
         self.tasks.add(asyncio.create_task(self.get_topology_links_with_balance()))
-        self.tasks.add(asyncio.create_task(self.blacklist_rpch_nodes()))
-        self.tasks.add(asyncio.create_task(self.blacklist_ct_nodes()))
+        self.tasks.add(asyncio.create_task(self.get_rpch_nodes()))
+        self.tasks.add(asyncio.create_task(self.get_ct_nodes()))
         self.tasks.add(asyncio.create_task(self.get_subgraph_data()))
         self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
         self.tasks.add(asyncio.create_task(self.apply_economic_model()))

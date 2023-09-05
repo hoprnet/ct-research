@@ -6,7 +6,7 @@ from economic_handler.economic_handler import EconomicHandler
 
 
 @pytest.mark.asyncio
-async def test_blacklist_rpch_nodes():
+async def test_get_rpch_nodes():
     """
     Test whether the method returns the correct list of rpch entry and exit nodes by
     mocking the response and patching the aiohttp.ClientSession.get method to return
@@ -31,7 +31,7 @@ async def test_blacklist_rpch_nodes():
         )
         node.started = True
 
-        asyncio.create_task(node.blacklist_rpch_nodes())
+        asyncio.create_task(node.get_rpch_nodes())
         await asyncio.sleep(0.5)
 
         node.started = False
@@ -41,7 +41,7 @@ async def test_blacklist_rpch_nodes():
 
 
 @pytest.mark.asyncio
-async def test_blacklist_rpch_nodes_exceptions():
+async def test_get_rpch_nodes_exceptions():
     """
     Test whether a connection failure triggers anz of the errors by patching
     the aiohttp.ClientSession.get method of the original function.
@@ -55,7 +55,7 @@ async def test_blacklist_rpch_nodes_exceptions():
             "some_rpch_endpoint",
             "some_subgraph_url",
         )
-        asyncio.create_task(node.blacklist_rpch_nodes())
+        asyncio.create_task(node.get_rpch_nodes())
         await asyncio.sleep(0.5)
         node.started = False
         await asyncio.sleep(0.5)
@@ -69,7 +69,7 @@ async def test_blacklist_rpch_nodes_exceptions():
             "some_rpch_endpoint",
             "some_subgraph_url",
         )
-        asyncio.create_task(node.blacklist_rpch_nodes())
+        asyncio.create_task(node.get_rpch_nodes())
         await asyncio.sleep(0.5)
         node.started = False
         await asyncio.sleep(0.5)
@@ -83,7 +83,7 @@ async def test_blacklist_rpch_nodes_exceptions():
             "some_rpch_endpoint",
             "some_subgraph_url",
         )
-        asyncio.create_task(node.blacklist_rpch_nodes())
+        asyncio.create_task(node.get_rpch_nodes())
         await asyncio.sleep(0.5)
         node.started = False
         await asyncio.sleep(0.5)
