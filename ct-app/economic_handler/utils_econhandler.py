@@ -369,8 +369,7 @@ def economic_model_from_file(filename: str = "parameters.json"):
     dictionary contains the equations, and the third dictionary
     contains the budget parameters.
     """
-    assets_directory = "assets"
-    parameters_file_path = os.path.join(assets_directory, filename)
+    parameters_file_path = os.path.join("assets", filename)
 
     contents = read_json_on_gcp("ct-platform-ct", parameters_file_path, schema_name)
 
