@@ -5,7 +5,6 @@ from .hopr_node import HOPRNode
 from .utils import (
     envvar,
     getlogger,
-    # read_json_file,
     read_json_on_gcp,
     running_module,
     write_csv_on_gcp,
@@ -20,7 +19,6 @@ __all__ = [
     "wakeupcall",
     "formalin",
     "connectguard",
-    # "read_json_file",
     "running_module",
     "write_csv_on_gcp",
     "read_json_on_gcp",
