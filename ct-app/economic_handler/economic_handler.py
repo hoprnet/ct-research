@@ -11,12 +11,12 @@ from sqlalchemy import func
 
 from .utils_econhandler import (
     exclude_elements,
-    compute_ct_prob,
+    reward_probability,
     compute_rewards,
     merge_topology_database_subgraph,
     economic_model_from_file,
     allow_many_node_per_safe,
-    save_expected_reward_csv,
+    save_dict_to_csv,
 )
 
 log = getlogger()
@@ -87,13 +87,15 @@ class EconomicHandler(HOPRNode):
 
         # computation of cover traffic probability
         equations, parameters, budget_parameters = economic_model_from_file()
-        compute_ct_prob(eligible_peers, equations, parameters)
+        reward_probability(eligible_peers, equations, parameters)
 
         # calculate expected rewards
         expected_rewards = compute_rewards(eligible_peers, budget_parameters)
 
         # output expected rewards as a csv file
-        save_expected_reward_csv(expected_rewards)
+        save_dict_to_csv(
+            expected_rewards, "expected_reward", foldername="expected_rewards"
+        )
 
         print(f"{eligible_peers=}")
         print(f"{expected_rewards=}")

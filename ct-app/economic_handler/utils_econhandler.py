@@ -46,29 +46,6 @@ def merge_topology_database_subgraph(
     return merged_result
 
 
-def block_ct_nodes(merged_metrics_dict: dict):
-    """
-    Exludes nodes from the ct distribution that are connected to
-    Netwatcher/Postman modules.
-    :param: merged_metrics_dict (dict): merged topology, subgraph, database data
-    :returns: (dict): dictionary excluding ct-app instances
-    """
-    excluded_nodes = set()  # update a set to avoid duplicates
-
-    # Collect all unique node_addresses from the input data
-    for data in merged_metrics_dict.values():
-        excluded_nodes.update(data["node_peerIds"])
-
-    # New dictionary excluding entries with keys in the exclusion set
-    metrics_dict_excluding_ct_nodes = {
-        key: value
-        for key, value in merged_metrics_dict.items()
-        if key not in excluded_nodes
-    }
-
-    return metrics_dict_excluding_ct_nodes
-
-
 def exclude_elements(source_data: dict, blacklist: list):
     """
     Removes elements from a dictionary based on a blacklist.
@@ -81,24 +58,6 @@ def exclude_elements(source_data: dict, blacklist: list):
         if key not in source_data:
             continue
         del source_data[key]
-
-
-def block_rpch_nodes(
-    blacklist_rpch_nodes: list, merged_metrics_subgraph_topology: dict
-):
-    """
-    Removes RPCh entry and exit nodes from the dictioanry that
-    contains the merged results of database metrics, subgraph, and topology.
-    :param: blacklist_rpch_nodes (list): Containing a list of RPCh nodes
-    :param: merged_metrics_subgraph_topology (dict): merged data
-    :returns: (dict): Updated merged_metrics_subgraph_topology dataset
-    """
-    merged_metrics_subgraph_topology = {
-        k: v
-        for k, v in merged_metrics_subgraph_topology.items()
-        if k not in blacklist_rpch_nodes
-    }
-    return merged_metrics_subgraph_topology
 
 
 def allow_many_node_per_safe(input_dict: dict):
@@ -129,30 +88,30 @@ def allow_many_node_per_safe(input_dict: dict):
         value["splitted_stake"] = total_balance / value["safe_address_count"]
 
 
-def compute_ct_prob(merged_result: dict, equations: dict, parameters: dict):
+def reward_probability(eligible_peers: dict, equations: dict, parameters: dict):
     """
-    Evaluate the function for each stake value in the merged_result dictionary.
-    :param: A dict containing the data.
+    Evaluate the function for each stake value in the eligible_peers dictionary.
+    :param eligible_peers: A dict containing the data.
     :param: equations: A dict containing the equations and conditions.
     :param: parameters: A dict containing the parameter values.
-    :returns: A dict containing the probability distribution.
+    :returns: nothing.
     """
     results = {}
     f_x_condition = equations["f_x"]["condition"]
 
     # compute transformed stake
-    for key, value in merged_result.items():
-        stake = value["splitted_stake"]
-        params = {param: value["value"] for param, value in parameters.items()}
-        params["x"] = stake
+    params = {param: value["value"] for param, value in parameters.items()}
+
+    for peer in eligible_peers:
+        params["x"] = 2
 
         try:
             function = "f_x" if eval(f_x_condition, params) else "g_x"
             formula = equations[function]["formula"]
-            results[key] = {"trans_stake": eval(formula, params)}
+            results[peer] = {"trans_stake": eval(formula, params)}
 
         except Exception:
-            log.exception(f"Error evaluating function for peer ID {key}")
+            log.exception(f"Error evaluating function for peer ID {peer}")
             return
 
     # compute ct probability
@@ -162,9 +121,9 @@ def compute_ct_prob(merged_result: dict, equations: dict, parameters: dict):
         results[key]["prob"] = results[key]["trans_stake"] / total_tf_stake
 
     # update dictionary with model results
-    for key in merged_result:
+    for key in eligible_peers:
         if key in results:
-            merged_result[key].update(results[key])
+            eligible_peers[key].update(results[key])
 
 
 def compute_rewards(dataset: dict, budget_param: dict):
@@ -209,16 +168,19 @@ def compute_rewards(dataset: dict, budget_param: dict):
     return dataset
 
 
-def save_expected_reward_csv(dataset: dict) -> bool:
+def save_dict_to_csv(
+    data: dict, filename_prefix: str = "file", foldername: str = "output"
+) -> bool:
     """
-    Saves the expected rewards dictionary as a CSV file
-    :param: dataset (dict): A dictionary containing the dataset entries.
+    Saves a dictionary as a CSV file
+    :param: data (dict): A dictionary to be saved.
+    :param: filename_prefix (str): The prefix of the filename.
+    :param: foldername (str): The name of the folder where the file will be saved.
     :returns: bool: No meaning except that it allows testing of the function.
     """
     timestamp = time.strftime("%Y%m%d%H%M%S")
-    folder_name = "expected_rewards"
-    folder_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), folder_name)
-    filename = f"expected_reward_{timestamp}.csv"
+    folder_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), foldername)
+    filename = f"{filename_prefix}_{timestamp}.csv"
     file_path = os.path.join(folder_path, filename)
 
     try:
@@ -230,9 +192,9 @@ def save_expected_reward_csv(dataset: dict) -> bool:
     try:
         with open(file_path, "w", newline="") as csvfile:
             writer = csv.writer(csvfile)
-            column_names = list(dataset.values())[0].keys()
+            column_names = list(data.values())[0].keys()
             writer.writerow(["peer_id"] + list(column_names))
-            for key, value in dataset.items():
+            for key, value in data.items():
                 writer.writerow([key] + list(value.values()))
     except OSError:
         log.exception("Error occurred while writing to the CSV file")
@@ -252,8 +214,6 @@ def push_jobs_to_celery_queue(dataset: dict):
     app = Celery(
         name="client",
         broker=envvar("CELERY_BROKER_URL"),
-        backend=envvar("CELERY_RESULT_BACKEND"),
-        include=["celery_tasks"],
     )
     app.autodiscover_tasks(force=True)
 
@@ -263,7 +223,7 @@ def push_jobs_to_celery_queue(dataset: dict):
         node_index = 0
 
         app.send_task(
-            f"{envvar('TASK_NAME')}.{node_list[node_index]}",
+            envvar("TASK_NAME"),
             args=(peer_id, count, node_list, node_index),
             queue=node_list[node_index],
         )
