@@ -1,4 +1,5 @@
 import asyncio
+import csv
 import json
 import logging
 import logging.config
@@ -8,6 +9,7 @@ import sys
 import jsonschema
 from aiohttp.client import ClientSession
 from aiohttp.client_exceptions import InvalidURL
+from google.cloud import storage
 
 from .logger import ColoredLogger
 
@@ -60,33 +62,33 @@ def envvar(name: str, type: type = None) -> str:
     return value
 
 
-def read_json_file(path, schema):
-    """
-    Reads a JSON file and validates its contents using a schema.
-    :param: path: The path to the parameters file
-    ;param: schema: The validation schema
-    :returns: (dict): The contents of the JSON file.
-    """
-    log = getlogger()
-    try:
-        with open(path, "r") as file:
-            contents = json.load(file)
-    except FileNotFoundError as e:
-        log.exception(f"The file in '{path}' does not exist. {e}")
-        return {}
+# def read_json_file(path, schema):
+#     """
+#     Reads a JSON file and validates its contents using a schema.
+#     :param: path: The path to the parameters file
+#     ;param: schema: The validation schema
+#     :returns: (dict): The contents of the JSON file.
+#     """
+#     log = getlogger()
+#     try:
+#         with open(path, "r") as file:
+#             contents = json.load(file)
+#     except FileNotFoundError as e:
+#         log.exception(f"The file in '{path}' does not exist. {e}")
+#         return {}
 
-    try:
-        jsonschema.validate(
-            contents,
-            schema=schema,
-        )
-    except jsonschema.ValidationError as e:
-        log.exception(
-            f"The file in'{path}' does not follow the expected structure. {e}"
-        )
-        return {}
+#     try:
+#         jsonschema.validate(
+#             contents,
+#             schema=schema,
+#         )
+#     except jsonschema.ValidationError as e:
+#         log.exception(
+#             f"The file in'{path}' does not follow the expected structure. {e}"
+#         )
+#         return {}
 
-    return contents
+#     return contents
 
 
 def running_module(uppercase: bool = False):
@@ -143,3 +145,49 @@ async def post_dictionary(url: str, data: dict, retry_sleep: int = None):
             await _post(session, url, data)
 
     return success
+
+
+def write_csv_on_gcp(bucket_name: str, blob_name: str, data: list[str]):
+    """Write a blob from GCS using file-like IO"""
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+
+    # Mode can be specified as wb/rb for bytes mode.
+    # See: https://docs.python.org/3/library/io.html
+
+    print(data)
+    with blob.open("w") as f:
+        writer = csv.writer(f)
+        writer.writerows(data)
+
+
+def read_json_on_gcp(bucket_name, blob_name, schema=None):
+    """
+    Reads a JSON file and validates its contents using a schema.
+    :param: path: The path to the parameters file
+    ;param: schema: The validation schema
+    :returns: (dict): The contents of the JSON file.
+    """
+    log = getlogger()
+
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+
+    with blob.open("r") as f:
+        contents = json.load(f)
+
+    if schema is not None:
+        try:
+            jsonschema.validate(
+                contents,
+                schema=schema,
+            )
+        except jsonschema.ValidationError as e:
+            log.exception(
+                f"The file in'{blob_name}' does not follow the expected structure. {e}"
+            )
+            return {}
+
+    return contents
