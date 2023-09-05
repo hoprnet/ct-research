@@ -1,5 +1,4 @@
 import asyncio
-
 import aiohttp
 
 from tools.decorator import connectguard, formalin, wakeupcall_from_file  # noqa: F401
@@ -109,6 +108,7 @@ class EconomicHandler(HOPRNode):
         self.topology_links_with_balance = (
             await self.api.get_unique_nodeAddress_peerId_aggbalance_links()
         )
+        log.info("Fetched unique nodeAddress-peerId links from topology.")
 
     @formalin(message="Getting RPCh nodes list", sleep=60 * 5)
     async def get_rpch_nodes(self):
@@ -144,18 +144,22 @@ class EconomicHandler(HOPRNode):
 
         if data and isinstance(data, list):
             self.rpch_nodes = [item["id"] for item in data if "id" in item]
+           
+    log.info(f"Fetched list of {len(rpch_node_peerID)} RPCh nodes.")
+
 
     @formalin(message="Getting CT nodes list", sleep=60 * 5)
     async def get_ct_nodes(self):
         """
         Retrieves a list of CT node based on the content of the database
         """
-
         with DatabaseConnection() as session:
             nodes = session.query(NodePeerConnection.node).distinct().all()
 
         # TODO: ADD LOCK
         self.ct_nodes = [node[0] for node in nodes]
+        log.info(f"Fetched list of {len(nodes)} CT nodes.")
+        
 
     @formalin(message="Getting database metrics", sleep=60 * 5)
     async def get_database_metrics(self):
@@ -206,6 +210,7 @@ class EconomicHandler(HOPRNode):
         for peer_id in metric_dict:
             del metric_dict[peer_id]["temp_order"]
 
+        log.info("Fetched data from Database.")
         # TODO: ADD LOCK
         self.database_metrics = metric_dict
 
@@ -307,9 +312,8 @@ class EconomicHandler(HOPRNode):
                 # Increment skip for next iteration
                 data["variables"]["skip"] += pagination_skip_size
                 more_content_available = len(safes) == pagination_skip_size
-
+                
         log.info("Subgraph data dictionary generated")
-
         # TODO: ADD LOCK
         self.subgraph_dict = subgraph_dict
 

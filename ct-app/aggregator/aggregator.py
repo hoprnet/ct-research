@@ -100,6 +100,54 @@ class Aggregator(metaclass=Singleton):
         for peer, lat in items.items():
             self.prometheus_latency.labels(node_id, peer).set(lat)
 
+    def remove_too_old_nodes(self, max_age: datetime.timedelta):
+        """
+        Remove nodes that have not been updated for a long time.
+        Concurrent access is managed using a lock.
+        :param max_age: the maximum age for a node to be considered up to date
+        :return: the number of nodes removed from the latency and from the last update
+        data
+        """
+
+        nodes_to_remove = []
+        with self._node_last_update_lock:
+            now = datetime.datetime.now()  # noqa: F841
+
+            for node_id, timestamp in self._node_last_update.items():
+                if now - timestamp > max_age:
+                    nodes_to_remove.append((node_id, timestamp))
+
+        log.debug(f"Going to remove {len(nodes_to_remove)} nodes")
+
+        nodes_removed_from_latency = []
+        with self._node_peer_latency_lock:
+            for node_id, timestamp in nodes_to_remove:
+                node_removed = self._node_peer_latency.pop(node_id, None)
+
+                if node_removed is not None:
+                    nodes_removed_from_latency.append(node_id)
+                    log.info(
+                        f"Removed {node_id} from latency data. Last update: {timestamp}"
+                    )
+                else:
+                    log.warning(f"Failed to remove {node_id} from latency data")
+
+        nodes_removed_from_timestamp = []
+        with self._node_last_update_lock:
+            for node_id, _ in nodes_to_remove:
+                node_removed = self._node_last_update.pop(node_id, None)
+
+                if node_removed is not None:
+                    nodes_removed_from_timestamp.append(node_id)
+                    log.info(f"Removed {node_id} from last update data")
+                else:
+                    log.warning(f"Failed to remove {node_id} from last update data")
+
+        log.info(f"Removed {len(nodes_removed_from_latency)} nodes from latency data")
+        log.info(f"Removed {len(nodes_removed_from_timestamp)} nodes from last update")
+
+        return len(nodes_removed_from_latency), len(nodes_removed_from_timestamp)
+
     def get_node_peer_latencies(self) -> dict:
         """
         Get the latency data stored.

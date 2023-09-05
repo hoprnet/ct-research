@@ -43,6 +43,9 @@ def merge_topology_database_subgraph(
 
         merged_result[peer_id] = data
 
+    log.info("Merged data successfully.")
+    log.info("Total balance calculated successfully.")
+
     return merged_result
 
 
@@ -58,6 +61,8 @@ def exclude_elements(source_data: dict, blacklist: list):
         if key not in source_data:
             continue
         del source_data[key]
+        
+    log.info(f"Excluded up to {len(blacklist)} entries.")
 
 
 def allow_many_node_per_safe(input_dict: dict):
@@ -86,6 +91,8 @@ def allow_many_node_per_safe(input_dict: dict):
         value["safe_address_count"] = safe_address_counts[safe_address]
 
         value["splitted_stake"] = total_balance / value["safe_address_count"]
+
+    log.info("Stake splitted successfully.")
 
 
 def reward_probability(eligible_peers: dict, equations: dict, parameters: dict):
@@ -124,6 +131,8 @@ def reward_probability(eligible_peers: dict, equations: dict, parameters: dict):
     for key in eligible_peers:
         if key in results:
             eligible_peers[key].update(results[key])
+            
+    log.info("Reward probabilty calculated successfully.")
 
 
 def compute_rewards(dataset: dict, budget_param: dict):
@@ -164,6 +173,8 @@ def compute_rewards(dataset: dict, budget_param: dict):
 
         denominator = entry["ticket_price"] * entry["winning_prob"]
         entry["jobs"] = round(entry["protocol_exp_reward_per_dist"] / denominator)
+
+    log.info("Expected rewards and jobs calculated successfully.")
 
     return dataset
 
@@ -375,4 +386,5 @@ def economic_model_from_file(filename: str = "parameters.json"):
 
     contents = read_json_file(parameters_file_path, schema_name)
 
+    log.info("Fetched parameters and equations.")
     return contents["equations"], contents["parameters"], contents["budget_param"]
