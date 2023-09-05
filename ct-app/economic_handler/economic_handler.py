@@ -2,7 +2,6 @@ import asyncio
 import csv
 import os
 import time
-import traceback
 
 import aiohttp
 from celery import Celery
@@ -278,6 +277,7 @@ class EconomicHandler(HOPRNode):
         """
         response = await self.api.get_unique_nodeAddress_peerId_aggbalance_links()
 
+        log.info("Fetched unique nodeAddress-peerId links.")
         return "unique_nodeAddress_peerId_aggbalance_links", response
 
     async def get_channels(self):
@@ -337,6 +337,7 @@ class EconomicHandler(HOPRNode):
             for peer_id in metrics_dict:
                 del metrics_dict[peer_id]["temp_order"]
 
+            log.info("Fetched data from Database.")
             return "metricsDB", metrics_dict
 
     def mock_data_metrics_db(self):
@@ -462,6 +463,7 @@ class EconomicHandler(HOPRNode):
         contents = await asyncio.to_thread(
             read_json_file, parameters_file_path, schema_name
         )
+        log.info("Fetched parameters and equations.")
         return (
             "params",
             contents["parameters"],
@@ -498,6 +500,7 @@ class EconomicHandler(HOPRNode):
                 return "rpch", []
 
             rpch_node_peerID = [item["id"] for item in data if "id" in item]
+            log.info(f"Fetched blacklist of {len(rpch_node_peerID)} RPCh nodes.")
             return "rpch", rpch_node_peerID
 
         return "rpch", []
@@ -601,7 +604,7 @@ class EconomicHandler(HOPRNode):
                     ] += pagination_skip_size  # Increment skip for next iter
                     more_content_available = len(safes) == pagination_skip_size
 
-        log.info("Subgraph data dictionary generated")
+        log.info("Fetched Subgraph data.")
         return "subgraph_data", subgraph_dict
 
     def merge_topology_metricdb_subgraph(
@@ -641,6 +644,7 @@ class EconomicHandler(HOPRNode):
             log.exception("Error occurred while merging")
             return "merged_data", {}
 
+        log.info("Merged data successfully.")
         return "merged_data", merged_result
 
     def block_rpch_nodes(
@@ -658,6 +662,7 @@ class EconomicHandler(HOPRNode):
             for k, v in merged_metrics_subgraph_topology.items()
             if k not in blacklist_rpch_nodes
         }
+        log.info("RPCh nodes blocked successfully.")
         return "dict_excluding_rpch_nodes", merged_metrics_subgraph_topology
 
     def calculate_total_balance(self, input_dict: dict):
@@ -673,6 +678,7 @@ class EconomicHandler(HOPRNode):
             data["total_balance"] = total_balance
             dict_including_total_balance[key] = data
 
+        log.info("Total Balance calculated successfully.")
         return "dict_excluding_rpch_nodes", dict_including_total_balance
 
     def block_ct_nodes(self, merged_metrics_dict: dict):
@@ -695,6 +701,7 @@ class EconomicHandler(HOPRNode):
             if key not in excluded_nodes
         }
 
+        log.info("Ct nodes blocked successfully.")
         return "dict_excluding_ct_nodes", metrics_dict_excluding_ct_nodes
 
     def safe_address_split_stake(self, input_dict: dict):
@@ -724,6 +731,7 @@ class EconomicHandler(HOPRNode):
 
             value["splitted_stake"] = total_balance / value["safe_address_count"]
 
+        log.info("Stake splitted successfully.")
         return "split_stake_dict", input_dict
 
     def compute_ct_prob(self, parameters, equations, merged_result):
@@ -753,9 +761,8 @@ class EconomicHandler(HOPRNode):
                 result = eval(formula, params)
                 results[key] = {"trans_stake": result}
 
-            except Exception as e:
-                log.error(f"Error evaluating function for peer ID {key}: {e}")
-                log.error(traceback.format_exc())
+            except Exception:
+                log.exception(f"Error evaluating function for peer ID {key}")
                 return "ct_prob", {}
 
         # compute ct probability
@@ -768,6 +775,7 @@ class EconomicHandler(HOPRNode):
             if key in results:
                 merged_result[key].update(results[key])
 
+        log.info("Ct probabilty calculated successfully.")
         return "ct_prob", merged_result
 
     def compute_expected_reward(self, dataset: dict, budget_param: dict):
@@ -804,6 +812,7 @@ class EconomicHandler(HOPRNode):
 
             entry["protocol_exp_reward_per_dist"] = protocol_exp_reward / dist_freq
 
+        log.info("Expected rewards calculated successfully.")
         return "expected_reward", dataset
 
     def compute_job_distribution(self, dataset: dict, budget_param: dict):
@@ -826,6 +835,7 @@ class EconomicHandler(HOPRNode):
 
             entry["jobs"] = round(entry["protocol_exp_reward_per_dist"] / denominator)
 
+        log.info("Jobs calculated successfully.")
         return "job_distribution", dataset
 
     def save_expected_reward_csv(self, dataset: dict) -> bool:
@@ -844,9 +854,8 @@ class EconomicHandler(HOPRNode):
 
         try:
             os.makedirs(folder_path, exist_ok=True)
-        except OSError as e:
-            log.error(f"Error occurred while creating the folder: {e}")
-            log.error(traceback.format_exc())
+        except OSError:
+            log.exception("Error occurred while creating the folder")
             return False
 
         try:
@@ -856,12 +865,11 @@ class EconomicHandler(HOPRNode):
                 writer.writerow(["peer_id"] + list(column_names))
                 for key, value in dataset.items():
                     writer.writerow([key] + list(value.values()))
-        except OSError as e:
-            log.error(f"Error occurred while writing to the CSV file: {e}")
-            log.error(traceback.format_exc())
+        except OSError:
+            log.exception("Error occurred while writing to the CSV file")
             return False
 
-        log.info("CSV file saved successfully")
+        log.info("CSV file saved successfully.")
         return True
 
     def push_jobs_to_celery_queue(self, dataset: dict):
