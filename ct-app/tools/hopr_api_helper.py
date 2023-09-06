@@ -51,13 +51,11 @@ class HoprdAPIHelper:
             body = json.loads(e.body.decode())
             log.error(f"ApiException calling AccountApi->account_get_balances: {body}")
             return None
-        except OSError as e:
-            body = json.loads(e.body.decode())
-            log.error(f"OSError calling AccountApi->account_get_balances: {body}")
+        except OSError:
+            log.error("OSError calling AccountApi->account_get_balances")
             return None
-        except MaxRetryError as e:
-            body = json.loads(e.body.decode())
-            log.error(f"MaxRetryError calling AccountApi->account_get_balances: {body}")
+        except MaxRetryError:
+            log.error("MaxRetryError calling AccountApi->account_get_balances")
             return None
 
         return_dict = {}
@@ -90,15 +88,11 @@ class HoprdAPIHelper:
                 f"ApiException calling ChannelsApi->channels_open_channel: {body}"
             )
             status = body["status"]
-        except OSError as e:
-            body = json.loads(e.body.decode())
-            log.error(f"OSError calling ChannelsApi->channels_open_channel: {body}")
+        except OSError:
+            log.error("OSError calling ChannelsApi->channels_open_channel")
             return False
-        except MaxRetryError as e:
-            body = json.loads(e.body.decode())
-            log.error(
-                f"MaxRetryError calling ChannelsApi->channels_open_channel: {body}"
-            )
+        except MaxRetryError:
+            log.error("MaxRetryError calling ChannelsApi->channels_open_channel")
             return False
 
         if status == "CHANNEL_ALREADY_OPEN":
@@ -125,15 +119,11 @@ class HoprdAPIHelper:
                 f"ApiException calling ChannelsApi->channels_close_channel: {body}"
             )
             return False
-        except OSError as e:
-            body = json.loads(e.body.decode())
-            log.error(f"OSError calling ChannelsApi->channels_close_channel: {body}")
+        except OSError:
+            log.error("OSError calling ChannelsApi->channels_close_channel")
             return False
-        except MaxRetryError as e:
-            body = json.loads(e.body.decode())
-            log.error(
-                f"MaxRetryError calling ChannelsApi->channels_close_channel: {body}"
-            )
+        except MaxRetryError:
+            log.error("MaxRetryError calling ChannelsApi->channels_close_channel")
             return False
 
         return True
@@ -158,15 +148,11 @@ class HoprdAPIHelper:
                 f"ApiException calling ChannelsApi->channels_get_channels: {body}"
             )
             return []
-        except OSError as e:
-            body = json.loads(e.body.decode())
-            log.error(f"OSError calling ChannelsApi->channels_get_channels: {body}")
+        except OSError:
+            log.error("OSError calling ChannelsApi->channels_get_channels")
             return []
-        except MaxRetryError as e:
-            body = json.loads(e.body.decode())
-            log.error(
-                f"MaxRetryError calling ChannelsApi->channels_get_channels: {body}"
-            )
+        except MaxRetryError:
+            log.error("MaxRetryError calling ChannelsApi->channels_get_channels")
             return []
 
         if not hasattr(response, "incoming"):
@@ -205,15 +191,11 @@ class HoprdAPIHelper:
                 f"ApiException calling ChannelsApi->channels_get_channels: {body}"
             )
             return []
-        except OSError as e:
-            body = json.loads(e.body.decode())
-            log.error(f"OSError calling ChannelsApi->channels_get_channels: {body}")
+        except OSError:
+            log.error("OSError calling ChannelsApi->channels_get_channels")
             return []
-        except MaxRetryError as e:
-            body = json.loads(e.body.decode())
-            log.error(
-                f"MaxRetryError calling ChannelsApi->channels_get_channels: {body}"
-            )
+        except MaxRetryError:
+            log.error("MaxRetryError calling ChannelsApi->channels_get_channels")
             return []
         else:
             return response
@@ -237,15 +219,11 @@ class HoprdAPIHelper:
                 f"ApiException calling ChannelsApi->channels_get_channels: {body}"
             )
             return None
-        except OSError as e:
-            body = json.loads(e.body.decode())
-            log.error(f"OSError calling ChannelsApi->channels_get_channels: {body}")
+        except OSError:
+            log.error("OSError calling ChannelsApi->channels_get_channels")
             return None
-        except MaxRetryError as e:
-            body = json.loads(e.body.decode())
-            log.error(
-                f"MaxRetryError calling ChannelsApi->channels_get_channels: {body}"
-            )
+        except MaxRetryError:
+            log.error("MaxRetryError calling ChannelsApi->channels_get_channels")
             return None
 
         if not hasattr(response, "all"):
@@ -306,13 +284,11 @@ class HoprdAPIHelper:
             body = json.loads(e.body.decode())
             log.error(f"ApiException calling PeersApi->peers_ping_peer: {body}")
             return 0
-        except OSError as e:
-            body = json.loads(e.body.decode())
-            log.error(f"OSError calling PeersApi->peers_ping_peer: {body}")
+        except OSError:
+            log.error("OSError calling PeersApi->peers_ping_peer")
             return 0
-        except MaxRetryError as e:
-            body = json.loads(e.body.decode())
-            log.error(f"MaxRetryError calling PeersApi->peers_ping_peer: {body}")
+        except MaxRetryError:
+            log.error("MaxRetryError calling PeersApi->peers_ping_peer")
             return 0
 
         if not hasattr(response, metric):
@@ -350,13 +326,11 @@ class HoprdAPIHelper:
             body = json.loads(e.body.decode())
             log.error(f"ApiException calling NodeApi->node_get_peers: {body}")
             return []
-        except OSError as e:
-            body = json.loads(e.body.decode())
-            log.error(f"OSError calling NodeApi->node_get_peers: {body}")
+        except OSError:
+            log.error("OSError calling NodeApi->node_get_peers")
             return []
-        except MaxRetryError as e:
-            body = json.loads(e.body.decode())
-            log.error(f"MaxRetryError calling NodeApi->node_get_peers: {body}")
+        except MaxRetryError:
+            log.error("MaxRetryError calling NodeApi->node_get_peers")
             return []
 
         if not hasattr(response, status):
@@ -395,13 +369,11 @@ class HoprdAPIHelper:
             body = json.loads(e.body.decode())
             log.error(f"ApiException calling AccountApi->account_get_address: {body}")
             return None
-        except OSError as e:
-            body = json.loads(e.body.decode())
-            log.error(f"OSError calling AccountApi->account_get_address: {body}")
+        except OSError:
+            log.error("OSError calling AccountApi->account_get_address")
             return None
-        except MaxRetryError as e:
-            body = json.loads(e.body.decode())
-            log.error(f"MaxRetryError calling AccountApi->account_get_address: {body}")
+        except MaxRetryError:
+            log.error("MaxRetryError calling AccountApi->account_get_address")
             return None
 
         if not hasattr(response, address):
@@ -431,17 +403,13 @@ class HoprdAPIHelper:
                 thread.get()
         except ApiException as e:
             body = json.loads(e.body.decode())
-            log.error(f"ApiException calling MessageApi->messages_send_message:{body}")
+            log.error(f"ApiException calling MessageApi->messages_send_message: {body}")
             return False
-        except OSError as e:
-            body = json.loads(e.body.decode())
-            log.error(f"OSError calling MessageApi->messages_send_message:{body}")
+        except OSError:
+            log.error("OSError calling MessageApi->messages_send_message:")
             return False
-        except MaxRetryError as e:
-            body = json.loads(e.body.decode())
-            log.error(
-                f"MaxRetryError calling MessageApi->messages_send_message: {body}"
-            )
+        except MaxRetryError:
+            log.error("MaxRetryError calling MessageApi->messages_send_message")
             return False
 
         return True
