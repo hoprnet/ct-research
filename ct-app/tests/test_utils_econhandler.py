@@ -152,14 +152,36 @@ def expected_merge_result_split_stake(expected_merge_result):
     # Define split stake values for specific peer IDs
     split_stake_values = {
         "peer_id_1": 15,
-        "peer_id_2": 5,
-        "peer_id_3": 6,
+        "peer_id_2": 6,
+        "peer_id_3": 8,
     }
 
     # Update the split stake values for the specified peer IDs
     for peer_id, split_stake in split_stake_values.items():
         if peer_id in result:
             result[peer_id]["splitted_stake"] = split_stake
+
+    return result
+
+
+@pytest.fixture
+def expected_input_for_compute_expected_rewards(expected_merge_result_split_stake):
+    """
+    Add new keys to the expected_merge_result_split_stake @pytest.fixture
+    """
+    result = expected_merge_result_split_stake.copy()
+
+    # Define split stake values for specific peer IDs
+    probability_values = {
+        "peer_id_1": 0.1,
+        "peer_id_2": 0.2,
+        "peer_id_3": 0.5,
+    }
+
+    # Update the split stake values for the specified peer IDs
+    for peer_id, prob in probability_values.items():
+        if peer_id in result:
+            result[peer_id]["prob"] = prob
 
     return result
 
@@ -205,7 +227,7 @@ def test_allow_many_node_per_safe(expected_merge_result):
         / expected_merge_result["peer_id_1"]["safe_address_count"]
     )
     assert expected_merge_result["peer_id_2"]["safe_address_count"] == 2
-    assert expected_merge_result["peer_id_3"]["splitted_stake"] == 6
+    assert expected_merge_result["peer_id_3"]["splitted_stake"] == 8
 
 
 def test_exclude_elements(mock_rpch_nodes_blacklist, expected_merge_result):
@@ -255,70 +277,71 @@ def test_reward_probability(mocked_model_parameters, expected_merge_result_split
     )
 
 
+def test_reward_probablity_exception(mocked_model_parameters):
+    """
+    Test whether an empty dictionary gets returned when a dataset is missing
+    and therefore the exception gets triggered.
+    """
+    parameters: dict = mocked_model_parameters["parameters"]
+    equations: dict = mocked_model_parameters["equations"]
+    merged_result = {}
+
+    with pytest.raises(Exception):
+        reward_probability(parameters, equations, merged_result)
+
+    # test that nothing gets calculated
+    assert merged_result == ({})
+
+
 def test_compute_expected_reward(
-    mocked_model_parameters, new_expected_split_stake_result
+    mocked_model_parameters, expected_input_for_compute_expected_rewards
 ):
     """
     Test whether the compute_expected_reward method generates
     the required values and whether the budget gets split correctly.
     """
 
-    # TODO: HERE THE "total_balance" jkey for each entry is missing in the mocked data
-    if 0:
-        budget_param = mocked_model_parameters["budget_param"]
+    budget_param: dict = mocked_model_parameters["budget_param"]
+    merged_result: dict = expected_input_for_compute_expected_rewards
 
-        result = compute_rewards(new_expected_split_stake_result, budget_param)
+    compute_rewards(merged_result, budget_param)
 
-        # Assert Keys
-        assert set(result[1].keys()) == set(new_expected_split_stake_result.keys())
+    # Assert Values
+    for value in merged_result.values():
+        assert "total_expected_reward" in value
+        assert "protocol_exp_reward" in value
+        assert "airdrop_expected_reward" in value
 
-        # Assert Values
-        for value in result[1].values():
-            assert "total_expected_reward" in value
-            assert "protocol_exp_reward" in value
-            assert "airdrop_expected_reward" in value
-
-        # Assert that the split works correctly
-        for entry in result[1].values():
-            assert (
-                entry["total_expected_reward"]
-                == entry["protocol_exp_reward"] + entry["airdrop_expected_reward"]
-            )
+    # Assert that the split works correctly
+    for entry in merged_result.values():
+        assert (
+            entry["total_expected_reward"]
+            == entry["protocol_exp_reward"] + entry["airdrop_expected_reward"]
+        )
 
 
-def test_reward_probablity_exception(mocked_model_parameters):
-    """
-    Test whether an empty dictionary gets returned when a dataset is missing
-    and therefore the exception gets triggered.
-    """
-    parameters = mocked_model_parameters["parameters"]
-    equations = mocked_model_parameters["equations"]
-    merged_result = {}
-
-    reward_probability(parameters, equations, merged_result)
-
-    assert merged_result == ({})
-
-
-def test_gcp_save_expected_reward_csv_success(new_expected_split_stake_result):
+def test_gcp_save_expected_reward_csv_success(expected_merge_result_split_stake):
     """
     Test whether the save_expected_reward_csv function returns the confirmation
     message in case of no errors.
     """
 
     result = save_dict_to_csv(
-        new_expected_split_stake_result, foldername="expected_rewards"
+        expected_merge_result_split_stake, foldername="expected_rewards"
     )
 
     assert result is True
 
 
-def test_save_expected_reward_csv_OSError_writing_csv(new_expected_split_stake_result):
+def test_save_expected_reward_csv_OSError_writing_csv(
+    expected_merge_result_split_stake,
+):
     """
     Test whether an OSError gets triggered when something goes wrong
     while writing the csv file.
     """
-    # TODO: check that the test is still needed
+    pass
+    # check that the test is still needed
 
 
 # @pytest.mark.asyncio

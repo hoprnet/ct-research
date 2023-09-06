@@ -91,10 +91,13 @@ def allow_many_node_per_safe(input_dict: dict):
     # Update the input_dict with the calculated splitted_stake
     for value in input_dict.values():
         safe_address = value["safe_address"]
-        total_balance = value["total_balance"]
+        channels_balance = value["channels_balance"]
+        safe_balance = value["safe_balance"]
         value["safe_address_count"] = safe_address_counts[safe_address]
 
-        value["splitted_stake"] = total_balance / value["safe_address_count"]
+        value["splitted_stake"] = (
+            safe_balance / value["safe_address_count"]
+        ) + channels_balance
 
     log.info("Stake splitted successfully.")
 
@@ -160,7 +163,9 @@ def compute_rewards(dataset: dict, budget_param: dict):
         total_exp_reward = entry["prob"] * budget
         apy = (
             total_exp_reward * ((60 * 60 * 24 * 365) / budget_period_in_sec)
-        ) / entry["total_balance"]
+        ) / entry[
+            "splitted_stake"
+        ]  # Splitted stake + total balance if 1 safe : 1 node
         protocol_exp_reward = total_exp_reward * budget_split_ratio
         entry["apy"] = apy
 
