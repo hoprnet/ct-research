@@ -27,7 +27,6 @@ def main():
         envvar("PGDATABASE")
         envvar("PGPASSWORD")
         envvar("PGSSLMODE")
-        mock_mode = envvar("MOCK_MODE", int)
     except KeyError:
         log.exception("Missing environment variables")
         exit(ExitCode.ERROR_MISSING_ENV_VARS)
@@ -45,10 +44,7 @@ def main():
 
     # start the node and run the event loop until the node stops
     try:
-        if mock_mode:
-            loop.run_until_complete(instance.mockstart())
-        else:
-            loop.run_until_complete(instance.start())
+        loop.run_until_complete(instance.start())
     except Exception as e:
         print("Uncaught exception ocurred", str(e))
         exit_code = ExitCode.ERROR_UNCAUGHT_EXCEPTION

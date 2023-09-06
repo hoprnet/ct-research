@@ -146,7 +146,7 @@ async def async_send_1_hop_message(
 
         try:
             app.send_task(
-                f"{envvar('TASK_NAME')}.{node_address}",
+                envvar("TASK_NAME"),
                 args=(
                     peer_id,
                     expected_count - effective_count,
