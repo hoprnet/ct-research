@@ -33,6 +33,9 @@ def merge_topology_database_subgraph(
         if peer_id in database_dict:
             metrics_data = database_dict[peer_id]
             data["node_peer_ids"] = metrics_data["node_peer_ids"]
+            print(
+                f"Peer {peer_id} found in database and connected nodes added to topology dict"
+            )
 
         if source_node_address in subgraph_dict:
             subgraph_data = subgraph_dict[source_node_address]
@@ -40,7 +43,8 @@ def merge_topology_database_subgraph(
             data["safe_balance"] = float(subgraph_data["wxHOPR_balance"])
             data["total_balance"] = data["channels_balance"] + data["safe_balance"]
 
-        merged_result[peer_id] = data
+        if "safe_address" in data and "node_peer_ids" in data:
+            merged_result[peer_id] = data
 
     log.info("Merged data successfully.")
     log.info("Total balance calculated successfully.")
@@ -140,8 +144,6 @@ def compute_rewards(dataset: dict, budget_param: dict):
     number of job that must be executed per peer to satisfy the protocol reward.
     :param: dataset (dict): A dictionary containing the dataset entries.
     :param: budget (dict): A dictionary containing the budget information.
-    :returns: dict: The updated dataset with the 'expected_reward' value
-    and reward splits for the automatic and airdrop mode.
     """
     budget = budget_param["budget"]["value"]
     budget_split_ratio = budget_param["s"]["value"]
@@ -173,9 +175,9 @@ def compute_rewards(dataset: dict, budget_param: dict):
         denominator = entry["ticket_price"] * entry["winning_prob"]
         entry["jobs"] = round(entry["protocol_exp_reward_per_dist"] / denominator)
 
-    log.info("Expected rewards and jobs calculated successfully.")
+        print(f"{entry['node_peer_ids']=}")
 
-    return dataset
+    log.info("Expected rewards and jobs calculated successfully.")
 
 
 def save_dict_to_csv(
@@ -195,6 +197,10 @@ def save_dict_to_csv(
     column_names = ["peer_id"] + list(list(data.values())[0].keys())
 
     lines = [column_names]
+
+    print(f"{column_names=}")
+    print(f"{lines=}")
+    print(f"{data=}")
     for key, value in data.items():
         lines.append([key] + list(value.values()))
 

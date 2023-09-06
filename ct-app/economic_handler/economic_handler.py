@@ -65,6 +65,7 @@ class EconomicHandler(HOPRNode):
     async def apply_economic_model(self):
         # merge unique_safe_peerId_links with database metrics and subgraph data
 
+        # TODO add while loop
         if not self.topology_links_with_balance:
             log.warning("No topology data available for scheduler")
             return
@@ -80,6 +81,12 @@ class EconomicHandler(HOPRNode):
         if not self.ct_nodes:
             log.warning("No CT nodes available for scheduler")
             return
+
+        # if missing_informations:
+        #     await asyncio.sleep(5)
+        #     continue
+
+        # missing_informations = False
 
         # wait for topolofy, database, and subgraph locks to be released
         async with self.topology_lock:
@@ -107,11 +114,18 @@ class EconomicHandler(HOPRNode):
         reward_probability(eligible_peers, equations, parameters)
 
         # calculate expected rewards
-        expected_rewards = compute_rewards(eligible_peers, budget_parameters)
+        compute_rewards(eligible_peers, budget_parameters)
 
         # output expected rewards as a csv file
+
+        if len(eligible_peers) == 0:
+            log.warning(
+                "No peers seams to be eligeable for rewards. Skipping distribution"
+            )
+            return
+
         save_dict_to_csv(
-            expected_rewards, "expected_reward", foldername="expected_rewards"
+            eligible_peers, "expected_reward", foldername="expected_rewards"
         )
 
         # print(f"{eligible_peers=}")
@@ -129,6 +143,7 @@ class EconomicHandler(HOPRNode):
         async with self.topology_lock:
             self.topology_links_with_balance = topology
         log.info("Fetched unique nodeAddress-peerId links from topology.")
+        log.debug(f"Unique nodeAddress-peerId links: {topology}")
 
     @formalin(message="Getting RPCh nodes list", sleep=60 * 5)
     async def get_rpch_nodes(self):
@@ -167,6 +182,7 @@ class EconomicHandler(HOPRNode):
                 self.rpch_nodes = [item["id"] for item in data if "id" in item]
 
         log.info(f"Fetched list of {len(self.rpch_nodes)} RPCh nodes.")
+        log.debug(f"RPCh nodes: {self.rpch_nodes}")
 
     @formalin(message="Getting CT nodes list", sleep=60 * 5)
     async def get_ct_nodes(self):
@@ -179,6 +195,7 @@ class EconomicHandler(HOPRNode):
         async with self.ct_node_lock:
             self.ct_nodes = [node[0] for node in nodes]
         log.info(f"Fetched list of {len(nodes)} CT nodes.")
+        log.debug(f"CT nodes: {self.ct_nodes}")
 
     @formalin(message="Getting database metrics", sleep=60 * 5)
     async def get_database_metrics(self):
@@ -213,26 +230,27 @@ class EconomicHandler(HOPRNode):
             metric_dict[row.peer_id]["latency_metrics"].append(row.latency)
             metric_dict[row.peer_id]["temp_order"].append(row.priority)
 
-        # sort node_addresses and latency based on temp_order
+        # sort node_peer_ids and latency based on temp_order
         for peer_id in metric_dict:
             order = metric_dict[peer_id]["temp_order"]
-            addresses = metric_dict[peer_id]["node_peer_ids"]
+            node_peer_ids = metric_dict[peer_id]["node_peer_ids"]
             latency = metric_dict[peer_id]["latency_metrics"]
 
-            addresses = [x for _, x in sorted(zip(order, addresses))]
+            node_peer_ids = [x for _, x in sorted(zip(order, node_peer_ids))]
             latency = [x for _, x in sorted(zip(order, latency))]
 
-            metric_dict[peer_id]["node_peer_ids"] = addresses
+            metric_dict[peer_id]["node_peer_ids"] = node_peer_ids
             metric_dict[peer_id]["latency_metrics"] = latency
 
         # remove the temp order key from the dictionaries
         for peer_id in metric_dict:
             del metric_dict[peer_id]["temp_order"]
 
-        log.info("Fetched data from Database.")
-
         async with self.database_lock:
             self.database_metrics = metric_dict
+
+        log.info("Fetched data from database.")
+        log.debug(f"Database entries: {metric_dict}")
 
     @formalin(message="Getting subgraph data", sleep=60 * 5)
     async def get_subgraph_data(self):
