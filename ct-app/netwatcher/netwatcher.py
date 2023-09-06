@@ -38,7 +38,7 @@ class NetWatcher(HOPRNode):
 
         # a dict to store all the peers that have been pinged at least once.
         # Used to open channels
-        self.peers_pinged_once = set()
+        self.peers_pinged_once = {}
 
         self.max_lat_count = max_lat_count
 
@@ -57,13 +57,9 @@ class NetWatcher(HOPRNode):
         :returns: nothing; the set of connected peerIds is kept in self.peers.
         """
 
-        if self.mock_mode:
-            number_to_pick = random.randint(5, 10)
-            found_peers = random.sample(self.mocking_peers, number_to_pick)
-        else:
-            found_peers = await self.api.peers(
-                params=["peer_id", "peer_address"], quality=quality
-            )
+        found_peers = await self.api.peers(
+            params=["peer_id", "peer_address"], quality=quality
+        )
 
         _short_peers = [".." + peer["peer_id"][-5:] for peer in found_peers]
         self.peers = found_peers
@@ -92,10 +88,7 @@ class NetWatcher(HOPRNode):
         rand_peer_id = rand_peer["peer_id"]
         rand_peer_address = rand_peer["peer_address"]  # noqa: F841
 
-        if self.mock_mode:
-            latency = random.randint(10, 100) if random.random() < 0.8 else 0
-        else:
-            latency = await self.api.ping(rand_peer_id, "latency")
+        latency = await self.api.ping(rand_peer_id, "latency")
 
         # latency update rule is:
         # - if latency measure fails:
@@ -105,7 +98,9 @@ class NetWatcher(HOPRNode):
 
         if latency != 0:
             async with self.peers_pinged_once_lock:
-                self.peers_pinged_once.add(rand_peer)
+                self.peers_pinged_once[rand_peer_id] = rand_peer_address
+
+        print(f"{latency=}")
 
         now = time.time()
         async with self.latency_lock:
@@ -212,13 +207,7 @@ class NetWatcher(HOPRNode):
     @formalin(message="Sending node balance", sleep=60 * 5)
     @connectguard
     async def transmit_balance(self):
-        if self.mock_mode:
-            native_balance = random.randint(100, 1000)
-            hopr_balance = random.randint(100, 1000)
-
-            balances = {"native": native_balance, "hopr": hopr_balance}
-        else:
-            balances = await self.api.balances(["native", "hopr"])
+        balances = await self.api.balances(["native", "hopr"])
 
         log.info(f"Got balances: {balances}")
 
@@ -266,10 +255,7 @@ class NetWatcher(HOPRNode):
         async with self.peers_pinged_once_lock:
             local_peers_pinged_once = deepcopy(self.peers_pinged_once)
 
-        for peer in local_peers_pinged_once:
-            peer_id = peer["peer_id"]
-            peer_address = peer["peer_address"]
-
+        for peer_id, peer_address in local_peers_pinged_once.items():
             log.info(f"Opening channel to {peer_id}({peer_address})")
             success = await self.api.open_channel(peer_address, "1")
             log.info(f"Channel to {peer_id}({peer_address}) opened: {success}")
