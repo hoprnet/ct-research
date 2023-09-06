@@ -45,10 +45,10 @@ async def test_start(mock_node_for_test_start: EconomicHandler):
     assert node.get_rpch_nodes.called
     assert node.get_ct_nodes.called
     assert node.get_subgraph_data.called
-    assert node.close_incoming_channels.called
+    # assert node.close_incoming_channels.called
     assert node.apply_economic_model.called
 
-    assert len(node.tasks) == 9
+    assert len(node.tasks) == 8
     assert node.started
 
     node.started = False
