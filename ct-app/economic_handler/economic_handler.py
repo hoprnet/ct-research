@@ -2,6 +2,7 @@ import asyncio
 import aiohttp
 from copy import deepcopy
 
+
 from tools.decorator import connectguard, formalin, wakeupcall_from_file  # noqa: F401
 from tools.hopr_node import HOPRNode
 from tools.utils import getlogger
@@ -23,6 +24,11 @@ log = getlogger()
 
 
 class EconomicHandler(HOPRNode):
+    # promoetheus metrics
+    prometheus_economic_model_execs = Gauge(
+        "eh_economic_model_execs", "Number of execution of the economic model"
+    )
+
     def __init__(
         self,
         url: str,
@@ -51,11 +57,6 @@ class EconomicHandler(HOPRNode):
         self.subgraph_lock = asyncio.Lock()
         self.rpch_node_lock = asyncio.Lock()
         self.ct_node_lock = asyncio.Lock()
-
-        # promoetheus metrics
-        self.prometheus_economic_model_execs = Gauge(
-            "eh_economic_model_execs", "Number of execution of the economic model"
-        )
 
         super().__init__(url=url, key=key)
 
