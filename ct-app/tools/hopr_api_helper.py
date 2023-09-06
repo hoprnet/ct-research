@@ -81,7 +81,8 @@ class HoprdAPIHelper:
                 thread = channels_api.channels_open_channel(body=body, async_req=True)
                 response = thread.get()
                 log.debug(
-                    f"Response after trying to open a channel to {peer_address} {response}"
+                    "Response after trying to open a channel to "
+                    + f"{peer_address} {response}"
                 )
         except ApiException as e:
             body = json.loads(e.body.decode())
@@ -92,7 +93,7 @@ class HoprdAPIHelper:
                     f"ApiException calling ChannelsApi->channels_open_channel: {body}"
                 )
         except OSError:
-            log.error(f"OSError calling ChannelsApi->channels_open_channel")
+            log.error("OSError calling ChannelsApi->channels_open_channel")
             return False
         except MaxRetryError:
             log.error("MaxRetryError calling ChannelsApi->channels_open_channel")
