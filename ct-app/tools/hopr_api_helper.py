@@ -64,11 +64,11 @@ class HoprdAPIHelper:
 
         return return_dict if len(return_dict) > 1 else return_dict[type[0]]
 
-    async def open_channel(self, peer_address: str, amount: int):
+    async def open_channel(self, peer_address: str, amount: str):
         """
         Opens a channel with the given peer_address and amount.
         :param: peer_address: str
-        :param: amount: int
+        :param: amount: str
         :return: bool
         """
         log.debug(f"Opening channel to '{peer_address}'")
@@ -79,10 +79,12 @@ class HoprdAPIHelper:
             with ApiClient(self.configuration) as client:
                 channels_api = ChannelsApi(client)
                 thread = channels_api.channels_open_channel(body=body, async_req=True)
-                response = thread.get()
+                response = await thread.get()
+                log.error(f"{response}")
         except ApiException as e:
             log.error("ApiException when calling ChannelsApi->channels_open_channel")
             status = json.loads(e.body.decode())["status"]
+            print(json.loads(e.body.decode()))
         except OSError:
             log.error("OSError when calling ChannelsApi->channels_open_channel")
             return False
@@ -92,18 +94,8 @@ class HoprdAPIHelper:
 
         if status == "CHANNEL_ALREADY_OPEN":
             log.warning("Channel already opened")
-            return True
 
-        if hasattr(response, "channelId"):
-            log.debug(f"Channel opened: {response.channelId}")
-            return True
-
-        if not hasattr(response, "status"):
-            log.error("Can not read `status` from response")
-            return False
-
-        log.error(f"Channel could not be opened: {response.status}")
-        return False
+        return True
 
     async def close_channel(self, channel_id: str):
         """
@@ -247,7 +239,7 @@ class HoprdAPIHelper:
             with ApiClient(self.configuration) as client:
                 channels_api = ChannelsApi(client)
                 thread = channels_api.channels_get_channels(
-                    full_topology="true", async_req=True
+                    full_topology="true", including_closed="false", async_req=True
                 )
                 response = thread.get()
         except ApiException:
@@ -338,16 +330,21 @@ class HoprdAPIHelper:
         return measure
 
     async def peers(
-        self, param: str = "peer_id", status: str = "connected", quality: int = 1
+        self,
+        params: list or str = "peer_id",
+        status: str = "connected",
+        quality: int = 1,
     ):
         """
         Returns a list of peers.
-        :param: param: str = "peer_id"
+        :param: param: list or str = "peer_id"
         :param: status: str = "connected"
         :param: quality: int = 0..1
         :return: peers: list
         """
         log.debug("Getting peers")
+
+        params = [params] if isinstance(params, str) else params
 
         try:
             with ApiClient(self.configuration) as client:
@@ -372,11 +369,16 @@ class HoprdAPIHelper:
             log.info(f"No peer with status `{status}`")
             return []
 
-        if not hasattr(getattr(response, status)[0], param):
-            log.error(f"No param `{param}` found for peers")
-            return []
+        for param in params:
+            if not hasattr(getattr(response, status)[0], param):
+                log.error(f"No param `{param}` found for peers")
+                return []
 
-        return [getattr(peer, param) for peer in getattr(response, status)]
+        output_list = []
+        for peer in getattr(response, status):
+            output_list.append({param: getattr(peer, param) for param in params})
+
+        return output_list
 
     async def get_address(self, address: str):
         """

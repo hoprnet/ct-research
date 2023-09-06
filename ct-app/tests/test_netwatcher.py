@@ -38,7 +38,14 @@ def mock_instance_for_test_gather(mocker):
     """
 
     api = HoprdAPIHelper("some_url", "some_key")
-    mocker.patch.object(api, "peers", return_value=["some_peer", "some_other_peer"])
+    mocker.patch.object(
+        api,
+        "peers",
+        return_value=[
+            {"peer_id": "some_peer", "peer_address": "some_address"},
+            {"peer_id": "some_other_peer", "peer_address": "some_other_address"},
+        ],
+    )
 
     instance = NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl")
     instance.api = api
@@ -75,7 +82,10 @@ def mock_instance_for_test_ping(mocker):
     mocker.patch.object(api, "ping", return_value=10)
 
     instance = NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl")
-    instance.peers = ["some_peer", "some_other_peer"]
+    instance.peers = [
+        {"peer_id": "some_peer", "peer_address": "some_address"},
+        {"peer_id": "some_other_peer", "peer_address": "some_other_address"},
+    ]
     instance.api = api
     instance.mock_mode = True
 
