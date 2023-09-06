@@ -43,7 +43,7 @@ def loop_through_nodes(node_list: list[str], node_index: int) -> tuple[str, int]
     return node_list[node_index], node_index
 
 
-@app.task(name=f"{envvar('TASK_NAME')}")
+@app.task(name="send_1_hop_message")
 def send_1_hop_message(
     peer: str,
     expected_count: int,
@@ -145,7 +145,7 @@ async def async_send_1_hop_message(
 
         try:
             app.send_task(
-                envvar("TASK_NAME"),
+                "send_1_hop_message",
                 args=(
                     peer_id,
                     expected_count - effective_count,
