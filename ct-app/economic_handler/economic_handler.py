@@ -64,23 +64,37 @@ class EconomicHandler(HOPRNode):
     async def apply_economic_model(self):
         # merge unique_safe_peerId_links with database metrics and subgraph data
 
-        # TODO add while loop
-        if not self.topology_links_with_balance:
-            log.warning("No topology data available for scheduler")
-            return
-        if len(self.database_metrics) == 0:
-            log.warning("No database metrics available for scheduler")
-            return
-        if not self.subgraph_dict:
-            log.warning("No subgraph data available for scheduler")
-            return
-        if not self.rpch_nodes:
-            log.warning("No RPCh nodes available for scheduler")
-            return
-        if not self.ct_nodes:
-            log.warning("No CT nodes available for scheduler")
-            return
+        data_ok = False
+        while not data_ok:
+            topology_ok = self.topology_links_with_balance is not None
+            database_ok = len(self.database_metrics) > 0
+            subgraph_ok = self.subgraph_dict is not None
+            rpch_ok = self.rpch_nodes is not None
+            ct_ok = self.ct_nodes is not None
 
+            if topology_ok:
+                log.warning("No topology data available for scheduler")
+            if database_ok:
+                log.warning("No database metrics available for scheduler")
+            if subgraph_ok:
+                log.warning("No subgraph data available for scheduler")
+            if rpch_ok:
+                log.warning("No RPCh nodes available for scheduler")
+            if ct_ok:
+                log.warning("No CT nodes available for scheduler")
+
+            data_ok = topology_ok * database_ok * subgraph_ok * rpch_ok * ct_ok
+
+            if data_ok:
+                continue
+
+            log.warning(
+                "Missing some information. "
+                + "Sleeping for a while (5s) before retrying."
+            )
+            await asyncio.sleep(5)
+
+        log.info("All data available for scheduler, running the economic model")
         # if missing_informations:
         #     await asyncio.sleep(5)
         #     continue
