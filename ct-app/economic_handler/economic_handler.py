@@ -384,7 +384,7 @@ class EconomicHandler(HOPRNode):
         self.tasks.add(asyncio.create_task(self.get_rpch_nodes()))
         self.tasks.add(asyncio.create_task(self.get_ct_nodes()))
         self.tasks.add(asyncio.create_task(self.get_subgraph_data()))
-        self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
+        # self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
         self.tasks.add(asyncio.create_task(self.apply_economic_model()))
 
         await asyncio.gather(*self.tasks)
