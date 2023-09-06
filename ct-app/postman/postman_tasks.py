@@ -203,4 +203,3 @@ def fake_task(
     log.info(f"Fake task execution started at {timestamp}")
     log.info(f"{expected_count} messages ment to be sent to {peer}")
     log.info(f"Node list: {node_list} (starting at index {node_index})")
-    log.info("")
