@@ -43,8 +43,7 @@ def loop_through_nodes(node_list: list[str], node_index: int) -> tuple[str, int]
     return node_list[node_index], node_index
 
 
-# the name of the task is the name of the "<task_name>.<node_address>"
-@app.task(name=f"{envvar('TASK_NAME')}")
+@app.task(name="send_1_hop_message")
 def send_1_hop_message(
     peer: str,
     expected_count: int,
@@ -146,7 +145,7 @@ async def async_send_1_hop_message(
 
         try:
             app.send_task(
-                envvar("TASK_NAME"),
+                "send_1_hop_message",
                 args=(
                     peer_id,
                     expected_count - effective_count,
@@ -181,3 +180,26 @@ async def async_send_1_hop_message(
         feedback_status = TaskStatus.SUCCESS
 
     return status, feedback_status
+
+
+@app.task(name="fake_task")
+def fake_task(
+    peer: str,
+    expected_count: int,
+    node_list: list[str],
+    node_index: int,
+    timestamp: float = time.time(),
+) -> TaskStatus:
+    """
+    Fake celery task to test if queues are working as expected.
+    method does is to run the async method `async_send_1_hop_message`.
+    :param peer: Peer ID to send messages to.
+    :param expected_count: Number of messages to send.
+    :param node_list: List of nodes connected to this peer, they can serve as backups.
+    :param node_index: Index of the node in the list of nodes.
+    :param timestamp: Timestamp at first iteration. For timeout purposes.
+    """
+
+    log.info(f"Fake task execution started at {timestamp}")
+    log.info(f"{expected_count} messages ment to be sent to {peer}")
+    log.info(f"Node list: {node_list} (starting at index {node_index})")

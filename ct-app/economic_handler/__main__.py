@@ -27,6 +27,7 @@ def main():
         envvar("PGDATABASE")
         envvar("PGPASSWORD")
         envvar("PGSSLMODE")
+        envvar("TASK_NAME")
     except KeyError:
         log.exception("Missing environment variables")
         exit(ExitCode.ERROR_MISSING_ENV_VARS)
