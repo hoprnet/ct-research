@@ -182,7 +182,7 @@ async def async_send_1_hop_message(
     return status, feedback_status
 
 
-@app.task(name=envvar("TASK_NAME"))
+@app.task(name="fake_task")
 def fake_task(
     peer: str,
     expected_count: int,
