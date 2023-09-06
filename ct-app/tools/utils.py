@@ -36,7 +36,7 @@ def getlogger() -> logging.Logger:
         logging.setLoggerClass(ColoredLogger)
 
     logger = logging.getLogger(module)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
     return logger
 
