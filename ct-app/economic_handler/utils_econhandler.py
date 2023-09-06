@@ -46,6 +46,7 @@ def merge_topology_database_subgraph(
         if "safe_address" in data and "node_peer_ids" in data:
             merged_result[peer_id] = data
 
+    log.debug(f"Merged data sources: {merged_result}")
     log.info("Merged data successfully.")
     log.info("Total balance calculated successfully.")
 
@@ -113,7 +114,7 @@ def reward_probability(eligible_peers: dict, equations: dict, parameters: dict):
     params = {param: value["value"] for param, value in parameters.items()}
 
     for peer in eligible_peers:
-        params["x"] = 2
+        params["x"] = eligible_peers[peer]["splitted_stake"]
 
         try:
             function = "f_x" if eval(f_x_condition, params) else "g_x"
@@ -175,7 +176,7 @@ def compute_rewards(dataset: dict, budget_param: dict):
         denominator = entry["ticket_price"] * entry["winning_prob"]
         entry["jobs"] = round(entry["protocol_exp_reward_per_dist"] / denominator)
 
-        print(f"{entry['node_peer_ids']=}")
+        print(f"{entry}")
 
     log.info("Expected rewards and jobs calculated successfully.")
 
