@@ -82,8 +82,8 @@ class HoprdAPIHelper:
             with ApiClient(self.configuration) as client:
                 channels_api = ChannelsApi(client)
                 thread = channels_api.channels_open_channel(body=body, async_req=True)
-                response = await thread.get()
-                log.error(f"{response}")
+                response = thread.get()
+                log.debug(f"Response after trying to open a channel to {peer_address} {response}")
         except ApiException as e:
             body = json.loads(e.body.decode())
             log.error(
