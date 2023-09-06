@@ -36,34 +36,16 @@ class NetWatcher(HOPRNode):
         self.latency = dict[str, dict]()
         self.last_peer_transmission: float = 0
 
+        # a dict to store all the peers that have been pinged at least once.
+        # Used to open channels
+        self.peers_pinged_once = set()
+
         self.max_lat_count = max_lat_count
-        self._mock_mode = False
 
         self.latency_lock = asyncio.Lock()
-
-        ############### MOCKING ###################
-        # set of 100 random peers
-        self.mocking_peers = list(
-            [
-                "0x" + "".join(random.choices("0123456789abcdef", k=20))
-                for _ in range(20)
-            ]
-        )
-        ###########################################
+        self.peers_pinged_once_lock = asyncio.Lock()
 
         super().__init__(url, key)
-
-    @property
-    def mock_mode(self):
-        return self._mock_mode
-
-    @mock_mode.setter
-    def mock_mode(self, value: bool):
-        self._mock_mode = value
-
-        if self._mock_mode:
-            index = random.randint(0, 100)
-            self.peer_id = f"<mock-node-address-{index:03d}>"
 
     @formalin(message="Gathering peers", sleep=20)
     @connectguard
@@ -120,19 +102,20 @@ class NetWatcher(HOPRNode):
         #     - if the peer is not known, add it with value -1 and set timestamp
         #     - if the peer is known and the last measure is recent, do nothing
         # - if latency measure succeeds, always update
+
+        if latency != 0:
+            async with self.peers_pinged_once_lock:
+                self.peers_pinged_once.add(rand_peer)
+
         now = time.time()
         async with self.latency_lock:
             if latency != 0:
                 log.info(f"Measured latency to {rand_peer_id[-5:]}: {latency}ms")
                 self.latency[rand_peer_id] = {"value": latency, "timestamp": now}
-                # try:
-                #     log.info(f"Opening channel to {rand_peer_address}")
-                #     await self.api.open_channel(rand_peer_address, "10")
-                # except Exception:
-                #     log.error(
-                #         f"Error opening channel to {rand_peer_address} "
-                #         + f"(id: {rand_peer_id}))"
-                #     )
+
+                log.info(f"Opening channel to {rand_peer_address}")
+                await self.api.open_channel(rand_peer_address, "10")
+
                 return
 
             log.warning(f"Failed to ping {rand_peer_id}")
@@ -254,28 +237,42 @@ class NetWatcher(HOPRNode):
 
         log.info("Transmitted balances")
 
-    @formalin(message="Closing incoming channels", sleep=60 * 5)
+    @formalin(message="Closing incoming channels", sleep=30)
     @connectguard
     async def close_incoming_channels(self):
         """
         Closes all incoming channels.
         """
-        if self.mock_mode:
-            return
-
         incoming_channels_ids = await self.api.incoming_channels(only_id=True)
+
+        if len(incoming_channels_ids) == 0:
+            log.info("No incoming channels to close")
+            return
 
         log.warning(f"Discovered {len(incoming_channels_ids)} incoming channels")
 
-        if len(incoming_channels_ids) == 0:
-            return
-
-        log.info("Closing discovered incoming channels")
-
         for channel_id in incoming_channels_ids:
+            log.warning(f"Closing channel {channel_id}")
             await self.api.close_channel(channel_id)
 
         log.info(f"Closed {len(incoming_channels_ids)} incoming channels")
+
+    @formalin(message="Opening channels to peers", sleep=10)
+    @connectguard
+    async def open_channels(self):
+        """
+        Open channels to peers that have been successfully pinged at least once.
+        """
+        async with self.peers_pinged_once_lock:
+            local_peers_pinged_once = deepcopy(self.peers_pinged_once)
+
+        for peer in local_peers_pinged_once:
+            peer_id = peer["peer_id"]
+            peer_address = peer["peer_address"]
+
+            log.info(f"Opening channel to {peer_id}({peer_address})")
+            success = await self.api.open_channel(peer_address, "1")
+            log.info(f"Channel to {peer_id}({peer_address}) opened: {success}")
 
     async def start(self):
         """
@@ -286,13 +283,12 @@ class NetWatcher(HOPRNode):
             return
 
         self.started = True
-        if not self.mock_mode:
-            self.tasks.add(asyncio.create_task(self.connect(address="hopr")))
-
+        self.tasks.add(asyncio.create_task(self.connect()))
         self.tasks.add(asyncio.create_task(self.gather_peers()))
         self.tasks.add(asyncio.create_task(self.ping_peers()))
         self.tasks.add(asyncio.create_task(self.transmit_peers()))
         self.tasks.add(asyncio.create_task(self.transmit_balance()))
+        self.tasks.add(asyncio.create_task(self.open_channels()))
         # self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
 
         await asyncio.gather(*self.tasks)
