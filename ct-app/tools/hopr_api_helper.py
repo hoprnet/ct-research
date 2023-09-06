@@ -74,29 +74,30 @@ class HoprdAPIHelper:
         """
         log.debug(f"Opening channel to '{peer_address}'")
 
-        status = None
         body = ChannelsBody(peer_address, amount)
         try:
             with ApiClient(self.configuration) as client:
                 channels_api = ChannelsApi(client)
                 thread = channels_api.channels_open_channel(body=body, async_req=True)
-                response = await thread.get()
-                log.error(f"{response}")
+                response = thread.get()
+                log.debug(
+                    "Response after trying to open a channel to "
+                    + f"{peer_address} {response}"
+                )
         except ApiException as e:
             body = json.loads(e.body.decode())
-            log.error(
-                f"ApiException calling ChannelsApi->channels_open_channel: {body}"
-            )
-            status = body["status"]
+            if body["status"] == "CHANNEL_ALREADY_OPEN":
+                log.debug("Channel already opened")
+            else:
+                log.error(
+                    f"ApiException calling ChannelsApi->channels_open_channel: {body}"
+                )
         except OSError:
             log.error("OSError calling ChannelsApi->channels_open_channel")
             return False
         except MaxRetryError:
             log.error("MaxRetryError calling ChannelsApi->channels_open_channel")
             return False
-
-        if status == "CHANNEL_ALREADY_OPEN":
-            log.warning("Channel already opened")
 
         return True
 
@@ -133,7 +134,7 @@ class HoprdAPIHelper:
         Returns all open incoming channels.
         :return: channels: list
         """
-        log.debug("Getting open channels")
+        log.debug("Getting open incoming channels")
 
         try:
             with ApiClient(self.configuration) as client:
@@ -167,6 +168,50 @@ class HoprdAPIHelper:
             return [channel.id for channel in response.incoming]
         else:
             return response.incoming
+
+    async def outgoing_channels(self, only_id: bool = False):
+        """
+        Returns all open outgoing channels.
+        :return: channels: list
+        """
+        log.debug("Getting open outgoing channels")
+
+        try:
+            with ApiClient(self.configuration) as client:
+                channels_api = ChannelsApi(client)
+                thread = channels_api.channels_get_channels(
+                    full_topology="false", including_closed="false", async_req=True
+                )
+                response = thread.get()
+        except ApiException as e:
+            body = json.loads(e.body.decode())
+            log.error(
+                f"ApiException calling ChannelsApi->channels_get_channels: {body}"
+            )
+            return []
+        except OSError as e:
+            body = json.loads(e.body.decode())
+            log.error(f"OSError calling ChannelsApi->channels_get_channels: {body}")
+            return []
+        except MaxRetryError as e:
+            body = json.loads(e.body.decode())
+            log.error(
+                f"MaxRetryError calling ChannelsApi->channels_get_channels: {body}"
+            )
+            return []
+
+        if not hasattr(response, "outgoing"):
+            log.warning("Response does not contain `outgoing`")
+            return []
+
+        if len(response.outgoing) == 0:
+            log.info("No outgoing channels")
+            return []
+
+        if only_id:
+            return [channel.id for channel in response.outgoing]
+        else:
+            return response.outgoing
 
     async def all_channels(self, include_closed: bool):
         """
