@@ -317,11 +317,11 @@ class HoprdAPIHelper:
             return 0
         except OSError as e:
             body = json.loads(e.body.decode())
-            log.exception(f"OSError calling PeersApi->peers_ping_peer: {body}")
+            log.error(f"OSError calling PeersApi->peers_ping_peer: {body}")
             return 0
         except MaxRetryError as e:
             body = json.loads(e.body.decode())
-            log.exception(f"MaxRetryError calling PeersApi->peers_ping_peer: {body}")
+            log.error(f"MaxRetryError calling PeersApi->peers_ping_peer: {body}")
             return 0
 
         if not hasattr(response, metric):
