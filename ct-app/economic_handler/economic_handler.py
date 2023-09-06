@@ -6,6 +6,7 @@ from tools.decorator import connectguard, formalin, wakeupcall_from_file  # noqa
 from tools.hopr_node import HOPRNode
 from tools.utils import getlogger
 from tools.db_connection import DatabaseConnection, NodePeerConnection
+from prometheus_client import Gauge
 
 from sqlalchemy import func
 
@@ -51,6 +52,11 @@ class EconomicHandler(HOPRNode):
         self.rpch_node_lock = asyncio.Lock()
         self.ct_node_lock = asyncio.Lock()
 
+        # promoetheus metrics
+        self.prometheus_economic_model_execs = Gauge(
+            "eh_economic_model_execs", "Number of execution of the economic model"
+        )
+
         super().__init__(url=url, key=key)
 
     @formalin(sleep=10 * 60)
@@ -59,8 +65,8 @@ class EconomicHandler(HOPRNode):
         return self.connected
 
     @connectguard
-    @wakeupcall_from_file(folder="assets", filename="parameters.json")
-    # @formalin("Running the economic model", sleep=10)
+    # @wakeupcall_from_file(folder="assets", filename="parameters.json")
+    @formalin("Running the economic model", sleep=10)
     async def apply_economic_model(self):
         # merge unique_safe_peerId_links with database metrics and subgraph data
 
@@ -95,13 +101,9 @@ class EconomicHandler(HOPRNode):
             await asyncio.sleep(5)
 
         log.info("All data available for scheduler, running the economic model")
-        # if missing_informations:
-        #     await asyncio.sleep(5)
-        #     continue
+        self.prometheus_economic_model_execs.inc()
 
-        # missing_informations = False
-
-        # wait for topolofy, database, and subgraph locks to be released
+        # wait for topology, database, subgraph, rpch and ct locks to be released
         async with self.topology_lock:
             local_topology = deepcopy(self.topology_links_with_balance)
         async with self.database_lock:
@@ -140,9 +142,6 @@ class EconomicHandler(HOPRNode):
         # save_dict_to_csv(
         #     eligible_peers, "expected_reward", foldername="expected_rewards"
         # )
-
-        # print(f"{eligible_peers=}")
-        # print(f"{expected_rewards=}")
 
     @connectguard
     @formalin(message="Getting subgraph data", sleep=60 * 5)
