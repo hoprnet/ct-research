@@ -13,10 +13,10 @@ from sqlalchemy import func
 
 from .utils_econhandler import (
     exclude_elements,
-    reward_probability,
-    compute_rewards,
+    reward_probability,  # noqa: F401
+    compute_rewards,  # noqa: F401
     merge_topology_database_subgraph,
-    economic_model_from_file,
+    economic_model_from_file,  # noqa: F401
     allow_many_node_per_safe,
 )
 
@@ -125,14 +125,14 @@ class EconomicHandler(HOPRNode):
         allow_many_node_per_safe(eligible_peers)
         exclude_elements(eligible_peers, local_rpch + local_ct)
 
-        # computation of cover traffic probability
-        equations, parameters, budget_parameters = economic_model_from_file()
-        reward_probability(eligible_peers, equations, parameters)
+        # # computation of cover traffic probability
+        # equations, parameters, budget_parameters = economic_model_from_file()
+        # reward_probability(eligible_peers, equations, parameters)
 
-        # calculate expected rewards
-        compute_rewards(eligible_peers, budget_parameters)
+        # # calculate expected rewards
+        # compute_rewards(eligible_peers, budget_parameters)
 
-        # output expected rewards as a csv file
+        # # output expected rewards as a csv file
 
         if len(eligible_peers) == 0:
             log.warning(
