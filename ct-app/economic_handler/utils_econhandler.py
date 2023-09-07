@@ -28,20 +28,22 @@ def merge_topology_database_subgraph(
 
     # Merge based on peer ID with the channel topology as the baseline
     for peer_id, data in topology_dict.items():
-        source_node_address = data["source_node_address"]
+        log.debug(f"Peer {peer_id} seen in topology")
 
         if peer_id in database_dict:
             metrics_data = database_dict[peer_id]
             data["node_peer_ids"] = metrics_data["node_peer_ids"]
-            print(
-                f"Peer {peer_id} found in database and connected nodes added to topology dict"
-            )
+            log.debug(f"Peer {peer_id} found in database")
 
+        source_node_address = data["source_node_address"]
         if source_node_address in subgraph_dict:
             subgraph_data = subgraph_dict[source_node_address]
             data["safe_address"] = subgraph_data["safe_address"]
             data["safe_balance"] = float(subgraph_data["wxHOPR_balance"])
             data["total_balance"] = data["channels_balance"] + data["safe_balance"]
+            log.debug(f"Source node address for {peer_id} found in subgraph")
+
+        log.debug(f"{peer_id}: {'safe_address' in data}, {'node_peer_ids' in data}")
 
         if "safe_address" in data and "node_peer_ids" in data:
             merged_result[peer_id] = data

@@ -77,6 +77,12 @@ class EconomicHandler(HOPRNode):
         # wait for topology, database, subgraph, rpch and ct locks to be released
 
         data_ok = False
+        local_topology = None
+        local_database = None
+        local_subgraph = None
+        local_rpch = None
+        local_ct = None
+
         while not data_ok:
             async with self.topology_lock:
                 local_topology = deepcopy(self.topology_links_with_balance)
