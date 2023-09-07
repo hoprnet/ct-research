@@ -108,9 +108,6 @@ class NetWatcher(HOPRNode):
                 log.info(f"Measured latency to {rand_peer_id[-5:]}: {latency}ms")
                 self.latency[rand_peer_id] = {"value": latency, "timestamp": now}
 
-                log.info(f"Opening channel to {rand_peer_address}")
-                await self.api.open_channel(rand_peer_address, "10")
-
                 return
 
             log.warning(f"Failed to ping {rand_peer_id}")
