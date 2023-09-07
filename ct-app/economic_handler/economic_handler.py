@@ -58,6 +58,8 @@ class EconomicHandler(HOPRNode):
         self.rpch_node_lock = asyncio.Lock()
         self.ct_node_lock = asyncio.Lock()
 
+        self.prometheus_economic_model_execs.set(0)
+
         super().__init__(url=url, key=key)
 
     @formalin(sleep=10 * 60)
@@ -67,7 +69,7 @@ class EconomicHandler(HOPRNode):
 
     @connectguard
     # @wakeupcall_from_file(folder="assets", filename="parameters.json")
-    @formalin("Running the economic model", sleep=10)
+    @formalin("Running the economic model", sleep=30)
     async def apply_economic_model(self):
         # merge unique_safe_peerId_links with database metrics and subgraph data
 
@@ -125,14 +127,14 @@ class EconomicHandler(HOPRNode):
         allow_many_node_per_safe(eligible_peers)
         exclude_elements(eligible_peers, local_rpch + local_ct)
 
-        # # computation of cover traffic probability
-        # equations, parameters, budget_parameters = economic_model_from_file()
-        # reward_probability(eligible_peers, equations, parameters)
+        # computation of cover traffic probability
+        equations, parameters, budget_parameters = economic_model_from_file()
+        reward_probability(eligible_peers, equations, parameters)
 
-        # # calculate expected rewards
-        # compute_rewards(eligible_peers, budget_parameters)
+        # calculate expected rewards
+        compute_rewards(eligible_peers, budget_parameters)
 
-        # # output expected rewards as a csv file
+        # output expected rewards as a csv file
 
         if len(eligible_peers) == 0:
             log.warning(
