@@ -74,19 +74,20 @@ class EconomicHandler(HOPRNode):
         # merge unique_safe_peerId_links with database metrics and subgraph data
 
         # wait for topology, database, subgraph, rpch and ct locks to be released
-        async with self.topology_lock:
-            local_topology = deepcopy(self.topology_links_with_balance)
-        async with self.database_lock:
-            local_database = deepcopy(self.database_metrics)
-        async with self.subgraph_lock:
-            local_subgraph = deepcopy(self.subgraph_dict)
-        async with self.rpch_node_lock:
-            local_rpch = deepcopy(self.rpch_nodes)
-        async with self.ct_node_lock:
-            local_ct = deepcopy(self.ct_nodes)
 
         data_ok = False
         while not data_ok:
+            async with self.topology_lock:
+                local_topology = deepcopy(self.topology_links_with_balance)
+            async with self.database_lock:
+                local_database = deepcopy(self.database_metrics)
+            async with self.subgraph_lock:
+                local_subgraph = deepcopy(self.subgraph_dict)
+            async with self.rpch_node_lock:
+                local_rpch = deepcopy(self.rpch_nodes)
+            async with self.ct_node_lock:
+                local_ct = deepcopy(self.ct_nodes)
+
             topology_ok = local_topology is not None
             database_ok = len(local_database) > 0
             subgraph_ok = local_subgraph is not None
@@ -147,7 +148,7 @@ class EconomicHandler(HOPRNode):
         # )
 
     @connectguard
-    @formalin(message="Getting subgraph data", sleep=60 * 5)
+    @formalin(message="Getting subgraph data", sleep=15)
     async def get_topology_links_with_balance(self):
         """
         Gets a dictionary containing all unique source_peerId-source_address links
@@ -160,7 +161,7 @@ class EconomicHandler(HOPRNode):
         log.info("Fetched unique nodeAddress-peerId links from topology.")
         log.debug(f"Unique nodeAddress-peerId links: {topology}")
 
-    @formalin(message="Getting RPCh nodes list", sleep=60 * 5)
+    @formalin(message="Getting RPCh nodes list", sleep=15)
     async def get_rpch_nodes(self):
         """
         Retrieves a list of RPCH node peer IDs from the specified API endpoint.
@@ -199,7 +200,7 @@ class EconomicHandler(HOPRNode):
         log.info(f"Fetched list of {len(self.rpch_nodes)} RPCh nodes.")
         log.debug(f"RPCh nodes: {self.rpch_nodes}")
 
-    @formalin(message="Getting CT nodes list", sleep=60 * 5)
+    @formalin(message="Getting CT nodes list", sleep=15)
     async def get_ct_nodes(self):
         """
         Retrieves a list of CT node based on the content of the database
@@ -212,7 +213,7 @@ class EconomicHandler(HOPRNode):
         log.info(f"Fetched list of {len(nodes)} CT nodes.")
         log.debug(f"CT nodes: {self.ct_nodes}")
 
-    @formalin(message="Getting database metrics", sleep=60 * 5)
+    @formalin(message="Getting database metrics", sleep=15)
     async def get_database_metrics(self):
         """
         This function establishes a connection to the database using the provided
@@ -267,7 +268,7 @@ class EconomicHandler(HOPRNode):
         log.info("Fetched data from database.")
         log.debug(f"Database entries: {metric_dict}")
 
-    @formalin(message="Getting subgraph data", sleep=60 * 5)
+    @formalin(message="Getting subgraph data", sleep=15)
     async def get_subgraph_data(self):
         """
         This function retrieves safe_address-node_address-balance links from the
