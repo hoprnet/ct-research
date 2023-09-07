@@ -73,23 +73,35 @@ class EconomicHandler(HOPRNode):
     async def apply_economic_model(self):
         # merge unique_safe_peerId_links with database metrics and subgraph data
 
+        # wait for topology, database, subgraph, rpch and ct locks to be released
+        async with self.topology_lock:
+            local_topology = deepcopy(self.topology_links_with_balance)
+        async with self.database_lock:
+            local_database = deepcopy(self.database_metrics)
+        async with self.subgraph_lock:
+            local_subgraph = deepcopy(self.subgraph_dict)
+        async with self.rpch_node_lock:
+            local_rpch = deepcopy(self.rpch_nodes)
+        async with self.ct_node_lock:
+            local_ct = deepcopy(self.ct_nodes)
+
         data_ok = False
         while not data_ok:
-            topology_ok = self.topology_links_with_balance is not None
-            database_ok = len(self.database_metrics) > 0
-            subgraph_ok = self.subgraph_dict is not None
-            rpch_ok = self.rpch_nodes is not None
-            ct_ok = self.ct_nodes is not None
+            topology_ok = local_topology is not None
+            database_ok = len(local_database) > 0
+            subgraph_ok = local_subgraph is not None
+            rpch_ok = local_rpch is not None
+            ct_ok = local_ct is not None
 
-            if topology_ok:
+            if not topology_ok:
                 log.warning("No topology data available for scheduler")
-            if database_ok:
+            if not database_ok:
                 log.warning("No database metrics available for scheduler")
-            if subgraph_ok:
+            if not subgraph_ok:
                 log.warning("No subgraph data available for scheduler")
-            if rpch_ok:
+            if not rpch_ok:
                 log.warning("No RPCh nodes available for scheduler")
-            if ct_ok:
+            if not ct_ok:
                 log.warning("No CT nodes available for scheduler")
 
             data_ok = topology_ok * database_ok * subgraph_ok * rpch_ok * ct_ok
@@ -105,18 +117,6 @@ class EconomicHandler(HOPRNode):
 
         log.info("All data available for scheduler, running the economic model")
         self.prometheus_economic_model_execs.inc()
-
-        # wait for topology, database, subgraph, rpch and ct locks to be released
-        async with self.topology_lock:
-            local_topology = deepcopy(self.topology_links_with_balance)
-        async with self.database_lock:
-            local_database = deepcopy(self.database_metrics)
-        async with self.subgraph_lock:
-            local_subgraph = deepcopy(self.subgraph_dict)
-        async with self.rpch_node_lock:
-            local_rpch = deepcopy(self.rpch_nodes)
-        async with self.ct_node_lock:
-            local_ct = deepcopy(self.ct_nodes)
 
         eligible_peers = merge_topology_database_subgraph(
             local_topology,
