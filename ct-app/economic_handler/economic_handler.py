@@ -18,6 +18,7 @@ from .utils_econhandler import (
     merge_topology_database_subgraph,
     economic_model_from_file,  # noqa: F401
     allow_many_node_per_safe,
+    save_dict_to_csv,
 )
 
 log = getlogger()
@@ -143,9 +144,9 @@ class EconomicHandler(HOPRNode):
             )
             return
 
-        # save_dict_to_csv(
-        #     eligible_peers, "expected_reward", foldername="expected_rewards"
-        # )
+        save_dict_to_csv(
+            eligible_peers, "expected_reward", foldername="expected_rewards"
+        )
 
     @connectguard
     @formalin(message="Getting subgraph data", sleep=15)

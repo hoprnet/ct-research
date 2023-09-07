@@ -223,13 +223,13 @@ def push_jobs_to_celery_queue(dataset: dict):
     :returns: nothing.
     """
     app = Celery(
-        name="client",
+        name=envvar("PROJECT_NAME"),
         broker=envvar("CELERY_BROKER_URL"),
     )
     app.autodiscover_tasks(force=True)
 
     for peer_id, value in dataset.items():
-        node_list = value["node_addresses"]
+        node_list = value["node_peer_ids"]
         count = value["jobs"]
         node_index = 0
 
