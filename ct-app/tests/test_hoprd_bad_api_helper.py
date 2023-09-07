@@ -10,7 +10,7 @@ def bad_api_helper():
     """
     apihost = envvar("API_HOST") + "foo"
     apiport = envvar("API_PORT")
-    apikey = envvar("API_TOKEN")
+    apikey = envvar("API_KEY")
 
     helper = HoprdAPIHelper(f"http://{apihost}:{apiport}", apikey)
 

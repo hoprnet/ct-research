@@ -95,13 +95,13 @@ async def async_send_1_hop_message(
 
     # initialize the API helper and task status
     api_host = envvar("API_HOST")
-    api_token = envvar("API_TOKEN")
+    api_key = envvar("API_KEY")
     status = TaskStatus.DEFAULT
     feedback_status = TaskStatus.DEFAULT
 
     effective_count = 0
 
-    api = HoprdAPIHelper(api_host, api_token)
+    api = HoprdAPIHelper(api_host, api_key)
 
     # try to connect to the node. If the `get_address` method fails, it means that the
     # node is not reachable
