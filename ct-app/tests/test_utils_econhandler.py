@@ -37,10 +37,13 @@ def mocked_model_parameters():
         },
         "budget_param": {
             "budget": {
-                "value": 100,
+                "value": 1,
                 "comment": "budget for the given distribution period",
             },
-            "budget_period": {"value": 15, "comment": "budget period in seconds"},
+            "budget_period": {
+                "value": 2628000,  # Month is seconds
+                "comment": "budget period in seconds",
+            },
             "s": {
                 "value": 0.25,
                 "comment": "split ratio between automated and airdrop mode",
@@ -50,7 +53,7 @@ def mocked_model_parameters():
                 "comment": "distribution frequency of rewards via the automatic distribution",
             },
             "ticket_price": {
-                "value": 0.5,
+                "value": 0.01,
                 "comment": "Price of a ticket issued for relaying a packet",
             },
             "winning_prob": {
@@ -173,7 +176,7 @@ def expected_input_for_compute_expected_rewards(expected_merge_result_split_stak
 
     # Define split stake values for specific peer IDs
     probability_values = {
-        "peer_id_1": 0.1,
+        "peer_id_1": 0.3,
         "peer_id_2": 0.2,
         "peer_id_3": 0.5,
     }
@@ -306,17 +309,54 @@ def test_compute_expected_reward(
 
     compute_rewards(merged_result, budget_param)
 
-    # Assert Values
-    for value in merged_result.values():
-        assert "total_expected_reward" in value
-        assert "protocol_exp_reward" in value
-        assert "airdrop_expected_reward" in value
+    keys_to_check = [
+        "total_expected_reward",
+        "protocol_exp_reward",
+        "airdrop_expected_reward",
+        "apy_pct",
+        "protocol_exp_reward_per_dist",
+        "ticket_price",
+        "winning_prob",
+        "jobs",
+    ]
 
-    # Assert that the split works correctly
+    # Assert reward calculation
+    assert merged_result["peer_id_1"]["total_expected_reward"] == 0.3
+
+    # Assert APY calculation
+    assert (
+        round(
+            (
+                (
+                    merged_result["peer_id_1"]["total_expected_reward"]
+                    * (
+                        (60 * 60 * 24 * 365)
+                        / merged_result["peer_id_1"]["budget_period_in_sec"]
+                    )
+                )
+                / merged_result["peer_id_1"]["splitted_stake"]
+            )
+            * 100,
+            0,
+        )
+        == 24  # Percent
+    )
+
+    # Assert distribution frequency
+    assert merged_result["peer_id_1"]["protocol_exp_reward_per_dist"] == 0.0375
+
+    # Assert job creation
+    assert merged_result["peer_id_1"]["jobs"] == 4
+
     for entry in merged_result.values():
+        # Assert that all keys are present
+        assert all(key in entry for key in keys_to_check)
+
+        # Assert that the reward split works correctly
         assert (
             entry["total_expected_reward"]
             == entry["protocol_exp_reward"] + entry["airdrop_expected_reward"]
+            == entry["prob"] * entry["budget"]
         )
 
 

@@ -161,13 +161,12 @@ def compute_rewards(dataset: dict, budget_param: dict):
         entry["budget_period_in_sec"] = budget_period_in_sec
 
         total_exp_reward = entry["prob"] * budget
-        apy = (
-            total_exp_reward * ((60 * 60 * 24 * 365) / budget_period_in_sec)
-        ) / entry[
-            "splitted_stake"
-        ]  # Splitted stake + total balance if 1 safe : 1 node
+        apy_pct = (
+            (total_exp_reward * ((60 * 60 * 24 * 365) / budget_period_in_sec))
+            / entry["splitted_stake"]
+        ) * 100  # Splitted stake = total balance if 1 safe : 1 node
         protocol_exp_reward = total_exp_reward * budget_split_ratio
-        entry["apy"] = apy
+        entry["apy_pct"] = apy_pct
 
         entry["total_expected_reward"] = total_exp_reward
         entry["airdrop_expected_reward"] = total_exp_reward * (1 - budget_split_ratio)
