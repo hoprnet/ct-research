@@ -71,7 +71,7 @@ class EconomicHandler(HOPRNode):
 
     @connectguard
     # @wakeupcall_from_file(folder="assets", filename="parameters.json")
-    @formalin("Running the economic model", sleep=30)
+    @formalin("Running the economic model", sleep=60)
     async def apply_economic_model(self):
         # merge unique_safe_peerId_links with database metrics and subgraph data
 
