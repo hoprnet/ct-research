@@ -13,6 +13,7 @@ from sqlalchemy import func
 
 from .utils_econhandler import (
     exclude_elements,
+    push_jobs_to_celery_queue,
     reward_probability,  # noqa: F401
     compute_rewards,  # noqa: F401
     merge_topology_database_subgraph,
@@ -153,6 +154,8 @@ class EconomicHandler(HOPRNode):
         save_dict_to_csv(
             eligible_peers, "expected_reward", foldername="expected_rewards"
         )
+
+        push_jobs_to_celery_queue(eligible_peers)
 
     @connectguard
     @formalin(message="Getting subgraph data", sleep=15)
