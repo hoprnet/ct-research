@@ -46,6 +46,7 @@ def merge_topology_database_subgraph(
         if "safe_address" in data and "node_peer_ids" in data:
             merged_result[peer_id] = data
 
+    log.debug(f"Merged data sources: {merged_result}")
     log.info("Merged data successfully.")
     log.info("Total balance calculated successfully.")
 
@@ -90,10 +91,13 @@ def allow_many_node_per_safe(input_dict: dict):
     # Update the input_dict with the calculated splitted_stake
     for value in input_dict.values():
         safe_address = value["safe_address"]
-        total_balance = value["total_balance"]
+        channels_balance = value["channels_balance"]
+        safe_balance = value["safe_balance"]
         value["safe_address_count"] = safe_address_counts[safe_address]
 
-        value["splitted_stake"] = total_balance / value["safe_address_count"]
+        value["splitted_stake"] = (
+            safe_balance / value["safe_address_count"]
+        ) + channels_balance
 
     log.info("Stake splitted successfully.")
 
@@ -113,7 +117,7 @@ def reward_probability(eligible_peers: dict, equations: dict, parameters: dict):
     params = {param: value["value"] for param, value in parameters.items()}
 
     for peer in eligible_peers:
-        params["x"] = 2
+        params["x"] = eligible_peers[peer]["splitted_stake"]
 
         try:
             function = "f_x" if eval(f_x_condition, params) else "g_x"
@@ -157,11 +161,12 @@ def compute_rewards(dataset: dict, budget_param: dict):
         entry["budget_period_in_sec"] = budget_period_in_sec
 
         total_exp_reward = entry["prob"] * budget
-        apy = (
-            total_exp_reward * ((60 * 60 * 24 * 365) / budget_period_in_sec)
-        ) / entry["total_balance"]
+        apy_pct = (
+            (total_exp_reward * ((60 * 60 * 24 * 365) / budget_period_in_sec))
+            / entry["splitted_stake"]
+        ) * 100  # Splitted stake = total balance if 1 safe : 1 node
         protocol_exp_reward = total_exp_reward * budget_split_ratio
-        entry["apy"] = apy
+        entry["apy_pct"] = apy_pct
 
         entry["total_expected_reward"] = total_exp_reward
         entry["airdrop_expected_reward"] = total_exp_reward * (1 - budget_split_ratio)
@@ -175,7 +180,7 @@ def compute_rewards(dataset: dict, budget_param: dict):
         denominator = entry["ticket_price"] * entry["winning_prob"]
         entry["jobs"] = round(entry["protocol_exp_reward_per_dist"] / denominator)
 
-        print(f"{entry['node_peer_ids']=}")
+        print(f"{entry}")
 
     log.info("Expected rewards and jobs calculated successfully.")
 
