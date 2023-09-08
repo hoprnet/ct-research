@@ -10,9 +10,10 @@ os.environ["RABBITMQ_USERNAME"] = "foo_username"
 os.environ["RABBITMQ_PASSWORD"] = "foo_password"
 os.environ["RABBITMQ_HOST"] = "foo_host"
 os.environ["RABBITMQ_VIRTUALHOST"] = "foo_virtualhost"
+os.environ["CELERY_BROKER_URL"] = "foo_url"
 os.environ["TIMEOUT"] = "5"
 os.environ["API_HOST"] = "foo_api_host"
-os.environ["API_TOKEN"] = "foo_api_token"
+os.environ["API_KEY"] = "foo_api_key"
 
 
 import postman as pm  # noqa: E402

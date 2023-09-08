@@ -15,12 +15,12 @@ async def retrieve_address():
     """
     try:
         api_host = envvar("API_HOST")
-        api_token = envvar("API_KEY")
+        api_key = envvar("API_KEY")
     except ValueError:
         log.exception("Could not get API_HOST or API_KEY from environment")
         return None
 
-    api = HoprdAPIHelper(api_host, api_token)
+    api = HoprdAPIHelper(api_host, api_key)
 
     # try to connect to the node. If the `get_address` method fails, it means that the
     # node is not reachable

@@ -193,11 +193,8 @@ class HoprdAPIHelper:
             body = json.loads(e.body.decode())
             log.error(f"OSError calling ChannelsApi->channels_get_channels: {body}")
             return []
-        except MaxRetryError as e:
-            body = json.loads(e.body.decode())
-            log.error(
-                f"MaxRetryError calling ChannelsApi->channels_get_channels: {body}"
-            )
+        except MaxRetryError:
+            log.error("MaxRetryError calling ChannelsApi->channels_get_channels")
             return []
 
         if not hasattr(response, "outgoing"):

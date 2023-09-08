@@ -6,10 +6,7 @@ from tools.db_connection import DatabaseConnection, Reward
 
 log = getlogger()
 
-app = Celery(
-    name=envvar("PROJECT_NAME"),
-    broker=f"amqp://{envvar('RABBITMQ_USERNAME')}:{envvar('RABBITMQ_PASSWORD')}@{envvar('RABBITMQ_HOST')}/{envvar('RABBITMQ_VIRTUALHOST')}",
-)
+app = Celery(name=envvar("PROJECT_NAME"), broker=envvar("CELERY_BROKER_URL"))
 
 
 @app.task(name="feedback_task")
