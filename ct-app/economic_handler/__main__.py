@@ -21,6 +21,7 @@ def main():
         rcphnodes = envvar("RPCH_NODES")
         subgraphurl = envvar("SUBGRAPH_URL")
         min_database_entries = envvar("MIN_DATABASE_ENTRIES", int)
+        envvar("PARAMETER_FILE")
         envvar("PGHOST")
         envvar("PGPORT", int)
         envvar("PGSSLCERT")
