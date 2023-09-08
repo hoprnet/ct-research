@@ -129,7 +129,9 @@ def reward_probability(eligible_peers: dict, equations: dict, parameters: dict):
         try:
             function = "f_x" if eval(f_x_condition, params) else "g_x"
             formula = equations[function]["formula"]
-            results[peer] = {"trans_stake": eval(formula, params)}
+
+            if params["x"] >= params["l"]:
+                results[peer] = {"trans_stake": eval(formula, params)}
 
         except Exception:
             log.exception(f"Error evaluating function for peer ID {peer}")
