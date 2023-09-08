@@ -2,10 +2,9 @@ import asyncio
 import aiohttp
 from copy import deepcopy
 
-
 from tools.decorator import connectguard, formalin, wakeupcall_from_file  # noqa: F401
 from tools.hopr_node import HOPRNode
-from tools.utils import getlogger
+from tools.utils import getlogger, envvar
 from tools.db_connection import DatabaseConnection, NodePeerConnection
 from prometheus_client import Gauge
 
@@ -70,7 +69,7 @@ class EconomicHandler(HOPRNode):
         return self.connected
 
     @connectguard
-    # @wakeupcall_from_file(folder="assets", filename="parameters.json")
+    # @wakeupcall_from_file(folder="assets", filename=envvar("PARAMETER_FILE"))
     @formalin("Running the economic model", sleep=60)
     async def apply_economic_model(self):
         # merge unique_safe_peerId_links with database metrics and subgraph data
@@ -137,7 +136,9 @@ class EconomicHandler(HOPRNode):
         exclude_elements(eligible_peers, local_rpch + local_ct)
 
         # computation of cover traffic probability
-        equations, parameters, budget_parameters = economic_model_from_file()
+        equations, parameters, budget_parameters = economic_model_from_file(
+            envvar("PARAMETER_FILE")
+        )
         reward_probability(eligible_peers, equations, parameters)
 
         # calculate expected rewards

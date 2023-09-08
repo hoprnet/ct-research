@@ -20,6 +20,7 @@ def main():
         apikey = envvar("API_KEY")
         rcphnodes = envvar("RPCH_NODES")
         subgraphurl = envvar("SUBGRAPH_URL")
+        envvar("PARAMETER_FILE")
         envvar("PGHOST")
         envvar("PGPORT", int)
         envvar("PGSSLCERT")

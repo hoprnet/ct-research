@@ -378,7 +378,7 @@ def replace_keys_in_mock_data(unique_nodeAddress_peerId_aggbalance_links: dict):
     return new_metrics_dict
 
 
-def economic_model_from_file(filename: str = "parameters.json"):
+def economic_model_from_file(filename: str):
     """
     Reads parameters and equations from a JSON file and validates it using a schema.
     :param: filename (str): The name of the JSON file containing the parameters
