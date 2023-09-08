@@ -123,15 +123,23 @@ def reward_probability(eligible_peers: dict, equations: dict, parameters: dict):
     # compute transformed stake
     params = {param: value["value"] for param, value in parameters.items()}
 
+    peers_to_remove = []
+    for peer, value in eligible_peers.items():
+        if value["splitted_stake"] >= params["l"]:
+            continue
+
+        peers_to_remove.append(peer)
+
+    for peer in peers_to_remove:
+        del eligible_peers[peer]
+
     for peer in eligible_peers:
         params["x"] = eligible_peers[peer]["splitted_stake"]
 
         try:
             function = "f_x" if eval(f_x_condition, params) else "g_x"
             formula = equations[function]["formula"]
-
-            if params["x"] >= params["l"]:
-                results[peer] = {"trans_stake": eval(formula, params)}
+            results[peer] = {"trans_stake": eval(formula, params)}
 
         except Exception:
             log.exception(f"Error evaluating function for peer ID {peer}")
