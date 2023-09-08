@@ -1,8 +1,9 @@
+from datetime import datetime
+
 from celery import Celery
+
 from tools import envvar, getlogger
-
 from tools.db_connection import DatabaseConnection, Reward
-
 
 log = getlogger()
 
@@ -29,7 +30,7 @@ def feedback_task(
             expected_count=expected_count,
             effective_count=effective_count,
             status=status,
-            timestamp=timestamp,
+            timestamp=datetime.fromtimestamp(timestamp),
         )
 
         session.add(entry)
