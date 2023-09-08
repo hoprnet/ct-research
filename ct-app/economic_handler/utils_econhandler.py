@@ -123,6 +123,16 @@ def reward_probability(eligible_peers: dict, equations: dict, parameters: dict):
     # compute transformed stake
     params = {param: value["value"] for param, value in parameters.items()}
 
+    peers_to_remove = []
+    for peer, value in eligible_peers.items():
+        if value["splitted_stake"] >= params["l"]:
+            continue
+
+        peers_to_remove.append(peer)
+
+    for peer in peers_to_remove:
+        del eligible_peers[peer]
+
     for peer in eligible_peers:
         params["x"] = eligible_peers[peer]["splitted_stake"]
 

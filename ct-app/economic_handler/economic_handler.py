@@ -85,11 +85,11 @@ class EconomicHandler(HOPRNode):
             async with self.ct_node_lock:
                 local_ct = deepcopy(self.ct_nodes)
 
-            topology_ok = local_topology is not None
-            database_ok = len(local_database) > 0
-            subgraph_ok = local_subgraph is not None
-            rpch_ok = local_rpch is not None
-            ct_ok = local_ct is not None
+            topology_ok = local_topology is not None and len(local_topology) > 0
+            database_ok = local_database is not None and len(local_database) > 0
+            subgraph_ok = local_subgraph is not None and len(local_subgraph) > 0
+            rpch_ok = local_rpch is not None and len(local_rpch) > 0
+            ct_ok = local_ct is not None and len(local_ct) > 0
 
             if not topology_ok:
                 log.warning("No topology data available for scheduler")
