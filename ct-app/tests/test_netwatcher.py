@@ -1,5 +1,6 @@
 import asyncio
 import functools
+import os
 from unittest.mock import MagicMock, patch
 import tools
 import pytest
@@ -96,6 +97,9 @@ async def test_ping_peers(mock_instance_for_test_ping: NetWatcher):
     """
     Test that the method pings peers works.
     """
+
+    os.environ["MOCK_LATENCY"] = "1"
+
     instance = mock_instance_for_test_ping
 
     instance.peer_id = "some_peer_id"
