@@ -5,7 +5,7 @@ import time
 
 from tools.decorator import connectguard, formalin
 from tools.hopr_node import HOPRNode
-from tools.utils import getlogger, post_dictionary
+from tools.utils import getlogger, post_dictionary, envvar
 
 log = getlogger()
 
@@ -88,7 +88,10 @@ class NetWatcher(HOPRNode):
         rand_peer_id = rand_peer["peer_id"]
         rand_peer_address = rand_peer["peer_address"]  # noqa: F841
 
-        latency = await self.api.ping(rand_peer_id, "latency")
+        if envvar("MOCK_LATENCY"):
+            latency = random.randint(0, 100)
+        else:
+            latency = await self.api.ping(rand_peer_id, "latency")
 
         # latency update rule is:
         # - if latency measure fails:

@@ -18,6 +18,7 @@ def main():
         apihost = envvar("API_HOST")
         apikey = envvar("API_KEY")
         latcount = envvar("LAT_COUNT", int)
+        envvar("MOCK_LATENCY", int)
     except KeyError:
         log.exception("Missing environment variables")
         exit(ExitCode.ERROR_MISSING_ENV_VARS)
