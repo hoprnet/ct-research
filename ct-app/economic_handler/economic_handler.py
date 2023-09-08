@@ -314,17 +314,6 @@ class EconomicHandler(HOPRNode):
                         }
                     }
                     }
-                    registeredNodesInSafeRegistry {
-                    node {
-                        id
-                    }
-                    safe {
-                        id
-                        balance {
-                        wxHoprBalance
-                        }
-                    }
-                    }
                 }
             }
         """
@@ -376,10 +365,7 @@ class EconomicHandler(HOPRNode):
 
                 safes = json_data["data"]["safes"]
                 for safe in safes:
-                    for node in (
-                        safe["registeredNodesInNetworkRegistry"]
-                        + safe["registeredNodesInSafeRegistry"]
-                    ):
+                    for node in safe["registeredNodesInNetworkRegistry"]:
                         node_address = node["node"]["id"]
                         wxHoprBalance = node["safe"]["balance"]["wxHoprBalance"]
                         safe_address = node["safe"]["id"]
