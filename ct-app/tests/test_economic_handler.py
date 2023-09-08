@@ -23,10 +23,7 @@ def mock_node_for_test_start(mocker):
     mocker.patch.object(EconomicHandler, "apply_economic_model", return_value=None)
 
     return EconomicHandler(
-        "some_url",
-        "some_api_key",
-        "some_rpch_endpoint",
-        "some_subgraph_url",
+        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_url", 5
     )
 
 
@@ -60,10 +57,7 @@ def test_stop():
     """
     mocked_task = MagicMock()
     node = EconomicHandler(
-        "some_url",
-        "some_api_key",
-        "some_rpch_endpoint",
-        "some_subgraph_url",
+        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_url", 5
     )
     node.tasks = {mocked_task}
 
