@@ -86,7 +86,7 @@ class EconomicHandler(HOPRNode):
                 local_ct = deepcopy(self.ct_nodes)
 
             topology_ok = local_topology is not None and len(local_topology) > 0
-            database_ok = len(local_database) > 0
+            database_ok = local_database is not None and len(local_database) > 0
             subgraph_ok = local_subgraph is not None and len(local_subgraph) > 0
             rpch_ok = local_rpch is not None and len(local_rpch) > 0
             ct_ok = local_ct is not None and len(local_ct) > 0
