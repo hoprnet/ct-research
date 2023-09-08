@@ -1,6 +1,8 @@
 import asyncio
 from signal import SIGINT, SIGTERM
 
+from prometheus_client import start_http_server
+
 from tools.exit_codes import ExitCode
 from tools.utils import envvar, getlogger
 
@@ -42,6 +44,9 @@ def main():
     loop = asyncio.new_event_loop()
     loop.add_signal_handler(SIGINT, instance.stop)
     loop.add_signal_handler(SIGTERM, instance.stop)
+
+    # start the prometheus client
+    start_http_server(8080)
 
     # start the node and run the event loop until the node stops
     try:

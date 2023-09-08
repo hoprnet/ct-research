@@ -5,7 +5,7 @@ from tools import envvar
 
 os.environ["API_HOST"] = "foo_host"
 os.environ["API_PORT"] = "foo_port"
-os.environ["API_TOKEN"] = "foo_token"
+os.environ["API_KEY"] = "foo_key"
 
 
 @pytest.fixture
@@ -16,7 +16,7 @@ def api_helper():
 
     apihost = envvar("API_HOST")
     apiport = envvar("API_PORT")
-    apikey = envvar("API_TOKEN")
+    apikey = envvar("API_KEY")
 
     helper = HoprdAPIHelper(f"http://{apihost}:{apiport}", apikey)
 

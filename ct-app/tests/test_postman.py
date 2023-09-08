@@ -9,7 +9,7 @@ os.environ["PROJECT_NAME"] = "foo_project"
 os.environ["CELERY_BROKER_URL"] = "foo_broker_url"
 os.environ["TIMEOUT"] = "5"
 os.environ["API_HOST"] = "foo_api_host"
-os.environ["API_TOKEN"] = "foo_api_token"
+os.environ["API_KEY"] = "foo_api_key"
 
 
 import postman as pm  # noqa: E402

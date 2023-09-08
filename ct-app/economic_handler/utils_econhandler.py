@@ -28,24 +28,32 @@ def merge_topology_database_subgraph(
 
     # Merge based on peer ID with the channel topology as the baseline
     for peer_id, data in topology_dict.items():
-        source_node_address = data["source_node_address"]
+        log.debug(f"Peer {peer_id} seen in topology")
+        seen_in_database = False
+        seen_in_subgraph = False
 
         if peer_id in database_dict:
             metrics_data = database_dict[peer_id]
             data["node_peer_ids"] = metrics_data["node_peer_ids"]
-            print(
-                f"Peer {peer_id} found in database and connected nodes added to topology dict"
-            )
+            seen_in_database = True
+            log.debug(f"Peer {peer_id} found in database")
 
+        source_node_address = data["source_node_address"]
         if source_node_address in subgraph_dict:
             subgraph_data = subgraph_dict[source_node_address]
             data["safe_address"] = subgraph_data["safe_address"]
             data["safe_balance"] = float(subgraph_data["wxHOPR_balance"])
             data["total_balance"] = data["channels_balance"] + data["safe_balance"]
 
-        if "safe_address" in data and "node_peer_ids" in data:
+            seen_in_subgraph = True
+            log.debug(f"Source node address for {peer_id} found in subgraph")
+
+        log.debug(f"{peer_id}:{seen_in_database}, {seen_in_subgraph}")
+
+        if seen_in_database and seen_in_subgraph:
             merged_result[peer_id] = data
 
+    log.debug(f"Merged data sources: {merged_result}")
     log.info("Merged data successfully.")
     log.info("Total balance calculated successfully.")
 
@@ -90,10 +98,13 @@ def allow_many_node_per_safe(input_dict: dict):
     # Update the input_dict with the calculated splitted_stake
     for value in input_dict.values():
         safe_address = value["safe_address"]
-        total_balance = value["total_balance"]
+        channels_balance = value["channels_balance"]
+        safe_balance = value["safe_balance"]
         value["safe_address_count"] = safe_address_counts[safe_address]
 
-        value["splitted_stake"] = total_balance / value["safe_address_count"]
+        value["splitted_stake"] = (
+            safe_balance / value["safe_address_count"]
+        ) + channels_balance
 
     log.info("Stake splitted successfully.")
 
@@ -113,7 +124,7 @@ def reward_probability(eligible_peers: dict, equations: dict, parameters: dict):
     params = {param: value["value"] for param, value in parameters.items()}
 
     for peer in eligible_peers:
-        params["x"] = 2
+        params["x"] = eligible_peers[peer]["splitted_stake"]
 
         try:
             function = "f_x" if eval(f_x_condition, params) else "g_x"
@@ -157,11 +168,12 @@ def compute_rewards(dataset: dict, budget_param: dict):
         entry["budget_period_in_sec"] = budget_period_in_sec
 
         total_exp_reward = entry["prob"] * budget
-        apy = (
-            total_exp_reward * ((60 * 60 * 24 * 365) / budget_period_in_sec)
-        ) / entry["total_balance"]
+        apy_pct = (
+            (total_exp_reward * ((60 * 60 * 24 * 365) / budget_period_in_sec))
+            / entry["splitted_stake"]
+        ) * 100  # Splitted stake = total balance if 1 safe : 1 node
         protocol_exp_reward = total_exp_reward * budget_split_ratio
-        entry["apy"] = apy
+        entry["apy_pct"] = apy_pct
 
         entry["total_expected_reward"] = total_exp_reward
         entry["airdrop_expected_reward"] = total_exp_reward * (1 - budget_split_ratio)
@@ -175,7 +187,7 @@ def compute_rewards(dataset: dict, budget_param: dict):
         denominator = entry["ticket_price"] * entry["winning_prob"]
         entry["jobs"] = round(entry["protocol_exp_reward_per_dist"] / denominator)
 
-        print(f"{entry['node_peer_ids']=}")
+        print(f"{entry}")
 
     log.info("Expected rewards and jobs calculated successfully.")
 
@@ -218,13 +230,13 @@ def push_jobs_to_celery_queue(dataset: dict):
     :returns: nothing.
     """
     app = Celery(
-        name="client",
+        name=envvar("PROJECT_NAME"),
         broker=envvar("CELERY_BROKER_URL"),
     )
     app.autodiscover_tasks(force=True)
 
     for peer_id, value in dataset.items():
-        node_list = value["node_addresses"]
+        node_list = value["node_peer_ids"]
         count = value["jobs"]
         node_index = 0
 

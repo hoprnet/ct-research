@@ -5,6 +5,15 @@ from unittest.mock import patch
 from economic_handler.economic_handler import EconomicHandler
 
 
+def create_node():
+    return EconomicHandler(
+        "some_url",
+        "some_api_key",
+        "some_rpch_endpoint",
+        "some_subgraph_url",
+    )
+
+
 @pytest.mark.asyncio
 async def test_get_rpch_nodes():
     """
@@ -23,12 +32,7 @@ async def test_get_rpch_nodes():
         mock_response.status = 200
         mock_response.json.return_value = mock_response_data
 
-        node = EconomicHandler(
-            "some_url",
-            "some_api_key",
-            "some_rpch_endpoint",
-            "some_subgraph_url",
-        )
+        node = create_node()
         node.started = True
 
         asyncio.create_task(node.get_rpch_nodes())
@@ -47,14 +51,9 @@ async def test_get_rpch_nodes_exceptions():
     the aiohttp.ClientSession.get method of the original function.
     """
     with patch("aiohttp.ClientSession.get") as mock_get:
+        node = create_node()
         # Simulate ClientError
         mock_get.side_effect = aiohttp.ClientError("ClientError")
-        node = EconomicHandler(
-            "some_url",
-            "some_api_key",
-            "some_rpch_endpoint",
-            "some_subgraph_url",
-        )
         asyncio.create_task(node.get_rpch_nodes())
         await asyncio.sleep(0.5)
         node.started = False
@@ -63,12 +62,6 @@ async def test_get_rpch_nodes_exceptions():
 
         # Simulate ValueError
         mock_get.side_effect = OSError("ValueError")
-        node = EconomicHandler(
-            "some_url",
-            "some_api_key",
-            "some_rpch_endpoint",
-            "some_subgraph_url",
-        )
         asyncio.create_task(node.get_rpch_nodes())
         await asyncio.sleep(0.5)
         node.started = False
@@ -77,12 +70,6 @@ async def test_get_rpch_nodes_exceptions():
 
         # Simulate general exception
         mock_get.side_effect = Exception("Exception")
-        node = EconomicHandler(
-            "some_url",
-            "some_api_key",
-            "some_rpch_endpoint",
-            "some_subgraph_url",
-        )
         asyncio.create_task(node.get_rpch_nodes())
         await asyncio.sleep(0.5)
         node.started = False
@@ -94,8 +81,8 @@ async def test_get_rpch_nodes_exceptions():
 # async def test_get_staking_participations():
 #     """
 #     Test whether the method returns the correct dictionary containing the link
-#     between safe addresses and stake by mocking the response and patching the
-#     aiohttp.ClientSession.get method to return the mocked response.
+#     between safe addresses and node addresses and balance by mocking the response
+#     and patching the aiohttp.ClientSession.get method to return the mocked response.
 #     """
 #     mock_response_data = {
 #         "data": {
@@ -129,12 +116,7 @@ async def test_get_rpch_nodes_exceptions():
 #         mock_response.status = 200
 #         mock_response.json.return_value = mock_response_data
 
-#         node = EconomicHandler(
-#             "some_url",
-#             "some_api_key",
-#             "some_rpch_endpoint",
-#             "some_subgraph_url",
-#         )
+#         node = create_node()
 
 #         result = await node.get_staking_participations(
 #             "some_subgraph_url", "some_staking_season_address", 100
