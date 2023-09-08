@@ -117,7 +117,11 @@ async def async_send_1_hop_message(
 
     while status == TaskStatus.DEFAULT:
         # node is reachable, messages can be sent
-        successful_sending = await api.send_message(address, "foo", [peer_id])
+        successful_sending = await api.send_message(
+            address,
+            f"From CT: rewards partly distributed to {peer_id}",
+            [peer_id],
+        )
         effective_count += successful_sending
 
         if not successful_sending:

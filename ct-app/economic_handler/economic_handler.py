@@ -3,8 +3,7 @@ import aiohttp
 from copy import deepcopy
 
 from tools.decorator import connectguard, formalin, wakeupcall_from_file  # noqa: F401
-from tools.hopr_node import HOPRNode
-from tools.utils import getlogger, envvar
+from tools import getlogger, HOPRNode, envvar
 from tools.db_connection import DatabaseConnection, NodePeerConnection
 from prometheus_client import Gauge
 
@@ -25,7 +24,7 @@ log = getlogger()
 
 
 class EconomicHandler(HOPRNode):
-    # promoetheus metrics
+    # prometheus metrics
     prometheus_economic_model_execs = Gauge(
         "eh_economic_model_execs", "Number of execution of the economic model"
     )
@@ -36,6 +35,7 @@ class EconomicHandler(HOPRNode):
         key: str,
         rpch_endpoint: str,
         subgraph_endpoint: str,
+        min_database_entries: int,
     ):
         """
         :param url: the url of the HOPR node
@@ -53,6 +53,8 @@ class EconomicHandler(HOPRNode):
         self.rpch_nodes = None
         self.ct_nodes = None
 
+        self.min_database_entries = min_database_entries
+
         self.topology_lock = asyncio.Lock()
         self.database_lock = asyncio.Lock()
         self.subgraph_lock = asyncio.Lock()
@@ -63,19 +65,7 @@ class EconomicHandler(HOPRNode):
 
         super().__init__(url=url, key=key)
 
-    @formalin(sleep=10 * 60)
-    async def host_available(self):
-        print(f"{self.connected=}")
-        return self.connected
-
-    @connectguard
-    # @wakeupcall_from_file(folder="assets", filename=envvar("PARAMETER_FILE"))
-    @formalin("Running the economic model", sleep=60)
-    async def apply_economic_model(self):
-        # merge unique_safe_peerId_links with database metrics and subgraph data
-
-        # wait for topology, database, subgraph, rpch and ct locks to be released
-
+    async def verify_available_data(self):
         data_ok = False
         local_topology = None
         local_database = None
@@ -114,15 +104,40 @@ class EconomicHandler(HOPRNode):
 
             data_ok = topology_ok * database_ok * subgraph_ok * rpch_ok * ct_ok
 
-            if data_ok:
-                continue
+            if len(local_database) < self.min_database_entries:
+                log.warning(
+                    f"Database has less than {self.min_database_entries} entries."
+                )
+                data_ok = False
 
-            log.warning(
-                "Missing some information. "
-                + "Sleeping for a while (5s) before retrying."
-            )
-            await asyncio.sleep(5)
+            if not data_ok:
+                log.warning(
+                    "Missing some information. "
+                    + "Sleeping for a while (5s) before retrying."
+                )
+                await asyncio.sleep(5)
 
+        return local_topology, local_database, local_subgraph, local_rpch, local_ct
+
+    @formalin(sleep=10 * 60)
+    async def host_available(self):
+        print(f"{self.connected=}")
+        return self.connected
+
+    @connectguard
+    # @wakeupcall_from_file(folder="assets", filename="parameters.json")
+    @formalin("Running the economic model", sleep=60)
+    async def apply_economic_model(self):
+        # merge unique_safe_peerId_links with database metrics and subgraph data
+        (
+            local_topology,
+            local_database,
+            local_subgraph,
+            local_rpch,
+            local_ct,
+        ) = await self.verify_available_data()
+
+        # wait for topology, database, subgraph, rpch and ct locks to be released
         log.info("All data available for scheduler, running the economic model")
         self.prometheus_economic_model_execs.inc()
 
@@ -144,14 +159,13 @@ class EconomicHandler(HOPRNode):
         # calculate expected rewards
         compute_rewards(eligible_peers, budget_parameters)
 
-        # output expected rewards as a csv file
-
         if len(eligible_peers) == 0:
             log.warning(
                 "No peers seams to be eligeable for rewards. Skipping distribution"
             )
             return
 
+        # output expected rewards as a csv file
         save_dict_to_csv(
             eligible_peers, "expected_reward", foldername="expected_rewards"
         )
