@@ -246,7 +246,7 @@ class NetWatcher(HOPRNode):
 
         log.info(f"Closed {len(incoming_channels_ids)} incoming channels")
 
-    @formalin(message="Opening channels to peers", sleep=10)
+    @formalin(message="Opening channels to peers", sleep=5)
     @connectguard
     async def open_channels(self):
         """
@@ -255,7 +255,14 @@ class NetWatcher(HOPRNode):
         async with self.peers_pinged_once_lock:
             local_peers_pinged_once = deepcopy(self.peers_pinged_once)
 
-        for peer_id, peer_address in local_peers_pinged_once.items():
+        num_peers = len(local_peers_pinged_once)
+
+        sample_indexes = random.sample(range(num_peers), min(num_peers, 5))
+        subdict_local_peers_pinged_once = {
+            list(dict.keys())[i]: list(dict.values())[i] for i in sample_indexes
+        }
+
+        for peer_id, peer_address in subdict_local_peers_pinged_once.items():
             log.info(f"Opening channel to {peer_id}({peer_address})")
             success = await self.api.open_channel(
                 peer_address, envvar("CHANNEL_INITIAL_BALANCE")
