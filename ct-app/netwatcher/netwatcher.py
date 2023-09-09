@@ -88,7 +88,7 @@ class NetWatcher(HOPRNode):
         rand_peer_id = rand_peer["peer_id"]
         rand_peer_address = rand_peer["peer_address"]  # noqa: F841
 
-        if envvar("MOCK_LATENCY"):
+        if envvar("MOCK_LATENCY", int):
             latency = random.randint(0, 100)
         else:
             latency = await self.api.ping(rand_peer_id, "latency")
