@@ -257,7 +257,9 @@ class NetWatcher(HOPRNode):
 
         for peer_id, peer_address in local_peers_pinged_once.items():
             log.info(f"Opening channel to {peer_id}({peer_address})")
-            success = await self.api.open_channel(peer_address, "100000000000000000")
+            success = await self.api.open_channel(
+                peer_address, envvar("CHANNEL_INITIAL_BALANCE")
+            )
             log.info(f"Channel to {peer_id}({peer_address}) opened: {success}")
 
     async def start(self):
