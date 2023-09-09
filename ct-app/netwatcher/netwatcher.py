@@ -246,7 +246,7 @@ class NetWatcher(HOPRNode):
 
         log.info(f"Closed {len(incoming_channels_ids)} incoming channels")
 
-    @formalin(message="Opening channels to peers", sleep=5)
+    @formalin(message="Opening channels to peers", sleep=20)
     @connectguard
     async def open_channels(self):
         """
