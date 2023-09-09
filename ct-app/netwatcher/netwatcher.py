@@ -253,6 +253,15 @@ class NetWatcher(HOPRNode):
         async with self.peers_pinged_once_lock:
             local_peers_pinged_once = deepcopy(self.peers_pinged_once)
 
+        # getting all channels to filter the outgoing ones from us, and retrieve the
+        # destination addresses of opened outgoing channels
+        channels = await self.api.all_channels(False)
+
+        outgoing_channels_peer_addresses = []
+        for channel in channels.all:
+            if channel.source_peer_id == self.peer_id and channel.status == "Open":
+                outgoing_channels_peer_addresses.append(channel.destination_address)
+
         num_peers = len(local_peers_pinged_once)
 
         sample_indexes = random.sample(range(num_peers), min(num_peers, 5))
@@ -261,6 +270,12 @@ class NetWatcher(HOPRNode):
         }
 
         for peer_id, peer_address in subdict_local_peers_pinged_once.items():
+            if peer_address in outgoing_channels_peer_addresses:
+                log.info(
+                    f"Channel to {peer_id}({peer_address}) already opened. Skipping.."
+                )
+                continue
+
             log.info(f"Opening channel to {peer_id}({peer_address})")
             success = await self.api.open_channel(
                 peer_address, envvar("CHANNEL_INITIAL_BALANCE")
