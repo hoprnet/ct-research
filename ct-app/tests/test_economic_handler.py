@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 os.environ["PARAMETER_FILE"] = "parameters.json"
 
-from economic_handler.economic_handler import EconomicHandler
+from economic_handler.economic_handler import EconomicHandler  # noqa: E402
 
 
 @pytest.fixture
