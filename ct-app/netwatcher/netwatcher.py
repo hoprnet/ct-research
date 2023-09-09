@@ -47,9 +47,9 @@ class NetWatcher(HOPRNode):
 
         super().__init__(url, key)
 
-    @formalin(message="Gathering peers", sleep=20)
+    @formalin(message="Gathering peers", sleep=60)
     @connectguard
-    async def gather_peers(self, quality: float = 1):
+    async def gather_peers(self, quality: float = 0.5):
         """
         Long-running task that continously updates the set of peers connected to this
         node.
@@ -124,7 +124,7 @@ class NetWatcher(HOPRNode):
 
             log.debug(f"Keeping {rand_peer_id} in latency dictionary (recent measure)")
 
-    @formalin(message="Initiated peers transmission", sleep=5)
+    @formalin(message="Initiated peers transmission", sleep=10)
     @connectguard
     async def transmit_peers(self):
         """
