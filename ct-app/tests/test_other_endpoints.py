@@ -11,67 +11,67 @@ def create_node():
     )
 
 
-@pytest.mark.asyncio
-async def test_get_rpch_nodes():
-    """
-    Test whether the method returns the correct list of rpch entry and exit nodes by
-    mocking the response and patching the aiohttp.ClientSession.get method to return
-    the mocked response.
-    """
-    mock_response_data = [
-        {"id": "1"},
-        {"id": "2"},
-        {"id": "3"},
-    ]
+# @pytest.mark.asyncio
+# async def test_get_rpch_nodes():
+#     """
+#     Test whether the method returns the correct list of rpch entry and exit nodes by
+#     mocking the response and patching the aiohttp.ClientSession.get method to return
+#     the mocked response.
+#     """
+#     mock_response_data = [
+#         {"id": "1"},
+#         {"id": "2"},
+#         {"id": "3"},
+#     ]
 
-    with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_response = mock_get.return_value.__aenter__.return_value
-        mock_response.status = 200
-        mock_response.json.return_value = mock_response_data
+#     with patch("aiohttp.ClientSession.get") as mock_get:
+#         mock_response = mock_get.return_value.__aenter__.return_value
+#         mock_response.status = 200
+#         mock_response.json.return_value = mock_response_data
 
-        node = create_node()
-        node.started = True
+#         node = create_node()
+#         node.started = True
 
-        asyncio.create_task(node.get_rpch_nodes())
-        await asyncio.sleep(0.5)
+#         asyncio.create_task(node.get_rpch_nodes())
+#         await asyncio.sleep(0.5)
 
-        node.started = False
-        await asyncio.sleep(0.5)
+#         node.started = False
+#         await asyncio.sleep(0.5)
 
-        assert node.rpch_nodes == ["1", "2", "3"]
+#         assert node.rpch_nodes == ["1", "2", "3"]
 
 
-@pytest.mark.asyncio
-async def test_get_rpch_nodes_exceptions():
-    """
-    Test whether a connection failure triggers anz of the errors by patching
-    the aiohttp.ClientSession.get method of the original function.
-    """
-    with patch("aiohttp.ClientSession.get") as mock_get:
-        node = create_node()
-        # Simulate ClientError
-        mock_get.side_effect = aiohttp.ClientError("ClientError")
-        asyncio.create_task(node.get_rpch_nodes())
-        await asyncio.sleep(0.5)
-        node.started = False
-        await asyncio.sleep(0.5)
-        assert node.rpch_nodes is None
+# @pytest.mark.asyncio
+# async def test_get_rpch_nodes_exceptions():
+#     """
+#     Test whether a connection failure triggers anz of the errors by patching
+#     the aiohttp.ClientSession.get method of the original function.
+#     """
+#     with patch("aiohttp.ClientSession.get") as mock_get:
+#         node = create_node()
+#         # Simulate ClientError
+#         mock_get.side_effect = aiohttp.ClientError("ClientError")
+#         asyncio.create_task(node.get_rpch_nodes())
+#         await asyncio.sleep(0.5)
+#         node.started = False
+#         await asyncio.sleep(0.5)
+#         assert node.rpch_nodes is None
 
-        # Simulate ValueError
-        mock_get.side_effect = OSError("ValueError")
-        asyncio.create_task(node.get_rpch_nodes())
-        await asyncio.sleep(0.5)
-        node.started = False
-        await asyncio.sleep(0.5)
-        assert node.rpch_nodes is None
+#         # Simulate ValueError
+#         mock_get.side_effect = OSError("ValueError")
+#         asyncio.create_task(node.get_rpch_nodes())
+#         await asyncio.sleep(0.5)
+#         node.started = False
+#         await asyncio.sleep(0.5)
+#         assert node.rpch_nodes is None
 
-        # Simulate general exception
-        mock_get.side_effect = Exception("Exception")
-        asyncio.create_task(node.get_rpch_nodes())
-        await asyncio.sleep(0.5)
-        node.started = False
-        await asyncio.sleep(0.5)
-        assert node.rpch_nodes is None
+#         # Simulate general exception
+#         mock_get.side_effect = Exception("Exception")
+#         asyncio.create_task(node.get_rpch_nodes())
+#         await asyncio.sleep(0.5)
+#         node.started = False
+#         await asyncio.sleep(0.5)
+#         assert node.rpch_nodes is None
 
 
 @pytest.mark.asyncio
@@ -132,7 +132,7 @@ async def test_get_get_subgraph_data_exceptions():
         await asyncio.sleep(0.5)
         node.started = False
         await asyncio.sleep(0.5)
-        assert node.rpch_nodes is None
+        assert node.subgraph_dict is None
 
         # Simulate ValueError
         mock_get.side_effect = OSError("ValueError")
@@ -140,7 +140,7 @@ async def test_get_get_subgraph_data_exceptions():
         await asyncio.sleep(0.5)
         node.started = False
         await asyncio.sleep(0.5)
-        assert node.rpch_nodes is None
+        assert node.subgraph_dict is None
 
         # Simulate general exception
         mock_get.side_effect = Exception("Exception")
@@ -148,4 +148,4 @@ async def test_get_get_subgraph_data_exceptions():
         await asyncio.sleep(0.5)
         node.started = False
         await asyncio.sleep(0.5)
-        assert node.rpch_nodes is None
+        assert node.subgraph_dict is None

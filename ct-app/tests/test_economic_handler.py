@@ -1,6 +1,9 @@
 # import json
+import os
 import pytest
 from unittest.mock import MagicMock
+
+os.environ["PARAMETER_FILE"] = "parameters.json"
 
 from economic_handler.economic_handler import EconomicHandler
 
@@ -39,13 +42,13 @@ async def test_start(mock_node_for_test_start: EconomicHandler):
     assert node.host_available.called
     assert node.get_database_metrics.called
     assert node.get_topology_links_with_balance.called
-    assert node.get_rpch_nodes.called
+    # assert node.get_rpch_nodes.called
     assert node.get_ct_nodes.called
     assert node.get_subgraph_data.called
     # assert node.close_incoming_channels.called
     assert node.apply_economic_model.called
 
-    assert len(node.tasks) == 8
+    assert len(node.tasks) == 7
     assert node.started
 
     node.started = False

@@ -42,7 +42,7 @@ class AggregatorTrigger:
             log.info(f"Response for `send_list`: {response}")
             return True
 
-    @formalin(sleep=60 * 2)
+    @formalin(sleep=60 * 30)
     async def check_nodes_timestamps(self):
         """
         Sends a request to the aggregator to check if the nodes stores are updated
