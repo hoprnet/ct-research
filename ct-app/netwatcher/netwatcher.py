@@ -266,7 +266,10 @@ class NetWatcher(HOPRNode):
 
         sample_indexes = random.sample(range(num_peers), min(num_peers, 5))
         subdict_local_peers_pinged_once = {
-            list(dict.keys())[i]: list(dict.values())[i] for i in sample_indexes
+            list(local_peers_pinged_once.keys())[i]: list(
+                local_peers_pinged_once.values()
+            )[i]
+            for i in sample_indexes
         }
 
         for peer_id, peer_address in subdict_local_peers_pinged_once.items():
