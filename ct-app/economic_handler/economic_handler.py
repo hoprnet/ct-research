@@ -183,44 +183,44 @@ class EconomicHandler(HOPRNode):
         log.info("Fetched unique nodeAddress-peerId links from topology.")
         log.debug(f"Unique nodeAddress-peerId links: {topology}")
 
-    @formalin(message="Getting RPCh nodes list", sleep=1 * 60)
-    async def get_rpch_nodes(self):
-        """
-        Retrieves a list of RPCH node peer IDs from the specified API endpoint.
-        Notes:
-        - The function sends a GET request to the provided `api_endpoint`.
-        - Expects the response to be a JSON-encoded list of items.
-        - Filters out items that do not have the 'id' field.
-        - Logs errors and traceback in case of failures.
-        """
+    # @formalin(message="Getting RPCh nodes list", sleep=1 * 60)
+    # async def get_rpch_nodes(self):
+    #     """
+    #     Retrieves a list of RPCH node peer IDs from the specified API endpoint.
+    #     Notes:
+    #     - The function sends a GET request to the provided `api_endpoint`.
+    #     - Expects the response to be a JSON-encoded list of items.
+    #     - Filters out items that do not have the 'id' field.
+    #     - Logs errors and traceback in case of failures.
+    #     """
 
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(self.rpch_endpoint) as response:
-                    if response.status != 200:
-                        log.error(f"Received error code: {response.status}")
-                        return
-                    data = await response.json()
-        except aiohttp.ClientError:
-            log.exception("An error occurred while making the request to rpch endpoint")
-            return
-        except OSError:
-            log.exception(
-                "An error occurred while reading the response from rpch endpoint"
-            )
-            return
-        except Exception:
-            log.exception(
-                "An unexpected error occurred while making the request rpch endpoint"
-            )
-            return
+    #     try:
+    #         async with aiohttp.ClientSession() as session:
+    #             async with session.get(self.rpch_endpoint) as response:
+    #                 if response.status != 200:
+    #                     log.error(f"Received error code: {response.status}")
+    #                     return
+    #                 data = await response.json()
+    #     except aiohttp.ClientError:
+    #         log.exception("An error occurred while making the request to rpch endpoint")
+    #         return
+    #     except OSError:
+    #         log.exception(
+    #             "An error occurred while reading the response from rpch endpoint"
+    #         )
+    #         return
+    #     except Exception:
+    #         log.exception(
+    #             "An unexpected error occurred while making the request rpch endpoint"
+    #         )
+    #         return
 
-        if data and isinstance(data, list):
-            async with self.rpch_node_lock:
-                self.rpch_nodes = [item["id"] for item in data if "id" in item]
+    #     if data and isinstance(data, list):
+    #         async with self.rpch_node_lock:
+    #             self.rpch_nodes = [item["id"] for item in data if "id" in item]
 
-        log.info(f"Fetched list of {len(self.rpch_nodes)} RPCh nodes.")
-        log.debug(f"RPCh nodes: {self.rpch_nodes}")
+    #     log.info(f"Fetched list of {len(self.rpch_nodes)} RPCh nodes.")
+    #     log.debug(f"RPCh nodes: {self.rpch_nodes}")
 
     @formalin(message="Getting CT nodes list", sleep=1 * 60)
     async def get_ct_nodes(self):

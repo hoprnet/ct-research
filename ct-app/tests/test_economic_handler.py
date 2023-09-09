@@ -19,7 +19,7 @@ def mock_node_for_test_start(mocker):
     mocker.patch.object(
         EconomicHandler, "get_topology_links_with_balance", return_value=None
     )
-    mocker.patch.object(EconomicHandler, "get_rpch_nodes", return_value=None)
+    # mocker.patch.object(EconomicHandler, "get_rpch_nodes", return_value=None)
     mocker.patch.object(EconomicHandler, "get_ct_nodes", return_value=None)
     mocker.patch.object(EconomicHandler, "get_subgraph_data", return_value=None)
     mocker.patch.object(EconomicHandler, "close_incoming_channels", return_value=None)
