@@ -25,9 +25,26 @@ log = getlogger()
 
 class EconomicHandler(HOPRNode):
     # prometheus metrics
-    prometheus_economic_model_execs = Gauge(
-        "eh_economic_model_execs", "Number of execution of the economic model"
+    prom_EM_executions = Gauge(
+        "eh_EM_execs", "Number of execution of the economic model"
     )
+    prom_eligible_peers_for_rewards = Gauge(
+        "eh_eligible_peers_for_rewards", "Number of eligible peers for rewards"
+    )
+    prom_budget = Gauge("eh_budget", "Budget for the economic model")
+    prom_budget_period = Gauge(
+        "eh_budget_period", "Budget period for the economic model"
+    )
+    prom_budget_dist_freq = Gauge(
+        "eh_budget_dist_freq", "Number of expected distributions"
+    )
+    prom_budget_ticket_price = Gauge("eh_budget_ticket_price", "Ticket price")
+    prom_budget_winning_prob = Gauge(
+        "eh_budget_winning_prob", "Winning probability of a given ticket"
+    )
+
+    prom_peer_apy = Gauge("eh_peer_apy", "APY of the peer", ["peer_id"])
+    prom_peer_jobs = Gauge("eh_peer_jobs", "Number of jobs for the peer", ["peer_id"])
 
     def __init__(
         self,
@@ -136,13 +153,15 @@ class EconomicHandler(HOPRNode):
 
         # wait for topology, database, subgraph, rpch and ct locks to be released
         log.info("All data available for scheduler, running the economic model")
-        self.prometheus_economic_model_execs.inc()
+        self.prom_EM_executions.inc()
 
         eligible_peers = merge_topology_database_subgraph(
             local_topology,
             local_database,
             local_subgraph,
         )
+
+        self.prom_eligible_peers_for_rewards.set(len(eligible_peers))
 
         allow_many_node_per_safe(eligible_peers)
         exclude_elements(eligible_peers, local_ct)
@@ -151,10 +170,20 @@ class EconomicHandler(HOPRNode):
         equations, parameters, budget_parameters = economic_model_from_file(
             envvar("PARAMETER_FILE")
         )
+        self.prom_budget.set(budget_parameters["budget"]["value"])
+        self.prom_budget_period.set(budget_parameters["budget_period"]["value"])
+        self.prom_budget_dist_freq.set(budget_parameters["dist_freq"]["value"])
+        self.prom_budget_ticket_price.set(budget_parameters["ticket_price"]["value"])
+        self.prom_budget_winning_prob.set(budget_parameters["winning_prob"]["value"])
+
         reward_probability(eligible_peers, equations, parameters)
 
         # calculate expected rewards
         compute_rewards(eligible_peers, budget_parameters)
+
+        for peer_id, values in eligible_peers.items():
+            self.prom_peer_apy.labels(peer_id).set(values["apy_pct"])
+            self.prom_peer_jobs.labels(peer_id).set(values["jobs"])
 
         if len(eligible_peers) == 0:
             log.warning(
