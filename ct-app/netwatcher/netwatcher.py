@@ -47,9 +47,9 @@ class NetWatcher(HOPRNode):
 
         super().__init__(url, key)
 
-    @formalin(message="Gathering peers", sleep=20)
+    @formalin(message="Gathering peers", sleep=60)
     @connectguard
-    async def gather_peers(self, quality: float = 0.2):
+    async def gather_peers(self, quality: float = 0.5):
         """
         Long-running task that continously updates the set of peers connected to this
         node.
@@ -103,8 +103,6 @@ class NetWatcher(HOPRNode):
             async with self.peers_pinged_once_lock:
                 self.peers_pinged_once[rand_peer_id] = rand_peer_address
 
-        print(f"{latency=}")
-
         now = time.time()
         async with self.latency_lock:
             if latency != 0:
@@ -126,7 +124,7 @@ class NetWatcher(HOPRNode):
 
             log.debug(f"Keeping {rand_peer_id} in latency dictionary (recent measure)")
 
-    @formalin(message="Initiated peers transmission", sleep=5)
+    @formalin(message="Initiated peers transmission", sleep=10)
     @connectguard
     async def transmit_peers(self):
         """
@@ -246,7 +244,7 @@ class NetWatcher(HOPRNode):
 
         log.info(f"Closed {len(incoming_channels_ids)} incoming channels")
 
-    @formalin(message="Opening channels to peers", sleep=10)
+    @formalin(message="Opening channels to peers", sleep=20)
     @connectguard
     async def open_channels(self):
         """
@@ -255,9 +253,36 @@ class NetWatcher(HOPRNode):
         async with self.peers_pinged_once_lock:
             local_peers_pinged_once = deepcopy(self.peers_pinged_once)
 
-        for peer_id, peer_address in local_peers_pinged_once.items():
+        # getting all channels to filter the outgoing ones from us, and retrieve the
+        # destination addresses of opened outgoing channels
+        channels = await self.api.all_channels(False)
+
+        outgoing_channels_peer_addresses = []
+        for channel in channels.all:
+            if channel.source_peer_id == self.peer_id and channel.status == "Open":
+                outgoing_channels_peer_addresses.append(channel.destination_address)
+
+        num_peers = len(local_peers_pinged_once)
+
+        sample_indexes = random.sample(range(num_peers), min(num_peers, 5))
+        subdict_local_peers_pinged_once = {
+            list(local_peers_pinged_once.keys())[i]: list(
+                local_peers_pinged_once.values()
+            )[i]
+            for i in sample_indexes
+        }
+
+        for peer_id, peer_address in subdict_local_peers_pinged_once.items():
+            if peer_address in outgoing_channels_peer_addresses:
+                log.info(
+                    f"Channel to {peer_id}({peer_address}) already opened. Skipping.."
+                )
+                continue
+
             log.info(f"Opening channel to {peer_id}({peer_address})")
-            success = await self.api.open_channel(peer_address, "100000000000000000")
+            success = await self.api.open_channel(
+                peer_address, envvar("CHANNEL_INITIAL_BALANCE")
+            )
             log.info(f"Channel to {peer_id}({peer_address}) opened: {success}")
 
     async def start(self):

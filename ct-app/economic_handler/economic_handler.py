@@ -50,7 +50,7 @@ class EconomicHandler(HOPRNode):
         self.topology_links_with_balance = None
         self.database_metrics = {}
         self.subgraph_dict = None
-        self.rpch_nodes = None
+        # self.rpch_nodes = None
         self.ct_nodes = None
 
         self.min_database_entries = min_database_entries
@@ -58,10 +58,8 @@ class EconomicHandler(HOPRNode):
         self.topology_lock = asyncio.Lock()
         self.database_lock = asyncio.Lock()
         self.subgraph_lock = asyncio.Lock()
-        self.rpch_node_lock = asyncio.Lock()
+        # self.rpch_node_lock = asyncio.Lock()
         self.ct_node_lock = asyncio.Lock()
-
-        self.prometheus_economic_model_execs.set(0)
 
         super().__init__(url=url, key=key)
 
@@ -70,7 +68,7 @@ class EconomicHandler(HOPRNode):
         local_topology = None
         local_database = None
         local_subgraph = None
-        local_rpch = None
+        # local_rpch = None
         local_ct = None
 
         while not data_ok:
@@ -80,15 +78,15 @@ class EconomicHandler(HOPRNode):
                 local_database = deepcopy(self.database_metrics)
             async with self.subgraph_lock:
                 local_subgraph = deepcopy(self.subgraph_dict)
-            async with self.rpch_node_lock:
-                local_rpch = deepcopy(self.rpch_nodes)
+            # async with self.rpch_node_lock:
+            #     local_rpch = deepcopy(self.rpch_nodes)
             async with self.ct_node_lock:
                 local_ct = deepcopy(self.ct_nodes)
 
             topology_ok = local_topology is not None and len(local_topology) > 0
             database_ok = local_database is not None and len(local_database) > 0
             subgraph_ok = local_subgraph is not None and len(local_subgraph) > 0
-            rpch_ok = local_rpch is not None and len(local_rpch) > 0
+            # rpch_ok = local_rpch is not None and len(local_rpch) > 0
             ct_ok = local_ct is not None and len(local_ct) > 0
 
             if not topology_ok:
@@ -97,12 +95,12 @@ class EconomicHandler(HOPRNode):
                 log.warning("No database metrics available for scheduler")
             if not subgraph_ok:
                 log.warning("No subgraph data available for scheduler")
-            if not rpch_ok:
-                log.warning("No RPCh nodes available for scheduler")
+            # if not rpch_ok:
+            #     log.warning("No RPCh nodes available for scheduler")
             if not ct_ok:
                 log.warning("No CT nodes available for scheduler")
 
-            data_ok = topology_ok * database_ok * subgraph_ok * rpch_ok * ct_ok
+            data_ok = topology_ok * database_ok * subgraph_ok * ct_ok  # * rpch_ok
 
             if len(local_database) < self.min_database_entries:
                 log.warning(
@@ -115,26 +113,25 @@ class EconomicHandler(HOPRNode):
                     "Missing some information. "
                     + "Sleeping for a while (5s) before retrying."
                 )
-                await asyncio.sleep(5)
+                await asyncio.sleep(15)
 
-        return local_topology, local_database, local_subgraph, local_rpch, local_ct
+        return local_topology, local_database, local_subgraph, local_ct  # , local_rpch
 
     @formalin(sleep=10 * 60)
     async def host_available(self):
-        print(f"{self.connected=}")
+        log.info(f"Attached HOPRd node connection state: {self.connected}")
         return self.connected
 
     @connectguard
-    # @wakeupcall_from_file(folder="assets", filename="parameters.json")
-    @formalin("Running the economic model", sleep=60)
+    @wakeupcall_from_file(folder="assets", filename=envvar("PARAMETER_FILE"))
     async def apply_economic_model(self):
         # merge unique_safe_peerId_links with database metrics and subgraph data
         (
             local_topology,
             local_database,
             local_subgraph,
-            local_rpch,
             local_ct,
+            # local_rpch,
         ) = await self.verify_available_data()
 
         # wait for topology, database, subgraph, rpch and ct locks to be released
@@ -148,7 +145,7 @@ class EconomicHandler(HOPRNode):
         )
 
         allow_many_node_per_safe(eligible_peers)
-        exclude_elements(eligible_peers, local_rpch + local_ct)
+        exclude_elements(eligible_peers, local_ct)
 
         # computation of cover traffic probability
         equations, parameters, budget_parameters = economic_model_from_file(
@@ -173,7 +170,7 @@ class EconomicHandler(HOPRNode):
         push_jobs_to_celery_queue(eligible_peers)
 
     @connectguard
-    @formalin(message="Getting subgraph data", sleep=15)
+    @formalin(message="Getting subgraph data", sleep=1 * 60)
     async def get_topology_links_with_balance(self):
         """
         Gets a dictionary containing all unique source_peerId-source_address links
@@ -186,46 +183,46 @@ class EconomicHandler(HOPRNode):
         log.info("Fetched unique nodeAddress-peerId links from topology.")
         log.debug(f"Unique nodeAddress-peerId links: {topology}")
 
-    @formalin(message="Getting RPCh nodes list", sleep=15)
-    async def get_rpch_nodes(self):
-        """
-        Retrieves a list of RPCH node peer IDs from the specified API endpoint.
-        Notes:
-        - The function sends a GET request to the provided `api_endpoint`.
-        - Expects the response to be a JSON-encoded list of items.
-        - Filters out items that do not have the 'id' field.
-        - Logs errors and traceback in case of failures.
-        """
+    # @formalin(message="Getting RPCh nodes list", sleep=1 * 60)
+    # async def get_rpch_nodes(self):
+    #     """
+    #     Retrieves a list of RPCH node peer IDs from the specified API endpoint.
+    #     Notes:
+    #     - The function sends a GET request to the provided `api_endpoint`.
+    #     - Expects the response to be a JSON-encoded list of items.
+    #     - Filters out items that do not have the 'id' field.
+    #     - Logs errors and traceback in case of failures.
+    #     """
 
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(self.rpch_endpoint) as response:
-                    if response.status != 200:
-                        log.error(f"Received error code: {response.status}")
-                        return
-                    data = await response.json()
-        except aiohttp.ClientError:
-            log.exception("An error occurred while making the request to rpch endpoint")
-            return
-        except OSError:
-            log.exception(
-                "An error occurred while reading the response from rpch endpoint"
-            )
-            return
-        except Exception:
-            log.exception(
-                "An unexpected error occurred while making the request rpch endpoint"
-            )
-            return
+    #     try:
+    #         async with aiohttp.ClientSession() as session:
+    #             async with session.get(self.rpch_endpoint) as response:
+    #                 if response.status != 200:
+    #                     log.error(f"Received error code: {response.status}")
+    #                     return
+    #                 data = await response.json()
+    #     except aiohttp.ClientError:
+    #         log.exception("An error occurred while making the request to rpch endpoint")
+    #         return
+    #     except OSError:
+    #         log.exception(
+    #             "An error occurred while reading the response from rpch endpoint"
+    #         )
+    #         return
+    #     except Exception:
+    #         log.exception(
+    #             "An unexpected error occurred while making the request rpch endpoint"
+    #         )
+    #         return
 
-        if data and isinstance(data, list):
-            async with self.rpch_node_lock:
-                self.rpch_nodes = [item["id"] for item in data if "id" in item]
+    #     if data and isinstance(data, list):
+    #         async with self.rpch_node_lock:
+    #             self.rpch_nodes = [item["id"] for item in data if "id" in item]
 
-        log.info(f"Fetched list of {len(self.rpch_nodes)} RPCh nodes.")
-        log.debug(f"RPCh nodes: {self.rpch_nodes}")
+    #     log.info(f"Fetched list of {len(self.rpch_nodes)} RPCh nodes.")
+    #     log.debug(f"RPCh nodes: {self.rpch_nodes}")
 
-    @formalin(message="Getting CT nodes list", sleep=15)
+    @formalin(message="Getting CT nodes list", sleep=1 * 60)
     async def get_ct_nodes(self):
         """
         Retrieves a list of CT node based on the content of the database
@@ -238,7 +235,7 @@ class EconomicHandler(HOPRNode):
         log.info(f"Fetched list of {len(nodes)} CT nodes.")
         log.debug(f"CT nodes: {self.ct_nodes}")
 
-    @formalin(message="Getting database metrics", sleep=15)
+    @formalin(message="Getting database metrics", sleep=1 * 60)
     async def get_database_metrics(self):
         """
         This function establishes a connection to the database using the provided
@@ -293,7 +290,7 @@ class EconomicHandler(HOPRNode):
         log.info("Fetched data from database.")
         log.debug(f"Database entries: {metric_dict}")
 
-    @formalin(message="Getting subgraph data", sleep=15)
+    @formalin(message="Getting subgraph data", sleep=1 * 60)
     async def get_subgraph_data(self):
         """
         This function retrieves safe_address-node_address-balance links from the
@@ -409,7 +406,7 @@ class EconomicHandler(HOPRNode):
         self.tasks.add(asyncio.create_task(self.host_available()))
         self.tasks.add(asyncio.create_task(self.get_database_metrics()))
         self.tasks.add(asyncio.create_task(self.get_topology_links_with_balance()))
-        self.tasks.add(asyncio.create_task(self.get_rpch_nodes()))
+        # self.tasks.add(asyncio.create_task(self.get_rpch_nodes()))
         self.tasks.add(asyncio.create_task(self.get_ct_nodes()))
         self.tasks.add(asyncio.create_task(self.get_subgraph_data()))
         # self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
