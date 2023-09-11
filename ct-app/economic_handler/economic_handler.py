@@ -161,10 +161,20 @@ class EconomicHandler(HOPRNode):
             local_subgraph,
         )
 
-        self.prom_eligible_peers_for_rewards.set(len(eligible_peers))
+        log.debug(f"Number of eligible peers after merging: {len(eligible_peers)}")
 
         allow_many_node_per_safe(eligible_peers)
+        log.debug(
+            "Number of eligible peers after allowing many nodes per safe: "
+            + f"{len(eligible_peers)}"
+        )
+
         exclude_elements(eligible_peers, local_ct)
+        log.debug(
+            f"Number of eligible peers after excluding CT nodes: {len(eligible_peers)}"
+        )
+
+        self.prom_eligible_peers_for_rewards.set(len(eligible_peers))
 
         # computation of cover traffic probability
         equations, parameters, budget_parameters = economic_model_from_file(
@@ -177,9 +187,16 @@ class EconomicHandler(HOPRNode):
         self.prom_budget_winning_prob.set(budget_parameters["winning_prob"]["value"])
 
         reward_probability(eligible_peers, equations, parameters)
-
+        log.debug(
+            "Number of eligible peers after computing reward probability: "
+            + f"{len(eligible_peers)}"
+        )
         # calculate expected rewards
         compute_rewards(eligible_peers, budget_parameters)
+        log.debug(
+            "Number of eligible peers after computing expected rewards: "
+            + f"{len(eligible_peers)}"
+        )
 
         for peer_id, values in eligible_peers.items():
             self.prom_peer_apy.labels(peer_id).set(values["apy_pct"])

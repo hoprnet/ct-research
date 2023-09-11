@@ -72,6 +72,7 @@ def exclude_elements(source_data: dict, blacklist: list):
         if key not in source_data:
             continue
         del source_data[key]
+        log.warning(f"Excluded {key} from the dataset.")
 
     log.info(f"Excluded up to {len(blacklist)} entries.")
 
@@ -133,6 +134,9 @@ def reward_probability(eligible_peers: dict, equations: dict, parameters: dict):
     for peer in peers_to_remove:
         del eligible_peers[peer]
 
+    log.info(f"Excluded {len(peers_to_remove)} peers from the dataset.")
+    log.debug(f"Excluded peers: {peers_to_remove}")
+
     for peer in eligible_peers:
         params["x"] = eligible_peers[peer]["splitted_stake"]
 
@@ -142,8 +146,10 @@ def reward_probability(eligible_peers: dict, equations: dict, parameters: dict):
             results[peer] = {"trans_stake": eval(formula, params)}
 
         except Exception:
-            log.exception(f"Error evaluating function for peer ID {peer}")
+            log.exception(f"Error evaluating reward probabilty for peer {peer}")
             return
+
+        log.debug(f"Peer{peer} rewards probablity evaluated successfully.")
 
     # compute ct probability
     total_tf_stake = sum(result["trans_stake"] for result in results.values())
