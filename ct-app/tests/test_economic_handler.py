@@ -1,27 +1,14 @@
 # import json
-import functools
 import os
 import pytest
 from unittest.mock import MagicMock, patch
 
 os.environ["PARAMETER_FILE"] = "parameters.json"
 
-
-def mock_decorator(*args, **kwargs):
-    """Decorate by doing nothing."""
-
-    def decorator(func):
-        @functools.wraps(func)
-        async def decorated_function(*args, **kwargs):
-            return await func(*args, **kwargs)
-
-        return decorated_function
-
-    return decorator
-
-
 # PATCH THE DECORATOR HERE
-patch("tools.decorator.wakeupcall", mock_decorator).start()
+patch(
+    "economic_handler.utils_econhandler.determine_delay_from_parameters", return_value=5
+).start()
 
 
 from economic_handler.economic_handler import EconomicHandler  # noqa: E402
