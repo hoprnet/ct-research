@@ -4,6 +4,7 @@ __pycache__/
 
 # envs
 env*/
+simulation.env
 
 # logs
 expected_rewards/
