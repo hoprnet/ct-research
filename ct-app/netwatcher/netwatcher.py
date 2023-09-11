@@ -92,13 +92,13 @@ class NetWatcher(HOPRNode):
             latency = random.randint(0, 100)
         else:
             latency = await self.api.ping(rand_peer_id, "latency")
+            log.debug(f"Measured latency to {rand_peer_id[-5:]}: {latency}ms")
 
         # latency update rule is:
         # - if latency measure fails:
         #     - if the peer is not known, add it with value -1 and set timestamp
         #     - if the peer is known and the last measure is recent, do nothing
         # - if latency measure succeeds, always update
-
         if latency != 0:
             async with self.peers_pinged_once_lock:
                 self.peers_pinged_once[rand_peer_id] = rand_peer_address
@@ -106,7 +106,6 @@ class NetWatcher(HOPRNode):
         now = time.time()
         async with self.latency_lock:
             if latency != 0:
-                log.info(f"Measured latency to {rand_peer_id[-5:]}: {latency}ms")
                 self.latency[rand_peer_id] = {"value": latency, "timestamp": now}
 
                 return
@@ -124,7 +123,7 @@ class NetWatcher(HOPRNode):
 
             log.debug(f"Keeping {rand_peer_id} in latency dictionary (recent measure)")
 
-    @formalin(message="Initiated peers transmission", sleep=10)
+    @formalin(message="Initiated peers transmission", sleep=20)
     @connectguard
     async def transmit_peers(self):
         """
