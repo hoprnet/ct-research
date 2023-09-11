@@ -126,7 +126,7 @@ def reward_probability(eligible_peers: dict, equations: dict, parameters: dict):
 
     peers_to_remove = []
     for peer, value in eligible_peers.items():
-        print(f"{peer=}, {value=}, {params=}")
+        log.debug(f"{peer=}, {value=}, {params=}")
         if value["splitted_stake"] >= params["l"]:
             continue
 
