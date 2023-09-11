@@ -1,9 +1,15 @@
 # import json
 import os
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 os.environ["PARAMETER_FILE"] = "parameters.json"
+
+# PATCH THE DECORATOR HERE
+patch(
+    "economic_handler.utils_econhandler.determine_delay_from_parameters", return_value=5
+).start()
+
 
 from economic_handler.economic_handler import EconomicHandler  # noqa: E402
 

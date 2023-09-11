@@ -204,8 +204,6 @@ def compute_rewards(dataset: dict, budget_param: dict):
         denominator = entry["ticket_price"] * entry["winning_prob"]
         entry["jobs"] = round(entry["protocol_exp_reward_per_dist"] / denominator)
 
-        print(f"{entry}")
-
     log.info("Expected rewards and jobs calculated successfully.")
 
 
@@ -227,9 +225,6 @@ def save_dict_to_csv(
 
     lines = [column_names]
 
-    print(f"{column_names=}")
-    print(f"{lines=}")
-    print(f"{data=}")
     for key, value in data.items():
         lines.append([key] + list(value.values()))
 
@@ -410,3 +405,22 @@ def economic_model_from_file(filename: str):
 
     log.info("Fetched parameters and equations.")
     return contents["equations"], contents["parameters"], contents["budget_param"]
+
+
+def determine_delay_from_parameters(
+    folder: str = "", filename: str = "parameters.json"
+):
+    """
+    Determines the number of seconds from the JSON contents.
+    :param folder: the folder where the parameters file is located
+    :param filename: the name of the parameters file
+    :returns: (int): The number of seconds to sleep
+    """
+    parameters_file_path = os.path.join(folder, filename)
+
+    contents = read_json_on_gcp("ct-platform-ct", parameters_file_path, schema_name)
+
+    period_in_seconds = contents["budget_param"]["budget_period"]["value"]
+    distribution_count = contents["budget_param"]["dist_freq"]["value"]
+
+    return period_in_seconds / distribution_count

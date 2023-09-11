@@ -1,22 +1,27 @@
 import asyncio
-import aiohttp
 from copy import deepcopy
 
-from tools.decorator import connectguard, formalin, wakeupcall_from_file  # noqa: F401
-from tools import getlogger, HOPRNode, envvar
-from tools.db_connection import DatabaseConnection, NodePeerConnection
+import aiohttp
 from prometheus_client import Gauge
-
 from sqlalchemy import func
 
+from tools import HOPRNode, envvar, getlogger
+from tools.db_connection import DatabaseConnection, NodePeerConnection
+from tools.decorator import (
+    connectguard,
+    formalin,
+    wakeupcall,
+)
+
 from .utils_econhandler import (
-    exclude_elements,
-    push_jobs_to_celery_queue,
-    reward_probability,  # noqa: F401
-    compute_rewards,  # noqa: F401
-    merge_topology_database_subgraph,
-    economic_model_from_file,  # noqa: F401
     allow_many_node_per_safe,
+    compute_rewards,
+    determine_delay_from_parameters,
+    economic_model_from_file,
+    exclude_elements,
+    merge_topology_database_subgraph,
+    push_jobs_to_celery_queue,
+    reward_probability,
     save_dict_to_csv,
 )
 
@@ -140,7 +145,9 @@ class EconomicHandler(HOPRNode):
         return self.connected
 
     @connectguard
-    @wakeupcall_from_file(folder="assets", filename=envvar("PARAMETER_FILE"))
+    @wakeupcall(
+        seconds=determine_delay_from_parameters("assets", envvar("PARAMETER_FILE"))
+    )
     async def apply_economic_model(self):
         # merge unique_safe_peerId_links with database metrics and subgraph data
         (
