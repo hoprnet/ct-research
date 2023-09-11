@@ -1,11 +1,9 @@
 import asyncio
 import datetime
 import functools
-import os
 
-from assets.parameters_schema import schema as schema_name
 
-from .utils import getlogger, read_json_on_gcp
+from .utils import getlogger
 
 log = getlogger()
 
@@ -25,6 +23,7 @@ def wakeupcall(
     def next_delay_in_seconds(hours: int = 0, minutes: int = 0, seconds: int = 0):
         """
         Calculates the delay until the next whole `minutes`min and `seconds`sec.
+
         :param minutes: next whole minute to trigger the function
         :param seconds: next whole second to trigger the function
         """
@@ -52,59 +51,15 @@ def wakeupcall(
                 log.info(message)
 
             sleep = next_delay_in_seconds(hours, minutes, seconds)
+            log.info(f"First start in {sleep} seconds")
             await asyncio.sleep(sleep)
 
             while self.started:
                 await func(self, *args, **kwargs)
 
                 sleep = next_delay_in_seconds(hours, minutes, seconds)
-                await asyncio.sleep(sleep)
 
-        return wrapper
-
-    return decorator
-
-
-def wakeupcall_from_file(
-    message: str = None, folder: str = "", filename: str = "parameters.json"
-):
-    """
-    Decorator to log the start of a function, make it run until stopped, and delay the
-    next iteration. The delay is specified in seconds.
-    :param message: the message to log when the function starts
-    :param folder: the folder where the parameters file is located
-    :param filename: the name of the parameters file
-    """
-
-    def determine_delay_from_parameters(
-        folder: str = "", filename: str = "parameters.json"
-    ):
-        """
-        Determines the number of seconds from the JSON contents.
-        :param folder: the folder where the parameters file is located
-        :param filename: the name of the parameters file
-        :returns: (int): The number of seconds to sleep
-        """
-        parameters_file_path = os.path.join(folder, filename)
-
-        contents = read_json_on_gcp("ct-platform-ct", parameters_file_path, schema_name)
-
-        period_in_seconds = contents["budget_param"]["budget_period"]["value"]
-        distribution_count = contents["budget_param"]["dist_freq"]["value"]
-
-        return period_in_seconds / distribution_count
-
-    def decorator(func):
-        @functools.wraps(func)
-        async def wrapper(self, *args, **kwargs):
-            if message is not None:
-                log.info(message)
-
-            while self.started:
-                await func(self, *args, **kwargs)
-
-                sleep = determine_delay_from_parameters(folder, filename)
-                log.info(f"sleep for {sleep} seconds")
+                log.info(f"Sleeping for {sleep} seconds")
                 await asyncio.sleep(sleep)
 
         return wrapper
