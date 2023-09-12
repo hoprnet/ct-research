@@ -16,7 +16,7 @@ class ColoredLogger(logging.Logger):
     def __init__(self, name):
         logging.Logger.__init__(self, name, logging.DEBUG)
 
-        color_formatter = ColoredFormatter(self.COLOR_FORMAT, False)
+        color_formatter = ColoredFormatter(self.COLOR_FORMAT, True)
 
         console = logging.StreamHandler()
         console.setFormatter(color_formatter)

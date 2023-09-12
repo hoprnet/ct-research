@@ -20,11 +20,11 @@ def formatter_message(message, use_color=True):
 
 
 COLORS = {
-    "warning": YELLOW,
-    "info": WHITE,
     "debug": BLUE,
-    "critical": YELLOW,
+    "info": GREEN,
+    "warning": YELLOW,
     "error": RED,
+    "critical": RED,
 }
 
 
