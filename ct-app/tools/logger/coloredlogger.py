@@ -9,7 +9,7 @@ class ColoredLogger(logging.Logger):
     A logger that allows to color the output of the logger.
     """
 
-    FORMAT = "[%(name)s] %(levelname)s-%(message)s"
+    FORMAT = "%(levelname)-8s %(message)s"
 
     COLOR_FORMAT = formatter_message(FORMAT, True)
 

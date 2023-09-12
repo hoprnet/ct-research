@@ -19,11 +19,6 @@ def getlogger() -> logging.Logger:
     Generate a logger instance based on folder and name.
     :returns: a tuple with the logger instance and the name of the log file
     """
-    # configure and get logger handler
-    module = running_module(uppercase=True)
-    if not module:
-        module = "main"
-
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("hoprd_sdk.rest").setLevel(logging.WARNING)
     logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
@@ -36,7 +31,7 @@ def getlogger() -> logging.Logger:
     # checks if a logger already exists with the given module name
     logging.setLoggerClass(ColoredLogger)
 
-    logger = logging.getLogger(module)
+    logger = logging.getLogger("ct-app")
     logger.setLevel(logging.DEBUG)
 
     return logger

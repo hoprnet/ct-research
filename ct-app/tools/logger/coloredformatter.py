@@ -20,11 +20,11 @@ def formatter_message(message, use_color=True):
 
 
 COLORS = {
-    "WARNING": YELLOW,
-    "INFO": WHITE,
-    "DEBUG": BLUE,
-    "CRITICAL": YELLOW,
-    "ERROR": RED,
+    "warning": YELLOW,
+    "info": WHITE,
+    "debug": BLUE,
+    "critical": YELLOW,
+    "error": RED,
 }
 
 
@@ -38,6 +38,7 @@ class ColoredFormatter(logging.Formatter):
         self.use_color = use_color
 
     def format(self, record):
+        record.levelname = record.levelname.lower()
         levelname = record.levelname
         if self.use_color and levelname in COLORS:
             levelname_color = (
