@@ -34,8 +34,7 @@ def getlogger() -> logging.Logger:
     logging.getLogger("sqlalchemy.orm.path_registry").setLevel(logging.WARNING)
 
     # checks if a logger already exists with the given module name
-    if logging.getLoggerClass() != ColoredLogger:
-        logging.setLoggerClass(ColoredLogger)
+    logging.setLoggerClass(ColoredLogger)
 
     logger = logging.getLogger(module)
     logger.setLevel(logging.DEBUG)
@@ -69,6 +68,8 @@ def running_module(uppercase: bool = False):
     :param uppercase: if True, the module name will be returned in uppercase
     :returns: the name of the module that is running"""
     argv = sys.argv[0]
+
+    print(sys.argv)
 
     if not argv.endswith("__main__.py"):
         return None
