@@ -1,4 +1,5 @@
 import asyncio
+import random
 import time
 from enum import Enum
 
@@ -204,3 +205,16 @@ def fake_task(
     log.info(f"Fake task execution started at {timestamp}")
     log.info(f"{expected_count} messages ment to be sent to {peer}")
     log.info(f"Node list: {node_list} (starting at index {node_index})")
+
+    app.send_task(
+        "feedback_task",
+        args=(
+            peer,
+            node_list[node_index],
+            random.randint(0, expected_count),
+            expected_count,
+            TaskStatus.SUCCESS.value,
+            timestamp,
+        ),
+        queue="feedback",
+    )
