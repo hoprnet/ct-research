@@ -7,7 +7,7 @@ from economic_handler.economic_handler import EconomicHandler
 
 def create_node():
     return EconomicHandler(
-        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_url", 5
+        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_url"
     )
 
 

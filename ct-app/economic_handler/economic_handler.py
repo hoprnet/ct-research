@@ -57,7 +57,6 @@ class EconomicHandler(HOPRNode):
         key: str,
         rpch_endpoint: str,
         subgraph_endpoint: str,
-        min_database_entries: int,
     ):
         """
         :param url: the url of the HOPR node
@@ -75,8 +74,6 @@ class EconomicHandler(HOPRNode):
         # self.rpch_nodes = None
         self.ct_nodes = None
 
-        self.min_database_entries = min_database_entries
-
         self.topology_lock = asyncio.Lock()
         self.database_lock = asyncio.Lock()
         self.subgraph_lock = asyncio.Lock()
@@ -93,51 +90,43 @@ class EconomicHandler(HOPRNode):
         # local_rpch = None
         local_ct = None
 
-        while not data_ok:
-            async with self.topology_lock:
-                local_topology = deepcopy(self.topology_links_with_balance)
-            async with self.database_lock:
-                local_database = deepcopy(self.database_metrics)
-            async with self.subgraph_lock:
-                local_subgraph = deepcopy(self.subgraph_dict)
-            # async with self.rpch_node_lock:
-            #     local_rpch = deepcopy(self.rpch_nodes)
-            async with self.ct_node_lock:
-                local_ct = deepcopy(self.ct_nodes)
+        async with self.topology_lock:
+            local_topology = deepcopy(self.topology_links_with_balance)
+        async with self.database_lock:
+            local_database = deepcopy(self.database_metrics)
+        async with self.subgraph_lock:
+            local_subgraph = deepcopy(self.subgraph_dict)
+        # async with self.rpch_node_lock:
+        #     local_rpch = deepcopy(self.rpch_nodes)
+        async with self.ct_node_lock:
+            local_ct = deepcopy(self.ct_nodes)
 
-            topology_ok = local_topology is not None and len(local_topology) > 0
-            database_ok = local_database is not None and len(local_database) > 0
-            subgraph_ok = local_subgraph is not None and len(local_subgraph) > 0
-            # rpch_ok = local_rpch is not None and len(local_rpch) > 0
-            ct_ok = local_ct is not None and len(local_ct) > 0
+        topology_ok = local_topology is not None and len(local_topology) > 0
+        database_ok = local_database is not None and len(local_database) > 0
+        subgraph_ok = local_subgraph is not None and len(local_subgraph) > 0
+        # rpch_ok = local_rpch is not None and len(local_rpch) > 0
+        ct_ok = local_ct is not None and len(local_ct) > 0
 
-            if not topology_ok:
-                log.warning("No topology data available for scheduler")
-            if not database_ok:
-                log.warning("No database metrics available for scheduler")
-            if not subgraph_ok:
-                log.warning("No subgraph data available for scheduler")
-            # if not rpch_ok:
-            #     log.warning("No RPCh nodes available for scheduler")
-            if not ct_ok:
-                log.warning("No CT nodes available for scheduler")
+        if not topology_ok:
+            log.warning("No topology data available for reward calculation")
+        if not database_ok:
+            log.warning("No database metrics available for reward calculation")
+        if not subgraph_ok:
+            log.warning("No subgraph data available for reward calculation")
+        if not ct_ok:
+            log.warning("No CT nodes available for reward calculation")
+        # if not rpch_ok:
+        #     log.warning("No RPCh nodes available for scheduler")
 
-            data_ok = topology_ok * database_ok * subgraph_ok * ct_ok  # * rpch_ok
+        data_ok = topology_ok * database_ok * subgraph_ok * ct_ok  # * rpch_ok
 
-            if len(local_database) < self.min_database_entries:
-                log.warning(
-                    f"Database has less than {self.min_database_entries} entries."
-                )
-                data_ok = False
-
-            if not data_ok:
-                log.warning(
-                    "Missing some information. "
-                    + "Sleeping for a while (5s) before retrying."
-                )
-                await asyncio.sleep(15)
-
-        return local_topology, local_database, local_subgraph, local_ct  # , local_rpch
+        return (
+            data_ok,
+            local_topology,
+            local_database,
+            local_subgraph,
+            local_ct,
+        )  # , local_rpch
 
     @formalin(sleep=10 * 60)
     async def host_available(self):
@@ -145,12 +134,11 @@ class EconomicHandler(HOPRNode):
         return self.connected
 
     @connectguard
-    @wakeupcall(
-        seconds=determine_delay_from_parameters("assets", envvar("PARAMETER_FILE"))
-    )
+    @formalin(sleep=2 * 60)
     async def apply_economic_model(self):
         # merge unique_safe_peerId_links with database metrics and subgraph data
         (
+            data_ok,
             local_topology,
             local_database,
             local_subgraph,
@@ -158,10 +146,11 @@ class EconomicHandler(HOPRNode):
             # local_rpch,
         ) = await self.verify_available_data()
 
-        # wait for topology, database, subgraph, rpch and ct locks to be released
-        log.info("All data available for scheduler, running the economic model")
-        self.prom_EM_executions.inc()
+        if not data_ok:
+            log.warning("Not enough data available for reward calculation")
+            return
 
+        # wait for topology, database, subgraph, rpch and ct locks to be released
         eligible_peers = merge_topology_database_subgraph(
             local_topology,
             local_database,
@@ -181,8 +170,6 @@ class EconomicHandler(HOPRNode):
             f"Number of eligible peers after excluding CT nodes: {len(eligible_peers)}"
         )
 
-        self.prom_eligible_peers_for_rewards.set(len(eligible_peers))
-
         # computation of cover traffic probability
         equations, parameters, budget_parameters = economic_model_from_file(
             envvar("PARAMETER_FILE")
@@ -198,6 +185,7 @@ class EconomicHandler(HOPRNode):
             "Number of eligible peers after computing reward probability: "
             + f"{len(eligible_peers)}"
         )
+
         # calculate expected rewards
         compute_rewards(eligible_peers, budget_parameters)
         log.debug(
@@ -209,18 +197,29 @@ class EconomicHandler(HOPRNode):
             self.prom_peer_apy.labels(peer_id).set(values["apy_pct"])
             self.prom_peer_jobs.labels(peer_id).set(values["jobs"])
 
-        if len(eligible_peers) == 0:
+        self.prom_eligible_peers_for_rewards.set(len(eligible_peers))
+
+        self.eligible_peers = eligible_peers
+
+    @wakeupcall(
+        seconds=determine_delay_from_parameters("assets", envvar("PARAMETER_FILE"))
+    )
+    async def reward_peers(self):
+        min_eligible_peers = envvar("MIN_ELIGIBLE_PEERS")
+
+        while len(self.eligible_peers) < min_eligible_peers:
             log.warning(
-                "No peers seams to be eligeable for rewards. Skipping distribution"
+                f"Less than {min_eligible_peers} peers are eligible for rewards. "
+                + "Waiting for more peers to be added to the list."
             )
-            return
+            await asyncio.sleep(30)
 
-        # output expected rewards as a csv file
+        self.prom_EM_executions.inc()
+
+        push_jobs_to_celery_queue(self.eligible_peers)
         save_dict_to_csv(
-            eligible_peers, "expected_reward", foldername="expected_rewards"
+            self.eligible_peers, "expected_reward", foldername="expected_rewards"
         )
-
-        push_jobs_to_celery_queue(eligible_peers)
 
     @connectguard
     @formalin(message="Getting subgraph data", sleep=1 * 60)
@@ -464,6 +463,7 @@ class EconomicHandler(HOPRNode):
         self.tasks.add(asyncio.create_task(self.get_subgraph_data()))
         # self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
         self.tasks.add(asyncio.create_task(self.apply_economic_model()))
+        self.tasks.add(asyncio.create_task(self.reward_peers()))
 
         await asyncio.gather(*self.tasks)
 
