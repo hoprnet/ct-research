@@ -81,11 +81,14 @@ class EconomicHandler(HOPRNode):
         # self.rpch_nodes = None
         self.ct_nodes = None
 
+        self.eligible_peers = {}
+
         self.topology_lock = asyncio.Lock()
         self.database_lock = asyncio.Lock()
         self.subgraph_lock = asyncio.Lock()
         # self.rpch_node_lock = asyncio.Lock()
         self.ct_node_lock = asyncio.Lock()
+        self.eligible_peers_lock = asyncio.Lock()
 
         super().__init__(url=url, key=key)
 
@@ -209,15 +212,19 @@ class EconomicHandler(HOPRNode):
 
         self.prom_eligible_peers_for_rewards.set(len(eligible_peers))
 
-        self.eligible_peers = eligible_peers
+        async with self.eligible_peers_lock:
+            self.eligible_peers = eligible_peers
 
     @wakeupcall(
         seconds=determine_delay_from_parameters("assets", envvar("PARAMETER_FILE"))
     )
     async def reward_peers(self):
-        min_eligible_peers = envvar("MIN_ELIGIBLE_PEERS")
+        min_eligible_peers = envvar("MIN_ELIGIBLE_PEERS", int)
 
-        while len(self.eligible_peers) < min_eligible_peers:
+        async with self.eligible_peers_lock:
+            peers_for_reward = deepcopy(self.eligible_peers)
+
+        while len(peers_for_reward) < min_eligible_peers:
             log.warning(
                 f"Less than {min_eligible_peers} peers are eligible for rewards. "
                 + "Waiting for more peers to be added to the list."
@@ -226,9 +233,9 @@ class EconomicHandler(HOPRNode):
 
         self.prom_EM_executions.inc()
 
-        push_jobs_to_celery_queue(self.eligible_peers)
+        push_jobs_to_celery_queue(peers_for_reward)
         save_dict_to_csv(
-            self.eligible_peers, "expected_reward", foldername="expected_rewards"
+            peers_for_reward, "expected_reward", foldername="expected_rewards"
         )
 
     @connectguard
