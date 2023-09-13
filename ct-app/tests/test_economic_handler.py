@@ -30,9 +30,10 @@ def mock_node_for_test_start(mocker):
     mocker.patch.object(EconomicHandler, "get_subgraph_data", return_value=None)
     mocker.patch.object(EconomicHandler, "close_incoming_channels", return_value=None)
     mocker.patch.object(EconomicHandler, "apply_economic_model", return_value=None)
+    mocker.patch.object(EconomicHandler, "reward_peers", return_value=None)
 
     return EconomicHandler(
-        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_url", 5
+        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_url"
     )
 
 
@@ -53,8 +54,9 @@ async def test_start(mock_node_for_test_start: EconomicHandler):
     assert node.get_subgraph_data.called
     # assert node.close_incoming_channels.called
     assert node.apply_economic_model.called
+    assert node.reward_peers.called
 
-    assert len(node.tasks) == 7
+    assert len(node.tasks) == 8
     assert node.started
 
     node.started = False
@@ -66,7 +68,7 @@ def test_stop():
     """
     mocked_task = MagicMock()
     node = EconomicHandler(
-        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_url", 5
+        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_url"
     )
     node.tasks = {mocked_task}
 
