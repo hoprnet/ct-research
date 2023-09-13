@@ -47,7 +47,7 @@ def send_1_hop_message(
     expected_count: int,
     node_list: list[str],
     node_index: int,
-    timestamp: float = time.time(),
+    timestamp: float = None,
 ) -> TaskStatus:
     """
     Celery task to send `messages_count` 1-hop messages to a peer. This method is the
@@ -60,6 +60,9 @@ def send_1_hop_message(
     :param node_index: Index of the node in the list of nodes.
     :param timestamp: Timestamp at first iteration. For timeout purposes.
     """
+    if timestamp is None:
+        timestamp = time.time()
+
     return asyncio.run(
         async_send_1_hop_message(peer, expected_count, node_list, node_index, timestamp)
     )
@@ -190,7 +193,7 @@ def fake_task(
     expected_count: int,
     node_list: list[str],
     node_index: int,
-    timestamp: float = time.time(),
+    timestamp: float = None,
 ) -> TaskStatus:
     """
     Fake celery task to test if queues are working as expected.
@@ -201,6 +204,9 @@ def fake_task(
     :param node_index: Index of the node in the list of nodes.
     :param timestamp: Timestamp at first iteration. For timeout purposes.
     """
+
+    if timestamp is None:
+        timestamp = time.time()
 
     log.info(f"Fake task execution started at {timestamp}")
     log.info(f"{expected_count} messages ment to be sent to {peer}")
