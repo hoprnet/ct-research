@@ -53,6 +53,9 @@ class EconomicHandler(HOPRNode):
     prom_peer_splitted_stake = Gauge(
         "eh_peer_splitted_stake", "Splitted stake", ["peer_id"]
     )
+    prom_peer_transformed_stake = Gauge(
+        "eh_peer_transformed_stake", "Transformed stake", ["peer_id"]
+    )
     prom_peer_safe_count = Gauge("eh_peer_safe_count", "Number of safes", ["peer_id"])
 
     def __init__(
@@ -202,6 +205,7 @@ class EconomicHandler(HOPRNode):
             self.prom_peer_jobs.labels(peer_id).set(values["jobs"])
             self.prom_peer_splitted_stake.labels(peer_id).set(values["splitted_stake"])
             self.prom_peer_safe_count.labels(peer_id).set(values["safe_address_count"])
+            self.prom_peer_transformed_stake.labels(peer_id).set(values["trans_stake"])
 
         self.prom_eligible_peers_for_rewards.set(len(eligible_peers))
 
