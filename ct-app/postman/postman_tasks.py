@@ -127,6 +127,7 @@ async def async_send_1_hop_message(
             [peer_id],
         )
         effective_count += successful_sending
+        await asyncio.sleep(0.1)
 
         if not successful_sending:
             log.error(
