@@ -20,7 +20,7 @@ def main():
         apikey = envvar("API_KEY")
         rcphnodes = envvar("RPCH_NODES")
         subgraphurl = envvar("SUBGRAPH_URL")
-        min_database_entries = envvar("MIN_DATABASE_ENTRIES", int)
+        envvar("MIN_ELIGIBLE_PEERS", int)
         envvar("PARAMETER_FILE")
         envvar("PGHOST")
         envvar("PGPORT", int)
@@ -36,9 +36,7 @@ def main():
         log.exception("Missing environment variables")
         exit(ExitCode.ERROR_MISSING_ENV_VARS)
 
-    instance = EconomicHandler(
-        apihost, apikey, rcphnodes, subgraphurl, min_database_entries
-    )
+    instance = EconomicHandler(apihost, apikey, rcphnodes, subgraphurl)
 
     loop = asyncio.new_event_loop()
     loop.add_signal_handler(SIGINT, instance.stop)
