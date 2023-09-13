@@ -230,6 +230,7 @@ class EconomicHandler(HOPRNode):
                 + "Waiting for more peers to be added to the list."
             )
             await asyncio.sleep(30)
+
             async with self.eligible_peers_lock:
                 peers_for_reward = deepcopy(self.eligible_peers)
 

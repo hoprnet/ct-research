@@ -50,8 +50,7 @@ def wakeupcall(
             if message is not None:
                 log.info(message)
 
-            # sleep = next_delay_in_seconds(hours, minutes, seconds)
-            sleep = 30
+            sleep = next_delay_in_seconds(hours, minutes, seconds)
             log.info(f"First start in {sleep} seconds")
             await asyncio.sleep(sleep)
 
