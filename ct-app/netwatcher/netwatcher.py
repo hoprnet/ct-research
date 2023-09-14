@@ -269,7 +269,7 @@ class NetWatcher(HOPRNode):
         low_balance_channels = [
             c
             for c in open_channels
-            if int(c.balance / 1e18) <= envvar("MINIMUM_BALANCE_IN_CHANNEL", float)
+            if int(c.balance) / 1e18 <= envvar("MINIMUM_BALANCE_IN_CHANNEL", float)
         ]
 
         # Getting the peer addresses behind the outgoing opened channels
