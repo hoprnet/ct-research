@@ -243,46 +243,69 @@ class NetWatcher(HOPRNode):
 
         log.info(f"Closed {len(incoming_channels_ids)} incoming channels")
 
-    @formalin(message="Opening channels to peers", sleep=20)
+    @formalin(message="Handling channels to peers", sleep=5 * 60 + 5)
     @connectguard
-    async def open_channels(self):
+    async def handle_channels(self):
         """
         Open channels to peers that have been successfully pinged at least once.
         """
         async with self.peers_pinged_once_lock:
             local_peers_pinged_once = deepcopy(self.peers_pinged_once)
 
-        # getting all channels to filter the outgoing ones from us, and retrieve the
-        # destination addresses of opened outgoing channels
-        channels = await self.api.all_channels(False)
+        # Getting all channels
+        all_channels = await self.api.all_channels(False)
 
-        outgoing_channels_peer_addresses = []
-        for channel in channels.all:
-            if channel.source_peer_id == self.peer_id and channel.status == "Open":
-                outgoing_channels_peer_addresses.append(channel.destination_address)
+        # Filtering outgoing channels
+        outgoing_channels = [
+            c for c in all_channels.all if c.source_peer_id == self.peer_id
+        ]
 
-        num_peers = len(local_peers_pinged_once)
+        # Filtering outgoing channel with status "Open" and "PendingToClose", and low
+        # balance channels
+        open_channels = [c for c in outgoing_channels if c.status == "Open"]
+        pending_to_close_channels = [
+            c for c in outgoing_channels if c.status == "PendingToClose"
+        ]
+        low_balance_channels = [
+            c
+            for c in open_channels
+            if int(c.balance) / 1e18 <= envvar("MINIMUM_BALANCE_IN_CHANNEL", float)
+        ]
 
-        sample_indexes = random.sample(range(num_peers), min(num_peers, 5))
-        subdict_local_peers_pinged_once = {
-            list(local_peers_pinged_once.keys())[i]: list(
-                local_peers_pinged_once.values()
-            )[i]
-            for i in sample_indexes
+        # Getting the peer addresses behind the outgoing opened channels
+        peer_address_behind_open_channels = {
+            c.destination_address for c in open_channels
         }
+        local_peer_addresses = set(local_peers_pinged_once.values())
 
-        for peer_id, peer_address in subdict_local_peers_pinged_once.items():
-            if peer_address in outgoing_channels_peer_addresses:
-                log.info(
-                    f"Channel to {peer_id}({peer_address}) already opened. Skipping.."
-                )
-                continue
+        addresses_without_out_channel = (
+            local_peer_addresses - peer_address_behind_open_channels
+        )
 
-            log.info(f"Opening channel to {peer_id}({peer_address})")
-            success = await self.api.open_channel(
-                peer_address, envvar("CHANNEL_INITIAL_BALANCE")
+        #### CLOSE PENDING TO CLOSE CHANNELS ####
+        for channel in pending_to_close_channels:
+            log.info(
+                f"Closing channel to {channel.channel_id} (was in PendingToClose state)"
             )
-            log.info(f"Channel to {peer_id}({peer_address}) opened: {success}")
+            success = await self.api.close_channel(channel.channel_id)
+            log.info(f"Channel {channel.channel_id} closed: {success}")
+
+        #### CLOSING LOW BALANCE CHANNELS ####
+        for channel in low_balance_channels:
+            log.info(
+                f"Closing channel {channel.channel_id} (balance: {int(channel.balance)/1e18} < "
+                + f"{envvar('MINIMUM_BALANCE_IN_CHANNEL')})"
+            )
+            sucess = await self.api.close_channel(channel.channel_id)
+            log.info(f"Channel {channel.channel_id} closed: {sucess}")
+
+        #### OPEN NEW CHANNELS ####
+        for address in addresses_without_out_channel:
+            log.info(f"Opening channel to {address}")
+            success = await self.api.open_channel(
+                address, envvar("CHANNEL_INITIAL_BALANCE")
+            )
+            log.info(f"Channel to {address} opened: {success}")
 
     async def start(self):
         """
@@ -298,7 +321,7 @@ class NetWatcher(HOPRNode):
         self.tasks.add(asyncio.create_task(self.ping_peers()))
         self.tasks.add(asyncio.create_task(self.transmit_peers()))
         self.tasks.add(asyncio.create_task(self.transmit_balance()))
-        self.tasks.add(asyncio.create_task(self.open_channels()))
+        self.tasks.add(asyncio.create_task(self.handle_channels()))
         # self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
 
         await asyncio.gather(*self.tasks)
