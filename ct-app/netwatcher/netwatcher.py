@@ -204,7 +204,7 @@ class NetWatcher(HOPRNode):
     @formalin(message="Sending node balance", sleep=60 * 5)
     @connectguard
     async def transmit_balance(self):
-        balances = await self.api.balances(["native", "hopr"])
+        balances = await self.api.balances()
 
         log.info(f"Got balances: {balances}")
 
