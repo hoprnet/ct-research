@@ -276,7 +276,7 @@ class NetWatcher(HOPRNode):
         peer_address_behind_open_channels = {
             c.destination_address for c in open_channels
         }
-        local_peer_addresses = list(local_peers_pinged_once.values())
+        local_peer_addresses = set(local_peers_pinged_once.values())
 
         addresses_without_out_channel = (
             local_peer_addresses - peer_address_behind_open_channels
@@ -284,18 +284,20 @@ class NetWatcher(HOPRNode):
 
         #### CLOSE PENDING TO CLOSE CHANNELS ####
         for channel in pending_to_close_channels:
-            log.info(f"Closing channel {channel.id} (was in PendingToClose state)")
-            success = await self.api.close_channel(channel.id)
-            log.info(f"Channel {channel.id} closed: {success}")
+            log.info(
+                f"Closing channel to {channel.channel_id} (was in PendingToClose state)"
+            )
+            success = await self.api.close_channel(channel.channel_id)
+            log.info(f"Channel {channel.channel_id} closed: {success}")
 
         #### CLOSING LOW BALANCE CHANNELS ####
         for channel in low_balance_channels:
             log.info(
-                f"Closing channel {channel.id} (balance: {int(channel.balance)/1e18} < "
+                f"Closing channel {channel.channel_id} (balance: {int(channel.balance)/1e18} < "
                 + f"{envvar('MINIMUM_BALANCE_IN_CHANNEL')})"
             )
-            sucess = await self.api.close_channel(channel.id)
-            log.info(f"Channel {channel.id} closed: {sucess}")
+            sucess = await self.api.close_channel(channel.channel_id)
+            log.info(f"Channel {channel.channel_id} closed: {sucess}")
 
         #### OPEN NEW CHANNELS ####
         for address in addresses_without_out_channel:
