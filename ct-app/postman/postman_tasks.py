@@ -119,24 +119,28 @@ async def async_send_1_hop_message(
         log.error("Could not connect to node. Transfering task to the next node.")
         status = TaskStatus.RETRIED
 
-    while status == TaskStatus.DEFAULT:
+    for index in range(expected_count):
         # node is reachable, messages can be sent
-        successful_sending = await api.send_message(
+        await api.send_message(
             address,
-            f"From CT: rewards partly distributed to {peer_id}",
+            f"From CT: rewards partly distributed to {peer_id} at {timestamp}-{index}",
             [peer_id],
+            tag=0x0320,
         )
-        effective_count += successful_sending
-        await asyncio.sleep(0.1)
 
-        if not successful_sending:
-            log.error(
-                "Could not send message. Transfering remaining ones to the next node."
-            )
-            status = TaskStatus.SPLITTED
+        sending_time = time.time()
+        while time.time() - sending_time < envvar("MESSAGE_DELIVERY_TIMEOUT"):
+            size = await api.messages_size(0x0320)
+            if not size:
+                await asyncio.sleep(0.1)
+                continue
+            await api.messages_pop_all(0x0320)
+            effective_count += size
 
-        if effective_count == expected_count:
-            status = TaskStatus.SUCCESS
+    if effective_count == expected_count:
+        status = TaskStatus.SUCCESS
+    elif effective_count > 0:
+        status = TaskStatus.SPLITTED
 
     log.info(
         f"{effective_count}/{expected_count} messages sent to `{peer_id}` via "
