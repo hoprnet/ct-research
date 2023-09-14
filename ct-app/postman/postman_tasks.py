@@ -118,29 +118,30 @@ async def async_send_1_hop_message(
     if address is None:
         log.error("Could not connect to node. Transfering task to the next node.")
         status = TaskStatus.RETRIED
+    else:
+        for index in range(expected_count):
+            # node is reachable, messages can be sent
+            await api.send_message(
+                address,
+                f"From CT: distribution to {peer_id} at {timestamp}-{index}",
+                [peer_id],
+                tag=0x0320,
+            )
 
-    for index in range(expected_count):
-        # node is reachable, messages can be sent
-        await api.send_message(
-            address,
-            f"From CT: rewards partly distributed to {peer_id} at {timestamp}-{index}",
-            [peer_id],
-            tag=0x0320,
-        )
+            sending_time = time.time()
+            while time.time() - sending_time < envvar("MESSAGE_DELIVERY_TIMEOUT", int):
+                size = await api.messages_size(0x0320)
+                if not size:
+                    await asyncio.sleep(0.1)
+                    continue
+                await api.messages_pop_all(0x0320)
+                effective_count += size
+                break
 
-        sending_time = time.time()
-        while time.time() - sending_time < envvar("MESSAGE_DELIVERY_TIMEOUT"):
-            size = await api.messages_size(0x0320)
-            if not size:
-                await asyncio.sleep(0.1)
-                continue
-            await api.messages_pop_all(0x0320)
-            effective_count += size
-
-    if effective_count == expected_count:
-        status = TaskStatus.SUCCESS
-    elif effective_count > 0:
-        status = TaskStatus.SPLITTED
+        if effective_count == expected_count:
+            status = TaskStatus.SUCCESS
+        else:
+            status = TaskStatus.SPLITTED
 
     log.info(
         f"{effective_count}/{expected_count} messages sent to `{peer_id}` via "
@@ -149,16 +150,15 @@ async def async_send_1_hop_message(
 
     if status != TaskStatus.SUCCESS:
         node_address, node_index = loop_through_nodes(node_list, node_index)
-        log.info(
-            f"Creating task for {node_address} to send {effective_count} messages."
-        )
+        message_count = expected_count - effective_count
+        log.info(f"Creating task for {node_address} to send {message_count} messages.")
 
         try:
             app.send_task(
                 "send_1_hop_message",
                 args=(
                     peer_id,
-                    expected_count - effective_count,
+                    message_count,
                     node_list,
                     node_index,
                     timestamp,
