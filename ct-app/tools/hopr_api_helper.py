@@ -440,7 +440,7 @@ class HoprdAPIHelper:
         :param: tag: int = 0x0320
         :return: bool
         """
-        log.debug("Sending message")
+        log.debug(f"Sending message to {destination} via {hops} with tag {tag}")
 
         body = MessagesBody(tag, message, destination, path=hops)
         try:

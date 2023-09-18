@@ -121,18 +121,22 @@ async def async_send_1_hop_message(
     else:
         for index in range(expected_count):
             # node is reachable, messages can be sent
-            await api.send_message(
+            success = await api.send_message(
                 address,
                 f"From CT: distribution to {peer_id} at {timestamp}-{index}",
                 [peer_id],
-                tag=0x0320,
             )
+
+            if not success:
+                log.error("Could not send message")
+                await asyncio.sleep(0.05)
+                continue
 
             sending_time = time.time()
             while time.time() - sending_time < envvar("MESSAGE_DELIVERY_TIMEOUT", int):
                 size = await api.messages_size(0x0320)
                 if not size:
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(0.05)
                     continue
                 await api.messages_pop_all(0x0320)
                 effective_count += size
