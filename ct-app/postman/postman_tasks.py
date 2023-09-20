@@ -7,6 +7,7 @@ from enum import Enum
 from celery import Celery
 
 from tools import HoprdAPIHelper, envvar, getlogger
+from tools.db_connection import DatabaseConnection, Peer
 
 log = getlogger()
 log.setLevel(logging.INFO)
@@ -29,6 +30,18 @@ class TaskStatus(Enum):
 
 app = Celery(name=envvar("PROJECT_NAME"), broker=envvar("CELERY_BROKER_URL"))
 app.autodiscover_tasks(force=True)
+
+
+def peer_to_tag(peer_id: str) -> int:
+    with DatabaseConnection() as session:
+        entry = session.query(Peer).filter(Peer.peer_id == peer_id).first()
+
+        if entry is None:
+            entry = Peer(peer_id=peer_id)
+            session.add(entry)
+            session.commit()
+
+    return entry.id
 
 
 def loop_through_nodes(node_list: list[str], node_index: int) -> tuple[str, int]:
@@ -60,13 +73,15 @@ async def send_messages_in_batches(
     api: HoprdAPIHelper,
     peer_id: str,
     expected_count: int,
+    already_in_inbox: int,
     address: str,
     timestamp: float,
     batch_size: int,
+    tag: int,
 ):
-    effective_count = 0
+    effective_count = already_in_inbox
 
-    batches = create_batches(expected_count, batch_size)
+    batches = create_batches(expected_count - effective_count, batch_size)
     message_delivery_timeout = envvar("MESSAGE_DELIVERY_TIMEOUT", int)
 
     for batch_index, batch in enumerate(batches):
@@ -79,12 +94,13 @@ async def send_messages_in_batches(
                 f"From CT: distribution to {peer_id} at {timestamp}-"
                 f"{global_index + 1}/{expected_count}",
                 [peer_id],
+                tag,
             )
             await asyncio.sleep(1)
 
         await asyncio.sleep(message_delivery_timeout)
 
-        messages = await api.messages_pop_all(0x0320)
+        messages = await api.messages_pop_all(tag)
         effective_count += len(messages)
 
     return effective_count
@@ -169,10 +185,20 @@ async def async_send_1_hop_message(
         log.error("Could not connect to node. Transfering task to the next node.")
         status = TaskStatus.RETRIED
     else:
-        inbox = await api.messages_pop_all(0x0320)
+        tag = peer_to_tag(address)
+
+        inbox = await api.messages_pop_all(tag)
         already_in_inbox = len(inbox)
+
         effective_count = await send_messages_in_batches(
-            api, peer_id, expected_count, address, timestamp, envvar("BATCH_SIZE", int)
+            api,
+            peer_id,
+            expected_count,
+            already_in_inbox,
+            address,
+            timestamp,
+            envvar("BATCH_SIZE", int),
+            tag,
         )
 
         if effective_count >= expected_count:

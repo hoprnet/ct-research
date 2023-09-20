@@ -48,3 +48,12 @@ class Reward(Base):
             + f"status={self.status!r}, "
             + f"timestamp={self.timestamp})"
         )
+
+
+class Peer(Base):
+    __tablename__ = "peerTable"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    peer_id: Mapped[str]
+
+    def __repr__(self) -> str:
+        return f"Peer(id={self.id!r}, peer_id={self.peer_id!r})"
