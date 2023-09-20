@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import random
 import time
 from enum import Enum
@@ -8,6 +9,7 @@ from celery import Celery
 from tools import HoprdAPIHelper, envvar, getlogger
 
 log = getlogger()
+log.setLevel(logging.INFO)
 
 
 class TaskStatus(Enum):
@@ -20,6 +22,7 @@ class TaskStatus(Enum):
     SUCCESS = "SUCCESS"
     RETRIED = "RETRIED"
     SPLITTED = "SPLITTED"
+    LEFTOVERS = "LEFTOVERS"
     TIMEOUT = "TIMEOUT"
     FAILED = "FAILED"
 
@@ -39,6 +42,52 @@ def loop_through_nodes(node_list: list[str], node_index: int) -> tuple[str, int]
     node_index = (node_index + 1) % len(node_list)
 
     return node_list[node_index], node_index
+
+
+def create_batches(total_count, batch_size):
+    if total_count < 0:
+        return []
+
+    full_batches = total_count // batch_size
+    remainder = total_count % batch_size
+
+    batches: list = [batch_size] * full_batches + [remainder] * bool(remainder)
+
+    return batches
+
+
+async def send_messages_in_batches(
+    api: HoprdAPIHelper,
+    peer_id: str,
+    expected_count: int,
+    address: str,
+    timestamp: float,
+    batch_size: int,
+):
+    effective_count = 0
+
+    batches = create_batches(expected_count, batch_size)
+    message_delivery_timeout = envvar("MESSAGE_DELIVERY_TIMEOUT", int)
+
+    for batch_index, batch in enumerate(batches):
+        for message_index in range(batch):
+            # node is reachable, messages can be sent
+            global_index = message_index + batch_index * batch_size
+
+            await api.send_message(
+                address,
+                f"From CT: distribution to {peer_id} at {timestamp}-"
+                f"{global_index + 1}/{expected_count}",
+                [peer_id],
+            )
+            await asyncio.sleep(1)
+
+        await asyncio.sleep(message_delivery_timeout)
+
+        messages = await api.messages_pop_all(0x0320)
+        effective_count += len(messages)
+
+    return effective_count
 
 
 @app.task(name="send_1_hop_message")
@@ -119,30 +168,13 @@ async def async_send_1_hop_message(
         log.error("Could not connect to node. Transfering task to the next node.")
         status = TaskStatus.RETRIED
     else:
-        for index in range(expected_count):
-            # node is reachable, messages can be sent
-            success = await api.send_message(
-                address,
-                f"From CT: distribution to {peer_id} at {timestamp}-{index}",
-                [peer_id],
-            )
+        inbox = await api.messages_pop_all(0x0320)
+        already_in_inbox = len(inbox)
+        effective_count = await send_messages_in_batches(
+            api, peer_id, expected_count, address, timestamp, envvar("BATCH_SIZE", int)
+        )
 
-            if not success:
-                log.error("Could not send message")
-                await asyncio.sleep(0.05)
-                continue
-
-            sending_time = time.time()
-            while time.time() - sending_time < envvar("MESSAGE_DELIVERY_TIMEOUT", int):
-                size = await api.messages_size(0x0320)
-                if not size:
-                    await asyncio.sleep(0.05)
-                    continue
-                await api.messages_pop_all(0x0320)
-                effective_count += size
-                break
-
-        if effective_count == expected_count:
+        if effective_count >= expected_count:
             status = TaskStatus.SUCCESS
         else:
             status = TaskStatus.SPLITTED
@@ -151,6 +183,8 @@ async def async_send_1_hop_message(
         f"{effective_count}/{expected_count} messages sent to `{peer_id}` via "
         + f"{address} ({api_host})"
     )
+    if already_in_inbox > 0:
+        log.warning(f"{already_in_inbox} messages were already in the inbox")
 
     if status != TaskStatus.SUCCESS:
         node_address, node_index = loop_through_nodes(node_list, node_index)
@@ -167,7 +201,7 @@ async def async_send_1_hop_message(
                     node_index,
                     timestamp,
                 ),
-                queue=node_address,
+                queue=f"{node_address}.local",
             )
         except Exception:
             # shoud never happen. If it does, it means that the targeted queue is not up
@@ -186,6 +220,19 @@ async def async_send_1_hop_message(
             ),
             queue="feedback",
         )
+        if already_in_inbox > 0:
+            app.send_task(
+                "feedback_task",
+                args=(
+                    peer_id,
+                    address,
+                    already_in_inbox,
+                    0,
+                    TaskStatus.LEFTOVERS.value,
+                    timestamp,
+                ),
+                queue="feedback",
+            )
     except Exception:
         # shoud never happen. If it does, it means that the targeted queue is not up
         log.exception("Could not send feedback task")
