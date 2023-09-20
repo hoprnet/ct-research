@@ -150,6 +150,7 @@ async def async_send_1_hop_message(
     feedback_status = TaskStatus.DEFAULT
 
     effective_count = 0
+    already_in_inbox = 0
 
     api = HoprdAPIHelper(api_host, api_key)
 

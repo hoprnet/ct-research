@@ -11,6 +11,7 @@ os.environ["TIMEOUT"] = "5"
 os.environ["MESSAGE_DELIVERY_TIMEOUT"] = "1"
 os.environ["API_HOST"] = "foo_api_host"
 os.environ["API_KEY"] = "foo_api_key"
+os.environ["BATCH_SIZE"] = "50"
 
 
 import postman as pm  # noqa: E402
@@ -60,7 +61,7 @@ async def test_async_send_1_hop_message_hit_retried(mocker):
     mocker.patch("postman.postman_tasks.HoprdAPIHelper.get_address", return_value=None)
     mocker.patch("postman.postman_tasks.HoprdAPIHelper.messages_size", return_value=0)
     mocker.patch(
-        "postman.postman_tasks.HoprdAPIHelper.messages_pop_all", return_value=0
+        "postman.postman_tasks.HoprdAPIHelper.messages_pop_all", return_value=[]
     )
     status, fb_status = await pm.async_send_1_hop_message(
         peer_id="foo_peer_id",
@@ -85,7 +86,7 @@ async def test_async_send_1_hop_message_hit_splitted(mocker):
     mocker.patch("postman.postman_tasks.HoprdAPIHelper.send_message", return_value=None)
     mocker.patch("postman.postman_tasks.HoprdAPIHelper.messages_size", return_value=0)
     mocker.patch(
-        "postman.postman_tasks.HoprdAPIHelper.messages_pop_all", return_value=0
+        "postman.postman_tasks.HoprdAPIHelper.messages_pop_all", return_value=[]
     )
 
     status, fb_status = await pm.async_send_1_hop_message(
@@ -111,7 +112,7 @@ async def test_async_send_1_hop_message_hit_success(mocker):
     mocker.patch("postman.postman_tasks.HoprdAPIHelper.send_message", return_value=None)
     mocker.patch("postman.postman_tasks.HoprdAPIHelper.messages_size", return_value=1)
     mocker.patch(
-        "postman.postman_tasks.HoprdAPIHelper.messages_pop_all", return_value=0
+        "postman.postman_tasks.HoprdAPIHelper.messages_pop_all", return_value=["foo"]
     )
 
     status, fb_status = await pm.async_send_1_hop_message(

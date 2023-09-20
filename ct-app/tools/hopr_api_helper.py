@@ -487,11 +487,11 @@ class HoprdAPIHelper:
 
         return response.size
 
-    async def messages_pop_latest(self, tag: int = 0x0320) -> int:
+    async def messages_pop_latest(self, tag: int = 0x0320):
         """
         Pop latest message from the inbox for the given tag.
         :param: tag: int = 0x0320
-        :return: size: int
+        :return: message:
         """
 
         body = MessagesPopBody(tag)
@@ -512,11 +512,11 @@ class HoprdAPIHelper:
 
         return response
 
-    async def messages_pop_all(self, tag: int = 0x0320) -> int:
+    async def messages_pop_all(self, tag: int = 0x0320) -> list:
         """
         Pop all messages from the inbox for the given tag.
         :param: tag: int = 0x0320
-        :return: size: int
+        :return: messages: list
         """
 
         body = MessagesPopallBody(tag)
