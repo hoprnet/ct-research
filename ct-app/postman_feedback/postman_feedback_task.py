@@ -18,6 +18,7 @@ def feedback_task(
     expected_count: int,
     status: str,
     timestamp: float,
+    issued_count: int,
 ):
     """
     Celery task to store the message delivery status in the database.
@@ -31,6 +32,7 @@ def feedback_task(
             effective_count=effective_count,
             status=status,
             timestamp=datetime.fromtimestamp(timestamp),
+            issued_count=issued_count,
         )
 
         session.add(entry)
