@@ -97,6 +97,7 @@ def send_1_hop_message(
     node_list: list[str],
     node_index: int,
     timestamp: float = None,
+    attempts: int = 0,
 ) -> TaskStatus:
     """
     Celery task to send `messages_count` 1-hop messages to a peer. This method is the
@@ -108,12 +109,15 @@ def send_1_hop_message(
     :param node_list: List of nodes connected to this peer, they can serve as backups.
     :param node_index: Index of the node in the list of nodes.
     :param timestamp: Timestamp at first iteration. For timeout purposes.
+    :param attempts: Number of attempts to send the message regardless of the node.
     """
     if timestamp is None:
         timestamp = time.time()
 
     return asyncio.run(
-        async_send_1_hop_message(peer, expected_count, node_list, node_index, timestamp)
+        async_send_1_hop_message(
+            peer, expected_count, node_list, node_index, timestamp, attempts
+        )
     )
 
 
@@ -123,6 +127,7 @@ async def async_send_1_hop_message(
     node_list: list[str],
     node_index: int,
     timestamp: float,
+    attempts: int,
 ) -> TaskStatus:
     """
     Celery task to send `count` 1-hop messages to a peer in an async manner. A timeout
@@ -133,15 +138,18 @@ async def async_send_1_hop_message(
     :param node_list: List of nodes connected to this peer, they can serve as backups.
     :param node_index: Index of the node in the list of nodes.
     :param timestamp: Timestamp at first iteration. For timeout purposes.
+    :param attempts: Number of attempts to send the message regardless of the node.
     """
 
-    # at the first iteration, the timestamp is set to the current time. At each task
-    # transfer, the method will check if the timestamp is recent enough to consider
+    # at the first iteration, the number of attempts is set to 0. At each task
+    # transfer, the method will check if the counter is still acceptable to consider
     # trying to send a message
-    timeout = envvar("TIMEOUT", int)
-    if time.time() - timestamp > timeout:  # timestamp is older than timeout
-        log.error(f"Trying to send a message for more than {timeout}s, stopping")
+    max_attempts = envvar("MAXATTEMPTS", int)
+    if attempts >= max_attempts:
+        log.error(f"Trying to send a message more than {max_attempts}x, stopping")
         return TaskStatus.TIMEOUT, TaskStatus.DEFAULT
+
+    attempts += 1
 
     # initialize the API helper and task status
     api_host = envvar("API_HOST")
@@ -201,6 +209,7 @@ async def async_send_1_hop_message(
                     node_list,
                     node_index,
                     timestamp,
+                    attempts,
                 ),
                 queue=node_address,
             )
