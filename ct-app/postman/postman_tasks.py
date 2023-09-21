@@ -202,7 +202,7 @@ async def async_send_1_hop_message(
                     node_index,
                     timestamp,
                 ),
-                queue=f"{node_address}.local",
+                queue=node_address,
             )
         except Exception:
             # shoud never happen. If it does, it means that the targeted queue is not up
