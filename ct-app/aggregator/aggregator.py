@@ -231,7 +231,7 @@ class Aggregator(metaclass=Singleton):
             log.debug(f"Latency data converted into an array:\n{lat_as_array}")
 
             # create a dict with the best 'peer: [node]' matchs
-            matchs = multiple_round_node_peer_match(lat_as_array, max_iter=3)
+            matchs = multiple_round_node_peer_match(lat_as_array)
             log.info(f"Matchs with 3 iterations:\n{matchs}")
 
             # convert back each ids in matchs to the original ids
