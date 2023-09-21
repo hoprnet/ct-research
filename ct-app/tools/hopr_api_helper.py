@@ -1,6 +1,11 @@
 import json
 from hoprd_sdk import Configuration, ApiClient
-from hoprd_sdk.models import MessagesBody, ChannelsBody
+from hoprd_sdk.models import (
+    MessagesBody,
+    ChannelsBody,
+    MessagesPopBody,
+    MessagesPopallBody,
+)
 from hoprd_sdk.rest import ApiException
 from hoprd_sdk.api import NodeApi, MessagesApi, AccountApi, ChannelsApi, PeersApi
 from urllib3.exceptions import MaxRetryError
@@ -435,7 +440,7 @@ class HoprdAPIHelper:
         :param: tag: int = 0x0320
         :return: bool
         """
-        log.debug("Sending message")
+        log.debug(f"Sending message to {destination} via {hops} with tag {tag}")
 
         body = MessagesBody(tag, message, destination, path=hops)
         try:
@@ -455,3 +460,79 @@ class HoprdAPIHelper:
             return False
 
         return True
+
+    async def messages_size(self, tag: int = 0x0320) -> int:
+        """
+        Returns the size of the inbox for the given tag.
+        :param: tag: int = 0x0320
+        :return: size: int
+        """
+        log.debug("Getting inbox size")
+
+        try:
+            with ApiClient(self.configuration) as client:
+                message_api = MessagesApi(client)
+                thread = message_api.messages_get_size(tag, async_req=True)
+                response = thread.get()
+        except ApiException as e:
+            body = json.loads(e.body.decode())
+            log.error(f"ApiException calling MessageApi->messages_get_size: {body}")
+            return 0
+        except OSError:
+            log.error("OSError calling MessageApi->messages_get_size")
+            return 0
+        except MaxRetryError:
+            log.error("MaxRetryError calling MessageApi->messages_get_size")
+            return 0
+
+        return response.size
+
+    async def messages_pop_latest(self, tag: int = 0x0320):
+        """
+        Pop latest message from the inbox for the given tag.
+        :param: tag: int = 0x0320
+        :return: message:
+        """
+
+        body = MessagesPopBody(tag)
+        try:
+            with ApiClient(self.configuration) as client:
+                message_api = MessagesApi(client)
+                thread = message_api.messages_pop_message(body=body, async_req=True)
+                response = thread.get()
+        except ApiException as e:
+            log.error(f"ApiException calling MessageApi->messages_pop_message: {e}")
+            return None
+        except OSError:
+            log.error("OSError calling MessageApi->messages_pop_message")
+            return None
+        except MaxRetryError:
+            log.error("MaxRetryError calling MessageApi->messages_pop_message")
+            return None
+
+        return response
+
+    async def messages_pop_all(self, tag: int = 0x0320) -> list:
+        """
+        Pop all messages from the inbox for the given tag.
+        :param: tag: int = 0x0320
+        :return: messages: list
+        """
+
+        body = MessagesPopallBody(tag)
+        try:
+            with ApiClient(self.configuration) as client:
+                message_api = MessagesApi(client)
+                thread = message_api.messages_pop_all_message(body=body, async_req=True)
+                response = thread.get()
+        except ApiException as e:
+            log.error(f"ApiException calling MessageApi->messages_pop_all_message: {e}")
+            return []
+        except OSError:
+            log.error("OSError calling MessageApi->messages_pop_all_message")
+            return []
+        except MaxRetryError:
+            log.error("MaxRetryError calling MessageApi->messages_pop_all_message")
+            return []
+
+        return response.messages
