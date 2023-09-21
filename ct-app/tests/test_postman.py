@@ -85,7 +85,7 @@ async def test_async_send_1_hop_message_hit_splitted(mocker):
     mocker.patch(
         "postman.postman_tasks.HoprdAPIHelper.get_address", return_value="foo_address"
     )
-    mocker.patch("postman.postman_tasks.HoprdAPIHelper.send_message", return_value=None)
+    mocker.patch("postman.postman_tasks.HoprdAPIHelper.send_message", return_value=True)
     mocker.patch("postman.postman_tasks.HoprdAPIHelper.messages_size", return_value=0)
     mocker.patch(
         "postman.postman_tasks.HoprdAPIHelper.messages_pop_all", return_value=[]
@@ -112,7 +112,7 @@ async def test_async_send_1_hop_message_hit_success(mocker):
     mocker.patch(
         "postman.postman_tasks.HoprdAPIHelper.get_address", return_value="foo_address"
     )
-    mocker.patch("postman.postman_tasks.HoprdAPIHelper.send_message", return_value=None)
+    mocker.patch("postman.postman_tasks.HoprdAPIHelper.send_message", return_value=True)
     mocker.patch("postman.postman_tasks.HoprdAPIHelper.messages_size", return_value=1)
     mocker.patch(
         "postman.postman_tasks.HoprdAPIHelper.messages_pop_all", return_value=["foo"]

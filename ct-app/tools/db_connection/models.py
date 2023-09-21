@@ -38,6 +38,7 @@ class Reward(Base):
     effective_count: Mapped[int]
     status: Mapped[str]
     timestamp: Mapped[datetime] = mapped_column(DateTime)
+    issued_count: Mapped[int]
 
     def __repr__(self) -> str:
         return (
@@ -45,6 +46,7 @@ class Reward(Base):
             + f"node_address={self.node_address!r}, "
             + f"expected_count={self.expected_count!r}, "
             + f"effective_count={self.effective_count!r}, "
+            + f"issued_count={self.issued_count!r}, "
             + f"status={self.status!r}, "
             + f"timestamp={self.timestamp})"
         )

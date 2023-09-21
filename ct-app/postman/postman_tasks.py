@@ -65,6 +65,7 @@ async def send_messages_in_batches(
     batch_size: int,
 ):
     effective_count = 0
+    issued_count = 0
 
     batches = create_batches(expected_count, batch_size)
     message_delivery_timeout = envvar("MESSAGE_DELIVERY_TIMEOUT", int)
@@ -74,7 +75,7 @@ async def send_messages_in_batches(
             # node is reachable, messages can be sent
             global_index = message_index + batch_index * batch_size
 
-            await api.send_message(
+            issued_count += await api.send_message(
                 address,
                 f"From CT: distribution to {peer_id} at {timestamp}-"
                 f"{global_index + 1}/{expected_count}",
@@ -87,7 +88,7 @@ async def send_messages_in_batches(
         messages = await api.messages_pop_all(0x0320)
         effective_count += len(messages)
 
-    return effective_count
+    return effective_count, issued_count
 
 
 @app.task(name="send_1_hop_message")
@@ -158,6 +159,7 @@ async def async_send_1_hop_message(
     feedback_status = TaskStatus.DEFAULT
 
     effective_count = 0
+    issued_count = 0
     already_in_inbox = 0
 
     api = HoprdAPIHelper(api_host, api_key)
@@ -179,7 +181,7 @@ async def async_send_1_hop_message(
     else:
         inbox = await api.messages_pop_all(0x0320)
         already_in_inbox = len(inbox)
-        effective_count = await send_messages_in_batches(
+        effective_count, issued_count = await send_messages_in_batches(
             api, peer_id, expected_count, address, timestamp, envvar("BATCH_SIZE", int)
         )
 
@@ -227,6 +229,7 @@ async def async_send_1_hop_message(
                 expected_count,
                 status.value,
                 timestamp,
+                issued_count,
             ),
             queue="feedback",
         )
@@ -240,6 +243,7 @@ async def async_send_1_hop_message(
                     0,
                     TaskStatus.LEFTOVERS.value,
                     timestamp,
+                    0,
                 ),
                 queue="feedback",
             )
