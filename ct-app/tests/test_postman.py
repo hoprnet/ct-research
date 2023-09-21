@@ -7,7 +7,7 @@ os.environ["TASK_NAME"] = "foo_task"
 os.environ["NODE_ADDRESS"] = "0x1234567890"
 os.environ["PROJECT_NAME"] = "foo_project"
 os.environ["CELERY_BROKER_URL"] = "foo_broker_url"
-os.environ["TIMEOUT"] = "5"
+os.environ["MAXATTEMPTS"] = "10"
 os.environ["MESSAGE_DELIVERY_TIMEOUT"] = "1"
 os.environ["API_HOST"] = "foo_api_host"
 os.environ["API_KEY"] = "foo_api_key"
@@ -39,7 +39,7 @@ async def test_async_send_1_hop_message_hit_timeout():
     Test that the async_send_1_hop_message method returns a TIMEOUT status when the last
     known timestamp is older than 5 seconds (set for testing).
     """
-    os.environ["TIMEOUT"] = "5"
+    os.environ["MAXATTEMPTS"] = "1"
 
     status, fb_status = await pm.async_send_1_hop_message(
         peer_id="foo_peer_id",
@@ -47,6 +47,7 @@ async def test_async_send_1_hop_message_hit_timeout():
         node_list=["node1", "node2", "node3"],
         node_index=0,
         timestamp=time.time() - 10,
+        attempts=1,
     )
 
     assert status == pm.TaskStatus.TIMEOUT
@@ -69,6 +70,7 @@ async def test_async_send_1_hop_message_hit_retried(mocker):
         node_list=["node1", "node2", "node3"],
         node_index=0,
         timestamp=time.time(),
+        attempts=0,
     )
 
     assert status == pm.TaskStatus.RETRIED
@@ -95,6 +97,7 @@ async def test_async_send_1_hop_message_hit_splitted(mocker):
         node_list=["node1", "node2", "node3"],
         node_index=0,
         timestamp=time.time(),
+        attempts=0,
     )
 
     assert status == pm.TaskStatus.SPLITTED
@@ -121,6 +124,7 @@ async def test_async_send_1_hop_message_hit_success(mocker):
         node_list=["node1", "node2", "node3"],
         node_index=0,
         timestamp=time.time(),
+        attempts=0,
     )
 
     assert status == pm.TaskStatus.SUCCESS
