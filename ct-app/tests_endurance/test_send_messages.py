@@ -3,8 +3,7 @@ import logging
 
 from tools import HoprdAPIHelper, envvar, getlogger
 
-from .endurance_test import EnduranceTest
-from .metric import Metric
+from . import EnduranceTest, Metric
 
 log = getlogger()
 log.setLevel(logging.ERROR)
@@ -21,28 +20,34 @@ class SendMessages(EnduranceTest):
             relayer_url = envvar("TEST_RELAYER_API_URL")
             relayer_key = envvar("TEST_RELAYER_API_KEY")
         except KeyError:
-            print("No relayer configured, using relayer defined by `peer_id`")
+            self.print("No relayer configured, using relayer defined by `peer_id`")
             self.relayer = envvar("TEST_RELAYER_PEER_ID")
         else:
             relayer_api = HoprdAPIHelper(relayer_url, relayer_key)
             self.relayer = await relayer_api.get_address("hopr")
 
         await self.api.messages_pop_all(envvar("MESSAGE_TAG", int))
-        print(f"Connected to node '...{self.recipient[-10:]}'")
-
-    async def task(self) -> bool:
-        self.results.append(
-            await self.api.send_message(
-                self.recipient,
-                "Load testing",
-                [self.relayer],
-                envvar("MESSAGE_TAG", int),
-            )
+        self.print(
+            f"Connected to node '...{self.recipient[-10:]}', "
+            + f"with relayer '...{self.relayer[-10:]}'"
         )
 
+    async def task(self) -> bool:
+        success = await self.api.send_message(
+            self.recipient,
+            "Load testing",
+            [self.relayer],
+            envvar("MESSAGE_TAG", int),
+        )
+
+        self.results.append(success)
+
     async def on_end(self):
-        print("Waiting 10s for messages to be relayed...")
-        await asyncio.sleep(10)
+        sleep_time = 10
+
+        self.print(f"Waiting {sleep_time}s for messages to be relayed")
+        await asyncio.sleep(sleep_time)
+
         inbox = await self.api.messages_pop_all(envvar("MESSAGE_TAG", int))
         self.inbox_size = len(inbox)
 

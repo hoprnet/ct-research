@@ -1,5 +1,6 @@
 import asyncio
 import time
+from datetime import timedelta
 
 from .metric import Metric
 
@@ -19,6 +20,37 @@ class EnduranceTest(object):
         self.execution_time = None
         self.metric_list: list[Metric] = []
 
+    async def progress_bar(self):
+        """
+        Continuously check the state of tasks in self.tasks, and print the number of
+        completed tasks.
+        """
+        _bar_length = 60
+
+        while True:
+            await asyncio.sleep(0.05)
+
+            completed_tasks = sum(task.done() for task in self.tasks)
+
+            hash_count = int(completed_tasks / (len(self.tasks) - 1) * _bar_length)
+            dash_count = _bar_length - hash_count
+            duration = time.time() - self.start_time
+
+            # format duration to mm:ss using time library
+            duration_f = timedelta(seconds=int(duration))
+            exp_duration_f = timedelta(seconds=int(self.duration))
+
+            print(
+                f"\r|{'#'*hash_count}{' '*dash_count}| "
+                + f"{completed_tasks}/{len(self.tasks)-1} "
+                + f"[{duration_f}/{exp_duration_f}]",
+                end="",
+            )
+
+            if completed_tasks == len(self.tasks) - 1:
+                break
+        print("")
+
     async def delayed_task(self, task, iteration: int):
         await asyncio.sleep((iteration + 1) / self.rate)
 
@@ -33,6 +65,7 @@ class EnduranceTest(object):
             self.tasks.add(
                 asyncio.create_task(self.delayed_task(getattr(self, "task"), it))
             )
+        self.tasks.add(asyncio.create_task(self.progress_bar()))
 
         Metric("Test duration", self.duration, "s").print_line()
         Metric("Test rate", self.rate, "/s").print_line()
@@ -40,13 +73,15 @@ class EnduranceTest(object):
 
         await self.on_start()
 
-        start_time = time.time()
+        self.start_time = time.time()
         await asyncio.gather(*self.tasks)
-        end_time = time.time()
+        self.end_time = time.time()
 
         await self.on_end()
 
-        self.execution_time = Metric("Execution time", end_time - start_time, "s")
+        self.execution_time = Metric(
+            "Execution time", self.end_time - self.start_time, "s"
+        )
 
         self.metrics()
         self._show_metrics()
@@ -54,11 +89,18 @@ class EnduranceTest(object):
     def __call__(self):
         asyncio.run(self._async_run())
 
+    def print(self, *args, **kwargs):
+        # print the message with all passed parameters, but in blue
+        print("\033[94m[+] ", end="")
+        print(*args, **kwargs)
+        print("\033[0m", end="")
+        # reset the terminal to its default color
+
     def _show_metrics(self):
         print("")
         for metric in self.metric_list:
             metric.print_line()
-        print(f"\n{'.'*48}\n")
+        print("")
 
     async def on_start(self):
         raise NotImplementedError(

@@ -1,8 +1,7 @@
 import importlib
 import os
 
-from .endurance_test import EnduranceTest
-from .metric import Metric
+from .module import EnduranceTest, Metric
 
 __all__ = ["EnduranceTest", "Metric"]
 

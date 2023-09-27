@@ -2,7 +2,7 @@ import logging
 
 from tools import getlogger
 
-from .endurance_test import EnduranceTest
+from . import EnduranceTest
 
 log = getlogger()
 log.setLevel(logging.ERROR)
