@@ -32,7 +32,7 @@ class NetWatcher(HOPRNode):
         self.balanceurl = balanceurl
 
         # a list to keep the peers of this node
-        self.peers = list[Peer]()
+        self.peers: list[Peer] = []
 
         # a dict to keep the max_lat_count latency measures along with the timestamp
         self.last_peer_transmission: float = 0
@@ -56,19 +56,18 @@ class NetWatcher(HOPRNode):
         found_peers = await self.api.peers(
             params=["peer_id", "peer_address"], quality=quality
         )
-        new_addresses = [
+        found_addresses = {
             Address(peer["peer_id"], peer["peer_address"]) for peer in found_peers
-        ]
-        old_addresses = [peer.address for peer in self.peers]
+        }
+
+        old_addresses = {peer.address for peer in self.peers}
+        new_addresses = found_addresses - old_addresses
 
         # append peers not in self.peers
         async with self.peers_lock:
-            for address in new_addresses:
-                if address in old_addresses:
-                    continue
-                self.peers.append(Peer(address))
+            self.peers.extend([Peer(address) for address in new_addresses])
 
-        _short_addresses = [address.short_id for address in new_addresses]
+        _short_addresses = [address.short_id for address in found_addresses]
 
         log.info(f"Found {len(_short_addresses)} peers {', '.join(_short_addresses)}")
 
@@ -105,7 +104,6 @@ class NetWatcher(HOPRNode):
         #     - if the peer is known and the last measure is recent, do nothing
         # - if latency measure succeeds, always update
 
-        time.time()
         async with self.peers_lock:
             addresses = [peer.address for peer in self.peers]
             index = addresses.index(rand_peer.address)
@@ -268,14 +266,10 @@ class NetWatcher(HOPRNode):
         ]
 
         # Peer addresses behind the outgoing opened channels
-        peer_address_behind_open_channels = {
-            c.destination_address for c in open_channels
-        }
-        peer_addresses = set([m.address.address for m in local_peers])
+        addresses_behind_open_channels = {c.destination_address for c in open_channels}
+        peer_addresses = {m.address.address for m in local_peers}
 
-        addresses_without_out_channel = (
-            peer_addresses - peer_address_behind_open_channels
-        )
+        addresses_without_out_channel = peer_addresses - addresses_behind_open_channels
 
         #### CLOSE PENDING TO CLOSE CHANNELS ####
         for channel in pending_to_close_channels:
@@ -293,6 +287,12 @@ class NetWatcher(HOPRNode):
             )
             success = await self.api.close_channel(channel.channel_id)
             log.info(f"Channel {channel.channel_id} closed: {success}")
+            if not success:
+                continue
+
+            async with self.peers_lock:
+                addresses = [p.address.address for p in self.peers]
+                self.peers.pop(addresses.index(channel.destination_address))
 
         #### FUND LOW BALANCE CHANNELS ####
         for channel in low_balance_channels:

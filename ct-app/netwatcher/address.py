@@ -12,3 +12,6 @@ class Address:
 
     def __eq__(self, other):
         return self.id == other.id and self.address == other.address
+
+    def __hash__(self):
+        return hash((self.id, self.address))
