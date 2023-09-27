@@ -290,14 +290,17 @@ class NetWatcher(HOPRNode):
             success = await self.api.close_channel(channel.channel_id)
             log.info(f"Channel {channel.channel_id} closed: {success}")
 
-        #### CLOSING LOW BALANCE CHANNELS ####
+        #### FUND LOW BALANCE CHANNELS ####
         for channel in low_balance_channels:
+            balance = int(channel.balance) / 1e18
             log.info(
-                f"Closing channel {channel.channel_id} (balance: {int(channel.balance)/1e18} < "
+                f"Re-funding channel {channel.channel_id} (balance: {balance} < "
                 + f"{envvar('MINIMUM_BALANCE_IN_CHANNEL')})"
             )
-            sucess = await self.api.close_channel(channel.channel_id)
-            log.info(f"Channel {channel.channel_id} closed: {sucess}")
+            sucess = await self.api.fund_channel(
+                channel.channel_id, envvar("CHANNEL_INITIAL_BALANCE")
+            )
+            log.info(f"Channel {channel.channel_id} funded: {sucess}")
 
         #### OPEN NEW CHANNELS ####
         for address in addresses_without_out_channel:
