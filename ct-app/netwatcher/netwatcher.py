@@ -6,8 +6,8 @@ import time
 from tools.decorator import connectguard, formalin
 from tools.hopr_node import HOPRNode
 from tools.utils import getlogger, post_dictionary, envvar
-from .latency_measure import LatencyMeasure
 from .peer import Peer
+from .address import Address
 
 log = getlogger()
 
@@ -35,12 +35,11 @@ class NetWatcher(HOPRNode):
         self.peers = list[Peer]()
 
         # a dict to keep the max_lat_count latency measures along with the timestamp
-        self.measures = dict[str, LatencyMeasure]()
         self.last_peer_transmission: float = 0
 
         self.max_lat_count = max_lat_count
 
-        self.measures_lock = asyncio.Lock()
+        self.peers_lock = asyncio.Lock()
 
         super().__init__(url, key)
 
@@ -57,13 +56,21 @@ class NetWatcher(HOPRNode):
         found_peers = await self.api.peers(
             params=["peer_id", "peer_address"], quality=quality
         )
-
-        self.peers = [
-            Peer(peer["peer_id"], peer["peer_address"]) for peer in found_peers
+        new_addresses = [
+            Address(peer["peer_id"], peer["peer_address"]) for peer in found_peers
         ]
-        _short_peers = [".." + peer.short_id for peer in self.peers]
+        old_addresses = [peer.address for peer in self.peers]
 
-        log.info(f"Found {len(found_peers)} peers {', '.join(_short_peers)}")
+        # append peers not in self.peers
+        async with self.peers_lock:
+            for address in new_addresses:
+                if address in old_addresses:
+                    continue
+                self.peers.append(Peer(address))
+
+        _short_addresses = [address.short_id for address in new_addresses]
+
+        log.info(f"Found {len(_short_addresses)} peers {', '.join(_short_addresses)}")
 
     @formalin(message="Pinging peers", sleep=1)
     @connectguard
@@ -89,8 +96,8 @@ class NetWatcher(HOPRNode):
         if envvar("MOCK_LATENCY", int):
             latency = random.randint(0, 100)
         else:
-            latency = await self.api.ping(rand_peer.id, "latency")
-            log.debug(f"Measured latency to {rand_peer.id[-5:]}: {latency}ms")
+            latency = await self.api.ping(rand_peer.address.id, "latency")
+            log.debug(f"Measured latency to {rand_peer.address.short_id}: {latency}ms")
 
         # latency update rule is:
         # - if latency measure fails:
@@ -98,24 +105,24 @@ class NetWatcher(HOPRNode):
         #     - if the peer is known and the last measure is recent, do nothing
         # - if latency measure succeeds, always update
 
-        now = time.time()
-        async with self.measures_lock:
+        time.time()
+        async with self.peers_lock:
+            addresses = [peer.address for peer in self.peers]
+            index = addresses.index(rand_peer.address)
+
             if latency != 0:
-                self.measures[rand_peer.id] = LatencyMeasure(
-                    latency, now, rand_peer, True
-                )
+                self.peers[index].value = latency
 
                 return
 
             log.warning(f"Failed to ping {rand_peer.id}")
 
-            if (
-                rand_peer.id not in self.measures
-                or self.measures[rand_peer.id].value is None
-            ):
-                log.debug(f"Adding {rand_peer.id} to latency dictionary with value -1")
+            if self.peers[index].value is None:
+                log.debug(
+                    f"Adding {rand_peer.address.id} to latency dictionary with value -1"
+                )
+                self.peers[index].value = -1
 
-                self.measures[rand_peer.id] = LatencyMeasure(-1, now, rand_peer, True)
                 return
 
             log.debug(f"Keeping {rand_peer.id} in latency dictionary (recent measure)")
@@ -126,41 +133,34 @@ class NetWatcher(HOPRNode):
         """
         Sends the detected peers to the Aggregator
         """
-        measures_to_send: list[LatencyMeasure] = []
-
         # access the peers address in the latency dictionary in a thread-safe way
-        async with self.measures_lock:
-            local_measures = deepcopy(self.measures)
+        async with self.peers_lock:
+            local_peers = deepcopy(self.peers)
 
         # convert the latency dictionary to a simpler dictionary for the aggregator
-        for measure in local_measures.values():
-            if not measure.transmit:
-                continue
-            measures_to_send.append(measure)
+        peers_to_send = [peer for peer in local_peers if peer.transmit]
 
         # pick randomly `self.max_lat_count` peers from peer values
-        selected_measures = random.sample(
-            measures_to_send, k=min(self.max_lat_count, len(measures_to_send))
+        selected_peers = random.sample(
+            peers_to_send, k=min(self.max_lat_count, len(peers_to_send))
         )
 
         # checks if transmission needs to be triggered by peer-list size
-        if len(selected_measures) == self.max_lat_count:
+        if len(selected_peers) == self.max_lat_count:
             log.info("Peers transmission triggered by latency dictionary size")
         # checks if transmission needs to be triggered by timestamp
         elif (
             time.time() - self.last_peer_transmission > 60 * 5
-            and len(selected_measures) != 0
+            and len(selected_peers) != 0
         ):  # 5 minutes
             log.info("Peers transmission triggered by timestamp")
         else:
-            log.info(
-                f"Peer transmission skipped. {len(selected_measures)} peers waiting"
-            )
+            log.info(f"Peer transmission skipped. {len(selected_peers)} peers waiting")
             return
 
         data = {
             "id": self.peer_id,
-            "peers": {measure.node.id: measure.value for measure in selected_measures},
+            "peers": {peer.address.id: peer.value for peer in selected_peers},
         }
 
         # send peer list to aggregator.
@@ -175,17 +175,18 @@ class NetWatcher(HOPRNode):
             return
 
         log.info(
-            f"Transmitted {len(selected_measures)} peers: "
-            + f"{', '.join([m.short_id for m in selected_measures])}"
+            f"Transmitted {len(selected_peers)} peers: "
+            + f"{', '.join([peer.address.short_id for peer in selected_peers])}"
         )
 
         # reset the transmitted key-value pair from self.latency in a
         # thread-safe way
-        async with self.measures_lock:
+        async with self.peers_lock:
             self.last_peer_transmission = time.time()
-            for measure in selected_measures:
-                self.measures[measure.node.id].value = None
-                self.measures[measure.node.id].transmit = False
+            addresses = [peer.address for peer in self.peers]
+
+            for peer in selected_peers:
+                self.peers[addresses.index(peer.address)].value = None
 
     @formalin(message="Sending node balance", sleep=60 * 5)
     @connectguard
@@ -235,8 +236,8 @@ class NetWatcher(HOPRNode):
         """
         Open channels to peers that have been successfully pinged at least once.
         """
-        async with self.measures_lock:
-            local_measures: dict[str, LatencyMeasure] = deepcopy(self.measures)
+        async with self.peers_lock:
+            local_peers: list[Peer] = deepcopy(self.peers)
 
         # Getting all channels
         all_channels = await self.api.all_channels(False)
@@ -248,7 +249,7 @@ class NetWatcher(HOPRNode):
 
         # Peer addresses of peer not connected for more than 1 day
         not_connected_nodes = [
-            m.node.address for m in local_measures.values() if m.close_channel
+            m.address.address for m in local_peers if m.close_channel
         ]
         not_connected_nodes_channels = [
             c for c in outgoing_channels if c.destination_address in not_connected_nodes
@@ -270,7 +271,7 @@ class NetWatcher(HOPRNode):
         peer_address_behind_open_channels = {
             c.destination_address for c in open_channels
         }
-        peer_addresses = set([m.node.address for m in local_measures.values()])
+        peer_addresses = set([m.address.address for m in local_peers])
 
         addresses_without_out_channel = (
             peer_addresses - peer_address_behind_open_channels

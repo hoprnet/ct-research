@@ -1,5 +1,5 @@
 from .netwatcher import NetWatcher
-from .latency_measure import LatencyMeasure
+from .address import Address
 from .peer import Peer
 
-__all__ = ["NetWatcher", "LatencyMeasure", "Peer"]
+__all__ = ["NetWatcher", "Address", "Peer"]
