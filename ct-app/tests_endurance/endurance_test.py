@@ -49,25 +49,41 @@ class EnduranceTest(object):
         self.execution_time = Metric("Execution time", end_time - start_time, "s")
 
         self.metrics()
-        self.show_metrics()
+        self._show_metrics()
 
     def __call__(self):
         asyncio.run(self._async_run())
 
-    def show_metrics(self):
+    def _show_metrics(self):
         print("")
         for metric in self.metric_list:
             metric.print_line()
         print(f"\n{'.'*48}\n")
 
     async def on_start(self):
-        raise NotImplementedError("Method `on_start` not implemented.")
+        raise NotImplementedError(
+            "Method `on_start` not implemented. "
+            + "Please create it with the following signature: "
+            + "`async def on_start(self): ...`"
+        )
 
     async def task(self):
-        raise NotImplementedError("Method `task` not implemented.")
+        raise NotImplementedError(
+            "Method `task` not implemented. "
+            + "Please create it with the following signature: "
+            + "`async def task(self): ...`"
+        )
 
     async def on_end(self):
-        raise NotImplementedError("Method `on_end` not implemented.")
+        raise NotImplementedError(
+            "Method `on_end` not implemented. "
+            + "Please create it with the following signature: "
+            + "`async def on_end(self): ...`"
+        )
 
     def metrics(self):
-        raise NotImplementedError("Method `metrics` not implemented.")
+        raise NotImplementedError(
+            "Method `metrics` not implemented. "
+            + "Please create it with the following signature: "
+            + "`def metrics(self): ...`"
+        )
