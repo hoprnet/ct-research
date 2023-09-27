@@ -19,17 +19,30 @@ class SendMessages(EnduranceTest):
         try:
             relayer_url = envvar("TEST_RELAYER_API_URL")
             relayer_key = envvar("TEST_RELAYER_API_KEY")
-        except KeyError:
-            self.print("No relayer configured, using relayer defined by `peer_id`")
+        except ValueError:
+            self.warning("No relayer configured, using relayer defined by `peer_id`")
             self.relayer = envvar("TEST_RELAYER_PEER_ID")
         else:
             relayer_api = HoprdAPIHelper(relayer_url, relayer_key)
             self.relayer = await relayer_api.get_address("hopr")
 
         await self.api.messages_pop_all(envvar("MESSAGE_TAG", int))
-        self.print(
+        self.info(
             f"Connected to node '...{self.recipient[-10:]}', "
             + f"with relayer '...{self.relayer[-10:]}'"
+        )
+
+        channels = await self.api.all_channels(False)
+        channel = [
+            c
+            for c in channels.all
+            if c.status == "Open"
+            and c.destination_peer_id == self.relayer
+            and c.source_peer_id == self.recipient
+        ][0]
+        self.info(
+            f"Using channel '{channel.channel_id}' "
+            + f"({channel.status} with {channel.balance}HOPR)"
         )
 
     async def task(self) -> bool:
@@ -45,8 +58,11 @@ class SendMessages(EnduranceTest):
     async def on_end(self):
         sleep_time = 10
 
-        self.print(f"Waiting {sleep_time}s for messages to be relayed")
-        await asyncio.sleep(sleep_time)
+        if sum(self.results) > 0:
+            self.info(f"Waiting {sleep_time}s for messages to be relayed")
+            await asyncio.sleep(sleep_time)
+        else:
+            self.warning("No messages were relayed, skipping wait")
 
         inbox = await self.api.messages_pop_all(envvar("MESSAGE_TAG", int))
         self.inbox_size = len(inbox)

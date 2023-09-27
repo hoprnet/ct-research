@@ -32,7 +32,7 @@ def main(configfile: str):
         len(value["stages"])
         for stage_idx, stage in enumerate(value["stages"]):
             print("\033[1m", end="")
-            print(f"[+] stage {stage_idx+1}/{len(value['stages'])}", end="")
+            print(f"  [+] stage {stage_idx+1}/{len(value['stages'])}", end="")
             print("\033[0m")
             eval(value.get("executor"))(**stage)()
 

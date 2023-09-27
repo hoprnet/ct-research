@@ -1,4 +1,5 @@
 import asyncio
+import pprint
 import time
 from datetime import timedelta
 
@@ -89,10 +90,26 @@ class EnduranceTest(object):
     def __call__(self):
         asyncio.run(self._async_run())
 
-    def print(self, *args, **kwargs):
-        # print the message with all passed parameters, but in blue
+    def info(self, *args, **kwargs):
         print("\033[94m[+] ", end="")
         print(*args, **kwargs)
+        print("\033[0m", end="")
+
+    def warning(self, *args, **kwargs):
+        # print the message with all passed parameters, but in orange
+        print("\033[93m[+] ", end="")
+        print(*args, **kwargs)
+        print("\033[0m", end="")
+
+    def error(self, *args, **kwargs):
+        print("\033[91m[+] ", end="")
+        print(*args, **kwargs)
+        print("\033[0m", end="")
+
+    def pprint(self, *args, **kwargs):
+        # print the message with all passed parameters, but in green
+        print("\033[94m[+] ", end="")
+        pprint.pprint(*args, **kwargs)
         print("\033[0m", end="")
         # reset the terminal to its default color
 
