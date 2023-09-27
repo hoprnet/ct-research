@@ -6,6 +6,8 @@ import time
 from tools.decorator import connectguard, formalin
 from tools.hopr_node import HOPRNode
 from tools.utils import getlogger, post_dictionary, envvar
+from .latency_measure import LatencyMeasure
+from .peer import Peer
 
 log = getlogger()
 
@@ -30,20 +32,15 @@ class NetWatcher(HOPRNode):
         self.balanceurl = balanceurl
 
         # a list to keep the peers of this node
-        self.peers = list[dict]()
+        self.peers = list[Peer]()
 
         # a dict to keep the max_lat_count latency measures along with the timestamp
-        self.latency = dict[str, dict]()
+        self.measures = dict[str, LatencyMeasure]()
         self.last_peer_transmission: float = 0
-
-        # a dict to store all the peers that have been pinged at least once.
-        # Used to open channels
-        self.peers_pinged_once = {}
 
         self.max_lat_count = max_lat_count
 
-        self.latency_lock = asyncio.Lock()
-        self.peers_pinged_once_lock = asyncio.Lock()
+        self.measures_lock = asyncio.Lock()
 
         super().__init__(url, key)
 
@@ -61,8 +58,11 @@ class NetWatcher(HOPRNode):
             params=["peer_id", "peer_address"], quality=quality
         )
 
-        _short_peers = [".." + peer["peer_id"][-5:] for peer in found_peers]
-        self.peers = found_peers
+        self.peers = [
+            Peer(peer["peer_id"], peer["peer_address"]) for peer in found_peers
+        ]
+        _short_peers = [".." + peer.short_id for peer in self.peers]
+
         log.info(f"Found {len(found_peers)} peers {', '.join(_short_peers)}")
 
     @formalin(message="Pinging peers", sleep=1)
@@ -85,51 +85,40 @@ class NetWatcher(HOPRNode):
 
         # pick a random peer to ping among all peers
         rand_peer = random.choice(self.peers)
-        rand_peer_id = rand_peer["peer_id"]
-        rand_peer_address = rand_peer["peer_address"]  # noqa: F841
 
         if envvar("MOCK_LATENCY", int):
             latency = random.randint(0, 100)
         else:
-            latency = await self.api.ping(rand_peer_id, "latency")
-            log.debug(f"Measured latency to {rand_peer_id[-5:]}: {latency}ms")
+            latency = await self.api.ping(rand_peer.id, "latency")
+            log.debug(f"Measured latency to {rand_peer.id[-5:]}: {latency}ms")
 
         # latency update rule is:
         # - if latency measure fails:
         #     - if the peer is not known, add it with value -1 and set timestamp
         #     - if the peer is known and the last measure is recent, do nothing
         # - if latency measure succeeds, always update
-        if latency != 0:
-            async with self.peers_pinged_once_lock:
-                self.peers_pinged_once[rand_peer_id] = rand_peer_address
 
         now = time.time()
-        async with self.latency_lock:
+        async with self.measures_lock:
             if latency != 0:
-                self.latency[rand_peer_id] = {
-                    "value": latency,
-                    "timestamp": now,
-                    "transmit": True,
-                }
+                self.measures[rand_peer.id] = LatencyMeasure(
+                    latency, now, rand_peer, True
+                )
 
                 return
 
-            log.warning(f"Failed to ping {rand_peer_id}")
+            log.warning(f"Failed to ping {rand_peer.id}")
 
             if (
-                rand_peer_id not in self.latency
-                or self.latency[rand_peer_id]["value"] is None
+                rand_peer.id not in self.measures
+                or self.measures[rand_peer.id].value is None
             ):
-                log.debug(f"Adding {rand_peer_id} to latency dictionary with value -1")
+                log.debug(f"Adding {rand_peer.id} to latency dictionary with value -1")
 
-                self.latency[rand_peer_id] = {
-                    "value": -1,
-                    "timestamp": now,
-                    "transmit": True,
-                }
+                self.measures[rand_peer.id] = LatencyMeasure(-1, now, rand_peer, True)
                 return
 
-            log.debug(f"Keeping {rand_peer_id} in latency dictionary (recent measure)")
+            log.debug(f"Keeping {rand_peer.id} in latency dictionary (recent measure)")
 
     @formalin(message="Initiated peers transmission", sleep=20)
     @connectguard
@@ -137,50 +126,41 @@ class NetWatcher(HOPRNode):
         """
         Sends the detected peers to the Aggregator
         """
-        peers_to_send: dict[str, int] = {}
+        measures_to_send: list[LatencyMeasure] = []
 
         # access the peers address in the latency dictionary in a thread-safe way
-        async with self.latency_lock:
-            peers_measures = deepcopy(self.latency)
+        async with self.measures_lock:
+            local_measures = deepcopy(self.measures)
 
         # convert the latency dictionary to a simpler dictionary for the aggregator
-        now = time.time()
-        for peer, measure in peers_measures.items():
-            if (
-                now - measure["timestamp"] > 60 * 60 * 2
-                and measure["value"] is not None
-            ):
-                measure["value"] = -1
-                measure["transmit"] = True
-
-            if measure["transmit"] is False:
+        for measure in local_measures.values():
+            if not measure.transmit:
                 continue
-
-            peers_to_send[peer] = measure["value"]
+            measures_to_send.append(measure)
 
         # pick randomly `self.max_lat_count` peers from peer values
-        selected_peers_values = random.sample(
-            list(peers_to_send.items()), k=min(self.max_lat_count, len(peers_to_send))
+        selected_measures = random.sample(
+            measures_to_send, k=min(self.max_lat_count, len(measures_to_send))
         )
 
         # checks if transmission needs to be triggered by peer-list size
-        if len(selected_peers_values) == self.max_lat_count:
+        if len(selected_measures) == self.max_lat_count:
             log.info("Peers transmission triggered by latency dictionary size")
         # checks if transmission needs to be triggered by timestamp
         elif (
             time.time() - self.last_peer_transmission > 60 * 5
-            and len(selected_peers_values) != 0
+            and len(selected_measures) != 0
         ):  # 5 minutes
             log.info("Peers transmission triggered by timestamp")
         else:
             log.info(
-                f"Peer transmission skipped. {len(selected_peers_values)} peers waiting"
+                f"Peer transmission skipped. {len(selected_measures)} peers waiting"
             )
             return
 
         data = {
             "id": self.peer_id,
-            "peers": {peer: value for peer, value in selected_peers_values},
+            "peers": {measure.node.id: measure.value for measure in selected_measures},
         }
 
         # send peer list to aggregator.
@@ -194,20 +174,18 @@ class NetWatcher(HOPRNode):
             log.error("Peers transmission failed")
             return
 
-        filtered_peers = [peer for peer, _ in selected_peers_values]
-
-        _short_filter_peers = [".." + peer[-5:] for peer in filtered_peers]
         log.info(
-            f"Transmitted {len(filtered_peers)} peers: {', '.join(_short_filter_peers)}"
+            f"Transmitted {len(selected_measures)} peers: "
+            + f"{', '.join([m.short_id for m in selected_measures])}"
         )
 
         # reset the transmitted key-value pair from self.latency in a
         # thread-safe way
-        async with self.latency_lock:
+        async with self.measures_lock:
             self.last_peer_transmission = time.time()
-            for peer in filtered_peers:
-                self.latency[peer]["value"] = None
-                self.latency[peer]["transmit"] = False
+            for measure in selected_measures:
+                self.measures[measure.node.id].value = None
+                self.measures[measure.node.id].transmit = False
 
     @formalin(message="Sending node balance", sleep=60 * 5)
     @connectguard
@@ -257,8 +235,8 @@ class NetWatcher(HOPRNode):
         """
         Open channels to peers that have been successfully pinged at least once.
         """
-        async with self.peers_pinged_once_lock:
-            local_peers_pinged_once = deepcopy(self.peers_pinged_once)
+        async with self.measures_lock:
+            local_measures: dict[str, LatencyMeasure] = deepcopy(self.measures)
 
         # Getting all channels
         all_channels = await self.api.all_channels(False)
@@ -266,6 +244,14 @@ class NetWatcher(HOPRNode):
         # Filtering outgoing channels
         outgoing_channels = [
             c for c in all_channels.all if c.source_peer_id == self.peer_id
+        ]
+
+        # Peer addresses of peer not connected for more than 1 day
+        not_connected_nodes = [
+            m.node.address for m in local_measures.values() if m.close_channel
+        ]
+        not_connected_nodes_channels = [
+            c for c in outgoing_channels if c.destination_address in not_connected_nodes
         ]
 
         # Filtering outgoing channel with status "Open" and "PendingToClose", and low
@@ -280,20 +266,29 @@ class NetWatcher(HOPRNode):
             if int(c.balance) / 1e18 <= envvar("MINIMUM_BALANCE_IN_CHANNEL", float)
         ]
 
-        # Getting the peer addresses behind the outgoing opened channels
+        # Peer addresses behind the outgoing opened channels
         peer_address_behind_open_channels = {
             c.destination_address for c in open_channels
         }
-        local_peer_addresses = set(local_peers_pinged_once.values())
+        peer_addresses = set([m.node.address for m in local_measures.values()])
 
         addresses_without_out_channel = (
-            local_peer_addresses - peer_address_behind_open_channels
+            peer_addresses - peer_address_behind_open_channels
         )
 
         #### CLOSE PENDING TO CLOSE CHANNELS ####
         for channel in pending_to_close_channels:
             log.info(
                 f"Closing channel to {channel.channel_id} (was in PendingToClose state)"
+            )
+            success = await self.api.close_channel(channel.channel_id)
+            log.info(f"Channel {channel.channel_id} closed: {success}")
+
+        #### CLOSE CHANNELS TO PEERS NOT CONNECTED PEERS ####
+        for channel in not_connected_nodes_channels:
+            log.info(
+                f"Closing channel to {channel.channel_id} "
+                + "(peer not connected for a long time)"
             )
             success = await self.api.close_channel(channel.channel_id)
             log.info(f"Channel {channel.channel_id} closed: {success}")

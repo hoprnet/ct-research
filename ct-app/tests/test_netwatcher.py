@@ -23,7 +23,7 @@ def mock_decorator(*args, **kwargs):
 patch("tools.decorator.wakeupcall", mock_decorator).start()
 patch("tools.decorator.formalin", mock_decorator).start()
 
-from netwatcher import NetWatcher  # noqa: E402
+from netwatcher import NetWatcher, Peer  # noqa: E402
 from tools.hopr_api_helper import HoprdAPIHelper  # noqa: E402
 
 
@@ -84,8 +84,8 @@ def mock_instance_for_test_ping(mocker):
 
     instance = NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl")
     instance.peers = [
-        {"peer_id": "some_peer", "peer_address": "some_address"},
-        {"peer_id": "some_other_peer", "peer_address": "some_other_address"},
+        Peer("some_peer", "some_address"),
+        Peer("some_other_peer", "some_other_address"),
     ]
     instance.api = api
 
@@ -112,7 +112,7 @@ async def test_ping_peers(mock_instance_for_test_ping: NetWatcher):
     instance.started = False
     await asyncio.sleep(1)
 
-    assert len(instance.latency) == 1
+    assert len(instance.measures) == 1
 
 
 @pytest.fixture
@@ -123,7 +123,7 @@ def mock_instance_for_test_transmit(mocker):
 
     instance = NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl")
     instance.peers = ["some_peer", "some_other_peer"]
-    instance.latency = {"some_peer": 10, "some_other_peer": 20}
+    instance.measures = {"some_peer": 10, "some_other_peer": 20}
 
     return instance
 
