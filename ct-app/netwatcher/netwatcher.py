@@ -106,7 +106,11 @@ class NetWatcher(HOPRNode):
         now = time.time()
         async with self.latency_lock:
             if latency != 0:
-                self.latency[rand_peer_id] = {"value": latency, "timestamp": now}
+                self.latency[rand_peer_id] = {
+                    "value": latency,
+                    "timestamp": now,
+                    "transmit": True,
+                }
 
                 return
 
@@ -118,7 +122,11 @@ class NetWatcher(HOPRNode):
             ):
                 log.debug(f"Adding {rand_peer_id} to latency dictionary with value -1")
 
-                self.latency[rand_peer_id] = {"value": -1, "timestamp": now}
+                self.latency[rand_peer_id] = {
+                    "value": -1,
+                    "timestamp": now,
+                    "transmit": True,
+                }
                 return
 
             log.debug(f"Keeping {rand_peer_id} in latency dictionary (recent measure)")
@@ -143,10 +151,9 @@ class NetWatcher(HOPRNode):
                 and measure["value"] is not None
             ):
                 measure["value"] = -1
+                measure["transmit"] = True
 
-            if measure["value"] is None:
-                continue
-            if measure["value"] == 0:
+            if measure["transmit"] is False:
                 continue
 
             peers_to_send[peer] = measure["value"]
@@ -167,7 +174,7 @@ class NetWatcher(HOPRNode):
             log.info("Peers transmission triggered by timestamp")
         else:
             log.info(
-                f"Peer transmission skipped. {len(selected_peers_values)} peers waiting.."
+                f"Peer transmission skipped. {len(selected_peers_values)} peers waiting"
             )
             return
 
@@ -199,7 +206,8 @@ class NetWatcher(HOPRNode):
         async with self.latency_lock:
             self.last_peer_transmission = time.time()
             for peer in filtered_peers:
-                self.latency[peer] = {"value": None, "timestamp": 0}
+                self.latency[peer]["value"] = None
+                self.latency[peer]["transmit"] = False
 
     @formalin(message="Sending node balance", sleep=60 * 5)
     @connectguard
