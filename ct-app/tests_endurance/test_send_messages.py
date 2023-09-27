@@ -17,6 +17,16 @@ class SendMessages(EnduranceTest):
         self.api = HoprdAPIHelper(envvar("API_URL"), envvar("API_KEY"))
         self.recipient = await self.api.get_address("hopr")
 
+        try:
+            relayer_url = envvar("TEST_RELAYER_API_URL")
+            relayer_key = envvar("TEST_RELAYER_API_KEY")
+        except KeyError:
+            print("No relayer configured, using relayer defined by `peer_id`")
+            self.relayer = envvar("TEST_RELAYER_PEER_ID")
+        else:
+            relayer_api = HoprdAPIHelper(relayer_url, relayer_key)
+            self.relayer = await relayer_api.get_address("hopr")
+
         await self.api.messages_pop_all(envvar("MESSAGE_TAG", int))
         print(f"Connected to node '...{self.recipient[-10:]}'")
 
@@ -25,7 +35,7 @@ class SendMessages(EnduranceTest):
             await self.api.send_message(
                 self.recipient,
                 "Load testing",
-                [envvar("TEST_RELAYER_PEER_ID")],
+                [self.relayer],
                 envvar("MESSAGE_TAG", int),
             )
         )
