@@ -36,8 +36,7 @@ class SendMessages(EnduranceTest):
         channel = [
             c
             for c in channels.all
-            if c.status == "Open"
-            and c.destination_peer_id == self.relayer
+            if c.destination_peer_id == self.relayer
             and c.source_peer_id == self.recipient
         ][0]
         self.info(
@@ -56,7 +55,7 @@ class SendMessages(EnduranceTest):
         self.results.append(success)
 
     async def on_end(self):
-        sleep_time = 10
+        sleep_time = 2.5
 
         if sum(self.results) > 0:
             self.info(f"Waiting {sleep_time}s for messages to be relayed")
