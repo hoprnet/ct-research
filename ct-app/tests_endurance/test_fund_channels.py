@@ -53,7 +53,7 @@ class FundChannels(EnduranceTest):
             self.error(f"Balance not changed after {timeout}s")
             self.final_balance = self.inital_balance
 
-    def metrics(self):
+    def metrics(self) -> list[Metric]:
         exp_fundings = Metric("Expected fundings", len(self.results), "x")
         initial_balance = Metric("Initial balance", self.inital_balance)
 

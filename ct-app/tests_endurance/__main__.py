@@ -42,6 +42,7 @@ def main(configfile: str):
 
     num_scenarios = len(scenarios)
 
+    scenarios_results = []
     for scenario_idx, (key, value) in enumerate(scenarios.items()):
         env: dict = value.get("env", {})
 
@@ -56,15 +57,48 @@ def main(configfile: str):
 
         stages = value.get("stages", [])
         num_stages = len(stages)
+        stage_results = []
         for stage_idx, stage in enumerate(stages, 1):
             EnduranceTest.bold(f"stage [{stage_idx}/{num_stages}]", prefix="\t")
 
-            eval(value.get("executor"))(**stage)()
+            success = eval(value.get("executor"))(**stage)()
+
+            stage_results.append(success)
+            display_success(success)
+
+        successful_stages = sum(stage_results)
+        scenarios_results.append(successful_stages == num_stages)
+
+        display_results(successful_stages, num_stages, "test")
 
         del_envvars(env.keys())
 
+    successful_scenarios = sum(scenarios_results)
+    print("." * 45)
+    display_results(successful_scenarios, num_scenarios, "scenario")
+
     del_envvars(["LOG_LEVEL", "LOG_ENABLED"])
     del_envvars(global_env.keys())
+
+
+def display_success(success: bool):
+    if success:
+        EnduranceTest.success("Test successful", prefix="\t", end="\n" * 2)
+    else:
+        EnduranceTest.error("Test failed", prefix="\t", end="\n" * 2)
+
+
+def display_results(hit: int, total: int, element: str):
+    if hit == total:
+        method = EnduranceTest.success
+    elif hit > 0:
+        method = EnduranceTest.warning
+    else:
+        method = EnduranceTest.error
+
+    plural = "s" if hit > 1 else ""
+
+    method(f"{hit}/{total} {element}{plural} passed", end="\n" * 2)
 
 
 if __name__ == "__main__":

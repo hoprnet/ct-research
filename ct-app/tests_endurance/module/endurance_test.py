@@ -51,16 +51,20 @@ class EnduranceTest(object):
             duration_f = timedelta(seconds=int(duration))
             exp_duration_f = timedelta(seconds=int(self.duration))
 
-            print(
+            str_to_print = (
                 f"\r|{'#'*hash_count}{' '*dash_count}| "
                 + f"{completed_tasks}/{len(self.tasks)-1} "
-                + f"[{duration_f}/{exp_duration_f}]",
-                end="",
+                + f"[{duration_f}/{exp_duration_f}]"
             )
+            print(str_to_print, end="")
 
             if completed_tasks == len(self.tasks) - 1:
                 break
-        print("")
+
+        print("\r" + " " * len(str_to_print), end="\r")
+
+        plural = "s" if completed_tasks > 1 else ""
+        self.info(f"Executed {completed_tasks} task{plural} in {duration_f}")
 
     async def delayed_task(self, task, iteration: int):
         await asyncio.sleep((iteration + 1) / self.rate)
@@ -97,8 +101,10 @@ class EnduranceTest(object):
         self.metric_list = self.metrics()
         self._show_metrics()
 
+        return self.success_flag()
+
     def __call__(self):
-        asyncio.run(self._async_run())
+        return asyncio.run(self._async_run())
 
     def _show_metrics(self):
         print("")
@@ -106,35 +112,43 @@ class EnduranceTest(object):
 
         for metric in self.metric_list:
             metric.print_line()
-        print("")
 
     async def on_start(self):
         raise NotImplementedError(
             "Method `on_start` not implemented. "
-            + "Please create it with the following signature: "
-            + "`async def on_start(self): ...`"
+            + "Please create it with the following signature:\n"
+            + "async def on_start(self) -> None"
         )
 
     async def task(self):
         raise NotImplementedError(
             "Method `task` not implemented. "
-            + "Please create it with the following signature: "
-            + "`async def task(self): ...`"
+            + "Please create it with the following signature:\n"
+            + "async def task(self): -> None"
         )
 
     async def on_end(self):
         raise NotImplementedError(
             "Method `on_end` not implemented. "
-            + "Please create it with the following signature: "
-            + "`async def on_end(self): ...`"
+            + "Please create it with the following signature:\n"
+            + "async def on_end(self) -> None"
         )
 
-    def metrics(self):
-        raise NotImplementedError(
-            "Method `metrics` not implemented. "
-            + "Please create it with the following signature: "
-            + "`def metrics(self): ...`"
+    def success_flag(self):
+        self.warning(
+            "Method `success_flag` not implemented. "
+            + "Please create it with the following signature:\n"
+            + "def success_flag(self): -> bool"
         )
+        return True
+
+    def metrics(self):
+        self.warning(
+            "Method `metrics` not implemented. "
+            + "Please create it with the following signature:\n"
+            + "def metrics(self): -> list[Metric]"
+        )
+        return []
 
     @classmethod
     def _color_print(cls, color: int, *args, **kwargs):
@@ -156,18 +170,27 @@ class EnduranceTest(object):
 
     @classmethod
     def bold(cls, *args, **kwargs):
+        kwargs["prefix"] = kwargs.get("prefix", "[•] ")
         cls._color_print(1, *args, **kwargs)
 
     @classmethod
+    def success(cls, *args, **kwargs):
+        kwargs["prefix"] = kwargs.get("prefix", "[+] ")
+        cls._color_print(92, *args, **kwargs)
+
+    @classmethod
     def info(cls, *args, **kwargs):
+        kwargs["prefix"] = kwargs.get("prefix", "[-] ")
         cls._color_print(94, *args, **kwargs)
 
     @classmethod
     def warning(cls, *args, **kwargs):
+        kwargs["prefix"] = kwargs.get("prefix", "[w] ")
         cls._color_print(93, *args, **kwargs)
 
     @classmethod
     def error(cls, *args, **kwargs):
+        kwargs["prefix"] = kwargs.get("prefix", "[e] ")
         cls._color_print(91, *args, **kwargs)
 
     @classmethod

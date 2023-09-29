@@ -57,6 +57,9 @@ class SendMessages(EnduranceTest):
         inbox = await self.api.messages_pop_all(envvar("MESSAGE_TAG", int))
         self.inbox_size = len(inbox)
 
+    def success_flag(self) -> bool:
+        return sum(self.results) / len(self.results) >= 0.9
+    
     def metrics(self):
         # Messages counts
         expected_messages = Metric(
@@ -114,3 +117,5 @@ class SendMessages(EnduranceTest):
             issuing_speed,
             delivery_speed,
         ]
+
+    
