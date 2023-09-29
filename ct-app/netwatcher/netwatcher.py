@@ -109,21 +109,21 @@ class NetWatcher(HOPRNode):
             index = addresses.index(rand_peer.address)
 
             if latency != 0:
-                self.peers[index].value = latency
-
+                self.peers[index].latency = latency
                 return
 
-            log.warning(f"Failed to ping {rand_peer.id}")
+            log.warning(f"Failed to ping {rand_peer.address.id}")
 
-            if self.peers[index].value is None:
+            if self.peers[index].latency is None:
                 log.debug(
                     f"Adding {rand_peer.address.id} to latency dictionary with value -1"
                 )
-                self.peers[index].value = -1
-
+                self.peers[index].latency = -1
                 return
 
-            log.debug(f"Keeping {rand_peer.id} in latency dictionary (recent measure)")
+            log.debug(
+                f"Keeping {rand_peer.address.id} in latency dictionary (recent measure)"
+            )
 
     @formalin(message="Initiated peers transmission", sleep=20)
     @connectguard
@@ -158,7 +158,7 @@ class NetWatcher(HOPRNode):
 
         data = {
             "id": self.peer_id,
-            "peers": {peer.address.id: peer.value for peer in selected_peers},
+            "peers": {peer.address.id: peer.latency for peer in selected_peers},
         }
 
         # send peer list to aggregator.
@@ -184,7 +184,7 @@ class NetWatcher(HOPRNode):
             addresses = [peer.address for peer in self.peers]
 
             for peer in selected_peers:
-                self.peers[addresses.index(peer.address)].value = None
+                self.peers[addresses.index(peer.address)].latency = None
 
     @formalin(message="Sending node balance", sleep=60 * 5)
     @connectguard
@@ -264,12 +264,19 @@ class NetWatcher(HOPRNode):
             for c in open_channels
             if int(c.balance) / 1e18 <= envvar("MINIMUM_BALANCE_IN_CHANNEL", float)
         ]
+        addresses_behind_low_balance_channels = {
+            c.destination_address for c in low_balance_channels
+        }
 
         # Peer addresses behind the outgoing opened channels
         addresses_behind_open_channels = {c.destination_address for c in open_channels}
         peer_addresses = {m.address.address for m in local_peers}
 
-        addresses_without_out_channel = peer_addresses - addresses_behind_open_channels
+        addresses_without_out_channel = (
+            peer_addresses
+            - addresses_behind_open_channels
+            - addresses_behind_low_balance_channels
+        )
 
         #### CLOSE PENDING TO CLOSE CHANNELS ####
         for channel in pending_to_close_channels:
@@ -345,3 +352,8 @@ class NetWatcher(HOPRNode):
             task.cancel()
 
         self.tasks = set()
+
+
+# 0.00000000000000001
+# 0xd3ab7e252b5d7e00b6ce8bb8349d597872684430
+# 0x840d0fbaa1d92cabc2e810355f69b8b900658646

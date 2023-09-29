@@ -6,25 +6,28 @@ class Peer:
     def __init__(
         self,
         address: Address,
-        value: int = None,
+        latency: int = None,
         timestamp: float = None,
         transmit: bool = False,
     ):
-        """
-        Initialisation of the class.
-        """
         self.address = address
-        self._value = value
+        self._latency = latency
         self.timestamp = timestamp
         self._transmit = transmit
 
     @property
     def transmit(self) -> bool:
+        if not self.timestamp:
+            return False
+
+        if not self.latency:
+            return False
+
         if self._transmit:
             return True
 
-        if time.time() - self.timestamp > 60 * 60 * 2 and self.value is not None:
-            self.value = -1
+        if time.time() - self.timestamp > 60 * 60 * 2:
+            self.latency = -1
             return True
 
         return False
@@ -35,18 +38,20 @@ class Peer:
 
     @property
     def close_channel(self) -> bool:
+        if not self.timestamp:
+            return False
+
         return time.time() - self.timestamp > 60 * 60 * 24
 
     @property
-    def value(self) -> int:
-        return self._value
+    def latency(self) -> int:
+        return self._latency
 
-    @value.setter
-    def value(self, value: int or None):
-        self._value = value
+    @latency.setter
+    def latency(self, value: int or None):
+        self._latency = value
+
+        self.transmit = value is not None
 
         if value is not None:
             self.timestamp = time.time()
-            self.transmit = True
-        else:
-            self.transmit = False
