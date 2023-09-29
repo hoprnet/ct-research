@@ -14,9 +14,16 @@ class SendMessages(EnduranceTest):
         self.recipient = await self.api.get_address("hopr")
 
         channels = await self.api.all_channels(False)
-        channel = random.choice(
-            [c for c in channels.all if c.source_peer_id == self.recipient]
-        )
+        open_channels = [
+            c
+            for c in channels.all
+            if c.source_peer_id == self.recipient and c.status == "Open"
+        ]
+
+        if len(open_channels) == 0:
+            raise Exception("No open channels found")
+
+        channel = random.choice(open_channels)
 
         self.relayer = channel.destination_peer_id
 
@@ -39,7 +46,7 @@ class SendMessages(EnduranceTest):
         self.results.append(success)
 
     async def on_end(self):
-        sleep_time = 2.5
+        sleep_time = envvar("DELAY_BEFORE_INBOX_CHECK", float)
 
         if sum(self.results) > 0:
             self.info(f"Waiting {sleep_time}s for messages to be relayed")

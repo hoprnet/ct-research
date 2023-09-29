@@ -8,6 +8,7 @@ scenarios:
     - duration: 3
       rate: 1
     env:
+      DELAY_BEFORE_INBOX_CHECK: 2.5
       MESSAGE_TAG: 801
   fund_channel:
     executor: FundChannels
