@@ -1,0 +1,27 @@
+---
+scenarios:
+  one_hop:
+    executor: SendMessages
+    description: Send messages through a staging node
+    execute: true
+    stages:
+    - duration: 3
+      rate: 1
+    env:
+      MESSAGE_TAG: 801
+  fund_channel:
+    executor: FundChannels
+    description: Fund channels
+    execute: true
+    stages:
+    - duration: 2
+      rate: 0.5
+    env:
+      FUND_AMOUNT: '1'
+      BALANCE_CHANGE_TIMEOUT: 5
+logs:
+  level: ERROR
+  enabled: false
+global_env:
+  API_URL: ""
+  API_KEY: ""

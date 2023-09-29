@@ -1,11 +1,4 @@
-import logging
-
-from tools import getlogger
-
 from . import EnduranceTest, Metric
-
-log = getlogger()
-log.setLevel(logging.ERROR)
 
 
 class SampleCounter(EnduranceTest):

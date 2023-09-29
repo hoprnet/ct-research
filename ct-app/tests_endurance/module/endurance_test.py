@@ -1,9 +1,14 @@
 import asyncio
+import logging
 import pprint
 import time
 from datetime import timedelta
 
+from tools.utils import envvar, getlogger
+
 from .metric import Metric
+
+log = getlogger()
 
 
 class EnduranceTest(object):
@@ -20,21 +25,26 @@ class EnduranceTest(object):
         self.results = None
         self.execution_time = None
         self.metric_list: list[Metric] = []
+        self._progress_bar_length = 45
+
+        log.setLevel(getattr(logging, envvar("LOG_LEVEL", default="INFO")))
+        log.disabled = not envvar("LOG_ENABLED", type=bool, default=True)
 
     async def progress_bar(self):
         """
         Continuously check the state of tasks in self.tasks, and print the number of
         completed tasks.
         """
-        _bar_length = 60
 
         while True:
             await asyncio.sleep(0.05)
 
             completed_tasks = sum(task.done() for task in self.tasks)
 
-            hash_count = int(completed_tasks / (len(self.tasks) - 1) * _bar_length)
-            dash_count = _bar_length - hash_count
+            hash_count = int(
+                completed_tasks / (len(self.tasks) - 1) * self._progress_bar_length
+            )
+            dash_count = self._progress_bar_length - hash_count
             duration = time.time() - self.start_time
 
             # format duration to mm:ss using time library
@@ -84,37 +94,16 @@ class EnduranceTest(object):
             "Execution time", self.end_time - self.start_time, "s"
         )
 
-        self.metrics()
+        self.metric_list = self.metrics()
         self._show_metrics()
 
     def __call__(self):
         asyncio.run(self._async_run())
 
-    def info(self, *args, **kwargs):
-        print("\033[94m[+] ", end="")
-        print(*args, **kwargs)
-        print("\033[0m", end="")
-
-    def warning(self, *args, **kwargs):
-        # print the message with all passed parameters, but in orange
-        print("\033[93m[+] ", end="")
-        print(*args, **kwargs)
-        print("\033[0m", end="")
-
-    def error(self, *args, **kwargs):
-        print("\033[91m[+] ", end="")
-        print(*args, **kwargs)
-        print("\033[0m", end="")
-
-    def pprint(self, *args, **kwargs):
-        # print the message with all passed parameters, but in green
-        print("\033[94m[+] ", end="")
-        pprint.pprint(*args, **kwargs)
-        print("\033[0m", end="")
-        # reset the terminal to its default color
-
     def _show_metrics(self):
         print("")
+        self.metric_list.insert(0, self.execution_time)
+
         for metric in self.metric_list:
             metric.print_line()
         print("")
@@ -146,3 +135,41 @@ class EnduranceTest(object):
             + "Please create it with the following signature: "
             + "`def metrics(self): ...`"
         )
+
+    @classmethod
+    def _color_print(cls, color: int, *args, **kwargs):
+        prefix = kwargs.pop("prefix", "[+] ")
+        no_prefix = kwargs.pop("no_prefix", False)
+
+        if no_prefix:
+            prefix = ""
+
+        print(f"\033[{color}m{prefix}", end="")
+        print(*args, **kwargs)
+        print("\033[0m", end="")
+
+    @classmethod
+    def _color_pprint(cls, color: int, *args, **kwargs):
+        print(f"\033[{color}m[+] ", end="")
+        pprint.pprint(*args, **kwargs)
+        print("\033[0m", end="")
+
+    @classmethod
+    def bold(cls, *args, **kwargs):
+        cls._color_print(1, *args, **kwargs)
+
+    @classmethod
+    def info(cls, *args, **kwargs):
+        cls._color_print(94, *args, **kwargs)
+
+    @classmethod
+    def warning(cls, *args, **kwargs):
+        cls._color_print(93, *args, **kwargs)
+
+    @classmethod
+    def error(cls, *args, **kwargs):
+        cls._color_print(91, *args, **kwargs)
+
+    @classmethod
+    def pprint(cls, *args, **kwargs):
+        cls._color_pprint(94, *args, **kwargs)

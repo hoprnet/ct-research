@@ -44,9 +44,11 @@ class Metric:
         else:
             prefix = "✓" if self.cdt else "✗"
 
+        value_format = "s" if isinstance(self.value, str) else "6.2f"
+
         print(
             f"{prefix} {self.text} {'.'*(30-len(self.text))}: "
-            + f"{self.value:6.2f} {self.suffix}"
+            + f"{self.value:{value_format}} {self.suffix}"
         )
 
     def __repr__(self):

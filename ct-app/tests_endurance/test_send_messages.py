@@ -1,12 +1,9 @@
 import asyncio
-import logging
+import random
 
-from tools import HoprdAPIHelper, envvar, getlogger
+from tools import HoprdAPIHelper, envvar
 
 from . import EnduranceTest, Metric
-
-log = getlogger()
-log.setLevel(logging.ERROR)
 
 
 class SendMessages(EnduranceTest):
@@ -16,33 +13,20 @@ class SendMessages(EnduranceTest):
         self.api = HoprdAPIHelper(envvar("API_URL"), envvar("API_KEY"))
         self.recipient = await self.api.get_address("hopr")
 
-        try:
-            relayer_url = envvar("TEST_RELAYER_API_URL")
-            relayer_key = envvar("TEST_RELAYER_API_KEY")
-        except ValueError:
-            self.warning("No relayer configured, using relayer defined by `peer_id`")
-            self.relayer = envvar("TEST_RELAYER_PEER_ID")
-        else:
-            relayer_api = HoprdAPIHelper(relayer_url, relayer_key)
-            self.relayer = await relayer_api.get_address("hopr")
+        channels = await self.api.all_channels(False)
+        channel = random.choice(
+            [c for c in channels.all if c.source_peer_id == self.recipient]
+        )
+
+        self.relayer = channel.destination_peer_id
+
+        self.info(f"Connected to node {self.recipient}")
+        self.info(f"relayer: {self.relayer}", prefix="\t")
+        self.info(f"channel: {channel.channel_id}", prefix="\t")
+        self.info(f"status : {channel.status}", prefix="\t")
+        self.info(f"balance: {channel.balance}HOPR", prefix="\t")
 
         await self.api.messages_pop_all(envvar("MESSAGE_TAG", int))
-        self.info(
-            f"Connected to node '...{self.recipient[-10:]}', "
-            + f"with relayer '...{self.relayer[-10:]}'"
-        )
-
-        channels = await self.api.all_channels(False)
-        channel = [
-            c
-            for c in channels.all
-            if c.destination_peer_id == self.relayer
-            and c.source_peer_id == self.recipient
-        ][0]
-        self.info(
-            f"Using channel '{channel.channel_id}' "
-            + f"({channel.status} with {channel.balance}HOPR)"
-        )
 
     async def task(self) -> bool:
         success = await self.api.send_message(
@@ -114,8 +98,7 @@ class SendMessages(EnduranceTest):
         )
 
         # Export metrics
-        self.metric_list = [
-            self.execution_time,
+        return [
             expected_messages,
             issued_messages,
             relayed_messages,

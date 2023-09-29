@@ -5,6 +5,7 @@ from hoprd_sdk.models import (
     ChannelsBody,
     MessagesPopBody,
     MessagesPopallBody,
+    ChannelidFundBody,
 )
 from hoprd_sdk.rest import ApiException
 from hoprd_sdk.api import NodeApi, MessagesApi, AccountApi, ChannelsApi, PeersApi
@@ -246,6 +247,64 @@ class HoprdAPIHelper:
             return []
         else:
             return response
+
+    async def channel(self, channel_id: str):
+        """
+        Returns information about the channel with the given id.
+        :param: channel_id: str
+        :return: channel: dict
+        """
+        log.debug(f"Getting channel with id {channel_id}")
+
+        try:
+            with ApiClient(self.configuration) as client:
+                channels_api = ChannelsApi(client)
+                thread = channels_api.channels_get_channel(channel_id, async_req=True)
+                response = thread.get()
+        except ApiException as e:
+            body = json.loads(e.body.decode())
+            log.error(f"ApiException calling ChannelsApi->channels_get_channel: {body}")
+            return None
+        except OSError:
+            log.error("OSError calling ChannelsApi->channels_get_channel")
+            return None
+        except MaxRetryError:
+            log.error("MaxRetryError calling ChannelsApi->channels_get_channel")
+            return None
+
+        return response
+
+    async def fund_channel(self, channel_id: str, amount: str):
+        """
+        Funds a given channel.
+        :param: channel_id: str
+        :param: amount: str
+        :return: bool
+        """
+        log.debug(f"Funding channel with id {channel_id}")
+
+        body = ChannelidFundBody(amount=amount)
+        try:
+            with ApiClient(self.configuration) as client:
+                channels_api = ChannelsApi(client)
+                thread = channels_api.channels_fund_channel(
+                    channel_id, body=body, async_req=True
+                )
+                thread.get()
+        except ApiException as e:
+            body = json.loads(e.body.decode())
+            log.error(
+                f"ApiException calling ChannelsApi->channels_fund_channel: {body}"
+            )
+            return False
+        except OSError:
+            log.error("OSError calling ChannelsApi->channels_fund_channel")
+            return False
+        except MaxRetryError:
+            log.error("MaxRetryError calling ChannelsApi->channels_fund_channel")
+            return False
+
+        return True
 
     async def get_unique_nodeAddress_peerId_aggbalance_links(self):
         """
