@@ -5,15 +5,25 @@ scenarios:
     description: Send messages through a staging node
     execute: true
     stages:
-    - duration: 3
-      rate: 1
+    - duration: 30
+      rate: 5    
+    - duration: 30
+      rate: 5
+    - duration: 30
+      rate: 5
+    - duration: 30
+      rate: 10
+    - duration: 30
+      rate: 10
+    - duration: 30
+      rate: 10
     env:
-      DELAY_BEFORE_INBOX_CHECK: 2.5
+      DELAY_BEFORE_INBOX_CHECK: 10
       MESSAGE_TAG: 801
   fund_channel:
     executor: FundChannels
     description: Fund channels
-    execute: true
+    execute: false
     stages:
     - duration: 2
       rate: 0.5
