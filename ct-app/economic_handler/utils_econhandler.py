@@ -158,11 +158,11 @@ def reward_probability(peers: list[Peer]):
 
 
 def save_dict_to_csv(
-    data: dict, filename_prefix: str = "file", foldername: str = "output"
+    peers: list[Peer], filename_prefix: str = "file", foldername: str = "output"
 ) -> bool:
     """
     Saves a dictionary as a CSV file
-    :param: data (dict): A dictionary to be saved.
+    :param: peers:
     :param: filename_prefix (str): The prefix of the filename.
     :param: foldername (str): The name of the folder where the file will be saved.
     :returns: bool: No meaning except that it allows testing of the function.
@@ -171,12 +171,13 @@ def save_dict_to_csv(
     filename = f"{filename_prefix}_{timestamp}.csv"
     file_path = os.path.join(foldername, filename)
 
-    column_names = ["peer_id"] + list(list(data.values())[0].keys())
+    column_names = ["peer_id"] + list(peers[0].attribute_to_export().keys())
 
     lines = [column_names]
 
-    for key, value in data.items():
-        lines.append([key] + list(value.values()))
+    for peer in peers:
+        line = [peer.id] + list(peer.attribute_to_export().values())
+        lines.append(line)
 
     write_csv_on_gcp("ct-platform-ct", file_path, lines)
 
@@ -184,11 +185,11 @@ def save_dict_to_csv(
     return True
 
 
-def push_jobs_to_celery_queue(dataset: dict):
+def push_jobs_to_celery_queue(peers: list[Peer]):
     """
     Sends jobs to the celery queue including the number of jobs and an ordered
     list of postmans that execute the jobs.
-    :param: dataset (dict): Contains the job number and postman list by peer id.
+    :param: peers:
     :returns: nothing.
     """
     app = Celery(
@@ -197,14 +198,14 @@ def push_jobs_to_celery_queue(dataset: dict):
     )
     app.autodiscover_tasks(force=True)
 
-    for peer_id, value in dataset.items():
-        node_list = value["node_peer_ids"]
-        count = value["jobs"]
+    for peer in peers:
+        node_list = peer.node_ids
+        count = peer.message_count_for_reward
         node_index = 0
 
         app.send_task(
             envvar("TASK_NAME"),
-            args=(peer_id, count, node_list, node_index),
+            args=(peer.id, count, node_list, node_index),
             queue=node_list[node_index],
         )
 

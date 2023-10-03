@@ -117,3 +117,32 @@ class Peer:
                 self.safe_balance,
             ]
         )
+
+    def attribute_to_export(self):
+        if self.economic_model is None:
+            raise ValueError("Economic model not set")
+
+        return {
+            "source_node_address": self.address,
+            "channels_balance": self.channel_balance,
+            "node_peer_ids": self.node_ids,
+            "safe_address": self.safe_address,
+            "safe_balance": self.safe_balance,
+            "total_balance": self.total_balance,
+            "safe_address_count": self.safe_address_count,
+            "splitted_stake": self.split_stake,
+            "trans_stake": self.transformed_stake,
+            "prob": self.reward_probability,
+            "budget": self.economic_model.budget.budget,
+            "budget_split_ratio": self.economic_model.budget.s,
+            "distribution_frequency": self.economic_model.budget.distribution_frequency,
+            "budget_period_in_sec": self.economic_model.budget.period,
+            "apy_pct": self.apy_percentage,
+            "total_expected_reward": self.expected_reward,
+            "airdrop_expected_reward": self.airdrop_reward,
+            "protocol_exp_reward": self.protocol_reward,
+            "protocol_exp_reward_per_dist": self.protocol_reward_per_distribution,
+            "ticket_price": self.economic_model.budget.ticket_price,
+            "winning_prob": self.economic_model.budget.winning_probability,
+            "jobs": self.message_count_for_reward,
+        }

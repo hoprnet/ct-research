@@ -24,6 +24,8 @@ from .utils_econhandler import (
     save_dict_to_csv,
 )
 
+from .peer import Peer
+
 log = getlogger()
 
 
@@ -80,7 +82,7 @@ class EconomicHandler(HOPRNode):
         # self.rpch_nodes = None
         self.ct_nodes = None
 
-        self.eligible_peers = {}
+        self.eligible_peers: list[Peer] = []
 
         self.topology_lock = asyncio.Lock()
         self.database_lock = asyncio.Lock()
@@ -382,7 +384,6 @@ class EconomicHandler(HOPRNode):
                 }
             }
         """
-
         data = {
             "query": query,
             "variables": {
