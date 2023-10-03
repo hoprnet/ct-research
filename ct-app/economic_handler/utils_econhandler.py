@@ -8,6 +8,9 @@ from assets.parameters_schema import schema as schema_name
 from tools import envvar, getlogger, write_csv_on_gcp, read_json_on_gcp
 from tools.db_connection import DatabaseConnection, NodePeerConnection
 
+from .peer import Peer
+from .economic_model import EconomicModel
+
 log = getlogger()
 
 
@@ -24,34 +27,25 @@ def merge_topology_database_subgraph(
     :param: subgraph_dict: A dict containing subgraph data with safe address as the key.
     :returns: A dict with peer ID as the key and the merged information.
     """
-    merged_result = {}
+    merged_result: list[Peer] = []
 
     # Merge based on peer ID with the channel topology as the baseline
     for peer_id, data in topology_dict.items():
-        log.debug(f"Peer {peer_id} seen in topology")
-        seen_in_database = False
-        seen_in_subgraph = False
+        peer = Peer(
+            peer_id,
+            data.get("source_node_address", None),
+            data.get("channels_balance", None),
+        )
 
-        if peer_id in database_dict:
-            metrics_data = database_dict[peer_id]
-            data["node_peer_ids"] = metrics_data["node_peer_ids"]
-            seen_in_database = True
-            log.debug(f"Peer {peer_id} found in database")
+        peer_in_subgraph: dict = subgraph_dict.get(peer.address, {})
+        peer_in_database: dict = database_dict.get(peer.id, {})
 
-        source_node_address = data["source_node_address"]
-        if source_node_address in subgraph_dict:
-            subgraph_data = subgraph_dict[source_node_address]
-            data["safe_address"] = subgraph_data["safe_address"]
-            data["safe_balance"] = float(subgraph_data["wxHOPR_balance"])
-            data["total_balance"] = data["channels_balance"] + data["safe_balance"]
+        peer.node_ids = peer_in_database.get("node_peer_ids", None)
+        peer.safe_address = peer_in_subgraph.get("safe_address", None)
+        peer.safe_balance = peer_in_subgraph.get("wxHOPR_balance", None)
 
-            seen_in_subgraph = True
-            log.debug(f"Source node address for {peer_id} found in subgraph")
-
-        log.debug(f"{peer_id}:{seen_in_database}, {seen_in_subgraph}")
-
-        if seen_in_database and seen_in_subgraph:
-            merged_result[peer_id] = data
+        if peer.complete:
+            merged_result.append(peer)
 
     log.debug(f"Merged data sources: {merged_result}")
     log.info("Merged data successfully.")
@@ -60,7 +54,7 @@ def merge_topology_database_subgraph(
     return merged_result
 
 
-def exclude_elements(source_data: dict, blacklist: list):
+def exclude_elements(source_data: list[Peer], blacklist: list):
     """
     Removes elements from a dictionary based on a blacklist.
     :param: source_data (dict): The dictionary to be updated.
@@ -68,143 +62,99 @@ def exclude_elements(source_data: dict, blacklist: list):
     :returns: nothing.
     """
 
-    for key in blacklist:
-        if key not in source_data:
-            continue
-        del source_data[key]
-        log.warning(f"Excluded {key} from the dataset.")
+    peer_ids = [peer.id for peer in source_data]
+    indexes = [peer_ids.index(peer_id) for peer_id in blacklist if peer_id in peer_ids]
 
-    log.info(f"Excluded up to {len(blacklist)} entries.")
+    # Remove elements from the list
+    for index in sorted(indexes, reverse=True):
+        peer: Peer = source_data.pop(index=index)
+        log.info(f"Excluded {peer.id} from the dataset.")
+
+    log.info(f"Excluded {len(index)} entries.")
 
 
-def allow_many_node_per_safe(input_dict: dict):
+def allow_many_node_per_safe(peers: list[Peer]):
     """
     Split the stake managed by a safe address equaly between the nodes
     that the safe manages.
-    :param: input_dict: dictionary containing peerID, nodeAddress, safeAdress
-        and total balance.
+    :param: peer: list of peers
     :returns: nothing.
     """
-    safe_address_counts = {}
+    safe_counts = {peer.safe_address: 0 for peer in peers}
 
     # Calculate the number of safe_addresses related to a node address
-    for value in input_dict.values():
-        safe_address = value["safe_address"]
-
-        if safe_address not in safe_address_counts:
-            safe_address_counts[safe_address] = 0
-
-        safe_address_counts[safe_address] += 1
+    for peer in peers:
+        safe_counts[peer.safe_address] += 1
 
     # Update the input_dict with the calculated splitted_stake
-    for value in input_dict.values():
-        safe_address = value["safe_address"]
-        channels_balance = value["channels_balance"]
-        safe_balance = value["safe_balance"]
-        value["safe_address_count"] = safe_address_counts[safe_address]
-
-        value["splitted_stake"] = (
-            safe_balance / value["safe_address_count"]
-        ) + channels_balance
+    for peer in peers:
+        peer.safe_address_count = safe_counts[peer.safe_address]
 
     log.info("Stake splitted successfully.")
 
 
-def reward_probability(eligible_peers: dict, equations: dict, parameters: dict):
+def reward_probability(peers: list[Peer]):
     """
     Evaluate the function for each stake value in the eligible_peers dictionary.
     :param eligible_peers: A dict containing the data.
-    :param: equations: A dict containing the equations and conditions.
-    :param: parameters: A dict containing the parameter values.
     :returns: nothing.
     """
-    results = {}
-    f_x_condition = equations["f_x"]["condition"]
 
-    # compute transformed stake
-    params = {param: value["value"] for param, value in parameters.items()}
+    indexes_to_remove = [idx for idx, peer in enumerate(peers) if peer.has_low_stake]
 
-    peers_to_remove = []
-    for peer, value in eligible_peers.items():
-        log.debug(f"{peer=}, {value=}, {params=}")
-        if value["splitted_stake"] >= params["l"]:
-            continue
+    # remove entries from the list
+    for index in sorted(indexes_to_remove, reverse=True):
+        peers.pop(index=index)
 
-        peers_to_remove.append(peer)
-
-    for peer in peers_to_remove:
-        del eligible_peers[peer]
-
-    log.info(f"Excluded {len(peers_to_remove)} peers from the dataset.")
-    log.debug(f"Excluded peers: {peers_to_remove}")
-
-    for peer in eligible_peers:
-        params["x"] = eligible_peers[peer]["splitted_stake"]
-
-        try:
-            function = "f_x" if eval(f_x_condition, params) else "g_x"
-            formula = equations[function]["formula"]
-            results[peer] = {"trans_stake": eval(formula, params)}
-
-        except Exception:
-            log.exception(f"Error evaluating reward probabilty for peer {peer}")
-            return
-
-        log.debug(f"Peer{peer} rewards probablity evaluated successfully.")
+    log.info(f"Excluded {len(indexes_to_remove)} peers from the dataset.")
 
     # compute ct probability
-    total_tf_stake = sum(result["trans_stake"] for result in results.values())
-
-    for key in results:
-        results[key]["prob"] = results[key]["trans_stake"] / total_tf_stake
-
-    # update dictionary with model results
-    for key in eligible_peers:
-        if key in results:
-            eligible_peers[key].update(results[key])
+    total_tf_stake = sum(peer.transformed_stake for peer in peers)
+    for peer in peers:
+        peer.reward_probability = peer.transformed_stake / total_tf_stake
 
     log.info("Reward probabilty calculated successfully.")
 
 
-def compute_rewards(dataset: dict, budget_param: dict):
-    """
-    Computes the expected reward for each entry in the dataset, as well as the
-    number of job that must be executed per peer to satisfy the protocol reward.
-    :param: dataset (dict): A dictionary containing the dataset entries.
-    :param: budget (dict): A dictionary containing the budget information.
-    """
-    budget = budget_param["budget"]["value"]
-    budget_split_ratio = budget_param["s"]["value"]
-    dist_freq = budget_param["dist_freq"]["value"]
-    budget_period_in_sec = budget_param["budget_period"]["value"]
+# def compute_rewards(dataset: list[Peer]):
+#     """
+#     Computes the expected reward for each entry in the dataset, as well as the
+#     number of job that must be executed per peer to satisfy the protocol reward.
+#     :param: dataset: A dictionary containing the dataset entries.
+#     """
 
-    for entry in dataset.values():
-        entry["budget"] = budget
-        entry["budget_split_ratio"] = budget_split_ratio
-        entry["distribution_frequency"] = dist_freq
-        entry["budget_period_in_sec"] = budget_period_in_sec
+#     budget = budget_param["budget"]["value"]
+#     budget_split_ratio = budget_param["s"]["value"]
+#     dist_freq = budget_param["dist_freq"]["value"]
+#     budget_period_in_sec = budget_param["budget_period"]["value"]
 
-        total_exp_reward = entry["prob"] * budget
-        apy_pct = (
-            (total_exp_reward * ((60 * 60 * 24 * 365) / budget_period_in_sec))
-            / entry["splitted_stake"]
-        ) * 100  # Splitted stake = total balance if 1 safe : 1 node
-        protocol_exp_reward = total_exp_reward * budget_split_ratio
-        entry["apy_pct"] = apy_pct
+#     for entry in dataset.values():
+#         entry["budget"] = budget
+#         entry["budget_split_ratio"] = budget_split_ratio
+#         entry["distribution_frequency"] = dist_freq
+#         entry["budget_period_in_sec"] = budget_period_in_sec
 
-        entry["total_expected_reward"] = total_exp_reward
-        entry["airdrop_expected_reward"] = total_exp_reward * (1 - budget_split_ratio)
-        entry["protocol_exp_reward"] = protocol_exp_reward
+#         total_exp_reward = entry["prob"] * budget
+#         apy_pct = (
+#             (total_exp_reward * ((60 * 60 * 24 * 365) / budget_period_in_sec))
+#             / entry["splitted_stake"]
+#         ) * 100  # Splitted stake = total balance if 1 safe : 1 node
+#         protocol_exp_reward = total_exp_reward * budget_split_ratio
+#         entry["apy_pct"] = apy_pct
 
-        entry["protocol_exp_reward_per_dist"] = protocol_exp_reward / dist_freq
+#         entry["total_expected_reward"] = total_exp_reward
+#         entry["airdrop_expected_reward"] = total_exp_reward * (1 - budget_split_ratio)
+#         entry["protocol_exp_reward"] = protocol_exp_reward
 
-        entry["ticket_price"] = budget_param["ticket_price"]["value"]
-        entry["winning_prob"] = budget_param["winning_prob"]["value"]
+#         entry["protocol_exp_reward_per_dist"] = protocol_exp_reward / dist_freq
 
-        denominator = entry["ticket_price"] * entry["winning_prob"]
-        entry["jobs"] = round(entry["protocol_exp_reward_per_dist"] / denominator)
+#         entry["ticket_price"] = budget_param["ticket_price"]["value"]
+#         entry["winning_prob"] = budget_param["winning_prob"]["value"]
 
-    log.info("Expected rewards and jobs calculated successfully.")
+#         denominator = entry["ticket_price"] * entry["winning_prob"]
+#         entry["jobs"] = round(entry["protocol_exp_reward_per_dist"] / denominator)
+
+#     log.info("Expected rewards and jobs calculated successfully.")
 
 
 def save_dict_to_csv(
@@ -395,16 +345,17 @@ def economic_model_from_file(filename: str):
     Reads parameters and equations from a JSON file and validates it using a schema.
     :param: filename (str): The name of the JSON file containing the parameters
     and equations. Defaults to "parameters.json".
-    :returns: dicts: The first dictionary contains the model parameters, the second
-    dictionary contains the equations, and the third dictionary
-    contains the budget parameters.
+    :returns: EconomicModel: Instance containing the model parameters,equations, budget
+    parameters.
     """
     parameters_file_path = os.path.join("assets", filename)
 
     contents = read_json_on_gcp("ct-platform-ct", parameters_file_path, schema_name)
 
+    model = EconomicModel.from_dictionary(contents)
     log.info("Fetched parameters and equations.")
-    return contents["equations"], contents["parameters"], contents["budget_param"]
+
+    return model
 
 
 def determine_delay_from_parameters(

@@ -15,7 +15,6 @@ from tools.decorator import (
 
 from .utils_econhandler import (
     allow_many_node_per_safe,
-    compute_rewards,
     determine_delay_from_parameters,
     economic_model_from_file,
     exclude_elements,
@@ -181,34 +180,30 @@ class EconomicHandler(HOPRNode):
         )
 
         # computation of cover traffic probability
-        equations, parameters, budget_parameters = economic_model_from_file(
-            envvar("PARAMETER_FILE")
-        )
-        self.prom_budget.set(budget_parameters["budget"]["value"])
-        self.prom_budget_period.set(budget_parameters["budget_period"]["value"])
-        self.prom_budget_dist_freq.set(budget_parameters["dist_freq"]["value"])
-        self.prom_budget_ticket_price.set(budget_parameters["ticket_price"]["value"])
-        self.prom_budget_winning_prob.set(budget_parameters["winning_prob"]["value"])
+        model = economic_model_from_file(envvar("PARAMETER_FILE"))
 
-        reward_probability(eligible_peers, equations, parameters)
+        self.prom_budget.set(model.budget.budget)
+        self.prom_budget_period.set(model.budget.period)
+        self.prom_budget_dist_freq.set(model.budget.distribution_frequency)
+        self.prom_budget_ticket_price.set(model.budget.ticket_price)
+        self.prom_budget_winning_prob.set(model.budget.winning_probability)
+
+        # assign economic model to peers
+        for peer in eligible_peers:
+            peer.economic_model = model
+
+        reward_probability(eligible_peers)
         log.debug(
             "Number of eligible peers after computing reward probability: "
             + f"{len(eligible_peers)}"
         )
 
-        # calculate expected rewards
-        compute_rewards(eligible_peers, budget_parameters)
-        log.debug(
-            "Number of eligible peers after computing expected rewards: "
-            + f"{len(eligible_peers)}"
-        )
-
-        for peer_id, values in eligible_peers.items():
-            self.prom_peer_apy.labels(peer_id).set(values["apy_pct"])
-            self.prom_peer_jobs.labels(peer_id).set(values["jobs"])
-            self.prom_peer_splitted_stake.labels(peer_id).set(values["splitted_stake"])
-            self.prom_peer_safe_count.labels(peer_id).set(values["safe_address_count"])
-            self.prom_peer_transformed_stake.labels(peer_id).set(values["trans_stake"])
+        for peer in eligible_peers:
+            self.prom_peer_apy.labels(peer.id).set(peer.apy_percentage)
+            self.prom_peer_jobs.labels(peer.id).set(peer.message_count_for_reward)
+            self.prom_peer_splitted_stake.labels(peer.id).set(peer.split_stake)
+            self.prom_peer_safe_count.labels(peer.id).set(peer.safe_address_count)
+            self.prom_peer_transformed_stake.labels(peer.id).set(peer.transformed_stake)
 
         self.prom_eligible_peers_for_rewards.set(len(eligible_peers))
 
@@ -252,6 +247,7 @@ class EconomicHandler(HOPRNode):
 
         async with self.topology_lock:
             self.topology_links_with_balance = topology
+
         log.info("Fetched unique nodeAddress-peerId links from topology.")
         log.debug(f"Unique nodeAddress-peerId links: {topology}")
 
