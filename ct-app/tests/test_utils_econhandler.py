@@ -1,14 +1,12 @@
 import pytest
 from unittest import mock
-from unittest.mock import MagicMock  # noqa F401
-from unittest.mock import patch  # noqa F401
 
 from economic_handler.utils_econhandler import (
     exclude_elements,
     reward_probability,
     save_dict_to_csv,
-    allow_many_node_per_safe,  # noqa F401
-    compute_rewards,  # noqa F401
+    allow_many_node_per_safe,
+    compute_rewards,
     merge_topology_database_subgraph,
 )
 
