@@ -352,8 +352,3 @@ class NetWatcher(HOPRNode):
             task.cancel()
 
         self.tasks = set()
-
-
-# 0.00000000000000001
-# 0xd3ab7e252b5d7e00b6ce8bb8349d597872684430
-# 0x840d0fbaa1d92cabc2e810355f69b8b900658646
