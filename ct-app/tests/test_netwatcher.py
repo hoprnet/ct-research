@@ -112,7 +112,7 @@ async def test_ping_peers(mock_instance_for_test_ping: NetWatcher):
     instance.started = False
     await asyncio.sleep(1)
 
-    measures = [peer for peer in instance.peers if peer.value is not None]
+    measures = [peer for peer in instance.peers if peer.latency is not None]
 
     assert len(measures) == 1
 
