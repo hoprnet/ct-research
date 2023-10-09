@@ -11,10 +11,21 @@ class Peer:
         self.safe_address = None
         self.safe_balance = None
 
-        self.safe_address_count = None
+        self._safe_address_count = None
 
         self.economic_model: EconomicModel = None
         self.reward_probability = None
+
+    @property
+    def safe_address_count(self) -> int:
+        if self._safe_address_count is None:
+            self.safe_address_count = 1
+
+        return self._safe_address_count
+
+    @safe_address_count.setter
+    def safe_address_count(self, value: int):
+        self._safe_address_count = value
 
     @property
     def transformed_stake(self) -> float:
@@ -90,7 +101,7 @@ class Peer:
         budget = self.economic_model.budget
         denominator = budget.ticket_price * budget.winning_probability
 
-        return self.protocol_reward_per_distribution / denominator
+        return round(self.protocol_reward_per_distribution / denominator)
 
     @property
     def apy_percentage(self):

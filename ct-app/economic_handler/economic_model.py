@@ -67,7 +67,7 @@ class BudgetParameters:
         ticket_price = _input.get("ticket_price", {}).get("value", None)
         winning_probability = _input.get("winning_prob", {}).get("value", None)
 
-        cls(
+        return cls(
             budget, period, s, distribution_frequency, ticket_price, winning_probability
         )
 

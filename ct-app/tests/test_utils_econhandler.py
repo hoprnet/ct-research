@@ -8,9 +8,10 @@ from economic_handler.utils_econhandler import (
     reward_probability,
     save_dict_to_csv,
     allow_many_node_per_safe,  # noqa F401
-    compute_rewards,  # noqa F401
     merge_topology_database_subgraph,
 )
+from economic_handler.peer import Peer
+from economic_handler.economic_model import EconomicModel
 
 
 @pytest.fixture
@@ -41,7 +42,7 @@ def mocked_model_parameters():
                 "comment": "budget for the given distribution period",
             },
             "budget_period": {
-                "value": 2628000,  # Month is seconds
+                "value": 2628000,  # Month in seconds
                 "comment": "budget period in seconds",
             },
             "s": {
@@ -107,86 +108,31 @@ def merge_data():
 
 
 @pytest.fixture
-def expected_merge_result():
+def expected_merge_result() -> list[Peer]:
     """
     Mock the output of the merge_topology_database_subgraph method
     """
-    expected_result = {
-        "peer_id_1": {
-            "source_node_address": "address_1",
-            "channels_balance": 5,
-            "node_peer_ids": ["node_1", "node_3"],
-            "safe_address": "safe_1",
-            "safe_balance": 10,
-            "total_balance": 15,
-        },
-        "peer_id_2": {
-            "source_node_address": "address_2",
-            "channels_balance": 2,
-            "node_peer_ids": ["node_1", "node_2", "node_4"],
-            "safe_address": "safe_2",
-            "safe_balance": 8,
-            "total_balance": 10,
-        },
-        "peer_id_3": {
-            "source_node_address": "address_3",
-            "channels_balance": 4,
-            "node_peer_ids": ["node_1", "node_2", "node_4"],
-            "safe_address": "safe_2",
-            "safe_balance": 8,
-            "total_balance": 12,
-        },
-    }
-    return expected_result
+    peer_1 = Peer("peer_id_1", "address_1", 5)
+    peer_1.node_ids = ["node_1", "node_3"]
+    peer_1.safe_address = "safe_1"
+    peer_1.safe_balance = 10
+
+    peer_2 = Peer("peer_id_2", "address_2", 2)
+    peer_2.node_ids = ["node_1", "node_2", "node_4"]
+    peer_2.safe_address = "safe_2"
+    peer_2.safe_balance = 8
+
+    peer_3 = Peer("peer_id_3", "address_3", 4)
+    peer_3.node_ids = ["node_1", "node_2", "node_4"]
+    peer_3.safe_address = "safe_2"
+    peer_3.safe_balance = 8
+
+    return [peer_1, peer_2, peer_3]
 
 
 @pytest.fixture
 def mock_rpch_nodes_blacklist():
     return ["peer_id_2", "peer_id_3"]
-
-
-@pytest.fixture
-def expected_merge_result_split_stake(expected_merge_result):
-    """
-    Add new keys to the expected_merge_result @pytest.fixture
-    """
-    result = expected_merge_result.copy()
-
-    # Define split stake values for specific peer IDs
-    split_stake_values = {
-        "peer_id_1": 15,
-        "peer_id_2": 6,
-        "peer_id_3": 8,
-    }
-
-    # Update the split stake values for the specified peer IDs
-    for peer_id, split_stake in split_stake_values.items():
-        if peer_id in result:
-            result[peer_id]["splitted_stake"] = split_stake
-
-    return result
-
-
-@pytest.fixture
-def expected_input_for_compute_expected_rewards(expected_merge_result_split_stake):
-    """
-    Add new keys to the expected_merge_result_split_stake @pytest.fixture
-    """
-    result = expected_merge_result_split_stake.copy()
-
-    # Define split stake values for specific peer IDs
-    probability_values = {
-        "peer_id_1": 0.3,
-        "peer_id_2": 0.2,
-        "peer_id_3": 0.5,
-    }
-
-    # Update the split stake values for the specified peer IDs
-    for peer_id, prob in probability_values.items():
-        if peer_id in result:
-            result[peer_id]["prob"] = prob
-
-    return result
 
 
 def test_merge_topology_database_subgraph(merge_data):
@@ -197,43 +143,31 @@ def test_merge_topology_database_subgraph(merge_data):
     new_metrics_dict = merge_data[1]
     new_subgraph_dict = merge_data[2]
 
-    result = merge_topology_database_subgraph(
+    peers = merge_topology_database_subgraph(
         unique_peerId_address, new_metrics_dict, new_subgraph_dict
     )
-    keys_to_check = [
-        "source_node_address",
-        "channels_balance",
-        "node_peer_ids",
-        "safe_address",
-        "safe_balance",
-        "total_balance",
-    ]
 
     # check that all keys are present and check the calculation
-    for value in result.values():
-        assert all(key in value for key in keys_to_check)
-        assert (
-            value["total_balance"] == value["safe_balance"] + value["channels_balance"]
-        )
+    for peer in peers:
+        assert peer.complete
+        assert peer.total_balance == peer.safe_balance + peer.channel_balance
 
 
-def test_allow_many_node_per_safe(expected_merge_result):
+def test_allow_many_node_per_safe(expected_merge_result: list[Peer]):
     """
     Test whether the method correctly splits the stake.
     """
     allow_many_node_per_safe(expected_merge_result)
 
     # Assert calculation and count of safe addresses works
-    assert (
-        expected_merge_result["peer_id_1"]["splitted_stake"]
-        == expected_merge_result["peer_id_1"]["total_balance"]
-        / expected_merge_result["peer_id_1"]["safe_address_count"]
-    )
-    assert expected_merge_result["peer_id_2"]["safe_address_count"] == 2
-    assert expected_merge_result["peer_id_3"]["splitted_stake"] == 8
+    peer_1, peer_2, peer_3 = expected_merge_result
+
+    assert peer_1.split_stake == peer_1.total_balance / peer_1.safe_address_count
+    assert peer_2.safe_address_count == 2
+    assert peer_3.split_stake == 8
 
 
-def test_exclude_elements(mock_rpch_nodes_blacklist, expected_merge_result):
+def test_exclude_elements(mock_rpch_nodes_blacklist, expected_merge_result: list[Peer]):
     """
     Test whether the function returns the updated dictionary without the rpch
     node keys. Test that the correct amount of peer_ids gets filtered out and
@@ -243,138 +177,107 @@ def test_exclude_elements(mock_rpch_nodes_blacklist, expected_merge_result):
 
     exclude_elements(expected_merge_result, mock_rpch_nodes_blacklist)
 
+    remaining_peer_ids = [peer.id for peer in expected_merge_result]
     assert len(expected_merge_result) == len(expected_peer_ids)
-    assert all(peer_id in expected_merge_result for peer_id in expected_peer_ids)
+    assert all(peer_id in remaining_peer_ids for peer_id in expected_peer_ids)
 
 
-def test_reward_probability(mocked_model_parameters, expected_merge_result_split_stake):
+def test_reward_probability(mocked_model_parameters, expected_merge_result: list[Peer]):
     """
     Test whether the sum of probabilities is "close" to 1 due to
     floating-point precision and test that the calculations work.
     """
-    parameters: dict = mocked_model_parameters["parameters"]
-    equations: dict = mocked_model_parameters["equations"]
-    merged_result: dict = expected_merge_result_split_stake
 
-    keys_to_check = [
-        "trans_stake",
-        "prob",
-    ]
+    model = EconomicModel.from_dictionary(mocked_model_parameters)
 
-    reward_probability(merged_result, equations, parameters)
-    sum_probabilities = sum(value["prob"] for _, value in merged_result.items())
+    for peer in expected_merge_result:
+        peer.economic_model = model
 
-    for value in merged_result.values():
-        assert all(key in value for key in keys_to_check)
+    reward_probability(expected_merge_result)
+
+    sum_probabilities = sum(peer.reward_probability for peer in expected_merge_result)
 
     # assert that sum is close to 1 due to floating-point precision
     assert pytest.approx(sum_probabilities, abs=1e-6) == 1.0
 
     # assert that the stake transformtion works correctly
-    assert round(merged_result["peer_id_1"]["trans_stake"], 4) == 14.4142
+    assert round(expected_merge_result[0].transformed_stake, 4) == 14.4142
 
     # assert that the stake treshold applies correctly
     assert (
-        merged_result["peer_id_3"]["trans_stake"]
-        == merged_result["peer_id_3"]["splitted_stake"]
+        expected_merge_result[2].transformed_stake
+        == expected_merge_result[2].split_stake
     )
 
 
-def test_reward_probablity_exception(mocked_model_parameters):
-    """
-    Test whether an empty dictionary gets returned when a dataset is missing
-    and therefore the exception gets triggered.
-    """
-    parameters: dict = mocked_model_parameters["parameters"]
-    equations: dict = mocked_model_parameters["equations"]
-    merged_result = {}
-
-    with pytest.raises(Exception):
-        reward_probability(parameters, equations, merged_result)
-
-    # test that nothing gets calculated
-    assert merged_result == ({})
-
-
 def test_compute_expected_reward(
-    mocked_model_parameters, expected_input_for_compute_expected_rewards
+    mocked_model_parameters, expected_merge_result: list[Peer]
 ):
     """
     Test whether the compute_expected_reward method generates
     the required values and whether the budget gets split correctly.
     """
 
-    budget_param: dict = mocked_model_parameters["budget_param"]
-    merged_result: dict = expected_input_for_compute_expected_rewards
+    model = EconomicModel.from_dictionary(mocked_model_parameters)
 
-    compute_rewards(merged_result, budget_param)
+    for peer in expected_merge_result:
+        peer.economic_model = model
 
-    keys_to_check = [
-        "total_expected_reward",
-        "protocol_exp_reward",
-        "airdrop_expected_reward",
-        "apy_pct",
-        "protocol_exp_reward_per_dist",
-        "ticket_price",
-        "winning_prob",
-        "jobs",
-    ]
+    reward_probability(expected_merge_result)
 
     # Assert reward calculation
-    assert merged_result["peer_id_1"]["total_expected_reward"] == 0.3
+    assert round(expected_merge_result[0].expected_reward, 2) == 0.4
 
     # Assert APY calculation
-    assert (
-        round(
-            (
-                (
-                    merged_result["peer_id_1"]["total_expected_reward"]
-                    * (
-                        (60 * 60 * 24 * 365)
-                        / merged_result["peer_id_1"]["budget_period_in_sec"]
-                    )
-                )
-                / merged_result["peer_id_1"]["splitted_stake"]
-            )
-            * 100,
-            0,
-        )
-        == 24  # Percent
-    )
+    assert round(expected_merge_result[0].apy_percentage) == 32
 
     # Assert distribution frequency
-    assert merged_result["peer_id_1"]["protocol_exp_reward_per_dist"] == 0.0375
+    assert round(expected_merge_result[0].protocol_reward_per_distribution, 4) == 0.0495
 
     # Assert job creation
-    assert merged_result["peer_id_1"]["jobs"] == 4
+    assert expected_merge_result[0].message_count_for_reward == 5
 
-    for entry in merged_result.values():
+    for peer in expected_merge_result:
         # Assert that all keys are present
-        assert all(key in entry for key in keys_to_check)
+        assert peer.expected_reward is not None
+        assert peer.protocol_reward is not None
+        assert peer.airdrop_reward is not None
+        assert peer.apy_percentage is not None
+        assert peer.protocol_reward_per_distribution is not None
+        assert peer.economic_model.budget.ticket_price is not None
+        assert peer.economic_model.budget.winning_probability is not None
+        assert peer.message_count_for_reward is not None
 
         # Assert that the reward split works correctly
         assert (
-            entry["total_expected_reward"]
-            == entry["protocol_exp_reward"] + entry["airdrop_expected_reward"]
-            == entry["prob"] * entry["budget"]
+            peer.expected_reward
+            == peer.protocol_reward + peer.airdrop_reward
+            == peer.reward_probability * peer.economic_model.budget.budget
         )
 
 
-def test_gcp_save_expected_reward_csv_success(expected_merge_result_split_stake):
+def test_gcp_save_expected_reward_csv_success(
+    expected_merge_result: list[Peer], mocked_model_parameters
+):
     """
     Test whether the save_expected_reward_csv function returns the confirmation
     message in case of no errors.
     """
 
-    result = save_dict_to_csv(
-        expected_merge_result_split_stake, foldername="expected_rewards"
-    )
+    model = EconomicModel.from_dictionary(mocked_model_parameters)
+
+    for peer in expected_merge_result:
+        peer.economic_model = model
+
+    reward_probability(expected_merge_result)
+
+    result = save_dict_to_csv(expected_merge_result, foldername="expected_rewards")
 
     assert result is True
 
 
 def test_save_expected_reward_csv_OSError_writing_csv(
-    expected_merge_result_split_stake,
+    expected_merge_result: list[Peer],
 ):
     """
     Test whether an OSError gets triggered when something goes wrong

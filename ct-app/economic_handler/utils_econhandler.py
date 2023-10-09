@@ -67,10 +67,10 @@ def exclude_elements(source_data: list[Peer], blacklist: list):
 
     # Remove elements from the list
     for index in sorted(indexes, reverse=True):
-        peer: Peer = source_data.pop(index=index)
+        peer: Peer = source_data.pop(index)
         log.info(f"Excluded {peer.id} from the dataset.")
 
-    log.info(f"Excluded {len(index)} entries.")
+    log.info(f"Excluded {len(indexes)} entries.")
 
 
 def allow_many_node_per_safe(peers: list[Peer]):
