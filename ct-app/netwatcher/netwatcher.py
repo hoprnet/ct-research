@@ -53,6 +53,7 @@ class NetWatcher(HOPRNode):
         :returns: nothing; the set of connected peerIds is kept in self.peers.
         """
 
+        # getting all peers to store the new one in the peer list
         found_peers = await self.api.peers(
             params=["peer_id", "peer_address"], quality=quality
         )
@@ -63,13 +64,33 @@ class NetWatcher(HOPRNode):
         old_addresses = {peer.address for peer in self.peers}
         new_addresses = found_addresses - old_addresses
 
-        # append peers not in self.peers
         async with self.peers_lock:
             self.peers.extend([Peer(address) for address in new_addresses])
 
         _short_addresses = [address.short_id for address in found_addresses]
 
         log.info(f"Found {len(_short_addresses)} peers {', '.join(_short_addresses)}")
+
+        # getting all channels to extract all the peers to which we have an outgoing
+        # channel. The channels to peers that are not in the peer list are added to it,
+        # without a latency measure, to automatically close the channel in the future
+
+        channels = await self.api.all_channels()
+        addresses_with_outgoing_channel = {
+            Address(c.destination_peer_id, c.destination_address)
+            for c in channels.all
+            if c.source_peer_id == self.peer_id
+            if c.status == "Open"
+        }
+
+        not_seen_addresses = addresses_with_outgoing_channel - old_addresses
+
+        async with self.peers_lock:
+            self.peers.extend(
+                [Peer(address, timestamp=time.time()) for address in not_seen_addresses]
+            )
+
+        log.info(f"Found {len(not_seen_addresses)} channels without a connected peer")
 
     @formalin(message="Pinging peers", sleep=1)
     @connectguard
@@ -286,7 +307,7 @@ class NetWatcher(HOPRNode):
             success = await self.api.close_channel(channel.channel_id)
             log.info(f"Channel {channel.channel_id} closed: {success}")
 
-        #### CLOSE CHANNELS TO PEERS NOT CONNECTED PEERS ####
+        #### CLOSE CHANNELS TO NOT CONNECTED PEERS ####
         for channel in not_connected_nodes_channels:
             log.info(
                 f"Closing channel to {channel.channel_id} "

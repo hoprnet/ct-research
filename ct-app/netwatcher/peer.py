@@ -11,9 +11,11 @@ class Peer:
         transmit: bool = False,
     ):
         self.address = address
-        self._latency = latency
+        self._latency = None
         self.timestamp = timestamp
         self._transmit = transmit
+
+        self.latency = latency
 
     @property
     def transmit(self) -> bool:
