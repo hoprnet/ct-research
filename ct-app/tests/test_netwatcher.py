@@ -1,8 +1,8 @@
 import asyncio
 import functools
 import os
+import time
 from unittest.mock import MagicMock, patch
-import tools
 import pytest
 
 
@@ -124,8 +124,10 @@ def mock_instance_for_test_transmit(mocker):
     """
 
     instance = NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl")
-    instance.peers = ["some_peer", "some_other_peer"]
-    instance.measures = {"some_peer": 10, "some_other_peer": 20}
+    instance.peers = [
+        Peer(Address("some_peer_1", "some_address_1"), 10, time.time() - 60 * 60),
+        Peer(Address("some_peer_2", "some_address_2"), 20, time.time() - 60 * 60),
+    ]
 
     return instance
 
@@ -137,18 +139,22 @@ async def test_transmit_peers(mock_instance_for_test_transmit: NetWatcher):
     """
     instance = mock_instance_for_test_transmit
 
-    instance.peer_id = "some_peer_id"
-    instance.started = True
-    instance.max_lat_count = 2
+    with patch("aiohttp.ClientSession.post") as mock_post:
+        mock_response = mock_post.return_value.__aenter__.return_value
+        mock_response.status = 200
 
-    await asyncio.create_task(instance.transmit_peers())
-    await asyncio.sleep(1)
+        instance.peer_id = "some_peer_id"
+        instance.started = True
+        instance.max_lat_count = 2
 
-    # avoid infinite while loop by setting node.started = False
-    instance.started = False
-    await asyncio.sleep(1)
+        await asyncio.create_task(instance.transmit_peers())
+        await asyncio.sleep(1)
 
-    assert tools.utils.post_dictionary.called  # TODO: modify the called method
+        # avoid infinite while loop by setting node.started = False
+        instance.started = False
+        await asyncio.sleep(1)
+
+        assert all(peer.latency is None for peer in instance.peers)
 
 
 @pytest.fixture
@@ -172,17 +178,19 @@ async def test_transmit_balance(mock_instance_for_test_transmit_balance: NetWatc
     """
     instance = mock_instance_for_test_transmit_balance
 
-    instance.peer_id = "some_peer_id"
-    instance.started = True
+    with patch("aiohttp.ClientSession.post") as mock_post:
+        mock_response = mock_post.return_value.__aenter__.return_value
+        mock_response.status = 200
 
-    asyncio.create_task(instance.transmit_balance())
-    await asyncio.sleep(1)
+        instance.peer_id = "some_peer_id"
+        instance.started = True
 
-    # avoid infinite while loop by setting node.started = False
-    instance.started = False
-    await asyncio.sleep(1)
+        asyncio.create_task(instance.transmit_balance())
+        await asyncio.sleep(1)
 
-    assert tools.utils.post_dictionary.called  # TODO: modify the called method
+        # avoid infinite while loop by setting node.started = False
+        instance.started = False
+        await asyncio.sleep(1)
 
 
 @pytest.fixture

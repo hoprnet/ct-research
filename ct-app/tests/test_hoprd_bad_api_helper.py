@@ -17,14 +17,6 @@ def bad_api_helper():
     yield helper
 
 
-def test_withdraw(bad_api_helper: HoprdAPIHelper):
-    """
-    This test checks that the withdraw method of the HoprdAPIHelper class returns the
-    expected response.
-    """
-    pass
-
-
 @pytest.mark.asyncio
 async def test_balance(bad_api_helper: HoprdAPIHelper):
     """
@@ -34,33 +26,6 @@ async def test_balance(bad_api_helper: HoprdAPIHelper):
     result = await bad_api_helper.balances()
 
     assert result is None
-
-
-@pytest.mark.asyncio
-async def test_set_alias(bad_api_helper: HoprdAPIHelper):
-    """
-    This test checks that the set_alias method of the HoprdAPIHelper class returns the
-    expected response.
-    """
-    pass
-
-
-@pytest.mark.asyncio
-async def test_get_alias(bad_api_helper: HoprdAPIHelper):
-    """
-    This test checks that the get_alias method of the HoprdAPIHelper class returns the
-    expected response.
-    """
-    pass
-
-
-@pytest.mark.asyncio
-async def test_remove_alias(bad_api_helper: HoprdAPIHelper):
-    """
-    This test checks that the remove_alias method of the HoprdAPIHelper class returns
-    the expected response.
-    """
-    pass
 
 
 @pytest.mark.asyncio

@@ -28,9 +28,8 @@ class Peer:
 
         if time.time() - self.timestamp > 60 * 60 * 2:
             self.latency = -1
-            return True
 
-        return False
+        return True
 
     @transmit.setter
     def transmit(self, value: bool):
