@@ -19,11 +19,12 @@ class FundChannels(EnduranceTest):
         open_channels = [c for c in channels if c.status == "Open"]
 
         if len(open_channels) == 0:
-            raise Exception("No open channels found")
+            raise RuntimeError("No open channels found")
 
         self.channel = random.choice(open_channels)
         self.inital_balance = self.channel.balance
 
+        self.info(f"peer_id: {self.channel.peer_id}", prefix="\t")
         self.info(f"channel: {self.channel.id}", prefix="\t")
         self.info(f"balance: {self.inital_balance}", prefix="\t")
 

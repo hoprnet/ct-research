@@ -3,7 +3,7 @@ scenarios:
   one_hop:
     executor: SendMessages
     description: Send messages through a staging node
-    execute: true
+    execute: false
     stages:
     - duration: 30
       rate: 5    
@@ -23,7 +23,7 @@ scenarios:
   fund_channel:
     executor: FundChannels
     description: Fund channels
-    execute: false
+    execute: true
     stages:
     - duration: 2
       rate: 0.5
@@ -31,8 +31,8 @@ scenarios:
       FUND_AMOUNT: '1'
       BALANCE_CHANGE_TIMEOUT: 5
 logs:
-  level: ERROR
-  enabled: false
+  level: INFO
+  enabled: true
 global_env:
-  API_URL: ""
-  API_KEY: ""
+  API_URL: "http://34.34.39.95:3001"
+  API_KEY: "^FOUR2viasj292981FJFKSOAAmnba^"

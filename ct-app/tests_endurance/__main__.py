@@ -61,7 +61,11 @@ def main(configfile: str):
         for stage_idx, stage in enumerate(stages, 1):
             EnduranceTest.bold(f"stage [{stage_idx}/{num_stages}]", prefix="\t")
 
-            success = eval(value.get("executor"))(**stage)()
+            try:
+                success = eval(value.get("executor"))(**stage)()
+            except Exception as e:
+                EnduranceTest.error(f"{e.__class__.__name__}: {e}", prefix="\t")
+                success = False
 
             stage_results.append(success)
             display_success(success)
