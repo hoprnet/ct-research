@@ -23,9 +23,6 @@ class Peer:
         if not self.latency:
             return False
 
-        if self._transmit:
-            return True
-
         if time.time() - self.timestamp > 60 * 60 * 2:
             self.latency = -1
 
@@ -49,8 +46,6 @@ class Peer:
     @latency.setter
     def latency(self, value: int or None):
         self._latency = value
-
-        self.transmit = value is not None
 
         if value is not None:
             self.timestamp = time.time()
