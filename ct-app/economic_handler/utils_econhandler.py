@@ -1,23 +1,23 @@
 import os
 import time
 
-from celery import Celery
-from sqlalchemy import func
-
 from assets.parameters_schema import schema as schema_name
-from tools import envvar, getlogger, write_csv_on_gcp, read_json_on_gcp
-from tools.db_connection import DatabaseConnection, NodePeerConnection
+from celery import Celery
+from tools import envvar, getlogger, read_json_on_gcp, write_csv_on_gcp
 
-from .peer import Peer
 from .economic_model import EconomicModel
+from .metric_table_entry import MetricTableEntry
+from .peer import Peer
+from .subgraph_entry import SubgraphEntry
+from .topology_entry import TopologyEntry
 
 log = getlogger()
 
 
 def merge_topology_database_subgraph(
-    topology_dict: dict,
-    database_dict: dict,
-    subgraph_dict: dict,
+    topology_list: list[TopologyEntry],
+    database_list: list[MetricTableEntry],
+    subgraph_list: list[SubgraphEntry],
 ):
     """
     Merge metrics and subgraph data with the unique peer IDs, addresses,
@@ -30,19 +30,28 @@ def merge_topology_database_subgraph(
     merged_result: list[Peer] = []
 
     # Merge based on peer ID with the channel topology as the baseline
-    for peer_id, data in topology_dict.items():
+    for topology_entry in topology_list:
         peer = Peer(
-            peer_id,
-            data.get("source_node_address", None),
-            data.get("channels_balance", None),
+            topology_entry.peer_id,
+            topology_entry.node_address,
+            topology_entry.channels_balance,
         )
 
-        peer_in_subgraph: dict = subgraph_dict.get(peer.address, {})
-        peer_in_database: dict = database_dict.get(peer.id, {})
+        entries = [e for e in subgraph_list if e.hasAddress(peer.address)]
+        if len(entries) > 1:
+            subgraph_entry: SubgraphEntry = entries[0]
+        else:
+            subgraph_entry = SubgraphEntry(None, None, None)
 
-        peer.node_ids = peer_in_database.get("node_peer_ids", None)
-        peer.safe_address = peer_in_subgraph.get("safe_address", None)
-        peer.safe_balance = peer_in_subgraph.get("wxHOPR_balance", None)
+        entries = [e for e in database_list if e.hasPeerId(peer.id)]
+        if len(entries) > 1:
+            database_entry: MetricTableEntry = entries[0]
+        else:
+            database_entry = MetricTableEntry(None, None, None, None)
+
+        peer.node_ids = database_entry.node_ids
+        peer.safe_address = subgraph_entry.safe_address
+        peer.safe_balance = subgraph_entry.wxHoprBalance
 
         if peer.complete:
             merged_result.append(peer)
@@ -116,47 +125,6 @@ def reward_probability(peers: list[Peer]):
     log.info("Reward probabilty calculated successfully.")
 
 
-# def compute_rewards(dataset: list[Peer]):
-#     """
-#     Computes the expected reward for each entry in the dataset, as well as the
-#     number of job that must be executed per peer to satisfy the protocol reward.
-#     :param: dataset: A dictionary containing the dataset entries.
-#     """
-
-#     budget = budget_param["budget"]["value"]
-#     budget_split_ratio = budget_param["s"]["value"]
-#     dist_freq = budget_param["dist_freq"]["value"]
-#     budget_period_in_sec = budget_param["budget_period"]["value"]
-
-#     for entry in dataset.values():
-#         entry["budget"] = budget
-#         entry["budget_split_ratio"] = budget_split_ratio
-#         entry["distribution_frequency"] = dist_freq
-#         entry["budget_period_in_sec"] = budget_period_in_sec
-
-#         total_exp_reward = entry["prob"] * budget
-#         apy_pct = (
-#             (total_exp_reward * ((60 * 60 * 24 * 365) / budget_period_in_sec))
-#             / entry["splitted_stake"]
-#         ) * 100  # Splitted stake = total balance if 1 safe : 1 node
-#         protocol_exp_reward = total_exp_reward * budget_split_ratio
-#         entry["apy_pct"] = apy_pct
-
-#         entry["total_expected_reward"] = total_exp_reward
-#         entry["airdrop_expected_reward"] = total_exp_reward * (1 - budget_split_ratio)
-#         entry["protocol_exp_reward"] = protocol_exp_reward
-
-#         entry["protocol_exp_reward_per_dist"] = protocol_exp_reward / dist_freq
-
-#         entry["ticket_price"] = budget_param["ticket_price"]["value"]
-#         entry["winning_prob"] = budget_param["winning_prob"]["value"]
-
-#         denominator = entry["ticket_price"] * entry["winning_prob"]
-#         entry["jobs"] = round(entry["protocol_exp_reward_per_dist"] / denominator)
-
-#     log.info("Expected rewards and jobs calculated successfully.")
-
-
 def save_dict_to_csv(
     peers: list[Peer], filename_prefix: str = "file", foldername: str = "output"
 ) -> bool:
@@ -210,137 +178,6 @@ def push_jobs_to_celery_queue(peers: list[Peer]):
         )
 
 
-async def get_database_metrics():
-    """
-    This function establishes a connection to the database using the provided
-    connection details, retrieves the latest peer information from the database
-    table, and returns the data as a dictionary.
-    """
-    with DatabaseConnection() as session:
-        max_timestamp = session.query(func.max(NodePeerConnection.timestamp)).scalar()
-
-        last_added_rows = (
-            session.query(NodePeerConnection).filter_by(timestamp=max_timestamp).all()
-        )
-
-        metrics_dict = {}
-
-        for row in last_added_rows:
-            if row.peer_id not in metrics_dict:
-                metrics_dict[row.peer_id] = {
-                    "node_peer_ids": [],
-                    "latency_metrics": [],
-                    "timestamp": row.timestamp,
-                    "temp_order": [],
-                }
-            metrics_dict[row.peer_id]["node_peer_ids"].append(row.node)
-            metrics_dict[row.peer_id]["latency_metrics"].append(row.latency)
-            metrics_dict[row.peer_id]["temp_order"].append(row.priority)
-
-        # sort node_addresses and latency based on temp_order
-        for peer_id in metrics_dict:
-            order = metrics_dict[peer_id]["temp_order"]
-            addresses = metrics_dict[peer_id]["node_peer_ids"]
-            latency = metrics_dict[peer_id]["latency_metrics"]
-
-            addresses = [x for _, x in sorted(zip(order, addresses))]
-            latency = [x for _, x in sorted(zip(order, latency))]
-
-            metrics_dict[peer_id]["node_peer_ids"] = addresses
-            metrics_dict[peer_id]["latency_metrics"] = latency
-
-        # remove the temp order key from the dictionaries
-        for peer_id in metrics_dict:
-            del metrics_dict[peer_id]["temp_order"]
-
-        return "metricsDB", metrics_dict
-
-
-def mock_data_metrics_db():
-    """
-    Generates a mock metrics dictionary that mimics the metrics database output.
-    :returns: a dictionary containing mock metrics data with peer IDs and network
-    watcher IDs odered by a statistical measure computed on latency
-    """
-    metrics_dict = {
-        "peer_id_1": {
-            "node_peer_ids": ["peerID_1", "peerID_2", "peerID_3"],
-            "latency_metrics": [10, 15, 8],
-            "timestamp": "2023-09-01 12:00:00",
-        },
-        "peer_id_2": {
-            "node_peer_ids": ["peerID_1", "peerID_3"],
-            "latency_metrics": [5, 12, 7],
-            "timestamp": "2023-09-01 12:00:00",
-        },
-        "peer_id_3": {
-            "node_peer_ids": ["peerID_1", "peerID_2", "peerID_3", "peerID_4"],
-            "latency_metrics": [8, 18, 9],
-            "timestamp": "2023-09-01 12:00:00",
-        },
-        "peer_id_4": {
-            "node_peer_ids": ["peerID_2", "peerID_3", "peerID_4"],
-            "latency_metrics": [9, 14, 6],
-            "timestamp": "2023-09-01 12:00:00",
-        },
-        "peer_id_5": {
-            "node_peer_ids": ["peerID_1", "peerID_3", "peerID_4"],
-            "latency_metrics": [12, 20, 11],
-            "timestamp": "2023-09-01 12:00:00",
-        },
-    }
-    return metrics_dict
-
-
-def mock_data_subgraph():
-    """
-    Generates a dictionary that mocks the metrics received form the subgraph.
-    :returns: a dictionary containing the data with safe stake addresses as key
-                and node_address as well as balance as the value.
-    """
-    subgraph_dict = {
-        "address_1": {
-            "safe_address": "safe_1",
-            "wxHOPR_balance": int(20),
-        },
-        "address_2": {
-            "safe_address": "safe_1",
-            "wxHOPR_balance": int(30),
-        },
-        "address_3": {
-            "safe_address": "safe_3",
-            "wxHOPR_balance": int(40),
-        },
-        "address_4": {
-            "safe_address": "safe_4",
-            "wxHOPR_balance": int(50),
-        },
-        "address_5": {
-            "safe_address": "safe_5",
-            "wxHOPR_balance": int(80),
-        },
-    }
-    return subgraph_dict
-
-
-def replace_keys_in_mock_data(unique_nodeAddress_peerId_aggbalance_links: dict):
-    """
-    Just a helper function that allows me to replace my invented peerID's
-    with the peerId's from Pluto.
-    This function will be deleted when working with the real data.
-    [NO NEED TO CHECK CODING STYLE NOR EFFICIENCY OF THE FUNCTION]
-    """
-    metrics_dict = mock_data_metrics_db()
-    channel_topology_keys = list(unique_nodeAddress_peerId_aggbalance_links.keys())
-
-    new_metrics_dict = {}
-    for i, key in enumerate(metrics_dict.keys()):
-        new_key = channel_topology_keys[i]
-        new_metrics_dict[new_key] = metrics_dict[key]
-
-    return new_metrics_dict
-
-
 def economic_model_from_file(filename: str):
     """
     Reads parameters and equations from a JSON file and validates it using a schema.
@@ -372,7 +209,6 @@ def determine_delay_from_parameters(
 
     contents = read_json_on_gcp("ct-platform-ct", parameters_file_path, schema_name)
 
-    period_in_seconds = contents["budget_param"]["budget_period"]["value"]
-    distribution_count = contents["budget_param"]["dist_freq"]["value"]
+    model = EconomicModel.from_dictionary(contents)
 
-    return period_in_seconds / distribution_count
+    return model.budget.period / model.budget.distribution_frequency
