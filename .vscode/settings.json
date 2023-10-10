@@ -1,7 +1,0 @@
-{
-    "python.testing.pytestArgs": [],
-    "python.testing.cwd": "${workspaceFolder}/ct-app/tests",
-    "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true,
-    "python.testing.autoTestDiscoverOnSaveEnabled": true,
-}
