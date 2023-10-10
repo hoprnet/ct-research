@@ -7,8 +7,17 @@ class SubgraphEntry:
     @classmethod
     def fromSubgraphResult(cls, node: dict):
         return cls(
-            node["node"]["id"], node["node"]["wxHoprBalance"], node["safe"]["id"]
+            node["node"]["id"],
+            node["safe"]["balance"]["wxHoprBalance"],
+            node["safe"]["id"],
         )
 
     def hasAddress(self, address: str):
         return self.node_address == address
+
+    def __eq__(self, other):
+        return (
+            self.node_address == other.node_address
+            and self.wxHoprBalance == other.wxHoprBalance
+            and self.safe_address == other.safe_address
+        )
