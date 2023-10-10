@@ -82,6 +82,7 @@ class NetWatcher(HOPRNode):
             if c.source_peer_id == self.peer_id
             if c.status == "Open"
         }
+        old_addresses = {peer.address for peer in self.peers}
 
         not_seen_addresses = addresses_with_outgoing_channel - old_addresses
 
