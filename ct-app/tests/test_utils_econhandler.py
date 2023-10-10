@@ -247,7 +247,7 @@ def test_gcp_save_expected_reward_csv_success(expected_merge_result: list[Peer])
 
     reward_probability(expected_merge_result)
 
-    result = save_dict_to_csv(expected_merge_result, foldername="expected_rewards")
+    result = save_dict_to_csv(expected_merge_result, foldername="test_expected_rewards")
 
     assert result is True
 
