@@ -237,7 +237,7 @@ class EconomicHandler(HOPRNode):
 
         push_jobs_to_celery_queue(peers_for_reward)
         save_dict_to_csv(
-            peers_for_reward, "expected_reward", foldername="expected_rewards"
+            peers_for_reward, "expected_reward", foldername=envvar("GCP_OUTPUT_FOLDER")
         )
 
     @connectguard
