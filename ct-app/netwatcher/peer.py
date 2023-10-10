@@ -28,10 +28,6 @@ class Peer:
 
         return True
 
-    @transmit.setter
-    def transmit(self, value: bool):
-        self._transmit = value
-
     @property
     def close_channel(self) -> bool:
         if not self.timestamp:
