@@ -8,6 +8,9 @@ class Address:
 
     @property
     def short_id(self):
+        if len(self.id) <= 10:
+            return self.id
+
         return self.id[-5:]
 
     def __eq__(self, other):
