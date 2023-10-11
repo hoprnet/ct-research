@@ -67,7 +67,7 @@ async def send_messages_in_batches(
     effective_count = 0
 
     batches = create_batches(expected_count, batch_size)
-    message_delivery_timeout = envvar("MESSAGE_DELIVERY_TIMEOUT", int)
+    message_delivery_timeout = envvar("MESSAGE_DELIVERY_TIMEOUT", float)
 
     for batch_index, batch in enumerate(batches):
         for message_index in range(batch):
