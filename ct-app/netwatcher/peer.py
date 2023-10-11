@@ -47,3 +47,6 @@ class Peer:
 
         if value is not None:
             self.timestamp = time.time()
+
+    def __repr__(self):
+        return f"Peer({self.address}, {self.latency}, {self.timestamp})"

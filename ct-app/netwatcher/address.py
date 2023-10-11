@@ -15,3 +15,6 @@ class Address:
 
     def __hash__(self):
         return hash((self.id, self.address))
+
+    def __repr__(self):
+        return f"Address({self.id}, {self.address})"

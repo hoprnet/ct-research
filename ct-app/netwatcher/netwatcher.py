@@ -76,12 +76,14 @@ class NetWatcher(HOPRNode):
         # without a latency measure, to automatically close the channel in the future
 
         channels = await self.api.all_channels()
+
         addresses_with_outgoing_channel = {
             Address(c.destination_peer_id, c.destination_address)
             for c in channels.all
             if c.source_peer_id == self.peer_id
             if c.status == "Open"
         }
+
         old_addresses = {peer.address for peer in self.peers}
 
         not_seen_addresses = addresses_with_outgoing_channel - old_addresses
