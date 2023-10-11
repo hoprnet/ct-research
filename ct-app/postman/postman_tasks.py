@@ -80,7 +80,7 @@ async def send_messages_in_batches(
                 f"{global_index + 1}/{expected_count}",
                 [peer_id],
             )
-            await asyncio.sleep(1)
+            await asyncio.sleep(envvar("DELAY_BETWEEN_TWO_MESSAGES", float))
 
         await asyncio.sleep(message_delivery_timeout)
 
