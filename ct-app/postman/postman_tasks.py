@@ -68,7 +68,7 @@ async def send_messages_in_batches(
     issued_count = 0
 
     batches = create_batches(expected_count, batch_size)
-    message_delivery_timeout = envvar("MESSAGE_DELIVERY_TIMEOUT", int)
+    envvar("MESSAGE_DELIVERY_TIMEOUT", float)
 
     for batch_index, batch in enumerate(batches):
         for message_index in range(batch):
@@ -83,7 +83,7 @@ async def send_messages_in_batches(
             )
             await asyncio.sleep(1)
 
-        await asyncio.sleep(message_delivery_timeout)
+        await asyncio.sleep(envvar("DELAY_BETWEEN_TWO_MESSAGES", float))
 
         messages = await api.messages_pop_all(0x0320)
         effective_count += len(messages)
