@@ -357,15 +357,8 @@ class EconomicHandler(HOPRNode):
             query SafeNodeBalance($first: Int, $skip: Int) {
                 safes(first: $first, skip: $skip) {
                     registeredNodesInNetworkRegistry {
-                    node {
-                        id
-                    }
-                    safe {
-                        id
-                        balance {
-                        wxHoprBalance
-                        }
-                    }
+                        node { id }
+                        safe { id balance { wxHoprBalance } }
                     }
                 }
             }

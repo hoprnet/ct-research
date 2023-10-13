@@ -6,4 +6,4 @@ class TopologyEntry:
 
     @classmethod
     def fromDict(cls, peer_id: str, value: dict):
-        return cls(peer_id, value["node_address"], value["channels_balance"])
+        return cls(peer_id, value["source_node_address"], value["channels_balance"])
