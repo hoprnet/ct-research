@@ -184,7 +184,7 @@ async def async_send_1_hop_message(
             api, peer_id, expected_count, address, timestamp, envvar("BATCH_SIZE", int)
         )
 
-        if effective_count == expected_count:
+        if effective_count >= expected_count:
             status = TaskStatus.SUCCESS
         else:
             status = TaskStatus.SPLITTED
