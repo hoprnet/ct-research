@@ -5,8 +5,8 @@ from .reward_entry import RewardEntry
 
 
 @click.command()
-@click.option("--start", help="Start date, inclusive (YYYYMMDD-HHMMSS format")
-@click.option("--end", help="End date, exclusive (YYYYMMDD-HHMMSS format")
+@click.option("--start", help="Start date, inclusive (YYYYMMDD-HHMMSS format)")
+@click.option("--end", help="End date, exclusive (YYYYMMDD-HHMMSS format)")
 @click.option("--bucket", default="ct-platform-ct", help="GCP bucket name")
 @click.option("--folder", default="expected_rewards", help="Folder name inside bucket")
 def main(start: str, end: str, bucket: str, folder: str):
