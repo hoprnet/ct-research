@@ -40,7 +40,7 @@ class MetricTableEntry:
     @classmethod
     def fromNodePeerConnections(cls, entries: [NodePeerConnection]):
         peer_id = entries[0].peer_id
-        node_ids = [entry.node_id for entry in entries]
+        node_ids = [entry.node for entry in entries]
         latencies = [entry.latency for entry in entries]
         timestamp = entries[0].timestamp
 
