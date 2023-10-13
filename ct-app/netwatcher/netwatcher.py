@@ -335,7 +335,7 @@ class NetWatcher(HOPRNode):
             success = await self.api.fund_channel(
                 channel.channel_id, envvar("CHANNEL_INITIAL_BALANCE")
             )
-            log.info(f"Channel {channel.channel_id} funded: {sucess}")
+            log.info(f"Channel {channel.channel_id} funded: {success}")
 
         #### OPEN NEW CHANNELS ####
         for address in addresses_without_out_channel:
