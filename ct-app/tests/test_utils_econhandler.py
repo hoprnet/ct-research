@@ -1,13 +1,10 @@
 import pytest
 from unittest import mock
-from unittest.mock import MagicMock  # noqa F401
-from unittest.mock import patch  # noqa F401
 
 from economic_handler.utils_econhandler import (
     exclude_elements,
     reward_probability,
     save_dict_to_csv,
-    allow_many_node_per_safe,  # noqa F401
     merge_topology_database_subgraph,
 )
 from economic_handler.peer import Peer
@@ -244,7 +241,6 @@ def test_gcp_save_expected_reward_csv_success(expected_merge_result: list[Peer])
     Test whether the save_expected_reward_csv function returns the confirmation
     message in case of no errors.
     """
-
     reward_probability(expected_merge_result)
 
     result = save_dict_to_csv(expected_merge_result, foldername="test_expected_rewards")
