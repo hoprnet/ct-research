@@ -7,8 +7,10 @@ from .reward_entry import RewardEntry
 @click.command()
 @click.option("--start", help="Start date, inclusive (YYYYMMDD-HHMMSS format")
 @click.option("--end", help="End date, exclusive (YYYYMMDD-HHMMSS format")
-def main(start: str, end: str = None):
-    files = GCPBucket("ct-platform-ct").files_in_range(start, end, "expected_rewards")
+@click.option("--bucket", default="ct-platform-ct", help="GCP bucket name")
+@click.option("--folder", default="expected_rewards", help="Folder name inside bucket")
+def main(start: str, end: str, bucket: str, folder: str):
+    files = GCPBucket(bucket).files_in_range(start, end, folder)
 
     # Get all entries from all files in the time range
     table_entries = sum([file.toTableEntry() for file in files], [])
