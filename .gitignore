@@ -4,6 +4,7 @@ __pycache__/
 
 # envs
 env*/
+.vscode/
 
 # logs
 expected_rewards/
