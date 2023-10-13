@@ -75,7 +75,7 @@ class NetWatcher(HOPRNode):
         # channel. The channels to peers that are not in the peer list are added to it,
         # without a latency measure, to automatically close the channel in the future
 
-        channels = await self.api.all_channels()
+        channels = await self.api.all_channels(False)
 
         addresses_with_outgoing_channel = {
             Address(c.destination_peer_id, c.destination_address)
