@@ -332,7 +332,7 @@ class NetWatcher(HOPRNode):
                 f"Re-funding channel {channel.channel_id} (balance: {balance} < "
                 + f"{envvar('MINIMUM_BALANCE_IN_CHANNEL')})"
             )
-            sucess = await self.api.fund_channel(
+            success = await self.api.fund_channel(
                 channel.channel_id, envvar("CHANNEL_INITIAL_BALANCE")
             )
             log.info(f"Channel {channel.channel_id} funded: {sucess}")
