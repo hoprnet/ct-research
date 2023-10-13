@@ -13,9 +13,12 @@ from tools.decorator import (
     wakeupcall,
 )
 
+from .metric_table_entry import MetricTableEntry
+from .peer import Peer
+from .subgraph_entry import SubgraphEntry
+from .topology_entry import TopologyEntry
 from .utils_econhandler import (
     allow_many_node_per_safe,
-    compute_rewards,
     determine_delay_from_parameters,
     economic_model_from_file,
     exclude_elements,
@@ -75,13 +78,13 @@ class EconomicHandler(HOPRNode):
         self.rpch_endpoint = rpch_endpoint
         self.subgraph_endpoint = subgraph_endpoint
 
-        self.topology_links_with_balance = None
-        self.database_metrics = {}
-        self.subgraph_dict = None
+        self.topology_list: list[TopologyEntry] = None
+        self.database_metrics: list[MetricTableEntry] = None
+        self.subgraph_list: list[SubgraphEntry] = None
         # self.rpch_nodes = None
         self.ct_nodes = None
 
-        self.eligible_peers = {}
+        self.eligible_peers: list[Peer] = []
 
         self.topology_lock = asyncio.Lock()
         self.database_lock = asyncio.Lock()
@@ -101,11 +104,11 @@ class EconomicHandler(HOPRNode):
         local_ct = None
 
         async with self.topology_lock:
-            local_topology = deepcopy(self.topology_links_with_balance)
+            local_topology = deepcopy(self.topology_list)
         async with self.database_lock:
             local_database = deepcopy(self.database_metrics)
         async with self.subgraph_lock:
-            local_subgraph = deepcopy(self.subgraph_dict)
+            local_subgraph = deepcopy(self.subgraph_list)
         # async with self.rpch_node_lock:
         #     local_rpch = deepcopy(self.rpch_nodes)
         async with self.ct_node_lock:
@@ -181,34 +184,30 @@ class EconomicHandler(HOPRNode):
         )
 
         # computation of cover traffic probability
-        equations, parameters, budget_parameters = economic_model_from_file(
-            envvar("PARAMETER_FILE")
-        )
-        self.prom_budget.set(budget_parameters["budget"]["value"])
-        self.prom_budget_period.set(budget_parameters["budget_period"]["value"])
-        self.prom_budget_dist_freq.set(budget_parameters["dist_freq"]["value"])
-        self.prom_budget_ticket_price.set(budget_parameters["ticket_price"]["value"])
-        self.prom_budget_winning_prob.set(budget_parameters["winning_prob"]["value"])
+        model = economic_model_from_file(envvar("PARAMETER_FILE"))
 
-        reward_probability(eligible_peers, equations, parameters)
+        self.prom_budget.set(model.budget.budget)
+        self.prom_budget_period.set(model.budget.period)
+        self.prom_budget_dist_freq.set(model.budget.distribution_frequency)
+        self.prom_budget_ticket_price.set(model.budget.ticket_price)
+        self.prom_budget_winning_prob.set(model.budget.winning_probability)
+
+        # assign economic model to peers
+        for peer in eligible_peers:
+            peer.economic_model = model
+
+        reward_probability(eligible_peers)
         log.debug(
             "Number of eligible peers after computing reward probability: "
             + f"{len(eligible_peers)}"
         )
 
-        # calculate expected rewards
-        compute_rewards(eligible_peers, budget_parameters)
-        log.debug(
-            "Number of eligible peers after computing expected rewards: "
-            + f"{len(eligible_peers)}"
-        )
-
-        for peer_id, values in eligible_peers.items():
-            self.prom_peer_apy.labels(peer_id).set(values["apy_pct"])
-            self.prom_peer_jobs.labels(peer_id).set(values["jobs"])
-            self.prom_peer_splitted_stake.labels(peer_id).set(values["splitted_stake"])
-            self.prom_peer_safe_count.labels(peer_id).set(values["safe_address_count"])
-            self.prom_peer_transformed_stake.labels(peer_id).set(values["trans_stake"])
+        for peer in eligible_peers:
+            self.prom_peer_apy.labels(peer.id).set(peer.apy_percentage)
+            self.prom_peer_jobs.labels(peer.id).set(peer.message_count_for_reward)
+            self.prom_peer_splitted_stake.labels(peer.id).set(peer.split_stake)
+            self.prom_peer_safe_count.labels(peer.id).set(peer.safe_address_count)
+            self.prom_peer_transformed_stake.labels(peer.id).set(peer.transformed_stake)
 
         self.prom_eligible_peers_for_rewards.set(len(eligible_peers))
 
@@ -238,7 +237,7 @@ class EconomicHandler(HOPRNode):
 
         push_jobs_to_celery_queue(peers_for_reward)
         save_dict_to_csv(
-            peers_for_reward, "expected_reward", foldername="expected_rewards"
+            peers_for_reward, "expected_reward", foldername=envvar("GCP_OUTPUT_FOLDER")
         )
 
     @connectguard
@@ -248,12 +247,16 @@ class EconomicHandler(HOPRNode):
         Gets a dictionary containing all unique source_peerId-source_address links
         including the aggregated balance of "Open" outgoing payment channels.
         """
-        topology = await self.api.get_unique_nodeAddress_peerId_aggbalance_links()
+        topology_dict = await self.api.get_unique_nodeAddress_peerId_aggbalance_links()
+        topology_list = [
+            TopologyEntry.fromDict(key, value) for key, value in topology_dict.items()
+        ]
 
         async with self.topology_lock:
-            self.topology_links_with_balance = topology
+            self.topology_links_with_balance = topology_list
+
         log.info("Fetched unique nodeAddress-peerId links from topology.")
-        log.debug(f"Unique nodeAddress-peerId links: {topology}")
+        log.debug(f"Unique nodeAddress-peerId links: {topology_list}")
 
     # @formalin(message="Getting RPCh nodes list", sleep=1 * 60)
     # async def get_rpch_nodes(self):
@@ -325,42 +328,23 @@ class EconomicHandler(HOPRNode):
                 .all()
             )
 
-        metric_dict = {}
+        metric_list: list[MetricTableEntry] = []
 
-        for row in last_added_rows:
-            if row.peer_id not in metric_dict:
-                metric_dict[row.peer_id] = {
-                    "node_peer_ids": [],
-                    "latency_metrics": [],
-                    "timestamp": row.timestamp,
-                    "temp_order": [],
-                }
+        all_peer_ids = [row.peer_id for row in last_added_rows]
 
-            metric_dict[row.peer_id]["node_peer_ids"].append(row.node)
-            metric_dict[row.peer_id]["latency_metrics"].append(row.latency)
-            metric_dict[row.peer_id]["temp_order"].append(row.priority)
+        for peer_id in set(all_peer_ids):
+            indexes = [i for i, x in enumerate(all_peer_ids) if x == peer_id]
 
-        # sort node_peer_ids and latency based on temp_order
-        for peer_id in metric_dict:
-            order = metric_dict[peer_id]["temp_order"]
-            node_peer_ids = metric_dict[peer_id]["node_peer_ids"]
-            latency = metric_dict[peer_id]["latency_metrics"]
-
-            node_peer_ids = [x for _, x in sorted(zip(order, node_peer_ids))]
-            latency = [x for _, x in sorted(zip(order, latency))]
-
-            metric_dict[peer_id]["node_peer_ids"] = node_peer_ids
-            metric_dict[peer_id]["latency_metrics"] = latency
-
-        # remove the temp order key from the dictionaries
-        for peer_id in metric_dict:
-            del metric_dict[peer_id]["temp_order"]
+            entry = MetricTableEntry.fromNodePeerConnections(
+                [last_added_rows[i] for i in indexes]
+            )
+            metric_list.append(entry)
 
         async with self.database_lock:
-            self.database_metrics = metric_dict
+            self.database_metrics = metric_list
 
         log.info("Fetched data from database.")
-        log.debug(f"Database entries: {metric_dict}")
+        log.debug(f"Database entries: {metric_list}")
 
     @formalin(message="Getting subgraph data", sleep=1 * 60)
     async def get_subgraph_data(self):
@@ -386,7 +370,6 @@ class EconomicHandler(HOPRNode):
                 }
             }
         """
-
         data = {
             "query": query,
             "variables": {
@@ -394,7 +377,7 @@ class EconomicHandler(HOPRNode):
                 "skip": 0,
             },
         }
-        subgraph_dict = {}
+        subgraph_list: list[SubgraphEntry] = []
         more_content_available = True
         pagination_skip_size = 1000
 
@@ -434,14 +417,12 @@ class EconomicHandler(HOPRNode):
 
                 safes = json_data["data"]["safes"]
                 for safe in safes:
-                    for node in safe["registeredNodesInNetworkRegistry"]:
-                        node_address = node["node"]["id"]
-                        wxHoprBalance = node["safe"]["balance"]["wxHoprBalance"]
-                        safe_address = node["safe"]["id"]
-                        subgraph_dict[node_address] = {
-                            "safe_address": safe_address,
-                            "wxHOPR_balance": wxHoprBalance,
-                        }
+                    subgraph_list.extend(
+                        [
+                            SubgraphEntry.fromSubgraphResult(node)
+                            for node in safe["registeredNodesInNetworkRegistry"]
+                        ]
+                    )
 
                 # Increment skip for next iteration
                 data["variables"]["skip"] += pagination_skip_size
@@ -450,7 +431,7 @@ class EconomicHandler(HOPRNode):
         log.info("Subgraph data dictionary generated")
 
         async with self.subgraph_lock:
-            self.subgraph_dict = subgraph_dict
+            self.subgraph_list = subgraph_list
 
     @formalin(message="Closing incoming channels", sleep=60 * 5)
     @connectguard
