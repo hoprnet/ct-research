@@ -38,13 +38,13 @@ def merge_topology_database_subgraph(
         )
 
         entries = [e for e in subgraph_list if e.hasAddress(peer.address)]
-        if len(entries) > 1:
+        if len(entries) > 0:
             subgraph_entry: SubgraphEntry = entries[0]
         else:
             subgraph_entry = SubgraphEntry(None, None, None)
 
         entries = [e for e in database_list if e.hasPeerId(peer.id)]
-        if len(entries) > 1:
+        if len(entries) > 0:
             database_entry: MetricTableEntry = entries[0]
         else:
             database_entry = MetricTableEntry(None, None, None, None)
