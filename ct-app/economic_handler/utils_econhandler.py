@@ -112,7 +112,7 @@ def reward_probability(peers: list[Peer]):
 
     # remove entries from the list
     for index in sorted(indexes_to_remove, reverse=True):
-        peers.pop(index=index)
+        peers.pop(index)
 
     log.info(f"Excluded {len(indexes_to_remove)} peers from the dataset.")
 
