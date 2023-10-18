@@ -157,3 +157,10 @@ class Peer:
             "winning_prob": self.economic_model.budget.winning_probability,
             "jobs": self.message_count_for_reward,
         }
+
+    def __repr__(self):
+        return (
+            f"Peer(id={self.id}, "
+            + f"address={self.address}, "
+            + f"balance={self.channel_balance})"
+        )

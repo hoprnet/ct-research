@@ -255,8 +255,7 @@ class EconomicHandler(HOPRNode):
         async with self.topology_lock:
             self.topology_list = topology_list
 
-        log.info("Fetched unique nodeAddress-peerId links from topology.")
-        log.debug(f"Unique nodeAddress-peerId links: {topology_list}")
+        log.info(f"Fetched topology links ({len(topology_list)} entries).")
 
     # @formalin(message="Getting RPCh nodes list", sleep=1 * 60)
     # async def get_rpch_nodes(self):
@@ -307,8 +306,7 @@ class EconomicHandler(HOPRNode):
 
         async with self.ct_node_lock:
             self.ct_nodes = [node[0] for node in nodes]
-        log.info(f"Fetched list of {len(nodes)} CT nodes.")
-        log.debug(f"CT nodes: {self.ct_nodes}")
+        log.info(f"Fetched list of CT nodes ({len(nodes)} entries).")
 
     @formalin(message="Getting database metrics", sleep=1 * 60)
     async def get_database_metrics(self):
@@ -343,8 +341,7 @@ class EconomicHandler(HOPRNode):
         async with self.database_lock:
             self.database_metrics = metric_list
 
-        log.info("Fetched data from database.")
-        log.debug(f"Database entries: {metric_list}")
+        log.info(f"Fetched data from database ({len(metric_list)} entries).)")
 
     @formalin(message="Getting subgraph data", sleep=1 * 60)
     async def get_subgraph_data(self):
@@ -421,7 +418,7 @@ class EconomicHandler(HOPRNode):
                 data["variables"]["skip"] += pagination_skip_size
                 more_content_available = len(safes) == pagination_skip_size
 
-        log.info("Subgraph data dictionary generated")
+        log.info(f"Subgraph data dictionary generated ({len(subgraph_list)} entries).")
 
         async with self.subgraph_lock:
             self.subgraph_list = subgraph_list
