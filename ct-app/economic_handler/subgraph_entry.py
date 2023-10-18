@@ -21,3 +21,10 @@ class SubgraphEntry:
             and self.wxHoprBalance == other.wxHoprBalance
             and self.safe_address == other.safe_address
         )
+
+    def __str__(self):
+        return (
+            f"SubgraphEntry(node_address={self.node_address}, "
+            + f"wxHoprBalance={self.wxHoprBalance}, "
+            + f"safe_address={self.safe_address})"
+        )

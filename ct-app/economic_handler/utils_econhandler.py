@@ -56,7 +56,6 @@ def merge_topology_database_subgraph(
         if peer.complete:
             merged_result.append(peer)
 
-    log.debug(f"Merged data sources: {merged_result}")
     log.info("Merged data successfully.")
     log.info("Total balance calculated successfully.")
 

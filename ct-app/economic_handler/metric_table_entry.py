@@ -48,3 +48,11 @@ class MetricTableEntry:
 
     def hasPeerId(self, peer_id: str):
         return self.peer_id == peer_id
+
+    def __repr__(self):
+        return (
+            f"MetricTableEntry(peer_id={self.peer_id}, "
+            + f"node_ids={self.node_ids}, "
+            + f"latencies={self.latencies}, "
+            + f"timestamp={self.timestamp})"
+        )
