@@ -253,7 +253,7 @@ class EconomicHandler(HOPRNode):
         ]
 
         async with self.topology_lock:
-            self.topology_links_with_balance = topology_list
+            self.topology_list = topology_list
 
         log.info("Fetched unique nodeAddress-peerId links from topology.")
         log.debug(f"Unique nodeAddress-peerId links: {topology_list}")
