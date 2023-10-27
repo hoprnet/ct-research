@@ -35,6 +35,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# send post request:
-# curl -X POST http://localhost:8080/list -H "Content-Type: application/json" -d '{"list": [["0x12", 41],["0xF5",95]]}'

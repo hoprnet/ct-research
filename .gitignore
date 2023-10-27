@@ -5,6 +5,7 @@ __pycache__/
 # envs
 env*/
 simulation.env
+.vscode/
 
 # logs
 expected_rewards/
@@ -21,5 +22,3 @@ foo*.*
 foo*/
 run_*.sh
 .DS_Store
-
-ct-app/tools/db_connection/__main__.py

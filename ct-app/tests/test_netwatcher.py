@@ -1,9 +1,11 @@
 import asyncio
 import functools
 import os
+import time
 from unittest.mock import MagicMock, patch
-import tools
 import pytest
+
+from hoprd_sdk import ChannelTopology, InlineResponse2005
 
 
 def mock_decorator(*args, **kwargs):
@@ -23,7 +25,7 @@ def mock_decorator(*args, **kwargs):
 patch("tools.decorator.wakeupcall", mock_decorator).start()
 patch("tools.decorator.formalin", mock_decorator).start()
 
-from netwatcher import NetWatcher  # noqa: E402
+from netwatcher import NetWatcher, Peer, Address  # noqa: E402
 from tools.hopr_api_helper import HoprdAPIHelper  # noqa: E402
 
 
@@ -47,6 +49,7 @@ def mock_instance_for_test_gather(mocker):
             {"peer_id": "some_other_peer", "peer_address": "some_other_address"},
         ],
     )
+    mocker.patch.object(api, "all_channels", return_value=InlineResponse2005())
 
     instance = NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl")
     instance.api = api
@@ -84,8 +87,8 @@ def mock_instance_for_test_ping(mocker):
 
     instance = NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl")
     instance.peers = [
-        {"peer_id": "some_peer", "peer_address": "some_address"},
-        {"peer_id": "some_other_peer", "peer_address": "some_other_address"},
+        Peer(Address("some_peer", "some_address")),
+        Peer(Address("some_other_peer", "some_other_address")),
     ]
     instance.api = api
 
@@ -112,7 +115,9 @@ async def test_ping_peers(mock_instance_for_test_ping: NetWatcher):
     instance.started = False
     await asyncio.sleep(1)
 
-    assert len(instance.latency) == 1
+    measures = [peer for peer in instance.peers if peer.latency is not None]
+
+    assert len(measures) == 1
 
 
 @pytest.fixture
@@ -122,8 +127,10 @@ def mock_instance_for_test_transmit(mocker):
     """
 
     instance = NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl")
-    instance.peers = ["some_peer", "some_other_peer"]
-    instance.latency = {"some_peer": 10, "some_other_peer": 20}
+    instance.peers = [
+        Peer(Address("some_peer_1", "some_address_1"), 10, time.time() - 60 * 60),
+        Peer(Address("some_peer_2", "some_address_2"), 20, time.time() - 60 * 60),
+    ]
 
     return instance
 
@@ -135,18 +142,22 @@ async def test_transmit_peers(mock_instance_for_test_transmit: NetWatcher):
     """
     instance = mock_instance_for_test_transmit
 
-    instance.peer_id = "some_peer_id"
-    instance.started = True
-    instance.max_lat_count = 2
+    with patch("aiohttp.ClientSession.post") as mock_post:
+        mock_response = mock_post.return_value.__aenter__.return_value
+        mock_response.status = 200
 
-    await asyncio.create_task(instance.transmit_peers())
-    await asyncio.sleep(1)
+        instance.peer_id = "some_peer_id"
+        instance.started = True
+        instance.max_lat_count = 2
 
-    # avoid infinite while loop by setting node.started = False
-    instance.started = False
-    await asyncio.sleep(1)
+        await asyncio.create_task(instance.transmit_peers())
+        await asyncio.sleep(1)
 
-    assert tools.utils.post_dictionary.called  # TODO: modify the called method
+        # avoid infinite while loop by setting node.started = False
+        instance.started = False
+        await asyncio.sleep(1)
+
+        assert all(peer.latency is None for peer in instance.peers)
 
 
 @pytest.fixture
@@ -170,17 +181,19 @@ async def test_transmit_balance(mock_instance_for_test_transmit_balance: NetWatc
     """
     instance = mock_instance_for_test_transmit_balance
 
-    instance.peer_id = "some_peer_id"
-    instance.started = True
+    with patch("aiohttp.ClientSession.post") as mock_post:
+        mock_response = mock_post.return_value.__aenter__.return_value
+        mock_response.status = 200
 
-    asyncio.create_task(instance.transmit_balance())
-    await asyncio.sleep(1)
+        instance.peer_id = "some_peer_id"
+        instance.started = True
 
-    # avoid infinite while loop by setting node.started = False
-    instance.started = False
-    await asyncio.sleep(1)
+        asyncio.create_task(instance.transmit_balance())
+        await asyncio.sleep(1)
 
-    assert tools.utils.post_dictionary.called  # TODO: modify the called method
+        # avoid infinite while loop by setting node.started = False
+        instance.started = False
+        await asyncio.sleep(1)
 
 
 @pytest.fixture
@@ -194,7 +207,7 @@ def mock_instance_for_test_start(mocker):
     mocker.patch.object(NetWatcher, "transmit_peers", return_value=None)
     mocker.patch.object(NetWatcher, "transmit_balance", return_value=None)
     mocker.patch.object(NetWatcher, "close_incoming_channels", return_value=None)
-    mocker.patch.object(NetWatcher, "open_channels", return_value=None)
+    mocker.patch.object(NetWatcher, "handle_channels", return_value=None)
 
     return NetWatcher("some_url", "some_api_key", "some_posturl", "some_balanceurl")
 
@@ -215,7 +228,7 @@ async def test_start(mock_instance_for_test_start: NetWatcher):
     assert instance.transmit_peers.called
     assert instance.transmit_balance.called
     # assert instance.close_incoming_channels.called
-    assert instance.open_channels.called
+    assert instance.handle_channels.called
 
     assert len(instance.tasks) == 6
 
@@ -235,3 +248,84 @@ def test_stop():
     assert not instance.started
     mocked_task.cancel.assert_called_once()
     assert instance.tasks == set()
+
+
+@pytest.fixture
+def mock_nw_gather_with_channel(mocker):
+    """
+    Create a mock for each coroutine that should be executed.
+    """
+
+    api = HoprdAPIHelper("some_url", "some_key")
+    mocker.patch.object(
+        api,
+        "peers",
+        return_value=[
+            {"peer_id": "some_peer", "peer_address": "some_address"},
+            {"peer_id": "some_other_peer", "peer_address": "some_other_address"},
+        ],
+    )
+    mocker.patch.object(
+        api,
+        "all_channels",
+        return_value=InlineResponse2005(
+            all=[
+                ChannelTopology(
+                    "channel_1",
+                    "some_peer",
+                    "some_other_peer",
+                    "some_address",
+                    "some_other_address",
+                    "1000",
+                    "Open",
+                ),
+                ChannelTopology(
+                    "channel_2",
+                    "some_peer_id",
+                    "some_peer",
+                    "some_address",
+                    "some_address",
+                    "20",
+                    "Open",
+                ),
+                ChannelTopology(
+                    "channel_3",
+                    "some_peer_id",
+                    "some_unseen_peer_id",
+                    "some_address",
+                    "some_unseen_address",
+                    "2000",
+                    "Open",
+                ),
+            ],
+        ),
+    )
+
+    instance = NetWatcher("some_url", "some_key", "some_posturl", "some_balanceurl")
+    instance.api = api
+
+    return instance
+
+
+@pytest.mark.asyncio
+async def test_gather_peers_gets_peers_from_channels(
+    mock_nw_gather_with_channel: NetWatcher,
+):
+    """
+    Test that the method gather_peer works
+    """
+    instance = mock_nw_gather_with_channel
+
+    instance.peer_id = "some_peer_id"
+    instance.started = True
+
+    asyncio.create_task(instance.gather_peers())
+    await asyncio.sleep(1)
+
+    # avoid infinite while loop by setting node.started = False
+    instance.started = False
+    await asyncio.sleep(1)
+
+    assert len(instance.peers) == 3
+
+    assert len([peer for peer in instance.peers if peer.timestamp]) == 1
