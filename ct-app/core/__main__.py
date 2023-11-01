@@ -4,6 +4,7 @@ from signal import SIGINT, SIGTERM
 from .ctcore import CTCore
 from .node import Node
 from .parameters import Parameters
+from .utils import Utils
 
 
 def get_nodes(count: int):
@@ -11,10 +12,14 @@ def get_nodes(count: int):
     Get nodes.
     """
     parameters = Parameters()
-    nodes = set(Node(f"address_{i}", f"key_{i}") for i in range(count))
+    addresses = Utils.envvar("NODE_ADDRESSES").split("||")
+    key = Utils.envvar("NODE_KEY")
+
+    nodes = {Node(address, key) for address in addresses}
 
     for node in nodes:
         node.parameters = parameters
+
     return nodes
 
 

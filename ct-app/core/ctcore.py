@@ -1,12 +1,14 @@
 import asyncio
+
 from tools.db_connection import DatabaseConnection
+
+from .baseclass import Base
+from .decorators import flagguard
 from .node import Node
 from .peer import Peer
 
 
-class CTCore:
-    """Class description."""
-
+class CTCore(Base):
     def __init__(self):
         """
         Initialisation of the class.
@@ -18,7 +20,12 @@ class CTCore:
         self.tasks = set[asyncio.Task]()
         self.all_peers = set[Peer]()
 
-    async def get_aggregated_peers(self):
+    @property
+    def print_prefix(self) -> str:
+        return "ct-core"
+
+    @flagguard
+    async def aggregate_peers(self):
         """
         Get aggregated peers.
         """
@@ -26,7 +33,21 @@ class CTCore:
         for node in self.nodes:
             self.all_peers.update(await node.peers)
 
-        print(f"{self.all_peers=}")
+    @flagguard
+    async def get_subgraph_data(self):
+        pass
+
+    @flagguard
+    async def get_topology_data(self):
+        pass
+
+    @flagguard
+    async def apply_economic_model(self):
+        pass
+
+    @flagguard
+    async def distribute_rewards(self):
+        pass
 
     async def start(self):
         """
@@ -38,13 +59,15 @@ class CTCore:
             return
 
         for node in self.nodes:
-            self.tasks.add(asyncio.create_task(node.retrieve_peers()))
-            self.tasks.add(asyncio.create_task(node.retrieve_outgoing_channels()))
-            self.tasks.add(asyncio.create_task(node.open_channels()))
-            self.tasks.add(asyncio.create_task(node.close_pending_channels()))
-            self.tasks.add(asyncio.create_task(node.fund_channels()))
+            await node.retrieve_peer_id()
+            self.tasks.update(node.tasks())
 
-        self.tasks.add(asyncio.create_task(self.get_aggregated_peers()))
+        self.tasks.add(asyncio.create_task(self.aggregate_peers()))
+        self.tasks.add(asyncio.create_task(self.get_subgraph_data()))
+        self.tasks.add(asyncio.create_task(self.get_topology_data()))
+
+        self.tasks.add(asyncio.create_task(self.apply_economic_model()))
+        self.tasks.add(asyncio.create_task(self.distribute_rewards()))
 
         await asyncio.gather(*self.tasks)
 
