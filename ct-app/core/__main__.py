@@ -6,6 +6,10 @@ from .node import Node
 from .parameters import Parameters
 from .utils import Utils
 
+import logging
+
+logger = logging.getLogger()
+
 
 def get_nodes():
     parameters = Parameters()

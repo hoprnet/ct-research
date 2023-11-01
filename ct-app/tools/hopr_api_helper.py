@@ -11,9 +11,9 @@ from hoprd_sdk.rest import ApiException
 from hoprd_sdk.api import NodeApi, MessagesApi, AccountApi, ChannelsApi, PeersApi
 from urllib3.exceptions import MaxRetryError
 
-from .utils import getlogger
+import logging
 
-log = getlogger()
+log = logging.getLogger()
 
 
 class HoprdAPIHelper:
