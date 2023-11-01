@@ -24,7 +24,7 @@ class CTCore(Base):
     @flagguard
     async def aggregate_peers(self):
         for node in self.nodes:
-            self.all_peers.update(await node.peers)
+            self.all_peers.update(await node.peers.get())
 
     @flagguard
     async def get_subgraph_data(self):
@@ -52,7 +52,7 @@ class CTCore(Base):
             return
 
         for node in self.nodes:
-            await node.retrieve_peer_id()
+            await node.retrieve_address()
             self.tasks.update(node.tasks())
 
         self.tasks.add(asyncio.create_task(self.aggregate_peers()))

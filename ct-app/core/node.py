@@ -1,13 +1,45 @@
 import asyncio
 from enum import Enum
+from typing import Any
 
-from tools import HoprdAPIHelper, envvar
+from tools import HoprdAPIHelper
 
 from .address import Address
 from .baseclass import Base
 from .decorators import connectguard, flagguard
 from .parameters import Parameters
 from .peer import Peer
+
+
+class LockedVar(Base):
+    def __init__(self, name: str, value: Any, infer_type: bool = True):
+        self.name = name
+        self.value = value
+        self.lock = asyncio.Lock()
+
+        if infer_type:
+            self.type = type(value)
+        else:
+            self.type = None
+
+    async def get(self) -> Any:
+        async with self.lock:
+            if self.type:
+                return self.type(self.value)
+            return self.value
+
+    async def set(self, value: Any):
+        if self.type and not isinstance(value, self.type):
+            self._warning(
+                f"Trying to set value of type {type(value)} to {self.type}, ignoring"
+            )
+
+        async with self.lock:
+            self.value = value
+
+    @property
+    def print_prefix(self):
+        return f"LockedVar({self.name})"
 
 
 class ChannelStatus(Enum):
@@ -25,73 +57,39 @@ class ChannelStatus(Enum):
 
 
 class Node(Base):
-    def __init__(self, address: str, key: str):
-        self.api = HoprdAPIHelper(address, key)
-        self.address = address
-        self.peer_id = None
+    def __init__(self, url: str, key: str):
+        self.api = HoprdAPIHelper(url, key)
+        self.url = url
+        self.address = None
 
-        self._peers = set[Peer]()
-        self._outgoings = []
-        self._incomings = []
-        self._connected = False
-
-        self.peers_lock = asyncio.Lock()
-        self.outgoings_lock = asyncio.Lock()
-        self.incomings_lock = asyncio.Lock()
-        self.connected_lock = asyncio.Lock()
+        self.peers = LockedVar("peers", set[Peer]())
+        self.outgoings = LockedVar("outgoings", [])
+        self.incomings = LockedVar("incomings", [])
+        self.connected = LockedVar("connected", False)
 
         self.params = Parameters()
-
-    @property
-    async def peers(self) -> set[Peer]:
-        async with self.peers_lock:
-            return self._peers
-
-    async def set_peers(self, value: set[Peer]):
-        async with self.peers_lock:
-            self._peers = value
-
-    @property
-    async def outgoings(self) -> []:
-        async with self.outgoings_lock:
-            return self._outgoings
-
-    async def set_outgoings(self, value: []):
-        async with self.outgoings_lock:
-            self._outgoings = value
-
-    @property
-    async def incomings(self) -> []:
-        async with self.incomings_lock:
-            return self._incomings
-
-    async def set_incomings(self, value: []):
-        async with self.incomings_lock:
-            self._incomings = value
 
     @property
     async def balance(self) -> dict:
         return await self.api.balances()
 
-    @property
-    async def connected(self) -> bool:
-        async with self.connected_lock:
-            return self._connected
-
-    async def set_connected(self, value: bool):
-        async with self.connected_lock:
-            self._connected = value
-
     async def healthcheck(self) -> dict:
-        await self.retrieve_peer_id()
-        await self.set_connected(self.peer_id is not None)
+        await self.retrieve_address()
+        await self.connected.set(self.address is not None)
 
     @property
     def print_prefix(self):
-        return f"{self.address}"
+        return f"{self.url}"
 
-    async def retrieve_peer_id(self):
-        self.peer_id = await self.api.get_address("hopr")
+    async def retrieve_address(self):
+        peer_id = await self.api.get_address("hopr")
+        peer_address = await self.api.get_address("hopr")
+
+        if not (peer_id and peer_address):
+            self._warning("Could not retrieve peer_id or peer_address")
+            self.address = None
+        else:
+            self.address = Address(peer_id, peer_address)
 
     @flagguard
     @connectguard
@@ -99,10 +97,12 @@ class Node(Base):
         """
         Open channels to discovered_peers.
         """
-        out_opens = [c for c in await self.outgoings if ChannelStatus.is_open(c.status)]
+        out_opens = (await self.outgoings.get()).filter(
+            lambda c: ChannelStatus.is_open(c.status)
+        )
 
         addresses_with_channels = {c.destination_address for c in out_opens}
-        all_addresses = {p.address for p in await self.peers}
+        all_addresses = {p.address for p in await self.peers.get()}
         addresses_without_channels = all_addresses - addresses_with_channels
 
         for address in addresses_without_channels:
@@ -114,7 +114,9 @@ class Node(Base):
         """
         Close incoming channels
         """
-        in_opens = [c for c in await self.incomings if ChannelStatus.is_open(c.status)]
+        in_opens = filter(
+            lambda c: ChannelStatus.is_open(c.status), await self.incomings.get()
+        )
 
         for channel in in_opens:
             await self.api.close_channel(channel.channel_id)
@@ -125,9 +127,10 @@ class Node(Base):
         """
         Close channels in PendingToClose state.
         """
-        out_pendings = [
-            c for c in await self.outgoings if ChannelStatus.is_pending(c.status)
-        ]
+
+        out_pendings = filter(
+            lambda c: ChannelStatus.is_pending(c.status), await self.outgoings.get()
+        )
 
         for channel in out_pendings:
             await self.api.close_channel(channel.channel_id)
@@ -138,15 +141,18 @@ class Node(Base):
         """
         Fund channels that are below minimum threshold.
         """
-        out_opens = [c for c in await self.outgoings if ChannelStatus.is_open(c.status)]
-        low_balances = [
-            c
-            for c in out_opens
-            if int(c.balance) / 1e18 <= self.params.channel_min_balance
-        ]
+
+        out_opens = filter(
+            lambda c: ChannelStatus.is_open(c.status), await self.outgoings.get()
+        )
+        low_balances = filter(
+            lambda c: int(c.balance) <= self.params.channel_min_balance, out_opens
+        )
+
+        peer_ids = [p.id for p in await self.peers.get()]
 
         for channel in low_balances:
-            if channel.destination_peer_id in [p.id for p in await self.peers]:
+            if channel.destination_peer_id in peer_ids:
                 await self.api.fund_channel(
                     channel.channel_id, self.params.channel_funding_amount
                 )
@@ -159,7 +165,7 @@ class Node(Base):
         peers = await self.api.peers(params=["peer_id", "peer_address"], quality=0.5)
         addresses = {Address(p["peer_id"], p["peer_address"]) for p in peers}
 
-        await self.set_peers([Peer(address) for address in addresses])
+        await self.peers.set({Peer(address) for address in addresses})
 
     @connectguard
     async def retrieve_outgoing_channels(self):
@@ -168,9 +174,9 @@ class Node(Base):
         """
         channels = await self.api.all_channels(False)
 
-        outgoings = [c for c in channels.all if c.source_peer_id == self.peer_id]
+        outgoings = filter(lambda c: c.source_peer_id == self.address.id, channels.all)
 
-        await self.set_outgoings(outgoings)
+        await self.outgoings.set(list(outgoings))
 
     @connectguard
     async def retrieve_incoming_channels(self):
@@ -179,9 +185,11 @@ class Node(Base):
         """
         channels = await self.api.all_channels(False)
 
-        incomings = [c for c in channels.all if c.destination_peer_id == self.peer_id]
+        incomings = filter(
+            lambda c: c.destination_peer_id == self.address.id, channels.all
+        )
 
-        await self.set_incomings(incomings)
+        await self.incomings.set(list(incomings))
 
     def tasks(self):
         return [
@@ -197,10 +205,3 @@ class Node(Base):
 
     def __str__(self):
         return f"Node(id='{self.peer_id}')"
-
-    @classmethod
-    def from_env(cls, address_var_name: str, key_var_name: str):
-        address = envvar(address_var_name, str)
-        key = envvar(key_var_name, str)
-
-        return cls(address, key)

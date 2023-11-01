@@ -10,7 +10,7 @@ def connectguard(func):
 
     @functools.wraps(func)
     async def wrapper(self, *args, **kwargs):
-        if not await self.connected:
+        if not await self.connected.get():
             self._warning("Node not connected, skipping")
             return
 
