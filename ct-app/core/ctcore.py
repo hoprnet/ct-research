@@ -10,9 +10,6 @@ from .peer import Peer
 
 class CTCore(Base):
     def __init__(self):
-        """
-        Initialisation of the class.
-        """
         self.nodes = set[Node]()
 
         self.database_connection = DatabaseConnection
@@ -26,10 +23,6 @@ class CTCore(Base):
 
     @flagguard
     async def aggregate_peers(self):
-        """
-        Get aggregated peers.
-        """
-
         for node in self.nodes:
             self.all_peers.update(await node.peers)
 

@@ -2,9 +2,6 @@ from os import environ
 
 
 class Flags:
-    def __init__(self):
-        pass
-
     @classmethod
     def get_environment_flags(cls, prefix: str = "FLAG_"):
         """

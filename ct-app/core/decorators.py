@@ -21,7 +21,7 @@ def connectguard(func):
 
 def flagguard(func):
     """
-    Decorator to check if the node is connected before running anything
+    Decorator to check if the feature is enabled before running it
     """
 
     @functools.wraps(func)

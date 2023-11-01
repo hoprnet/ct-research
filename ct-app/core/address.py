@@ -1,8 +1,5 @@
 class Address:
     def __init__(self, id: str, address: str):
-        """
-        Initialisation of the class.
-        """
         self.id = id
         self.address = address
 
