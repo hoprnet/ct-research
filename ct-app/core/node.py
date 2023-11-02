@@ -4,7 +4,7 @@ from tools import HoprdAPIHelper
 
 from .components.baseclass import Base
 from .components.channelstatus import ChannelStatus
-from .components.decorators import connectguard, flagguard
+from .components.decorators import connectguard, flagguard, formalin
 from .components.lockedvar import LockedVar
 from .model import Address, Parameters, Peer
 
@@ -22,13 +22,11 @@ class Node(Base):
 
         self.params = Parameters()
 
+        self.started = False
+
     @property
     async def balance(self) -> dict:
         return await self.api.balances()
-
-    async def healthcheck(self) -> dict:
-        await self.retrieve_address()
-        await self.connected.set(self.address is not None)
 
     @property
     def print_prefix(self):
@@ -44,7 +42,15 @@ class Node(Base):
         else:
             self.address = Address(peer_id, peer_address)
 
-    @flagguard
+    @flagguard(prefix="NODE_")
+    @formalin(flag_prefix="NODE_")
+    async def healthcheck(self) -> dict:
+        await self.retrieve_address()
+        await self.connected.set(self.address is not None)
+
+        self._debug(f"Connection state: {await self.connected.get()}")
+
+    @flagguard(prefix="NODE_")
     @connectguard
     async def open_channels(self):
         """
@@ -61,7 +67,7 @@ class Node(Base):
         for address in addresses_without_channels:
             await self.api.open_channel(address)
 
-    @flagguard
+    @flagguard(prefix="NODE_")
     @connectguard
     async def close_incoming_channels(self):
         """
@@ -74,7 +80,7 @@ class Node(Base):
         for channel in in_opens:
             await self.api.close_channel(channel.channel_id)
 
-    @flagguard
+    @flagguard(prefix="NODE_")
     @connectguard
     async def close_pending_channels(self):
         """
@@ -88,7 +94,7 @@ class Node(Base):
         for channel in out_pendings:
             await self.api.close_channel(channel.channel_id)
 
-    @flagguard
+    @flagguard(prefix="NODE_")
     @connectguard
     async def fund_channels(self):
         """
@@ -110,6 +116,7 @@ class Node(Base):
                     channel.channel_id, self.params.channel_funding_amount
                 )
 
+    @flagguard(prefix="NODE_")
     @connectguard
     async def retrieve_peers(self):
         """
@@ -120,6 +127,7 @@ class Node(Base):
 
         await self.peers.set({Peer(address) for address in addresses})
 
+    @flagguard(prefix="NODE_")
     @connectguard
     async def retrieve_outgoing_channels(self):
         """
@@ -131,6 +139,7 @@ class Node(Base):
 
         await self.outgoings.set(list(outgoings))
 
+    @flagguard(prefix="NODE_")
     @connectguard
     async def retrieve_incoming_channels(self):
         """

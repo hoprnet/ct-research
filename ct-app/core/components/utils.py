@@ -15,8 +15,12 @@ class Utils:
         return "".join(random.choices(choices, k=length))
 
     @classmethod
-    def envvar(cls, var_name, default=None, type=str):
+    def envvar(cls, var_name: str, default=None, type=str):
         if var_name in environ:
             return type(environ[var_name])
         else:
             return default
+
+    @classmethod
+    def envvar_with_prefix(cls, prefix: str, type=str):
+        return [value for key, value in environ.items() if key.startswith(prefix)]

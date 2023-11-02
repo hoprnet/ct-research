@@ -12,7 +12,7 @@ logger = logging.getLogger()
 
 def get_nodes():
     parameters = Parameters()
-    addresses = Utils.envvar("NODE_ADDRESSES").split("||")
+    addresses = Utils.envvar_with_prefix("NODE_ADDRESS_")
     key = Utils.envvar("NODE_KEY")
 
     nodes = {Node(address, key) for address in addresses}
