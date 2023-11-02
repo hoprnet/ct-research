@@ -1,12 +1,11 @@
 import asyncio
+import logging
 from signal import SIGINT, SIGTERM
 
+from .components.utils import Utils
 from .ctcore import CTCore
+from .model import Parameters
 from .node import Node
-from .parameters import Parameters
-from .utils import Utils
-
-import logging
 
 logger = logging.getLogger()
 

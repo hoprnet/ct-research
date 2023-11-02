@@ -2,10 +2,10 @@ import asyncio
 
 from tools.db_connection import DatabaseConnection
 
-from .baseclass import Base
-from .decorators import flagguard
+from .components.baseclass import Base
+from .components.decorators import flagguard
+from .model.peer import Peer
 from .node import Node
-from .peer import Peer
 
 
 class CTCore(Base):

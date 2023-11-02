@@ -1,59 +1,12 @@
 import asyncio
-from enum import Enum
-from typing import Any
 
 from tools import HoprdAPIHelper
 
-from .address import Address
-from .baseclass import Base
-from .decorators import connectguard, flagguard
-from .parameters import Parameters
-from .peer import Peer
-
-
-class LockedVar(Base):
-    def __init__(self, name: str, value: Any, infer_type: bool = True):
-        self.name = name
-        self.value = value
-        self.lock = asyncio.Lock()
-
-        if infer_type:
-            self.type = type(value)
-        else:
-            self.type = None
-
-    async def get(self) -> Any:
-        async with self.lock:
-            if self.type:
-                return self.type(self.value)
-            return self.value
-
-    async def set(self, value: Any):
-        if self.type and not isinstance(value, self.type):
-            self._warning(
-                f"Trying to set value of type {type(value)} to {self.type}, ignoring"
-            )
-
-        async with self.lock:
-            self.value = value
-
-    @property
-    def print_prefix(self):
-        return f"LockedVar({self.name})"
-
-
-class ChannelStatus(Enum):
-    Open = "Open"
-    PendingToClose = "PendingToClose"
-    Closed = "Closed"
-
-    @classmethod
-    def is_pending(cls, value: str):
-        return value == cls.PendingToClose.value
-
-    @classmethod
-    def is_open(cls, value: str):
-        return value == cls.Open.value
+from .components.baseclass import Base
+from .components.channelstatus import ChannelStatus
+from .components.decorators import connectguard, flagguard
+from .components.lockedvar import LockedVar
+from .model import Address, Parameters, Peer
 
 
 class Node(Base):
