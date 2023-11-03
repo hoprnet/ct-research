@@ -12,10 +12,10 @@ logger = logging.getLogger()
 
 def get_nodes():
     parameters = Parameters()
-    addresses = Utils.envvar_with_prefix("NODE_ADDRESS_")
+    addresses = Utils.envvarWithPrefix("NODE_ADDRESS_")
     key = Utils.envvar("NODE_KEY")
 
-    nodes = {Node(address, key) for address in addresses}
+    nodes = [Node(address, key) for address in addresses]
 
     for node in nodes:
         node.parameters = parameters
@@ -31,10 +31,13 @@ def main():
     loop.add_signal_handler(SIGINT, instance.stop)
     loop.add_signal_handler(SIGTERM, instance.stop)
 
-    loop.run_until_complete(instance.start())
-
-    instance.stop()
-    loop.close()
+    try:
+        loop.run_until_complete(instance.start())
+    except asyncio.CancelledError as e:
+        print("Uncaught exception ocurred", str(e))
+    finally:
+        instance.stop()
+        loop.close()
 
 
 if __name__ == "__main__":

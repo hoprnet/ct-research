@@ -10,8 +10,10 @@ from .model import Address, Parameters, Peer
 
 
 class Node(Base):
+    flag_prefix = "NODE_"
+
     def __init__(self, url: str, key: str):
-        self.api = HoprdAPIHelper(url, key)
+        self.api: HoprdAPIHelper = HoprdAPIHelper(url, key)
         self.url = url
         self.address = None
 
@@ -32,32 +34,26 @@ class Node(Base):
     def print_prefix(self):
         return f"{self.url}"
 
-    async def retrieve_address(self):
-        peer_id = await self.api.get_address("hopr")
-        peer_address = await self.api.get_address("hopr")
+    async def _retrieve_address(self):
+        addresses = await self.api.get_address("all")
+        self.address = Address(addresses["hopr"], addresses["native"])
 
-        if not (peer_id and peer_address):
-            self._warning("Could not retrieve peer_id or peer_address")
-            self.address = None
-        else:
-            self.address = Address(peer_id, peer_address)
-
-    @flagguard(prefix="NODE_")
-    @formalin(flag_prefix="NODE_")
+    @flagguard
+    @formalin(None)
     async def healthcheck(self) -> dict:
-        await self.retrieve_address()
+        await self._retrieve_address()
         await self.connected.set(self.address is not None)
 
         self._debug(f"Connection state: {await self.connected.get()}")
 
-    @flagguard(prefix="NODE_")
+    @flagguard
     @connectguard
     async def open_channels(self):
         """
         Open channels to discovered_peers.
         """
-        out_opens = (await self.outgoings.get()).filter(
-            lambda c: ChannelStatus.is_open(c.status)
+        out_opens = filter(
+            lambda c: ChannelStatus.isOpen(c.status), await self.outgoings.get()
         )
 
         addresses_with_channels = {c.destination_address for c in out_opens}
@@ -67,20 +63,20 @@ class Node(Base):
         for address in addresses_without_channels:
             await self.api.open_channel(address)
 
-    @flagguard(prefix="NODE_")
+    @flagguard
     @connectguard
     async def close_incoming_channels(self):
         """
         Close incoming channels
         """
         in_opens = filter(
-            lambda c: ChannelStatus.is_open(c.status), await self.incomings.get()
+            lambda c: ChannelStatus.isOpen(c.status), await self.incomings.get()
         )
 
         for channel in in_opens:
             await self.api.close_channel(channel.channel_id)
 
-    @flagguard(prefix="NODE_")
+    @flagguard
     @connectguard
     async def close_pending_channels(self):
         """
@@ -88,13 +84,13 @@ class Node(Base):
         """
 
         out_pendings = filter(
-            lambda c: ChannelStatus.is_pending(c.status), await self.outgoings.get()
+            lambda c: ChannelStatus.isPending(c.status), await self.outgoings.get()
         )
 
         for channel in out_pendings:
             await self.api.close_channel(channel.channel_id)
 
-    @flagguard(prefix="NODE_")
+    @flagguard
     @connectguard
     async def fund_channels(self):
         """
@@ -102,7 +98,7 @@ class Node(Base):
         """
 
         out_opens = filter(
-            lambda c: ChannelStatus.is_open(c.status), await self.outgoings.get()
+            lambda c: ChannelStatus.isOpen(c.status), await self.outgoings.get()
         )
         low_balances = filter(
             lambda c: int(c.balance) <= self.params.channel_min_balance, out_opens
@@ -116,18 +112,21 @@ class Node(Base):
                     channel.channel_id, self.params.channel_funding_amount
                 )
 
-    @flagguard(prefix="NODE_")
+    @flagguard
+    @formalin("Retrieving peers")
     @connectguard
     async def retrieve_peers(self):
         """
         Retrieve real peers from the network.
         """
-        peers = await self.api.peers(params=["peer_id", "peer_address"], quality=0.5)
-        addresses = {Address(p["peer_id"], p["peer_address"]) for p in peers}
 
-        await self.peers.set({Peer(address) for address in addresses})
+        results = await self.api.peers(params=["peer_id", "peer_address"], quality=0.5)
+        peers = {Peer(item["peer_id"], item["peer_address"]) for item in results}
 
-    @flagguard(prefix="NODE_")
+        await self.peers.set(peers)
+
+    @flagguard
+    @formalin("Retrieving outgoing channels")
     @connectguard
     async def retrieve_outgoing_channels(self):
         """
@@ -139,7 +138,8 @@ class Node(Base):
 
         await self.outgoings.set(list(outgoings))
 
-    @flagguard(prefix="NODE_")
+    @flagguard
+    @formalin("Retrieving incoming channels")
     @connectguard
     async def retrieve_incoming_channels(self):
         """
@@ -154,6 +154,7 @@ class Node(Base):
         await self.incomings.set(list(incomings))
 
     def tasks(self):
+        self._info("Starting node")
         return [
             asyncio.create_task(self.healthcheck()),
             asyncio.create_task(self.retrieve_peers()),

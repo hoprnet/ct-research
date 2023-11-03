@@ -432,13 +432,24 @@ class HoprdAPIHelper:
 
         return output_list
 
-    async def get_address(self, address: str):
+    async def get_address(self, address: str or list[str] = "hopr"):
         """
         Returns the address of the node.
-        :param: address: str = "hopr" | "native"
+        :param: address: str = "hopr" | "native" | "all"
         :return: address: str
         """
         log.debug("Getting address")
+
+        all_types = ["hopr", "native"]
+        if address == "all":
+            address = all_types
+        elif isinstance(address, str):
+            address = [address]
+
+        for item in address:
+            if item not in all_types:
+                log.error(f"Type `{item}` not supported. Use `all`, `hopr`, `native`")
+                return None
 
         try:
             with ApiClient(self.configuration) as client:
@@ -456,11 +467,16 @@ class HoprdAPIHelper:
             log.error("MaxRetryError calling AccountApi->account_get_address")
             return None
 
-        if not hasattr(response, address):
-            log.error(f"No {address} returned from the API")
-            return None
+        return_dict = {}
 
-        return getattr(response, address)
+        for item in address:
+            if not hasattr(response, item):
+                log.error(f"No {address} returned from the API")
+                return None
+
+            return_dict[item] = getattr(response, item)
+
+        return return_dict if len(return_dict) > 1 else return_dict[address[0]]
 
     async def send_message(
         self, destination: str, message: str, hops: list[str], tag: int = 0x0320

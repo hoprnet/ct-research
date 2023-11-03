@@ -6,7 +6,7 @@ class Flags:
     global_prefix = "FLAG_"
 
     @classmethod
-    def get_environment_flag_value(cls, methodname: str, prefix: str):
+    def getEnvironmentFlagValue(cls, methodname: str, prefix: str):
         """
         Get the value of an environment variable starting with a given prefix.
         """
@@ -15,7 +15,7 @@ class Flags:
         return float(environ.get(f"{_prefix}{methodname.upper()}", None))
 
     @classmethod
-    def get_environment_flags(cls, prefix: str):
+    def getEnvironmentFlags(cls, prefix: str):
         """
         Get all environment variable starting with a given prefix.
         """

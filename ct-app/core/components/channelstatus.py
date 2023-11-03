@@ -7,9 +7,9 @@ class ChannelStatus(Enum):
     Closed = "Closed"
 
     @classmethod
-    def is_pending(cls, value: str):
+    def isPending(cls, value: str):
         return value == cls.PendingToClose.value
 
     @classmethod
-    def is_open(cls, value: str):
+    def isOpen(cls, value: str):
         return value == cls.Open.value

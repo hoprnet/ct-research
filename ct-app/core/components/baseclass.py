@@ -19,3 +19,6 @@ class Base:
 
     def _error(self, message: str):
         self._print(message, color="\033[0;31m")
+
+    def _feature(self, message: str):
+        self._print(message, color="\033[0;35m")
