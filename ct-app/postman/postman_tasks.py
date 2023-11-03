@@ -210,9 +210,9 @@ async def async_send_1_hop_message(
 
         balance = channel_balance(api, address)
 
-        real_count = min(expected_count, balance // ticket_price)
+        possible_count = min(expected_count, balance // ticket_price)
 
-        if real_count < expected_count:
+        if possible_count < expected_count:
             log.warning(
                 "Insufficient balance to send all messages at once "
                 + f"(balance: {balance}, "
@@ -220,9 +220,15 @@ async def async_send_1_hop_message(
                 + f"ticket price: {ticket_price})"
             )
 
-        effective_count, issued_count = await send_messages_in_batches(
-            api, peer_id, real_count, address, timestamp, envvar("BATCH_SIZE", int)
-        )
+        if possible_count > 0:
+            effective_count, issued_count = await send_messages_in_batches(
+                api,
+                peer_id,
+                possible_count,
+                address,
+                timestamp,
+                envvar("BATCH_SIZE", int),
+            )
 
         if effective_count >= expected_count:
             status = TaskStatus.SUCCESS
