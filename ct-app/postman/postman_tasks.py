@@ -31,16 +31,16 @@ app = Celery(name=envvar("PROJECT_NAME"), broker=envvar("CELERY_BROKER_URL"))
 app.autodiscover_tasks(force=True)
 
 
-def channel_balance(api: HoprdAPIHelper, address: str) -> float:
+async def channel_balance(api: HoprdAPIHelper, address: str) -> float:
     """
     Get the channel balance of a given address.
     :param api: API helper instance.
     :param address: Address to get the balance from.
     :return: Channel balance of the address.
     """
-    channels = api.outgoing_channels(address)
+    channels = await api.outgoing_channels(address)
 
-    channel = filter(lambda c: c.peerAddress == address, channels)
+    channel = list(filter(lambda c: c.peerAddress == address, channels))
 
     if len(channel) == 0:
         return 0
@@ -208,7 +208,7 @@ async def async_send_1_hop_message(
         inbox = await api.messages_pop_all(0x0320)
         already_in_inbox = len(inbox)
 
-        balance = channel_balance(api, address)
+        balance = await channel_balance(api, address)
 
         possible_count = min(expected_count, balance // ticket_price)
 
