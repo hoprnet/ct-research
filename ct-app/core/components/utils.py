@@ -6,7 +6,8 @@ from os import environ
 from typing import Any
 
 from aiohttp import ClientSession
-from core.model import EconomicModel, Peer, SubgraphEntry, TopologyEntry
+
+from core.model import Peer, SubgraphEntry, TopologyEntry, EconomicModel
 from google.cloud import storage
 
 

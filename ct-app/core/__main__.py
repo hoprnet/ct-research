@@ -6,7 +6,6 @@ from .components.utils import Utils
 from .ctcore import CTCore
 from .node import Node
 
-
 def main():
     params = Parameters()(env_prefix="PARAM_")
 
