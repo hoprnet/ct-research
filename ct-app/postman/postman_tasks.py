@@ -31,6 +31,23 @@ app = Celery(name=envvar("PROJECT_NAME"), broker=envvar("CELERY_BROKER_URL"))
 app.autodiscover_tasks(force=True)
 
 
+async def channel_balance(api: HoprdAPIHelper, address: str) -> float:
+    """
+    Get the channel balance of a given address.
+    :param api: API helper instance.
+    :param address: Address to get the balance from.
+    :return: Channel balance of the address.
+    """
+    channels = await api.outgoing_channels(address)
+
+    channel = list(filter(lambda c: c.peerAddress == address, channels))
+
+    if len(channel) == 0:
+        return 0
+    else:
+        return int(channel[0].balance) / 1e18
+
+
 def loop_through_nodes(node_list: list[str], node_index: int) -> tuple[str, int]:
     """
     Get the next node address in the list of nodes. If the index is out of bounds, it
@@ -96,6 +113,7 @@ def send_1_hop_message(
     expected_count: int,
     node_list: list[str],
     node_index: int,
+    ticket_price: float,
     timestamp: float = None,
     attempts: int = 0,
 ) -> TaskStatus:
@@ -108,6 +126,7 @@ def send_1_hop_message(
     :param expected_count: Number of messages to send.
     :param node_list: List of nodes connected to this peer, they can serve as backups.
     :param node_index: Index of the node in the list of nodes.
+    :param ticket_price: Cost of sending a message.
     :param timestamp: Timestamp at first iteration. For timeout purposes.
     :param attempts: Number of attempts to send the message regardless of the node.
     """
@@ -116,7 +135,13 @@ def send_1_hop_message(
 
     return asyncio.run(
         async_send_1_hop_message(
-            peer, expected_count, node_list, node_index, timestamp, attempts
+            peer,
+            expected_count,
+            node_list,
+            node_index,
+            ticket_price,
+            timestamp,
+            attempts,
         )
     )
 
@@ -126,6 +151,7 @@ async def async_send_1_hop_message(
     expected_count: int,
     node_list: list[str],
     node_index: int,
+    ticket_price: float,
     timestamp: float,
     attempts: int,
 ) -> TaskStatus:
@@ -137,6 +163,7 @@ async def async_send_1_hop_message(
     :param expected_count: Number of messages to send.
     :param node_list: List of nodes connected to this peer, they can serve as backups.
     :param node_index: Index of the node in the list of nodes.
+    :param ticket_price: Cost of sending a message.
     :param timestamp: Timestamp at first iteration. For timeout purposes.
     :param attempts: Number of attempts to send the message regardless of the node.
     """
@@ -180,9 +207,28 @@ async def async_send_1_hop_message(
     else:
         inbox = await api.messages_pop_all(0x0320)
         already_in_inbox = len(inbox)
-        effective_count, issued_count = await send_messages_in_batches(
-            api, peer_id, expected_count, address, timestamp, envvar("BATCH_SIZE", int)
-        )
+
+        balance = await channel_balance(api, address)
+
+        possible_count = min(expected_count, balance // ticket_price)
+
+        if possible_count < expected_count:
+            log.warning(
+                "Insufficient balance to send all messages at once "
+                + f"(balance: {balance}, "
+                + f"count: {expected_count}, "
+                + f"ticket price: {ticket_price})"
+            )
+
+        if possible_count > 0:
+            effective_count, issued_count = await send_messages_in_batches(
+                api,
+                peer_id,
+                possible_count,
+                address,
+                timestamp,
+                envvar("BATCH_SIZE", int),
+            )
 
         if effective_count >= expected_count:
             status = TaskStatus.SUCCESS
@@ -262,6 +308,7 @@ def fake_task(
     expected_count: int,
     node_list: list[str],
     node_index: int,
+    ticket_price: float,
     timestamp: float = None,
 ) -> TaskStatus:
     """
@@ -271,6 +318,7 @@ def fake_task(
     :param expected_count: Number of messages to send.
     :param node_list: List of nodes connected to this peer, they can serve as backups.
     :param node_index: Index of the node in the list of nodes.
+    :param ticket_price: Cost of sending a message.
     :param timestamp: Timestamp at first iteration. For timeout purposes.
     """
 

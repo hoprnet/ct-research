@@ -172,7 +172,13 @@ def push_jobs_to_celery_queue(peers: list[Peer]):
 
         app.send_task(
             envvar("TASK_NAME"),
-            args=(peer.id, count, node_list, node_index),
+            args=(
+                peer.id,
+                count,
+                node_list,
+                node_index,
+                peer.economic_model.budget.ticket_price,
+            ),
             queue=node_list[node_index],
         )
 
