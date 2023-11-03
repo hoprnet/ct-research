@@ -1,7 +1,6 @@
 import asyncio
 
 import aiohttp
-
 from tools.hopr_api_helper import HoprdAPIHelper
 
 from .components.baseclass import Base
