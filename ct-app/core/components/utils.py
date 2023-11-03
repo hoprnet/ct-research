@@ -30,9 +30,18 @@ class Utils:
             return default
 
     @classmethod
-    def envvarWithPrefix(cls, prefix: str, type=str):
-        return [type(value) for key, value in environ.items() if key.startswith(prefix)]
+    def envvarWithPrefix(cls, prefix: str, type=str) -> dict[str, Any]:
+        var_dict = {key:type(v) for key, v in environ.items() if key.startswith(prefix)}
 
+        return dict(sorted(var_dict.items()))
+
+    @classmethod
+    def nodesAddresses(cls, address_prefix: str, keyenv: str) -> tuple[list[str], str]:
+        addresses = Utils.envvarWithPrefix(address_prefix).values()
+        key = Utils.envvar(keyenv)
+
+        return addresses, key
+    
     @classmethod
     async def doPost(cls, session: ClientSession, url: str, data: dict):
         async with session.post(url, json=data) as response:

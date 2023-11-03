@@ -6,7 +6,8 @@ from .components.baseclass import Base
 from .components.channelstatus import ChannelStatus
 from .components.decorators import connectguard, flagguard, formalin
 from .components.lockedvar import LockedVar
-from .model import Address, Parameters, Peer
+from .components.parameters import Parameters
+from .model import Address, Peer
 
 
 class Node(Base):
@@ -168,3 +169,7 @@ class Node(Base):
 
     def __str__(self):
         return f"Node(id='{self.peer_id}')"
+
+    @classmethod
+    def fromAddressListAndKey(cls, addresses: list[str], key: str):
+        return [cls(address, key) for address in addresses]

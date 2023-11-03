@@ -1,31 +1,22 @@
 import asyncio
-import logging
 from signal import SIGINT, SIGTERM
 
+from .components.parameters import Parameters
 from .components.utils import Utils
 from .ctcore import CTCore
-from .model import Parameters
 from .node import Node
 
-logger = logging.getLogger()
-
-
-def get_nodes():
-    parameters = Parameters()
-    addresses = Utils.envvarWithPrefix("NODE_ADDRESS_")
-    key = Utils.envvar("NODE_KEY")
-
-    nodes = [Node(address, key) for address in addresses]
-
-    for node in nodes:
-        node.parameters = parameters
-
-    return nodes
-
-
 def main():
+    params = Parameters()(env_prefix="PARAM_")
+
     instance = CTCore()
-    instance.nodes = get_nodes()
+    instance.nodes = Node.fromAddressListAndKey(
+        *Utils.nodesAddresses("NODE_ADDRESS_", "NODE_KEY")
+        )
+
+    instance.params = params
+    for node in instance.nodes:
+        node.params = params
 
     loop = asyncio.new_event_loop()
     loop.add_signal_handler(SIGINT, instance.stop)
@@ -33,8 +24,8 @@ def main():
 
     try:
         loop.run_until_complete(instance.start())
-    except asyncio.CancelledError as e:
-        print("Uncaught exception ocurred", str(e))
+    except asyncio.CancelledError:
+        instance._error("Stopping the instance...")
     finally:
         instance.stop()
         loop.close()

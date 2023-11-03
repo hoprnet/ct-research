@@ -7,8 +7,9 @@ from tools.hopr_api_helper import HoprdAPIHelper
 from .components.baseclass import Base
 from .components.decorators import flagguard, formalin
 from .components.lockedvar import LockedVar
+from .components.parameters import Parameters
 from .components.utils import Utils
-from .model import Parameters, Peer, SubgraphEntry, TopologyEntry, Address
+from .model import Address, Peer, SubgraphEntry, TopologyEntry
 from .node import Node
 
 
@@ -50,7 +51,7 @@ class CTCore(Base):
     @flagguard
     @formalin("Running healthcheck")
     async def healthcheck(self):
-        states = [await node.connected.get() for node in self.nodes]
+        states = [await node.connected.get() for node in self.network_nodes]
         await self.connected.set(all(states))
 
         self._debug(f"Connection state: {await self.connected.get()}")
@@ -173,7 +174,7 @@ class CTCore(Base):
         """
         Start the node.
         """
-        self._info("CTCore started")
+        self._info(f"CTCore started with {len(self.network_nodes)} nodes.")
 
         if self.tasks:
             return
