@@ -70,8 +70,6 @@ def running_module(uppercase: bool = False):
     :returns: the name of the module that is running"""
     argv = sys.argv[0]
 
-    print(sys.argv)
-
     if not argv.endswith("__main__.py"):
         return None
 
