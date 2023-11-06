@@ -3,11 +3,12 @@ import pytest
 import aiohttp
 from unittest.mock import patch
 from economic_handler.economic_handler import EconomicHandler
+from economic_handler.subgraph_entry import SubgraphEntry
 
 
 def create_node():
     return EconomicHandler(
-        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_url", 5
+        "some_url", "some_api_key", "some_rpch_endpoint", "some_subgraph_url"
     )
 
 
@@ -113,9 +114,9 @@ async def test_get_subgraph_data():
         node.started = False
         await asyncio.sleep(0.5)
 
-        expected_data = {"node_1": {"safe_address": "safe_1", "wxHOPR_balance": "100"}}
+        expected_data = [SubgraphEntry("node_1", "100", "safe_1")]
 
-        assert node.subgraph_dict == expected_data
+        assert node.subgraph_list == expected_data
 
 
 @pytest.mark.asyncio
@@ -132,7 +133,7 @@ async def test_get_get_subgraph_data_exceptions():
         await asyncio.sleep(0.5)
         node.started = False
         await asyncio.sleep(0.5)
-        assert node.subgraph_dict is None
+        assert node.subgraph_list is None
 
         # Simulate ValueError
         mock_get.side_effect = OSError("ValueError")
@@ -140,7 +141,7 @@ async def test_get_get_subgraph_data_exceptions():
         await asyncio.sleep(0.5)
         node.started = False
         await asyncio.sleep(0.5)
-        assert node.subgraph_dict is None
+        assert node.subgraph_list is None
 
         # Simulate general exception
         mock_get.side_effect = Exception("Exception")
@@ -148,4 +149,4 @@ async def test_get_get_subgraph_data_exceptions():
         await asyncio.sleep(0.5)
         node.started = False
         await asyncio.sleep(0.5)
-        assert node.subgraph_dict is None
+        assert node.subgraph_list is None

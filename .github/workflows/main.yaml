@@ -36,12 +36,12 @@ jobs:
         working-directory: ct-app
         run: |
           # default set of ruff rules with GitHub Annotations
-          ruff --format=github --ignore E501 --target-version=py39 .
+          ruff --output-format=github --ignore E501 --target-version=py39 .
 
       - name: Test with pytest
         working-directory: ct-app
         run: |
-          pytest -k "not api_helper.py and not test_transmit_ and not gcp"
+          pytest tests -k "not api_helper.py and not gcp"
 
   image:
     name: Build and push container image

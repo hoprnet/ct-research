@@ -1,4 +1,6 @@
 import asyncio
+import logging
+import random
 import time
 from enum import Enum
 
@@ -7,6 +9,7 @@ from celery import Celery
 from tools import HoprdAPIHelper, envvar, getlogger
 
 log = getlogger()
+log.setLevel(logging.INFO)
 
 
 class TaskStatus(Enum):
@@ -19,12 +22,30 @@ class TaskStatus(Enum):
     SUCCESS = "SUCCESS"
     RETRIED = "RETRIED"
     SPLITTED = "SPLITTED"
+    LEFTOVERS = "LEFTOVERS"
     TIMEOUT = "TIMEOUT"
     FAILED = "FAILED"
 
 
 app = Celery(name=envvar("PROJECT_NAME"), broker=envvar("CELERY_BROKER_URL"))
 app.autodiscover_tasks(force=True)
+
+
+async def channel_balance(api: HoprdAPIHelper, address: str) -> float:
+    """
+    Get the channel balance of a given address.
+    :param api: API helper instance.
+    :param address: Address to get the balance from.
+    :return: Channel balance of the address.
+    """
+    channels = await api.outgoing_channels(address)
+
+    channel = list(filter(lambda c: c.peerAddress == address, channels))
+
+    if len(channel) == 0:
+        return 0
+    else:
+        return int(channel[0].balance) / 1e18
 
 
 def loop_through_nodes(node_list: list[str], node_index: int) -> tuple[str, int]:
@@ -40,13 +61,61 @@ def loop_through_nodes(node_list: list[str], node_index: int) -> tuple[str, int]
     return node_list[node_index], node_index
 
 
+def create_batches(total_count, batch_size):
+    if total_count < 0:
+        return []
+
+    full_batches = total_count // batch_size
+    remainder = total_count % batch_size
+
+    batches: list = [batch_size] * full_batches + [remainder] * bool(remainder)
+
+    return batches
+
+
+async def send_messages_in_batches(
+    api: HoprdAPIHelper,
+    peer_id: str,
+    expected_count: int,
+    address: str,
+    timestamp: float,
+    batch_size: int,
+):
+    effective_count = 0
+    issued_count = 0
+
+    batches = create_batches(expected_count, batch_size)
+
+    for batch_index, batch in enumerate(batches):
+        for message_index in range(batch):
+            # node is reachable, messages can be sent
+            global_index = message_index + batch_index * batch_size
+
+            issued_count += await api.send_message(
+                address,
+                f"From CT: distribution to {peer_id} at {timestamp}-"
+                f"{global_index + 1}/{expected_count}",
+                [peer_id],
+            )
+            await asyncio.sleep(envvar("DELAY_BETWEEN_TWO_MESSAGES", float))
+
+        await asyncio.sleep(envvar("MESSAGE_DELIVERY_TIMEOUT", float))
+
+        messages = await api.messages_pop_all(0x0320)
+        effective_count += len(messages)
+
+    return effective_count, issued_count
+
+
 @app.task(name="send_1_hop_message")
 def send_1_hop_message(
     peer: str,
     expected_count: int,
     node_list: list[str],
     node_index: int,
-    timestamp: float = time.time(),
+    ticket_price: float,
+    timestamp: float = None,
+    attempts: int = 0,
 ) -> TaskStatus:
     """
     Celery task to send `messages_count` 1-hop messages to a peer. This method is the
@@ -57,10 +126,23 @@ def send_1_hop_message(
     :param expected_count: Number of messages to send.
     :param node_list: List of nodes connected to this peer, they can serve as backups.
     :param node_index: Index of the node in the list of nodes.
+    :param ticket_price: Cost of sending a message.
     :param timestamp: Timestamp at first iteration. For timeout purposes.
+    :param attempts: Number of attempts to send the message regardless of the node.
     """
+    if timestamp is None:
+        timestamp = time.time()
+
     return asyncio.run(
-        async_send_1_hop_message(peer, expected_count, node_list, node_index, timestamp)
+        async_send_1_hop_message(
+            peer,
+            expected_count,
+            node_list,
+            node_index,
+            ticket_price,
+            timestamp,
+            attempts,
+        )
     )
 
 
@@ -69,7 +151,9 @@ async def async_send_1_hop_message(
     expected_count: int,
     node_list: list[str],
     node_index: int,
+    ticket_price: float,
     timestamp: float,
+    attempts: int,
 ) -> TaskStatus:
     """
     Celery task to send `count` 1-hop messages to a peer in an async manner. A timeout
@@ -79,16 +163,20 @@ async def async_send_1_hop_message(
     :param expected_count: Number of messages to send.
     :param node_list: List of nodes connected to this peer, they can serve as backups.
     :param node_index: Index of the node in the list of nodes.
+    :param ticket_price: Cost of sending a message.
     :param timestamp: Timestamp at first iteration. For timeout purposes.
+    :param attempts: Number of attempts to send the message regardless of the node.
     """
 
-    # at the first iteration, the timestamp is set to the current time. At each task
-    # transfer, the method will check if the timestamp is recent enough to consider
+    # at the first iteration, the number of attempts is set to 0. At each task
+    # transfer, the method will check if the counter is still acceptable to consider
     # trying to send a message
-    timeout = envvar("TIMEOUT", int)
-    if time.time() - timestamp > timeout:  # timestamp is older than timeout
-        log.error(f"Trying to send a message for more than {timeout}s, stopping")
+    max_attempts = envvar("MAXATTEMPTS", int)
+    if attempts >= max_attempts:
+        log.error(f"Trying to send a message more than {max_attempts}x, stopping")
         return TaskStatus.TIMEOUT, TaskStatus.DEFAULT
+
+    attempts += 1
 
     # initialize the API helper and task status
     api_host = envvar("API_HOST")
@@ -97,6 +185,8 @@ async def async_send_1_hop_message(
     feedback_status = TaskStatus.DEFAULT
 
     effective_count = 0
+    issued_count = 0
+    already_in_inbox = 0
 
     api = HoprdAPIHelper(api_host, api_key)
 
@@ -114,45 +204,59 @@ async def async_send_1_hop_message(
     if address is None:
         log.error("Could not connect to node. Transfering task to the next node.")
         status = TaskStatus.RETRIED
+    else:
+        inbox = await api.messages_pop_all(0x0320)
+        already_in_inbox = len(inbox)
 
-    while status == TaskStatus.DEFAULT:
-        # node is reachable, messages can be sent
-        successful_sending = await api.send_message(
-            address,
-            f"From CT: rewards partly distributed to {peer_id}",
-            [peer_id],
-        )
-        effective_count += successful_sending
+        balance = await channel_balance(api, address)
 
-        if not successful_sending:
-            log.error(
-                "Could not send message. Transfering remaining ones to the next node."
+        possible_count = min(expected_count, balance // ticket_price)
+
+        if possible_count < expected_count:
+            log.warning(
+                "Insufficient balance to send all messages at once "
+                + f"(balance: {balance}, "
+                + f"count: {expected_count}, "
+                + f"ticket price: {ticket_price})"
             )
-            status = TaskStatus.SPLITTED
 
-        if effective_count == expected_count:
+        if possible_count > 0:
+            effective_count, issued_count = await send_messages_in_batches(
+                api,
+                peer_id,
+                possible_count,
+                address,
+                timestamp,
+                envvar("BATCH_SIZE", int),
+            )
+
+        if effective_count >= expected_count:
             status = TaskStatus.SUCCESS
+        else:
+            status = TaskStatus.SPLITTED
 
     log.info(
         f"{effective_count}/{expected_count} messages sent to `{peer_id}` via "
         + f"{address} ({api_host})"
     )
+    if already_in_inbox > 0:
+        log.warning(f"{already_in_inbox} messages were already in the inbox")
 
     if status != TaskStatus.SUCCESS:
         node_address, node_index = loop_through_nodes(node_list, node_index)
-        log.info(
-            f"Creating task for {node_address} to send {effective_count} messages."
-        )
+        message_count = expected_count - effective_count
+        log.info(f"Creating task for {node_address} to send {message_count} messages.")
 
         try:
             app.send_task(
                 "send_1_hop_message",
                 args=(
                     peer_id,
-                    expected_count - effective_count,
+                    message_count,
                     node_list,
                     node_index,
                     timestamp,
+                    attempts,
                 ),
                 queue=node_address,
             )
@@ -170,9 +274,24 @@ async def async_send_1_hop_message(
                 expected_count,
                 status.value,
                 timestamp,
+                issued_count,
             ),
             queue="feedback",
         )
+        if already_in_inbox > 0:
+            app.send_task(
+                "feedback_task",
+                args=(
+                    peer_id,
+                    address,
+                    already_in_inbox,
+                    0,
+                    TaskStatus.LEFTOVERS.value,
+                    timestamp,
+                    0,
+                ),
+                queue="feedback",
+            )
     except Exception:
         # shoud never happen. If it does, it means that the targeted queue is not up
         log.exception("Could not send feedback task")
@@ -189,7 +308,8 @@ def fake_task(
     expected_count: int,
     node_list: list[str],
     node_index: int,
-    timestamp: float = time.time(),
+    ticket_price: float,
+    timestamp: float = None,
 ) -> TaskStatus:
     """
     Fake celery task to test if queues are working as expected.
@@ -198,9 +318,26 @@ def fake_task(
     :param expected_count: Number of messages to send.
     :param node_list: List of nodes connected to this peer, they can serve as backups.
     :param node_index: Index of the node in the list of nodes.
+    :param ticket_price: Cost of sending a message.
     :param timestamp: Timestamp at first iteration. For timeout purposes.
     """
+
+    if timestamp is None:
+        timestamp = time.time()
 
     log.info(f"Fake task execution started at {timestamp}")
     log.info(f"{expected_count} messages ment to be sent to {peer}")
     log.info(f"Node list: {node_list} (starting at index {node_index})")
+
+    app.send_task(
+        "feedback_task",
+        args=(
+            peer,
+            node_list[node_index],
+            random.randint(0, expected_count),
+            expected_count,
+            TaskStatus.SUCCESS.value,
+            timestamp,
+        ),
+        queue="feedback",
+    )

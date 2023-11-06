@@ -1,22 +1,30 @@
 import asyncio
-import aiohttp
 from copy import deepcopy
 
-from tools.decorator import connectguard, formalin, wakeupcall_from_file  # noqa: F401
-from tools import getlogger, HOPRNode, envvar
-from tools.db_connection import DatabaseConnection, NodePeerConnection
+import aiohttp
 from prometheus_client import Gauge
-
 from sqlalchemy import func
 
+from tools import HOPRNode, envvar, getlogger
+from tools.db_connection import DatabaseConnection, NodePeerConnection
+from tools.decorator import (
+    connectguard,
+    formalin,
+    wakeupcall,
+)
+
+from .metric_table_entry import MetricTableEntry
+from .peer import Peer
+from .subgraph_entry import SubgraphEntry
+from .topology_entry import TopologyEntry
 from .utils_econhandler import (
-    exclude_elements,
-    push_jobs_to_celery_queue,
-    reward_probability,  # noqa: F401
-    compute_rewards,  # noqa: F401
-    merge_topology_database_subgraph,
-    economic_model_from_file,  # noqa: F401
     allow_many_node_per_safe,
+    determine_delay_from_parameters,
+    economic_model_from_file,
+    exclude_elements,
+    merge_topology_database_subgraph,
+    push_jobs_to_celery_queue,
+    reward_probability,
     save_dict_to_csv,
 )
 
@@ -25,9 +33,33 @@ log = getlogger()
 
 class EconomicHandler(HOPRNode):
     # prometheus metrics
-    prometheus_economic_model_execs = Gauge(
-        "eh_economic_model_execs", "Number of execution of the economic model"
+    prom_EM_executions = Gauge(
+        "eh_EM_execs", "Number of execution of the economic model"
     )
+    prom_eligible_peers_for_rewards = Gauge(
+        "eh_eligible_peers_for_rewards", "Number of eligible peers for rewards"
+    )
+    prom_budget = Gauge("eh_budget", "Budget for the economic model")
+    prom_budget_period = Gauge(
+        "eh_budget_period", "Budget period for the economic model"
+    )
+    prom_budget_dist_freq = Gauge(
+        "eh_budget_dist_freq", "Number of expected distributions"
+    )
+    prom_budget_ticket_price = Gauge("eh_budget_ticket_price", "Ticket price")
+    prom_budget_winning_prob = Gauge(
+        "eh_budget_winning_prob", "Winning probability of a given ticket"
+    )
+
+    prom_peer_apy = Gauge("eh_peer_apy", "APY of the peer", ["peer_id"])
+    prom_peer_jobs = Gauge("eh_peer_jobs", "Number of jobs for the peer", ["peer_id"])
+    prom_peer_splitted_stake = Gauge(
+        "eh_peer_splitted_stake", "Splitted stake", ["peer_id"]
+    )
+    prom_peer_transformed_stake = Gauge(
+        "eh_peer_transformed_stake", "Transformed stake", ["peer_id"]
+    )
+    prom_peer_safe_count = Gauge("eh_peer_safe_count", "Number of safes", ["peer_id"])
 
     def __init__(
         self,
@@ -35,7 +67,6 @@ class EconomicHandler(HOPRNode):
         key: str,
         rpch_endpoint: str,
         subgraph_endpoint: str,
-        min_database_entries: int,
     ):
         """
         :param url: the url of the HOPR node
@@ -47,19 +78,20 @@ class EconomicHandler(HOPRNode):
         self.rpch_endpoint = rpch_endpoint
         self.subgraph_endpoint = subgraph_endpoint
 
-        self.topology_links_with_balance = None
-        self.database_metrics = {}
-        self.subgraph_dict = None
+        self.topology_list: list[TopologyEntry] = None
+        self.database_metrics: list[MetricTableEntry] = None
+        self.subgraph_list: list[SubgraphEntry] = None
         # self.rpch_nodes = None
         self.ct_nodes = None
 
-        self.min_database_entries = min_database_entries
+        self.eligible_peers: list[Peer] = []
 
         self.topology_lock = asyncio.Lock()
         self.database_lock = asyncio.Lock()
         self.subgraph_lock = asyncio.Lock()
         # self.rpch_node_lock = asyncio.Lock()
         self.ct_node_lock = asyncio.Lock()
+        self.eligible_peers_lock = asyncio.Lock()
 
         super().__init__(url=url, key=key)
 
@@ -71,51 +103,43 @@ class EconomicHandler(HOPRNode):
         # local_rpch = None
         local_ct = None
 
-        while not data_ok:
-            async with self.topology_lock:
-                local_topology = deepcopy(self.topology_links_with_balance)
-            async with self.database_lock:
-                local_database = deepcopy(self.database_metrics)
-            async with self.subgraph_lock:
-                local_subgraph = deepcopy(self.subgraph_dict)
-            # async with self.rpch_node_lock:
-            #     local_rpch = deepcopy(self.rpch_nodes)
-            async with self.ct_node_lock:
-                local_ct = deepcopy(self.ct_nodes)
+        async with self.topology_lock:
+            local_topology = deepcopy(self.topology_list)
+        async with self.database_lock:
+            local_database = deepcopy(self.database_metrics)
+        async with self.subgraph_lock:
+            local_subgraph = deepcopy(self.subgraph_list)
+        # async with self.rpch_node_lock:
+        #     local_rpch = deepcopy(self.rpch_nodes)
+        async with self.ct_node_lock:
+            local_ct = deepcopy(self.ct_nodes)
 
-            topology_ok = local_topology is not None and len(local_topology) > 0
-            database_ok = local_database is not None and len(local_database) > 0
-            subgraph_ok = local_subgraph is not None and len(local_subgraph) > 0
-            # rpch_ok = local_rpch is not None and len(local_rpch) > 0
-            ct_ok = local_ct is not None and len(local_ct) > 0
+        topology_ok = local_topology is not None and len(local_topology) > 0
+        database_ok = local_database is not None and len(local_database) > 0
+        subgraph_ok = local_subgraph is not None and len(local_subgraph) > 0
+        # rpch_ok = local_rpch is not None and len(local_rpch) > 0
+        ct_ok = local_ct is not None and len(local_ct) > 0
 
-            if not topology_ok:
-                log.warning("No topology data available for scheduler")
-            if not database_ok:
-                log.warning("No database metrics available for scheduler")
-            if not subgraph_ok:
-                log.warning("No subgraph data available for scheduler")
-            # if not rpch_ok:
-            #     log.warning("No RPCh nodes available for scheduler")
-            if not ct_ok:
-                log.warning("No CT nodes available for scheduler")
+        if not topology_ok:
+            log.warning("No topology data available for reward calculation")
+        if not database_ok:
+            log.warning("No database metrics available for reward calculation")
+        if not subgraph_ok:
+            log.warning("No subgraph data available for reward calculation")
+        if not ct_ok:
+            log.warning("No CT nodes available for reward calculation")
+        # if not rpch_ok:
+        #     log.warning("No RPCh nodes available for scheduler")
 
-            data_ok = topology_ok * database_ok * subgraph_ok * ct_ok  # * rpch_ok
+        data_ok = topology_ok * database_ok * subgraph_ok * ct_ok  # * rpch_ok
 
-            if len(local_database) < self.min_database_entries:
-                log.warning(
-                    f"Database has less than {self.min_database_entries} entries."
-                )
-                data_ok = False
-
-            if not data_ok:
-                log.warning(
-                    "Missing some information. "
-                    + "Sleeping for a while (5s) before retrying."
-                )
-                await asyncio.sleep(15)
-
-        return local_topology, local_database, local_subgraph, local_ct  # , local_rpch
+        return (
+            data_ok,
+            local_topology,
+            local_database,
+            local_subgraph,
+            local_ct,
+        )  # , local_rpch
 
     @formalin(sleep=10 * 60)
     async def host_available(self):
@@ -123,10 +147,11 @@ class EconomicHandler(HOPRNode):
         return self.connected
 
     @connectguard
-    @wakeupcall_from_file(folder="assets", filename=envvar("PARAMETER_FILE"))
+    @formalin(sleep=2 * 60)
     async def apply_economic_model(self):
         # merge unique_safe_peerId_links with database metrics and subgraph data
         (
+            data_ok,
             local_topology,
             local_database,
             local_subgraph,
@@ -134,40 +159,86 @@ class EconomicHandler(HOPRNode):
             # local_rpch,
         ) = await self.verify_available_data()
 
-        # wait for topology, database, subgraph, rpch and ct locks to be released
-        log.info("All data available for scheduler, running the economic model")
-        self.prometheus_economic_model_execs.inc()
+        if not data_ok:
+            log.warning("Not enough data available for reward calculation")
+            return
 
+        # wait for topology, database, subgraph, rpch and ct locks to be released
         eligible_peers = merge_topology_database_subgraph(
             local_topology,
             local_database,
             local_subgraph,
         )
 
+        log.debug(f"Number of eligible peers after merging: {len(eligible_peers)}")
+
         allow_many_node_per_safe(eligible_peers)
+        log.debug(
+            "Number of eligible peers after allowing many nodes per safe: "
+            + f"{len(eligible_peers)}"
+        )
+
         exclude_elements(eligible_peers, local_ct)
+        log.debug(
+            f"Number of eligible peers after excluding CT nodes: {len(eligible_peers)}"
+        )
 
         # computation of cover traffic probability
-        equations, parameters, budget_parameters = economic_model_from_file(
-            envvar("PARAMETER_FILE")
+        model = economic_model_from_file(envvar("PARAMETER_FILE"))
+
+        self.prom_budget.set(model.budget.budget)
+        self.prom_budget_period.set(model.budget.period)
+        self.prom_budget_dist_freq.set(model.budget.distribution_frequency)
+        self.prom_budget_ticket_price.set(model.budget.ticket_price)
+        self.prom_budget_winning_prob.set(model.budget.winning_probability)
+
+        # assign economic model to peers
+        for peer in eligible_peers:
+            peer.economic_model = model
+
+        reward_probability(eligible_peers)
+        log.debug(
+            "Number of eligible peers after computing reward probability: "
+            + f"{len(eligible_peers)}"
         )
-        reward_probability(eligible_peers, equations, parameters)
 
-        # calculate expected rewards
-        compute_rewards(eligible_peers, budget_parameters)
+        for peer in eligible_peers:
+            self.prom_peer_apy.labels(peer.id).set(peer.apy_percentage)
+            self.prom_peer_jobs.labels(peer.id).set(peer.message_count_for_reward)
+            self.prom_peer_splitted_stake.labels(peer.id).set(peer.split_stake)
+            self.prom_peer_safe_count.labels(peer.id).set(peer.safe_address_count)
+            self.prom_peer_transformed_stake.labels(peer.id).set(peer.transformed_stake)
 
-        if len(eligible_peers) == 0:
+        self.prom_eligible_peers_for_rewards.set(len(eligible_peers))
+
+        async with self.eligible_peers_lock:
+            self.eligible_peers = eligible_peers
+
+    @wakeupcall(
+        seconds=determine_delay_from_parameters("assets", envvar("PARAMETER_FILE"))
+    )
+    async def reward_peers(self):
+        min_eligible_peers = envvar("MIN_ELIGIBLE_PEERS", int)
+
+        async with self.eligible_peers_lock:
+            peers_for_reward = deepcopy(self.eligible_peers)
+
+        while len(peers_for_reward) < min_eligible_peers:
             log.warning(
-                "No peers seams to be eligeable for rewards. Skipping distribution"
+                f"Less than {min_eligible_peers} peers are eligible for rewards. "
+                + "Waiting for more peers to be added to the list."
             )
-            return
+            await asyncio.sleep(30)
 
-        # output expected rewards as a csv file
+            async with self.eligible_peers_lock:
+                peers_for_reward = deepcopy(self.eligible_peers)
+
+        self.prom_EM_executions.inc()
+
+        push_jobs_to_celery_queue(peers_for_reward)
         save_dict_to_csv(
-            eligible_peers, "expected_reward", foldername="expected_rewards"
+            peers_for_reward, "expected_reward", foldername=envvar("GCP_OUTPUT_FOLDER")
         )
-
-        push_jobs_to_celery_queue(eligible_peers)
 
     @connectguard
     @formalin(message="Getting subgraph data", sleep=1 * 60)
@@ -176,12 +247,15 @@ class EconomicHandler(HOPRNode):
         Gets a dictionary containing all unique source_peerId-source_address links
         including the aggregated balance of "Open" outgoing payment channels.
         """
-        topology = await self.api.get_unique_nodeAddress_peerId_aggbalance_links()
+        topology_dict = await self.api.get_unique_nodeAddress_peerId_aggbalance_links()
+        topology_list = [
+            TopologyEntry.fromDict(key, value) for key, value in topology_dict.items()
+        ]
 
         async with self.topology_lock:
-            self.topology_links_with_balance = topology
-        log.info("Fetched unique nodeAddress-peerId links from topology.")
-        log.debug(f"Unique nodeAddress-peerId links: {topology}")
+            self.topology_list = topology_list
+
+        log.info(f"Fetched topology links ({len(topology_list)} entries).")
 
     # @formalin(message="Getting RPCh nodes list", sleep=1 * 60)
     # async def get_rpch_nodes(self):
@@ -232,8 +306,7 @@ class EconomicHandler(HOPRNode):
 
         async with self.ct_node_lock:
             self.ct_nodes = [node[0] for node in nodes]
-        log.info(f"Fetched list of {len(nodes)} CT nodes.")
-        log.debug(f"CT nodes: {self.ct_nodes}")
+        log.info(f"Fetched list of CT nodes ({len(nodes)} entries).")
 
     @formalin(message="Getting database metrics", sleep=1 * 60)
     async def get_database_metrics(self):
@@ -253,42 +326,22 @@ class EconomicHandler(HOPRNode):
                 .all()
             )
 
-        metric_dict = {}
+        metric_list: list[MetricTableEntry] = []
 
-        for row in last_added_rows:
-            if row.peer_id not in metric_dict:
-                metric_dict[row.peer_id] = {
-                    "node_peer_ids": [],
-                    "latency_metrics": [],
-                    "timestamp": row.timestamp,
-                    "temp_order": [],
-                }
+        all_peer_ids = [row.peer_id for row in last_added_rows]
 
-            metric_dict[row.peer_id]["node_peer_ids"].append(row.node)
-            metric_dict[row.peer_id]["latency_metrics"].append(row.latency)
-            metric_dict[row.peer_id]["temp_order"].append(row.priority)
+        for peer_id in set(all_peer_ids):
+            indexes = [i for i, x in enumerate(all_peer_ids) if x == peer_id]
 
-        # sort node_peer_ids and latency based on temp_order
-        for peer_id in metric_dict:
-            order = metric_dict[peer_id]["temp_order"]
-            node_peer_ids = metric_dict[peer_id]["node_peer_ids"]
-            latency = metric_dict[peer_id]["latency_metrics"]
-
-            node_peer_ids = [x for _, x in sorted(zip(order, node_peer_ids))]
-            latency = [x for _, x in sorted(zip(order, latency))]
-
-            metric_dict[peer_id]["node_peer_ids"] = node_peer_ids
-            metric_dict[peer_id]["latency_metrics"] = latency
-
-        # remove the temp order key from the dictionaries
-        for peer_id in metric_dict:
-            del metric_dict[peer_id]["temp_order"]
+            entry = MetricTableEntry.fromNodePeerConnections(
+                [last_added_rows[i] for i in indexes]
+            )
+            metric_list.append(entry)
 
         async with self.database_lock:
-            self.database_metrics = metric_dict
+            self.database_metrics = metric_list
 
-        log.info("Fetched data from database.")
-        log.debug(f"Database entries: {metric_dict}")
+        log.info(f"Fetched data from database ({len(metric_list)} entries).)")
 
     @formalin(message="Getting subgraph data", sleep=1 * 60)
     async def get_subgraph_data(self):
@@ -301,20 +354,12 @@ class EconomicHandler(HOPRNode):
             query SafeNodeBalance($first: Int, $skip: Int) {
                 safes(first: $first, skip: $skip) {
                     registeredNodesInNetworkRegistry {
-                    node {
-                        id
-                    }
-                    safe {
-                        id
-                        balance {
-                        wxHoprBalance
-                        }
-                    }
+                        node { id }
+                        safe { id balance { wxHoprBalance } }
                     }
                 }
             }
         """
-
         data = {
             "query": query,
             "variables": {
@@ -322,7 +367,7 @@ class EconomicHandler(HOPRNode):
                 "skip": 0,
             },
         }
-        subgraph_dict = {}
+        subgraph_list: list[SubgraphEntry] = []
         more_content_available = True
         pagination_skip_size = 1000
 
@@ -362,23 +407,21 @@ class EconomicHandler(HOPRNode):
 
                 safes = json_data["data"]["safes"]
                 for safe in safes:
-                    for node in safe["registeredNodesInNetworkRegistry"]:
-                        node_address = node["node"]["id"]
-                        wxHoprBalance = node["safe"]["balance"]["wxHoprBalance"]
-                        safe_address = node["safe"]["id"]
-                        subgraph_dict[node_address] = {
-                            "safe_address": safe_address,
-                            "wxHOPR_balance": wxHoprBalance,
-                        }
+                    subgraph_list.extend(
+                        [
+                            SubgraphEntry.fromSubgraphResult(node)
+                            for node in safe["registeredNodesInNetworkRegistry"]
+                        ]
+                    )
 
                 # Increment skip for next iteration
                 data["variables"]["skip"] += pagination_skip_size
                 more_content_available = len(safes) == pagination_skip_size
 
-        log.info("Subgraph data dictionary generated")
+        log.info(f"Subgraph data dictionary generated ({len(subgraph_list)} entries).")
 
         async with self.subgraph_lock:
-            self.subgraph_dict = subgraph_dict
+            self.subgraph_list = subgraph_list
 
     @formalin(message="Closing incoming channels", sleep=60 * 5)
     @connectguard
@@ -411,6 +454,7 @@ class EconomicHandler(HOPRNode):
         self.tasks.add(asyncio.create_task(self.get_subgraph_data()))
         # self.tasks.add(asyncio.create_task(self.close_incoming_channels()))
         self.tasks.add(asyncio.create_task(self.apply_economic_model()))
+        self.tasks.add(asyncio.create_task(self.reward_peers()))
 
         await asyncio.gather(*self.tasks)
 
