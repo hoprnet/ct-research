@@ -1,5 +1,14 @@
 import os
+from prometheus_client import Gauge
+
 from core.components.utils import Utils
+
+BUDGET = Gauge("budget", "Budget for the economic model")
+BUDGET_PERIOD = Gauge("budget_period", "Budget period for the economic model")
+DISTRIBUTION_FREQUENCY = Gauge("dist_freq", "Number of expected distributions")
+TICKET_PRICE = Gauge("ticket_price", "Ticket price")
+TICKET_WINNING_PROB = Gauge("ticket_winning_prob", "Ticket winning probability")
+NEXT_DISTRIBUTION_S = Gauge("next_distribution_s", "Next distribution (in seconds)")
 
 
 class Equation:
@@ -62,6 +71,15 @@ class BudgetParameters:
         self.ticket_price = ticket_price
         self.winning_probability = winning_probability
 
+        BUDGET.set(self.budget)
+        BUDGET_PERIOD.set(self.period)
+        DISTRIBUTION_FREQUENCY.set(self.distribution_frequency)
+        TICKET_PRICE.set(self.ticket_price)
+        TICKET_WINNING_PROB.set(self.winning_probability)
+        NEXT_DISTRIBUTION_S.set(
+            Utils.nextDelayInSeconds(self.delay_between_distributions)
+        )
+
     @classmethod
     def from_dictionary(cls, _input: dict):
         budget = _input.get("budget", {}).get("value", None)
@@ -74,6 +92,10 @@ class BudgetParameters:
         return cls(
             budget, period, s, distribution_frequency, ticket_price, winning_probability
         )
+
+    @property
+    def delay_between_distributions(self):
+        return self.period / self.distribution_frequency
 
 
 class EconomicModel:
@@ -101,7 +123,7 @@ class EconomicModel:
 
     @property
     def delay_between_distributions(self):
-        return self.budget.period / self.budget.distribution_frequency
+        return self.budget.delay_between_distributions
 
     @classmethod
     def fromDict(cls, _input: dict):
