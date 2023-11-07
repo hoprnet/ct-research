@@ -18,11 +18,6 @@ from .node import Node
 
 EXECUTIONS_COUNTER = Gauge("executions", "# of execution of the economic model")
 ELIGIBLE_PEERS_COUNTER = Gauge("eligible_peers", "# of eligible peers for rewards")
-BUDGET = Gauge("budget", "Budget for the economic model")
-BUDGET_PERIOD = Gauge("budget_period", "Budget period for the economic model")
-DISTRIBUTION_FREQUENCY = Gauge("dist_freq", "Number of expected distributions")
-TICKET_PRICE = Gauge("ticket_price", "Ticket price")
-TICKET_WINNING_PROB = Gauge("ticket_winning_prob", "Ticket winning probability")
 APY_PER_PEER = Gauge("apy_per_peer", "APY per peer", ["peer_id"])
 JOBS_PER_PEER = Gauge("jobs_per_peer", "Jobs per peer", ["peer_id"])
 PEER_SPLIT_STAKE = Gauge("peer_split_stake", "Splitted stake", ["peer_id"])
@@ -202,25 +197,23 @@ class CTCore(Base):
         await self.eligible_list.set(eligibles)
 
         # set prometheus metrics
-        BUDGET.set(model.budget.budget)
-        BUDGET_PERIOD.set(model.budget.period)
-        DISTRIBUTION_FREQUENCY.set(model.budget.distribution_frequency)
-        TICKET_PRICE.set(model.budget.ticket_price)
-        TICKET_WINNING_PROB.set(model.budget.winning_probability)
-
         ELIGIBLE_PEERS_COUNTER.set(len(eligibles))
         for peer in eligibles:
-            APY_PER_PEER.labels(peer.id).set(peer.apy_percentage)
-            JOBS_PER_PEER.labels(peer.id).set(peer.message_count_for_reward)
-            PEER_SPLIT_STAKE.labels(peer.id).set(peer.split_stake)
-            PEER_SAFE_COUNT.labels(peer.id).set(peer.safe_address_count)
-            PEER_TF_STAKE.labels(peer.id).set(peer.transformed_stake)
+            APY_PER_PEER.labels(peer.address.id).set(peer.apy_percentage)
+            JOBS_PER_PEER.labels(peer.address.id).set(peer.message_count_for_reward)
+            PEER_SPLIT_STAKE.labels(peer.address.id).set(peer.split_stake)
+            PEER_SAFE_COUNT.labels(peer.address.id).set(peer.safe_address_count)
+            PEER_TF_STAKE.labels(peer.address.id).set(peer.transformed_stake)
 
     @flagguard
     @formalin("Distributing rewards")
     async def distribute_rewards(self):
         model = EconomicModel.fromGCPFile(self.params.economic_model_filename)
-        asyncio.sleep(Utils.nextDelayInSeconds(model.delay_between_distributions))
+        asyncio.sleep(
+            Utils.nextDelayInSeconds(
+                Utils.nextDelayInSeconds(model.delay_between_distributions)
+            )
+        )
 
         min_peers = self.params.min_eligible_peers
 
