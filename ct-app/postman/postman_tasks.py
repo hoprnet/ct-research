@@ -47,7 +47,7 @@ async def channel_balance(
         filter(
             lambda c: c.destination_peer_id == dest_peer_id
             and c.source_peer_id == src_peer_id,
-            channels,
+            channels.all,
         )
     )
 
