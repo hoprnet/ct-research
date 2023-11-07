@@ -32,21 +32,21 @@ app.autodiscover_tasks(force=True)
 
 
 async def channel_balance(
-    api: HoprdAPIHelper, src_address: str, dest_address: str
+    api: HoprdAPIHelper, src_peer_id: str, dest_peer_id: str
 ) -> float:
     """
     Get the channel balance of a given address.
     :param api: API helper instance.
-    :param src_address: Channel source address.
-    :param dest_address: Channel destination address.
+    :param src_peer_id: Source channel peer id.
+    :param dest_peer_id: Destination channel peer id.
     :return: Channel balance of the address.
     """
     channels = await api.all_channels(False)
 
     channel = list(
         filter(
-            lambda c: c.destination_address == dest_address
-            and c.source_address == src_address,
+            lambda c: c.destination_peer_id == dest_peer_id
+            and c.source_peer_id == src_peer_id,
             channels,
         )
     )
@@ -202,22 +202,22 @@ async def async_send_1_hop_message(
     # try to connect to the node. If the `get_address` method fails, it means that the
     # node is not reachable
     try:
-        address = await api.get_address("hopr")
+        own_peer_id = await api.get_address("hopr")
     except Exception:
-        log.error("Could not get address from API")
-        address = None
+        log.error("Could not get peer id from API")
+        own_peer_id = None
     else:
-        log.info(f"Got address: {address}")
+        log.info(f"Got peer id: {own_peer_id}")
 
     # if the node is not reachable, the task is tranfered to the next node in the list
-    if address is None:
+    if own_peer_id is None:
         log.error("Could not connect to node. Transfering task to the next node.")
         status = TaskStatus.RETRIED
     else:
         inbox = await api.messages_pop_all(0x0320)
         already_in_inbox = len(inbox)
 
-        balance = await channel_balance(api, address)
+        balance = await channel_balance(api, own_peer_id, peer_id)
 
         possible_count = min(expected_count, balance // ticket_price)
 
@@ -234,7 +234,7 @@ async def async_send_1_hop_message(
                 api,
                 peer_id,
                 possible_count,
-                address,
+                own_peer_id,
                 timestamp,
                 envvar("BATCH_SIZE", int),
             )
@@ -246,7 +246,7 @@ async def async_send_1_hop_message(
 
     log.info(
         f"{effective_count}/{expected_count} messages sent to `{peer_id}` via "
-        + f"{address} ({api_host})"
+        + f"{own_peer_id} ({api_host})"
     )
     if already_in_inbox > 0:
         log.warning(f"{already_in_inbox} messages were already in the inbox")
@@ -278,7 +278,7 @@ async def async_send_1_hop_message(
             "feedback_task",
             args=(
                 peer_id,
-                address,
+                own_peer_id,
                 effective_count,
                 expected_count,
                 status.value,
@@ -292,7 +292,7 @@ async def async_send_1_hop_message(
                 "feedback_task",
                 args=(
                     peer_id,
-                    address,
+                    own_peer_id,
                     already_in_inbox,
                     0,
                     TaskStatus.LEFTOVERS.value,
