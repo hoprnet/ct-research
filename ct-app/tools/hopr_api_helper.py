@@ -6,7 +6,6 @@ from hoprd_sdk.models import (
     MessagesPopBody,
     MessagesPopallBody,
     ChannelidFundBody,
-    ChannelidFundBody,
 )
 from hoprd_sdk.rest import ApiException
 from hoprd_sdk.api import NodeApi, MessagesApi, AccountApi, ChannelsApi, PeersApi
