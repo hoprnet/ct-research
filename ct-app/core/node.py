@@ -1,5 +1,7 @@
 import asyncio
 
+from prometheus_client import Gauge
+
 from tools import HoprdAPIHelper
 
 from .components.baseclass import Base
@@ -8,6 +10,8 @@ from .components.decorators import connectguard, flagguard, formalin
 from .components.lockedvar import LockedVar
 from .components.parameters import Parameters
 from .model import Address, Peer
+
+BALANCE = Gauge("node_balance", "Node balance", ["node_address", "token"])
 
 
 class Node(Base):
@@ -46,6 +50,15 @@ class Node(Base):
         await self.connected.set(self.address is not None)
 
         self._debug(f"Connection state: {await self.connected.get()}")
+
+    @flagguard
+    @formalin("Retrieving balances")
+    async def retrieve_balances(self):
+        if self.address is None:
+            return
+
+        for token, balance in await self.api.balances():
+            BALANCE.labels(self.address.id, token).set(balance)
 
     @flagguard
     @connectguard
@@ -161,6 +174,7 @@ class Node(Base):
             asyncio.create_task(self.retrieve_peers()),
             asyncio.create_task(self.retrieve_outgoing_channels()),
             asyncio.create_task(self.retrieve_incoming_channels()),
+            asyncio.create_task(self.retrieve_balances()),
             asyncio.create_task(self.open_channels()),
             asyncio.create_task(self.close_incoming_channels()),
             asyncio.create_task(self.close_pending_channels()),

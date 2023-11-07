@@ -5,11 +5,11 @@ import string
 from os import environ
 from typing import Any
 
-from aiohttp import ClientSession
 import aiohttp
-
-from core.model import Peer, SubgraphEntry, TopologyEntry, EconomicModel
+from aiohttp import ClientSession
 from google.cloud import storage
+
+from core.model import EconomicModel, Peer, SubgraphEntry, TopologyEntry
 
 
 class Utils:
