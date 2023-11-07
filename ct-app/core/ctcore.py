@@ -18,7 +18,7 @@ from .node import Node
 
 EXECUTIONS_COUNTER = Gauge("executions", "# of execution of the economic model")
 ELIGIBLE_PEERS_COUNTER = Gauge("eligible_peers", "# of eligible peers for rewards")
-APY_PER_PEER = Gauge("apy_per_peer", "APY per peer", ["peer_id"])
+APR_PER_PEER = Gauge("apr_per_peer", "APR per peer", ["peer_id"])
 JOBS_PER_PEER = Gauge("jobs_per_peer", "Jobs per peer", ["peer_id"])
 PEER_SPLIT_STAKE = Gauge("peer_split_stake", "Splitted stake", ["peer_id"])
 PEER_TF_STAKE = Gauge("peer_tf_stake", "Transformed stake", ["peer_id"])
@@ -199,7 +199,7 @@ class CTCore(Base):
         # set prometheus metrics
         ELIGIBLE_PEERS_COUNTER.set(len(eligibles))
         for peer in eligibles:
-            APY_PER_PEER.labels(peer.address.id).set(peer.apy_percentage)
+            APR_PER_PEER.labels(peer.address.id).set(peer.apr_percentage)
             JOBS_PER_PEER.labels(peer.address.id).set(peer.message_count_for_reward)
             PEER_SPLIT_STAKE.labels(peer.address.id).set(peer.split_stake)
             PEER_SAFE_COUNT.labels(peer.address.id).set(peer.safe_address_count)

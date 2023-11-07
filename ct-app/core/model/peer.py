@@ -102,7 +102,7 @@ class Peer:
         return round(self.protocol_reward_per_distribution / denominator)
 
     @property
-    def apy_percentage(self):
+    def apr_percentage(self):
         if self.economic_model is None:
             raise ValueError("Economic model not set")
 
@@ -144,7 +144,7 @@ class Peer:
             "budget_split_ratio": self.economic_model.budget.s,
             "distribution_frequency": self.economic_model.budget.distribution_frequency,
             "budget_period_in_sec": self.economic_model.budget.period,
-            "apy_pct": self.apy_percentage,
+            "apr_pct": self.apr_percentage,
             "total_expected_reward": self.expected_reward,
             "airdrop_expected_reward": self.airdrop_reward,
             "protocol_exp_reward": self.protocol_reward,
