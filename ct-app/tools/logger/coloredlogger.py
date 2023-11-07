@@ -9,14 +9,14 @@ class ColoredLogger(logging.Logger):
     A logger that allows to color the output of the logger.
     """
 
-    FORMAT = "[%(asctime)s][%(name)s][%(levelname)-8s] %(message)s"
+    FORMAT = "%(levelname)-8s %(message)s"
 
     COLOR_FORMAT = formatter_message(FORMAT, True)
 
     def __init__(self, name):
         logging.Logger.__init__(self, name, logging.DEBUG)
 
-        color_formatter = ColoredFormatter(self.COLOR_FORMAT, False)
+        color_formatter = ColoredFormatter(self.COLOR_FORMAT, True)
 
         console = logging.StreamHandler()
         console.setFormatter(color_formatter)

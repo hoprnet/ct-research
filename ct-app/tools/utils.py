@@ -19,11 +19,6 @@ def getlogger() -> logging.Logger:
     Generate a logger instance based on folder and name.
     :returns: a tuple with the logger instance and the name of the log file
     """
-    # configure and get logger handler
-    module = running_module(uppercase=True)
-    if not module:
-        module = "main"
-
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("hoprd_sdk.rest").setLevel(logging.WARNING)
     logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
@@ -32,12 +27,17 @@ def getlogger() -> logging.Logger:
     logging.getLogger("sqlalchemy.engine.Engine").setLevel(logging.WARNING)
     logging.getLogger("sqlalchemy.pool.impl.QueuePool").setLevel(logging.WARNING)
     logging.getLogger("sqlalchemy.orm.path_registry").setLevel(logging.WARNING)
-
+    logging.getLogger("celery.worker.consumer.mingle").setLevel(logging.WARNING)
+    logging.getLogger("ccelery.apps.worker").setLevel(logging.WARNING)
+    logging.getLogger("celery.concurrency.asynpool").setLevel(logging.WARNING)
+    logging.getLogger("celery.worker.consumer.tasks").setLevel(logging.WARNING)
+    logging.getLogger("celery.worker.consumer.gossip").setLevel(logging.WARNING)
+    logging.getLogger("celery.events.state").setLevel(logging.WARNING)
+    logging.getLogger("celery.worker.consumer.connection").setLevel(logging.WARNING)
     # checks if a logger already exists with the given module name
-    if logging.getLoggerClass() != ColoredLogger:
-        logging.setLoggerClass(ColoredLogger)
+    logging.setLoggerClass(ColoredLogger)
 
-    logger = logging.getLogger(module)
+    logger = logging.getLogger("ct-app")
     logger.setLevel(logging.DEBUG)
 
     return logger

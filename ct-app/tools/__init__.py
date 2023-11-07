@@ -8,6 +8,7 @@ from .utils import (
     read_json_on_gcp,
     running_module,
     write_csv_on_gcp,
+    post_dictionary,
 )
 
 __all__ = [
@@ -22,4 +23,5 @@ __all__ = [
     "running_module",
     "write_csv_on_gcp",
     "read_json_on_gcp",
+    "post_dictionary",
 ]
