@@ -5,7 +5,7 @@ from sanic import exceptions, response
 from sanic.request import Request
 from sanic.response import text as sanic_text
 from tools.db_connection import DatabaseConnection
-from tools.utils import getlogger
+from tools import getlogger
 
 from .aggregator import Aggregator
 
