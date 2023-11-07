@@ -31,16 +31,25 @@ app = Celery(name=envvar("PROJECT_NAME"), broker=envvar("CELERY_BROKER_URL"))
 app.autodiscover_tasks(force=True)
 
 
-async def channel_balance(api: HoprdAPIHelper, address: str) -> float:
+async def channel_balance(
+    api: HoprdAPIHelper, src_address: str, dest_address: str
+) -> float:
     """
     Get the channel balance of a given address.
     :param api: API helper instance.
-    :param address: Address to get the balance from.
+    :param src_address: Channel source address.
+    :param dest_address: Channel destination address.
     :return: Channel balance of the address.
     """
-    channels = await api.outgoing_channels(address)
+    channels = await api.all_channels(False)
 
-    channel = list(filter(lambda c: c.peerAddress == address, channels))
+    channel = list(
+        filter(
+            lambda c: c.destination_address == dest_address
+            and c.source_address == src_address,
+            channels,
+        )
+    )
 
     if len(channel) == 0:
         return 0
