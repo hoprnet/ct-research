@@ -264,6 +264,7 @@ async def async_send_1_hop_message(
                     message_count,
                     node_list,
                     node_index,
+                    ticket_price,
                     timestamp,
                     attempts,
                 ),
