@@ -6,6 +6,7 @@ from os import environ
 from typing import Any
 
 from aiohttp import ClientSession
+import aiohttp
 
 from core.model import Peer, SubgraphEntry, TopologyEntry, EconomicModel
 from google.cloud import storage
@@ -31,7 +32,9 @@ class Utils:
 
     @classmethod
     def envvarWithPrefix(cls, prefix: str, type=str) -> dict[str, Any]:
-        var_dict = {key:type(v) for key, v in environ.items() if key.startswith(prefix)}
+        var_dict = {
+            key: type(v) for key, v in environ.items() if key.startswith(prefix)
+        }
 
         return dict(sorted(var_dict.items()))
 
@@ -41,13 +44,22 @@ class Utils:
         key = Utils.envvar(keyenv)
 
         return addresses, key
-    
+
     @classmethod
-    async def doPost(cls, session: ClientSession, url: str, data: dict):
-        async with session.post(url, json=data) as response:
-            status = response.status
-            response = await response.json()
-            return status, response
+    async def httpPOST(cls, url, data):
+        async def post(session: ClientSession, url: str, data: dict):
+            async with session.post(url, json=data) as response:
+                status = response.status
+                response = await response.json()
+                return status, response
+
+        async with aiohttp.ClientSession() as session:
+            try:
+                status, response = await post(session, url, data)
+            except Exception:
+                return None, None
+            else:
+                return status, response
 
     @classmethod
     def mergeTopologyPeersSubgraph(

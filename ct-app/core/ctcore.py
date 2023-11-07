@@ -1,7 +1,5 @@
 import asyncio
 
-import aiohttp
-
 from tools.hopr_api_helper import HoprdAPIHelper
 
 from .components.baseclass import Base
@@ -30,6 +28,8 @@ class CTCore(Base):
         self.subgraph_list = LockedVar("subgraph_list", list[SubgraphEntry]())
         self.eligible_list = LockedVar("eligible_list", list[Peer]())
 
+        self.subgraph_url = None
+
         self.started = False
 
     @property
@@ -57,6 +57,30 @@ class CTCore(Base):
         self._debug(f"Connection state: {await self.connected.get()}")
 
     @flagguard
+    @formalin("Checking subgraph URLs")
+    async def check_subgraph_urls(self):
+        data = {
+            "query": self.params.subgraph_query,
+            "variables": {"first": self.params.subgraph_pagination_size, "skip": 0},
+        }
+
+        if await Utils.httpPOST(self.params.subgraph_url, data):
+            if self.subgraph_url != self.params.subgraph_url:
+                self._info("Subgraph URL changed to 'standard'")
+            self.subgraph_url = self.params.subgraph_url
+            return
+
+        if await Utils.httpPOST(self.params.subgraph_url_backup, data):
+            if self.subgraph_url != self.params.subgraph_url_backup:
+                self._info("Subgraph URL changed to 'backup'")
+            self.subgraph_url = self.params.subgraph_url_backup
+            return
+
+        if self.subgraph_url is not None:
+            self._warning("Subgraph URL changed to 'None'")
+        self.subgraph_url = None
+
+    @flagguard
     @formalin("Aggregating peers")
     async def aggregate_peers(self):
         results = set[Peer]()
@@ -71,6 +95,10 @@ class CTCore(Base):
     @flagguard
     @formalin("Getting subgraph data")
     async def get_subgraph_data(self):
+        if not self.subgraph_url:
+            self._warning("No subgraph URL available.")
+            return
+
         results = list[SubgraphEntry]()
 
         data = {
@@ -80,10 +108,10 @@ class CTCore(Base):
 
         safes = []
         while True:
-            async with aiohttp.ClientSession() as session:
-                _, response = await Utils.doPost(
-                    session, self.params.subgraph_url, data
-                )
+            _, response = await Utils.httpPOST(self.subgraph_url, data)
+
+            if "data" not in response:
+                break
 
             safes.extend(response["data"]["safes"])
 
@@ -187,6 +215,7 @@ class CTCore(Base):
         self.started = True
 
         self.tasks.add(asyncio.create_task(self.healthcheck()))
+        self.tasks.add(asyncio.create_task(self.check_subgraph_urls()))
 
         self.tasks.add(asyncio.create_task(self.aggregate_peers()))
         self.tasks.add(asyncio.create_task(self.get_subgraph_data()))
