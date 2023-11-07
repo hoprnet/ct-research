@@ -14,9 +14,9 @@ dune = DuneClient.from_env()
 
 
 def remove_duplicates(
-    data: list, attribute: str = "safe_address", reverse: bool = False
+    data: list, attribute: str = "safe_address", keep_last: bool = False
 ) -> list:
-    _data = data[-1::-1] if reverse else data
+    _data = data[-1::-1] if keep_last else data
     attributes = [getattr(entry, attribute) for entry in _data]
 
     duplicates_free = []
