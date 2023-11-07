@@ -1,5 +1,4 @@
 from .address import Address
-from .economic_model import EconomicModel
 
 
 class Peer:
@@ -12,7 +11,7 @@ class Peer:
 
         self._safe_address_count = None
 
-        self.economic_model: EconomicModel = None
+        self.economic_model = None
         self.reward_probability = None
 
     @property

@@ -9,7 +9,8 @@ from .components.channelstatus import ChannelStatus
 from .components.decorators import connectguard, flagguard, formalin
 from .components.lockedvar import LockedVar
 from .components.parameters import Parameters
-from .model import Address, Peer
+from .model.address import Address
+from .model.peer import Peer
 
 BALANCE = Gauge("node_balance", "Node balance", ["node_address", "token"])
 

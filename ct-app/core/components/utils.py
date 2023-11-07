@@ -1,7 +1,7 @@
 import json
-import os
 import random
 import string
+from datetime import datetime, timedelta
 from os import environ
 from typing import Any
 
@@ -9,7 +9,9 @@ import aiohttp
 from aiohttp import ClientSession
 from google.cloud import storage
 
-from core.model import EconomicModel, Peer, SubgraphEntry, TopologyEntry
+from core.model.peer import Peer
+from core.model.subgraph_entry import SubgraphEntry
+from core.model.topology_entry import TopologyEntry
 
 
 class Utils:
@@ -73,7 +75,7 @@ class Utils:
         balance links.
         :param: topology_dict: A dict mapping peer IDs to node addresses.
         :param: peers_list: A dict containing metrics with peer ID as the key.
-        :param: subgraph_dict: A dict containing subgraph data with safe address as the key.
+        :param: subgraph_dict: A dict containing subgraph data with safe address as key.
         :returns: A dict with peer ID as the key and the merged information.
         """
         merged_result: list[Peer] = []
@@ -164,23 +166,6 @@ class Utils:
         return indexes_to_remove
 
     @classmethod
-    def EconomicModelFromGCPFile(cls, filename: str):
-        """
-        Reads parameters and equations from a JSON file and validates it using a schema.
-        :param: filename (str): The name of the JSON file containing the parameters
-        and equations.
-        :returns: EconomicModel: Instance containing the model parameters,equations,
-        budget parameters.
-        """
-        parameters_file_path = os.path.join("assets", filename)
-
-        contents = Utils.jsonFromGCP("ct-platform-ct", parameters_file_path, None)
-
-        model = EconomicModel.fromDict(contents)
-
-        return model
-
-    @classmethod
     def jsonFromGCP(cls, bucket_name, blob_name, schema=None):
         """
         Reads a JSON file and validates its contents using a schema.
@@ -210,3 +195,20 @@ class Utils:
         #         return {}
 
         return contents
+
+    @classmethod
+    def nextDelayInSeconds(seconds: int) -> int:
+        """
+        Calculates the delay until the next whole `minutes`min and `seconds`sec.
+        :param seconds: next whole second to trigger the function
+        """
+
+        dt, min_date, delta = datetime.now(), datetime.min, timedelta(seconds=seconds)
+
+        if delta.total_seconds() == 0:
+            return 1
+
+        next_timestamp = min_date + round((dt - min_date) / delta + 0.5) * delta
+        delay = int((next_timestamp - dt).total_seconds())
+
+        return delta.seconds if delay == 0 else delay

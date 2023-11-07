@@ -1,3 +1,7 @@
+import os
+from core.components.utils import Utils
+
+
 class Equation:
     def __init__(self, formula: str, condition: str):
         self.formula = formula
@@ -95,6 +99,10 @@ class EconomicModel:
 
         return eval(func.formula, kwargs)
 
+    @property
+    def delay_between_distributions(self):
+        return self.budget.period / self.budget.distribution_frequency
+
     @classmethod
     def fromDict(cls, _input: dict):
         equations = Equations.from_dictionary(_input.get("equations", {}))
@@ -102,6 +110,21 @@ class EconomicModel:
         budget = BudgetParameters.from_dictionary(_input.get("budget_param", {}))
 
         return cls(equations, parameters, budget)
+
+    @classmethod
+    def fromGCPFile(cls, filename: str):
+        """
+        Reads parameters and equations from a JSON file and validates it using a schema.
+        :param: filename (str): The name of the JSON file containing the parameters
+        and equations.
+        :returns: EconomicModel: Instance containing the model parameters,equations,
+        budget parameters.
+        """
+        parameters_file_path = os.path.join("assets", filename)
+
+        contents = Utils.jsonFromGCP("ct-platform-ct", parameters_file_path, None)
+
+        return EconomicModel.fromDict(contents)
 
     def __repr__(self):
         return f"EconomicModel({self.equations}, {self.parameters}, {self.budget})"

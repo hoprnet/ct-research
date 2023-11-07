@@ -1,6 +1,7 @@
 import asyncio
 
 from prometheus_client import Gauge
+
 from tools.hopr_api_helper import HoprdAPIHelper
 
 from .components.baseclass import Base
@@ -8,7 +9,11 @@ from .components.decorators import flagguard, formalin
 from .components.lockedvar import LockedVar
 from .components.parameters import Parameters
 from .components.utils import Utils
-from .model import Address, Peer, SubgraphEntry, TopologyEntry
+from .model.address import Address
+from .model.economic_model import EconomicModel
+from .model.peer import Peer
+from .model.subgraph_entry import SubgraphEntry
+from .model.topology_entry import TopologyEntry
 from .node import Node
 
 EXECUTIONS_COUNTER = Gauge("executions", "# of execution of the economic model")
@@ -185,7 +190,7 @@ class CTCore(Base):
         self._debug(f"Excluded network nodes ({len(excluded)} entries).")
         self._debug(f"Eligible nodes ({len(eligibles)} entries).")
 
-        model = Utils.EconomicModelFromGCPFile(self.params.economic_model_filename)
+        model = EconomicModel.fromGCPFile(self.params.economic_model_filename)
         for peer in eligibles:
             peer.economic_model = model
 
@@ -214,17 +219,18 @@ class CTCore(Base):
     @flagguard
     @formalin("Distributing rewards")
     async def distribute_rewards(self):
-        ready = False
+        model = EconomicModel.fromGCPFile(self.params.economic_model_filename)
+        asyncio.sleep(Utils.nextDelayInSeconds(model.delay_between_distributions))
+
         min_peers = self.params.min_eligible_peers
 
-        while not ready:
+        peers = list[Peer]()
+
+        while len(peers) >= min_peers:
+            self._warning(f"Min. {min_peers} peers required to distribute rewards.")
             peers = await self.eligible_list.get()
 
-            if len(peers) >= min_peers:
-                ready = True
-            else:
-                self._warning(f"Min. {min_peers} peers required to distribute rewards.")
-                await asyncio.sleep(2)
+            await asyncio.sleep(2)
 
         self._info(f"Distributing rewards to {len(peers)} peers.")
 
@@ -256,7 +262,7 @@ class CTCore(Base):
         self.tasks.add(asyncio.create_task(self.apply_economic_model()))
         self.tasks.add(asyncio.create_task(self.distribute_rewards()))
 
-        await asyncio.gather(*self.tasks)  # , return_exceptions=True)
+        await asyncio.gather(*self.tasks)
 
     def stop(self):
         """
