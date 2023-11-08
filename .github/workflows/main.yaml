@@ -41,7 +41,7 @@ jobs:
       - name: Test with pytest
         working-directory: ct-app
         run: |
-          pytest ct-app/core/test
+          pytest core/test
 
   image:
     name: Build and push container image
