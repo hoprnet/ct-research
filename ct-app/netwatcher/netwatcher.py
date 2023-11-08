@@ -280,9 +280,9 @@ class NetWatcher(HOPRNode):
         # Filtering outgoing channel with status "Open" and "PendingToClose", and low
         # balance channels
         open_channels = [c for c in outgoing_channels if c.status == "Open"]
-        pending_to_close_channels = [
-            c for c in outgoing_channels if c.status == "PendingToClose"
-        ]
+        # pending_to_close_channels = [
+        #     c for c in outgoing_channels if c.status == "PendingToClose"
+        # ]
         low_balance_channels = [
             c
             for c in open_channels
@@ -302,13 +302,13 @@ class NetWatcher(HOPRNode):
             - addresses_behind_low_balance_channels
         )
 
-        #### CLOSE PENDING TO CLOSE CHANNELS ####
-        for channel in pending_to_close_channels:
-            log.info(
-                f"Closing channel to {channel.channel_id} (was in PendingToClose state)"
-            )
-            success = await self.api.close_channel(channel.channel_id)
-            log.info(f"Channel {channel.channel_id} closed: {success}")
+        # #### CLOSE PENDING TO CLOSE CHANNELS ####
+        # for channel in pending_to_close_channels:
+        #     log.info(
+        #         f"Closing channel to {channel.channel_id} (was in PendingToClose state)"
+        #     )
+        #     success = await self.api.close_channel(channel.channel_id)
+        #     log.info(f"Channel {channel.channel_id} closed: {success}")
 
         # #### CLOSE CHANNELS TO NOT CONNECTED PEERS ####
         # for channel in not_connected_nodes_channels:
