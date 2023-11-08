@@ -270,12 +270,12 @@ class NetWatcher(HOPRNode):
         ]
 
         # Peer addresses of peer not connected for more than 1 day
-        not_connected_nodes = [
-            m.address.address for m in local_peers if m.close_channel
-        ]
-        not_connected_nodes_channels = [
-            c for c in outgoing_channels if c.destination_address in not_connected_nodes
-        ]
+        # not_connected_nodes = [
+        #     m.address.address for m in local_peers if m.close_channel
+        # ]
+        # not_connected_nodes_channels = [
+        #     c for c in outgoing_channels if c.destination_address in not_connected_nodes
+        # ]
 
         # Filtering outgoing channel with status "Open" and "PendingToClose", and low
         # balance channels
@@ -310,20 +310,20 @@ class NetWatcher(HOPRNode):
             success = await self.api.close_channel(channel.channel_id)
             log.info(f"Channel {channel.channel_id} closed: {success}")
 
-        #### CLOSE CHANNELS TO NOT CONNECTED PEERS ####
-        for channel in not_connected_nodes_channels:
-            log.info(
-                f"Closing channel to {channel.channel_id} "
-                + "(peer not connected for a long time)"
-            )
-            success = await self.api.close_channel(channel.channel_id)
-            log.info(f"Channel {channel.channel_id} closed: {success}")
-            if not success:
-                continue
+        # #### CLOSE CHANNELS TO NOT CONNECTED PEERS ####
+        # for channel in not_connected_nodes_channels:
+        #     log.info(
+        #         f"Closing channel to {channel.channel_id} "
+        #         + "(peer not connected for a long time)"
+        #     )
+        #     success = await self.api.close_channel(channel.channel_id)
+        #     log.info(f"Channel {channel.channel_id} closed: {success}")
+        #     if not success:
+        #         continue
 
-            async with self.peers_lock:
-                addresses = [p.address.address for p in self.peers]
-                self.peers.pop(addresses.index(channel.destination_address))
+        #     async with self.peers_lock:
+        #         addresses = [p.address.address for p in self.peers]
+        #         self.peers.pop(addresses.index(channel.destination_address))
 
         #### FUND LOW BALANCE CHANNELS ####
         for channel in low_balance_channels:
