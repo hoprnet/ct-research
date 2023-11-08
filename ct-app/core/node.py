@@ -2,11 +2,10 @@ import asyncio
 
 from prometheus_client import Gauge
 
-from tools import HoprdAPIHelper
-
 from .components.baseclass import Base
 from .components.channelstatus import ChannelStatus
 from .components.decorators import connectguard, flagguard, formalin
+from .components.horpd_api import HoprdAPI  # noqa: F401
 from .components.lockedvar import LockedVar
 from .components.parameters import Parameters
 from .model.address import Address
@@ -19,7 +18,7 @@ class Node(Base):
     flag_prefix = "NODE_"
 
     def __init__(self, url: str, key: str):
-        self.api: HoprdAPIHelper = HoprdAPIHelper(url, key)
+        self.api: HoprdAPI = HoprdAPI(url, key)
         self.url = url
         self.address = None
 
@@ -58,7 +57,7 @@ class Node(Base):
         if self.address is None:
             return
 
-        for token, balance in await self.api.balances():
+        for token, balance in (await self.balance).items():
             BALANCE.labels(self.address.id, token).set(balance)
 
     @flagguard
@@ -76,7 +75,7 @@ class Node(Base):
         addresses_without_channels = all_addresses - addresses_with_channels
 
         for address in addresses_without_channels:
-            await self.api.open_channel(address)
+            await self.api.open_channel(address, self.param.channel_funding_amount)
 
     @flagguard
     @connectguard

@@ -3,10 +3,9 @@ from enum import Enum
 
 from prometheus_client import Gauge
 
-from tools.hopr_api_helper import HoprdAPIHelper
-
 from .components.baseclass import Base
 from .components.decorators import flagguard, formalin
+from .components.horpd_api import HoprdAPI  # noqa: F401
 from .components.lockedvar import LockedVar
 from .components.parameters import Parameters
 from .components.utils import Utils
@@ -28,7 +27,7 @@ PEER_SPLIT_STAKE = Gauge("peer_split_stake", "Splitted stake", ["peer_id"])
 PEER_TF_STAKE = Gauge("peer_tf_stake", "Transformed stake", ["peer_id"])
 PEER_SAFE_COUNT = Gauge("peer_safe_count", "Number of safes", ["peer_id"])
 DISTRIBUTION_DELAY = Gauge("distribution_delay", "Delay between two distributions")
-NEXT_DISTRIBUTION_S = Gauge("next_distribution_s", "Next distribution (in seconds)")
+NEXT_DISTRIBUTION_EPOCH = Gauge("next_distribution_s", "Next distribution (in seconds)")
 
 
 class SubgraphType(Enum):
@@ -68,7 +67,7 @@ class CTCore(Base):
         return "ct-core"
 
     @property
-    def api(self) -> HoprdAPIHelper:
+    def api(self) -> HoprdAPI:
         return self.nodes[-1].api
 
     @property
@@ -146,8 +145,6 @@ class CTCore(Base):
             self._warning("No subgraph URL available.")
             return
 
-        results = list[SubgraphEntry]()
-
         data = {
             "query": self.params.subgraph_query,
             "variables": {"first": self.params.subgraph_pagination_size, "skip": 0},
@@ -170,6 +167,7 @@ class CTCore(Base):
             else:
                 break
 
+        results = list[SubgraphEntry]()
         for safe in safes:
             results.extend(
                 [
@@ -190,10 +188,13 @@ class CTCore(Base):
         Gets a dictionary containing all unique source_peerId-source_address links
         including the aggregated balance of "Open" outgoing payment channels.
         """
-        results = await self.api.get_unique_nodeAddress_peerId_aggbalance_links()
-        topology_list = [
-            TopologyEntry.fromDict(key, value) for key, value in results.items()
-        ]
+        channels = await self.api.all_channels(False)
+        if channels is None:
+            self._warning("Topology data not available.")
+            return
+
+        results = await Utils.aggregatePeerBalanceInChannels(channels.all)
+        topology_list = [TopologyEntry.fromDict(*arg) for arg in results.items()]
 
         await self.topology_list.set(topology_list)
 
@@ -236,7 +237,9 @@ class CTCore(Base):
 
         # set prometheus metrics
         DISTRIBUTION_DELAY.set(model.delay_between_distributions)
-        NEXT_DISTRIBUTION_S.set(Utils.nextEpoch(model.delay_between_distributions))
+        NEXT_DISTRIBUTION_EPOCH.set(
+            Utils.nextEpoch(model.delay_between_distributions).timestamp()
+        )
         ELIGIBLE_PEERS_COUNTER.set(len(eligibles))
 
         for peer in eligibles:
@@ -250,23 +253,23 @@ class CTCore(Base):
     @formalin("Distributing rewards")
     async def distribute_rewards(self):
         model = EconomicModel.fromGCPFile(self.params.economic_model_filename)
-        asyncio.sleep(
-            Utils.nextDelayInSeconds(
-                Utils.nextDelayInSeconds(model.delay_between_distributions)
-            )
-        )
+
+        delay = Utils.nextDelayInSeconds(model.delay_between_distributions)
+        self._debug(f"Waiting {delay} seconds for next distribution.")
+        await asyncio.sleep(delay)
 
         min_peers = self.params.min_eligible_peers
 
         peers = list[Peer]()
 
-        while len(peers) >= min_peers:
+        while len(peers) < min_peers:
             self._warning(f"Min. {min_peers} peers required to distribute rewards.")
             peers = await self.eligible_list.get()
 
             await asyncio.sleep(2)
 
-        self._info(f"Distributing rewards to {len(peers)} peers.")
+        Utils.stringArrayToGCP()
+        self._info(f"Distributed rewards to {len(peers)} peers.")
 
         EXECUTIONS_COUNTER.inc()
 

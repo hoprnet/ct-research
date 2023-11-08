@@ -1,3 +1,4 @@
+import csv
 import json
 import random
 import string
@@ -197,6 +198,22 @@ class Utils:
         return contents
 
     @classmethod
+    def stringArrayToGCP(cls, bucket_name: str, blob_name: str, data: list[str]):
+        """
+        Write a blob from GCS using file-like IO
+        :param bucket_name: The name of the bucket
+        :param blob_name: The name of the blob
+        :param data: The data to write
+        """
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(blob_name)
+
+        with blob.open("w") as f:
+            writer = csv.writer(f)
+            writer.writerows(data)
+
+    @classmethod
     def nextEpoch(cls, seconds: int) -> datetime:
         """
         Calculates the delay until the next whole `minutes`min and `seconds`sec.
@@ -210,7 +227,7 @@ class Utils:
         return next_timestamp
 
     @classmethod
-    def nextDelayInSeconds(seconds: int) -> int:
+    def nextDelayInSeconds(cls, seconds: int) -> int:
         """
         Calculates the delay until the next whole `minutes`min and `seconds`sec.
         :param seconds: next whole second to trigger the function
@@ -224,3 +241,31 @@ class Utils:
             return seconds
         else:
             return int(delay.total_seconds())
+
+    @classmethod
+    async def aggregatePeerBalanceInChannels(cls, channels: list) -> dict[str, dict]:
+        """
+        Returns a dict containing all unique source_peerId-source_address links.
+        """
+
+        results: dict[str, dict] = {}
+        for c in channels:
+            if not (
+                hasattr(c, "source_peer_id")
+                and hasattr(c, "source_address")
+                and hasattr(c, "status")
+            ):
+                continue
+
+            if c.status != "Open":
+                continue
+
+            if c.source_peer_id not in results:
+                results[c.source_peer_id] = {
+                    "source_node_address": c.source_address,
+                    "channels_balance": 0,
+                }
+
+            results[c.source_peer_id]["channels_balance"] += int(c.balance) / 1e18
+
+        return results
