@@ -1,8 +1,6 @@
 import csv
 import json
 import os
-import random
-import string
 import time
 from datetime import datetime, timedelta
 from os import environ
@@ -12,22 +10,13 @@ import aiohttp
 from aiohttp import ClientSession
 from google.cloud import storage
 
+from core.model.address import Address
 from core.model.peer import Peer
 from core.model.subgraph_entry import SubgraphEntry
 from core.model.topology_entry import TopologyEntry
 
 
 class Utils:
-    @classmethod
-    def randomString(cls, length: int, alpha: bool = True, numeric: bool = True):
-        choices = ""
-        if alpha:
-            choices += string.ascii_letters
-        if numeric:
-            choices += string.digits
-
-        return "".join(random.choices(choices, k=length))
-
     @classmethod
     def envvar(cls, var_name: str, default: Any = None, type: type = str):
         if var_name in environ:
@@ -48,7 +37,7 @@ class Utils:
         addresses = Utils.envvarWithPrefix(address_prefix).values()
         key = Utils.envvar(keyenv)
 
-        return addresses, key
+        return list(addresses), key
 
     @classmethod
     async def httpPOST(cls, url, data):
@@ -122,7 +111,9 @@ class Utils:
             peer.safe_address_count = safe_counts[peer.safe_address]
 
     @classmethod
-    def excludeElements(cls, source_data: list[Peer], blacklist: list) -> list[Peer]:
+    def excludeElements(
+        cls, source_data: list[Peer], blacklist: list[Address]
+    ) -> list[Peer]:
         """
         Removes elements from a dictionary based on a blacklist.
         :param: source_data (dict): The dictionary to be updated.
@@ -216,9 +207,9 @@ class Utils:
             writer.writerows(data)
 
     @classmethod
-    def generateFilename(cls, prefix: str, foldername: str):
+    def generateFilename(cls, prefix: str, foldername: str, extension: str = "csv"):
         timestamp = time.strftime("%Y%m%d%H%M%S")
-        filename = f"{prefix}_{timestamp}.csv"
+        filename = f"{prefix}_{timestamp}.{extension}"
         return os.path.join(foldername, filename)
 
     @classmethod
@@ -227,9 +218,10 @@ class Utils:
         Calculates the delay until the next whole `minutes`min and `seconds`sec.
         :param seconds: next whole second to trigger the function
         """
+        if seconds == 0:
+            raise ValueError("'seconds' must be greater than 0")
 
         dt, min_date, delta = datetime.now(), datetime.min, timedelta(seconds=seconds)
-
         next_timestamp = min_date + round((dt - min_date) / delta + 0.5) * delta
 
         return next_timestamp
