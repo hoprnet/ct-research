@@ -1,5 +1,6 @@
 from .utils import Utils
 
+
 class Parameters:
     def __init__(self):
         self.subgraph_query = """
@@ -23,7 +24,10 @@ class Parameters:
                 pass
 
             try:
-                value = int(value)
+                integer = int(value)
+                if integer == value:
+                    value = integer
+
             except ValueError:
                 pass
 

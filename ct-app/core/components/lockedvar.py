@@ -9,11 +9,7 @@ class LockedVar(Base):
         self.name = name
         self.value = value
         self.lock = asyncio.Lock()
-
-        if infer_type:
-            self.type = type(value)
-        else:
-            self.type = None
+        self.type = type(value) if infer_type else None
 
     async def get(self) -> Any:
         async with self.lock:
@@ -23,12 +19,21 @@ class LockedVar(Base):
 
     async def set(self, value: Any):
         if self.type and not isinstance(value, self.type):
-            self._warning(
+            raise TypeError(
                 f"Trying to set value of type {type(value)} to {self.type}, ignoring"
             )
 
         async with self.lock:
             self.value = value
+
+    async def inc(self, value: Any):
+        if self.type and not isinstance(value, self.type):
+            self._warning(
+                f"Trying to change value of type {type(value)} to {self.type}, ignoring"
+            )
+
+        async with self.lock:
+            self.value += value
 
     @property
     def print_prefix(self):
