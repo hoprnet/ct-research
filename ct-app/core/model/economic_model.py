@@ -8,7 +8,6 @@ BUDGET_PERIOD = Gauge("budget_period", "Budget period for the economic model")
 DISTRIBUTION_FREQUENCY = Gauge("dist_freq", "Number of expected distributions")
 TICKET_PRICE = Gauge("ticket_price", "Ticket price")
 TICKET_WINNING_PROB = Gauge("ticket_winning_prob", "Ticket winning probability")
-NEXT_DISTRIBUTION_S = Gauge("next_distribution_s", "Next distribution (in seconds)")
 
 
 class Equation:
@@ -71,14 +70,50 @@ class BudgetParameters:
         self.ticket_price = ticket_price
         self.winning_probability = winning_probability
 
-        BUDGET.set(self.budget)
-        BUDGET_PERIOD.set(self.period)
-        DISTRIBUTION_FREQUENCY.set(self.distribution_frequency)
-        TICKET_PRICE.set(self.ticket_price)
-        TICKET_WINNING_PROB.set(self.winning_probability)
-        NEXT_DISTRIBUTION_S.set(
-            Utils.nextDelayInSeconds(self.delay_between_distributions)
-        )
+    @property
+    def budget(self):
+        return self._budget
+
+    @property
+    def period(self):
+        return self._period
+
+    @property
+    def distribution_frequency(self):
+        return self._distribution_frequency
+
+    @property
+    def ticket_price(self):
+        return self._ticket_price
+
+    @property
+    def winning_probability(self):
+        return self._winning_probability
+
+    @budget.setter
+    def budget(self, value):
+        self._budget = value
+        BUDGET.set(value)
+
+    @period.setter
+    def period(self, value):
+        self._period = value
+        BUDGET_PERIOD.set(value)
+
+    @distribution_frequency.setter
+    def distribution_frequency(self, value):
+        self._distribution_frequency = value
+        DISTRIBUTION_FREQUENCY.set(value)
+
+    @ticket_price.setter
+    def ticket_price(self, value):
+        self._ticket_price = value
+        TICKET_PRICE.set(value)
+
+    @winning_probability.setter
+    def winning_probability(self, value):
+        self._winning_probability = value
+        TICKET_WINNING_PROB.set(value)
 
     @classmethod
     def from_dictionary(cls, _input: dict):

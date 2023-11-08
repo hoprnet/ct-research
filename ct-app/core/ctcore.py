@@ -1,4 +1,5 @@
 import asyncio
+from enum import Enum
 
 from prometheus_client import Gauge
 
@@ -16,6 +17,9 @@ from .model.subgraph_entry import SubgraphEntry
 from .model.topology_entry import TopologyEntry
 from .node import Node
 
+SUBGRAPH_CALLS = Gauge("subgraph_calls", "# of subgraph calls", ["type"])
+SUBGRAPH_SIZE = Gauge("subgraph_size", "Size of the subgraph")
+TOPOLOGY_SIZE = Gauge("topology_size", "Size of the topology")
 EXECUTIONS_COUNTER = Gauge("executions", "# of execution of the economic model")
 ELIGIBLE_PEERS_COUNTER = Gauge("eligible_peers", "# of eligible peers for rewards")
 APR_PER_PEER = Gauge("apr_per_peer", "APR per peer", ["peer_id"])
@@ -23,6 +27,17 @@ JOBS_PER_PEER = Gauge("jobs_per_peer", "Jobs per peer", ["peer_id"])
 PEER_SPLIT_STAKE = Gauge("peer_split_stake", "Splitted stake", ["peer_id"])
 PEER_TF_STAKE = Gauge("peer_tf_stake", "Transformed stake", ["peer_id"])
 PEER_SAFE_COUNT = Gauge("peer_safe_count", "Number of safes", ["peer_id"])
+NEXT_DISTRIBUTION_S = Gauge("next_distribution_s", "Next distribution (in seconds)")
+
+
+class SubgraphType(Enum):
+    DEFAULT = "default"
+    BACKUP = "backup"
+    NONE = "None"
+
+    @classmethod
+    def callables(cls):
+        return [item for item in cls if item != cls.NONE]
 
 
 class CTCore(Base):
@@ -42,7 +57,8 @@ class CTCore(Base):
         self.subgraph_list = LockedVar("subgraph_list", list[SubgraphEntry]())
         self.eligible_list = LockedVar("eligible_list", list[Peer]())
 
-        self.subgraph_url = None
+        self._selected_subgraph = SubgraphType.NONE
+        self.selected_subgraph = SubgraphType.DEFAULT
 
         self.started = False
 
@@ -62,6 +78,26 @@ class CTCore(Base):
     def network_nodes_addresses(self) -> list[Address]:
         return [node.address for node in self.network_nodes]
 
+    @property
+    def selected_subgraph(self) -> SubgraphType:
+        return self._selected_subgraph
+
+    @selected_subgraph.setter
+    def selected_subgraph(self, value: SubgraphType):
+        if value != self.selected_subgraph:
+            self._warning(f"Now using '{value.value}' subgraph.")
+
+        self._selected_subgraph = value
+
+    def subgraph_url(self, subgraph: SubgraphType) -> str:
+        if subgraph == SubgraphType.DEFAULT:
+            return self.params.subgraph_url
+
+        if subgraph == SubgraphType.BACKUP:
+            return self.params.subgraph_url_backup
+
+        return SubgraphType.NONE
+
     @flagguard
     @formalin("Running healthcheck")
     async def healthcheck(self):
@@ -75,24 +111,20 @@ class CTCore(Base):
     async def check_subgraph_urls(self):
         data = {
             "query": self.params.subgraph_query,
-            "variables": {"first": self.params.subgraph_pagination_size, "skip": 0},
+            "variables": {"first": 1, "skip": 0},
         }
 
-        if await Utils.httpPOST(self.params.subgraph_url, data):
-            if self.subgraph_url != self.params.subgraph_url:
-                self._info("Subgraph URL changed to 'standard'")
-            self.subgraph_url = self.params.subgraph_url
-            return
+        for subgraph in SubgraphType.callables():
+            _, response = await Utils.httpPOST(self.subgraph_url(subgraph), data)
 
-        if await Utils.httpPOST(self.params.subgraph_url_backup, data):
-            if self.subgraph_url != self.params.subgraph_url_backup:
-                self._info("Subgraph URL changed to 'backup'")
-            self.subgraph_url = self.params.subgraph_url_backup
-            return
+            if not response:
+                continue
 
-        if self.subgraph_url is not None:
-            self._warning("Subgraph URL changed to 'None'")
-        self.subgraph_url = None
+            SUBGRAPH_CALLS.labels(subgraph.value).inc()
+            self.selected_subgraph = subgraph
+            break
+        else:
+            self.selected_subgraph = SubgraphType.NONE
 
     @flagguard
     @formalin("Aggregating peers")
@@ -109,7 +141,7 @@ class CTCore(Base):
     @flagguard
     @formalin("Getting subgraph data")
     async def get_subgraph_data(self):
-        if not self.subgraph_url:
+        if self.subgraph_url(self.selected_subgraph) == SubgraphType.NONE:
             self._warning("No subgraph URL available.")
             return
 
@@ -122,7 +154,10 @@ class CTCore(Base):
 
         safes = []
         while True:
-            _, response = await Utils.httpPOST(self.subgraph_url, data)
+            _, response = await Utils.httpPOST(
+                self.subgraph_url(self.selected_subgraph), data
+            )
+            SUBGRAPH_CALLS.labels(self.selected_subgraph.value).inc()
 
             if "data" not in response:
                 break
@@ -144,6 +179,7 @@ class CTCore(Base):
 
         await self.subgraph_list.set(results)
 
+        SUBGRAPH_SIZE.set(len(results))
         self._debug(f"Fetched subgraph data ({len(results)} entries).")
 
     @flagguard
@@ -160,6 +196,7 @@ class CTCore(Base):
 
         await self.topology_list.set(topology_list)
 
+        TOPOLOGY_SIZE.set(len(topology_list))
         self._debug(f"Fetched topology links ({len(topology_list)} entries).")
 
     @flagguard
@@ -197,7 +234,9 @@ class CTCore(Base):
         await self.eligible_list.set(eligibles)
 
         # set prometheus metrics
+        NEXT_DISTRIBUTION_S.set(Utils.nextEpoch(model.delay_between_distributions))
         ELIGIBLE_PEERS_COUNTER.set(len(eligibles))
+
         for peer in eligibles:
             APR_PER_PEER.labels(peer.address.id).set(peer.apr_percentage)
             JOBS_PER_PEER.labels(peer.address.id).set(peer.message_count_for_reward)

@@ -197,7 +197,7 @@ class Utils:
         return contents
 
     @classmethod
-    def nextDelayInSeconds(seconds: int) -> int:
+    def nextEpoch(cls, seconds: int) -> datetime:
         """
         Calculates the delay until the next whole `minutes`min and `seconds`sec.
         :param seconds: next whole second to trigger the function
@@ -205,10 +205,22 @@ class Utils:
 
         dt, min_date, delta = datetime.now(), datetime.min, timedelta(seconds=seconds)
 
-        if delta.total_seconds() == 0:
+        next_timestamp = min_date + round((dt - min_date) / delta + 0.5) * delta
+
+        return next_timestamp
+
+    @classmethod
+    def nextDelayInSeconds(seconds: int) -> int:
+        """
+        Calculates the delay until the next whole `minutes`min and `seconds`sec.
+        :param seconds: next whole second to trigger the function
+        """
+        if seconds == 0:
             return 1
 
-        next_timestamp = min_date + round((dt - min_date) / delta + 0.5) * delta
-        delay = int((next_timestamp - dt).total_seconds())
+        delay = Utils.nextEpoch(seconds) - datetime.now()
 
-        return delta.seconds if delay == 0 else delay
+        if delay.total_seconds() < 1:
+            return seconds
+        else:
+            return int(delay.total_seconds())
