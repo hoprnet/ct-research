@@ -5,7 +5,7 @@ from prometheus_client import Gauge
 
 from .components.baseclass import Base
 from .components.decorators import flagguard, formalin
-from .components.horpd_api import HoprdAPI  # noqa: F401
+from .components.horpd_api import HoprdAPI
 from .components.lockedvar import LockedVar
 from .components.parameters import Parameters
 from .components.utils import Utils
@@ -255,6 +255,7 @@ class CTCore(Base):
         model = EconomicModel.fromGCPFile(self.params.economic_model_filename)
 
         delay = Utils.nextDelayInSeconds(model.delay_between_distributions)
+        delay = 5
         self._debug(f"Waiting {delay} seconds for next distribution.")
         await asyncio.sleep(delay)
 
@@ -268,7 +269,18 @@ class CTCore(Base):
 
             await asyncio.sleep(2)
 
-        Utils.stringArrayToGCP()
+        ### convert to csv
+        attributes = Peer.attributesToExport()
+        lines = [["peer_id"] + attributes]
+
+        for peer in peers:
+            line = [peer.address.id] + [getattr(peer, attr) for attr in attributes]
+            lines.append(line)
+
+        filename = Utils.generateFilename(
+            self.params.gcp_file_prefix, self.params.gcp_folder
+        )
+        Utils.stringArrayToGCP(self.params.gcp_bucket, filename, lines)
         self._info(f"Distributed rewards to {len(peers)} peers.")
 
         EXECUTIONS_COUNTER.inc()

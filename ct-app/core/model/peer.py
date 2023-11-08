@@ -15,6 +15,10 @@ class Peer:
         self.reward_probability = None
 
     @property
+    def node_address(self) -> str:
+        return self.address.address
+
+    @property
     def safe_address_count(self) -> int:
         if self._safe_address_count is None:
             self.safe_address_count = 1
@@ -125,34 +129,25 @@ class Peer:
             ]
         )
 
-    def attribute_to_export(self):
-        if self.economic_model is None:
-            raise ValueError("Economic model not set")
-
-        return {
-            "source_node_address": self.address.address,
-            "channels_balance": self.channel_balance,
-            # "node_peer_ids": self.node_ids,
-            "safe_address": self.safe_address,
-            "safe_balance": self.safe_balance,
-            "total_balance": self.total_balance,
-            "safe_address_count": self.safe_address_count,
-            "splitted_stake": self.split_stake,
-            "trans_stake": self.transformed_stake,
-            "prob": self.reward_probability,
-            "budget": self.economic_model.budget.budget,
-            "budget_split_ratio": self.economic_model.budget.s,
-            "distribution_frequency": self.economic_model.budget.distribution_frequency,
-            "budget_period_in_sec": self.economic_model.budget.period,
-            "apr_pct": self.apr_percentage,
-            "total_expected_reward": self.expected_reward,
-            "airdrop_expected_reward": self.airdrop_reward,
-            "protocol_exp_reward": self.protocol_reward,
-            "protocol_exp_reward_per_dist": self.protocol_reward_per_distribution,
-            "ticket_price": self.economic_model.budget.ticket_price,
-            "winning_prob": self.economic_model.budget.winning_probability,
-            "jobs": self.message_count_for_reward,
-        }
+    @classmethod
+    def attributesToExport(cls):
+        return [
+            "node_address",
+            "channel_balance",
+            # "node_peer_ids",
+            "safe_address",
+            "safe_balance",
+            "total_balance",
+            "safe_address_count",
+            "split_stake",
+            "transformed_stake",
+            "apr_percentage",
+            "expected_reward",
+            "airdrop_reward",
+            "protocol_reward",
+            "protocol_reward_per_distribution",
+            "message_count_for_reward",
+        ]
 
     def __repr__(self):
         return f"Peer(address: {self.address})"

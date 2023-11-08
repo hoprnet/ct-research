@@ -1,7 +1,9 @@
 import csv
 import json
+import os
 import random
 import string
+import time
 from datetime import datetime, timedelta
 from os import environ
 from typing import Any
@@ -212,6 +214,12 @@ class Utils:
         with blob.open("w") as f:
             writer = csv.writer(f)
             writer.writerows(data)
+
+    @classmethod
+    def generateFilename(cls, prefix: str, foldername: str):
+        timestamp = time.strftime("%Y%m%d%H%M%S")
+        filename = f"{prefix}_{timestamp}.csv"
+        return os.path.join(foldername, filename)
 
     @classmethod
     def nextEpoch(cls, seconds: int) -> datetime:
