@@ -17,8 +17,6 @@ def main():
         *Utils.nodesAddresses("NODE_ADDRESS_", "NODE_KEY")
     )
 
-    instance._info(f"Starting the instance with {len(instance.nodes)} nodes")
-
     instance.params = params
     for node in instance.nodes:
         node.params = params
