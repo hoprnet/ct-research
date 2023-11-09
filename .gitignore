@@ -8,8 +8,6 @@ env*/
 *.env
 
 # logs
-expected_rewards/
-expected_reward_*.csv
 net_viz-*.png
 out.mp4
 websocket_client.log
@@ -20,5 +18,6 @@ logs/
 htmlcov/
 foo*.*
 foo*/
-run_*.sh
+scripts/
+# run_*.sh
 .DS_Store
