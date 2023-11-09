@@ -11,7 +11,18 @@ from .components.parameters import Parameters
 from .model.address import Address
 from .model.peer import Peer
 
-BALANCE = Gauge("node_balance", "Node balance", ["node_address", "token"])
+BALANCE = Gauge("balance", "Node balance", ["peer_id", "token"])
+PEERS_COUNT = Gauge("peers_count", "Node peers", ["peer_id"])
+HEALTH = Gauge("node_health", "Node health", ["peer_id"])
+CHANNELS_OPENED = Gauge("channels_opened", "Node channels opened", ["peer_id"])
+INCOMING_CHANNELS_CLOSED = Gauge(
+    "incoming_channels_closed", "Node's incoming channels closed", ["peer_id"]
+)
+PENDING_CHANNELS_CLOSED = Gauge(
+    "pending_channels_closed", "Node's pending channels closed", ["peer_id"]
+)
+OUTGOING_CHANNELS = Gauge("outgoing_channels", "Node's outgoing channels", ["peer_id"])
+INCOMING_CHANNELS = Gauge("incoming_channels", "Node's incoming channels", ["peer_id"])
 
 
 class Node(Base):
@@ -52,17 +63,17 @@ class Node(Base):
         await self.connected.set(self.address is not None)
 
         self._debug(f"Connection state: {await self.connected.get()}")
+        HEALTH.labels(self.address.id).set(int(await self.connected.get()))
 
     @flagguard
     @formalin("Retrieving balances")
+    @connectguard
     async def retrieve_balances(self):
-        if self.address is None:
-            return
-
         for token, balance in (await self.balance).items():
             BALANCE.labels(self.address.id, token).set(balance)
 
     @flagguard
+    @formalin("Opening channels")
     @connectguard
     async def open_channels(self):
         """
@@ -79,7 +90,10 @@ class Node(Base):
         for address in addresses_without_channels:
             await self.api.open_channel(address, self.param.channel_funding_amount)
 
+        CHANNELS_OPENED.labels(self.address.id).set(len(addresses_without_channels))
+
     @flagguard
+    @formalin("Closing incoming channels")
     @connectguard
     async def close_incoming_channels(self):
         """
@@ -92,7 +106,10 @@ class Node(Base):
         for channel in in_opens:
             await self.api.close_channel(channel.channel_id)
 
+        INCOMING_CHANNELS_CLOSED.labels(self.address.id).set(len(in_opens))
+
     @flagguard
+    @formalin("Closing pending channels")
     @connectguard
     async def close_pending_channels(self):
         """
@@ -106,7 +123,10 @@ class Node(Base):
         for channel in out_pendings:
             await self.api.close_channel(channel.channel_id)
 
+        PENDING_CHANNELS_CLOSED.labels(self.address.id).set(len(out_pendings))
+
     @flagguard
+    @formalin("Funding channels")
     @connectguard
     async def fund_channels(self):
         """
@@ -140,6 +160,7 @@ class Node(Base):
         peers = {Peer(item["peer_id"], item["peer_address"]) for item in results}
 
         await self.peers.set(peers)
+        PEERS_COUNT.labels(self.address.id).set(len(peers))
 
     @flagguard
     @formalin("Retrieving outgoing channels")
@@ -153,6 +174,7 @@ class Node(Base):
         outgoings = filter(lambda c: c.source_peer_id == self.address.id, channels.all)
 
         await self.outgoings.set(list(outgoings))
+        OUTGOING_CHANNELS.labels(self.address.id).set(len(list(outgoings)))
 
     @flagguard
     @formalin("Retrieving incoming channels")
@@ -168,6 +190,7 @@ class Node(Base):
         )
 
         await self.incomings.set(list(incomings))
+        INCOMING_CHANNELS.labels(self.address.id).set(len(list(incomings)))
 
     def tasks(self):
         self._info("Starting node")

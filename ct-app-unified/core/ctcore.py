@@ -16,6 +16,9 @@ from .model.subgraph_entry import SubgraphEntry
 from .model.topology_entry import TopologyEntry
 from .node import Node
 
+HEALTH = Gauge("core_health", "Node health")
+UNIQUE_PEERS = Gauge("unique_peers", "Unique peers")
+SUBGRAPH_IN_USE = Gauge("subgraph_in_use", "Subgraph in use")
 SUBGRAPH_CALLS = Gauge("subgraph_calls", "# of subgraph calls", ["type"])
 SUBGRAPH_SIZE = Gauge("subgraph_size", "Size of the subgraph")
 TOPOLOGY_SIZE = Gauge("topology_size", "Size of the topology")
@@ -38,6 +41,13 @@ class SubgraphType(Enum):
     @classmethod
     def callables(cls):
         return [item for item in cls if item != cls.NONE]
+
+    def toInt(self):
+        if self == SubgraphType.DEFAULT:
+            return 0
+        if self == SubgraphType.BACKUP:
+            return 1
+        return -1
 
 
 class CTCore(Base):
@@ -89,6 +99,7 @@ class CTCore(Base):
         if value != self.selected_subgraph:
             self._warning(f"Now using '{value.value}' subgraph.")
 
+        SUBGRAPH_IN_USE.set(value.toInt())
         self._selected_subgraph = value
 
     def subgraph_url(self, subgraph: SubgraphType) -> str:
@@ -100,13 +111,18 @@ class CTCore(Base):
 
         return SubgraphType.NONE
 
+    async def _retrieve_address(self):
+        addresses = await self.api.get_address("all")
+        self.address = Address(addresses["hopr"], addresses["native"])
+
     @flagguard
-    @formalin("Running healthcheck")
-    async def healthcheck(self):
-        states = [await node.connected.get() for node in self.network_nodes]
-        await self.connected.set(all(states))
+    @formalin(None)
+    async def healthcheck(self) -> dict:
+        await self._retrieve_address()
+        await self.connected.set(self.address is not None)
 
         self._debug(f"Connection state: {await self.connected.get()}")
+        HEALTH.set(int(await self.connected.get()))
 
     @flagguard
     @formalin("Checking subgraph URLs")
@@ -139,6 +155,7 @@ class CTCore(Base):
         await self.all_peers.set(results)
 
         self._debug(f"Aggregated peers ({len(results)} entries).")
+        UNIQUE_PEERS.set(len(results))
 
     @flagguard
     @formalin("Getting subgraph data")
