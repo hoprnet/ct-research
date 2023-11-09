@@ -60,7 +60,7 @@ class HoprdAPI:
             # )
             return (False, None)
 
-    async def balances(self):
+    async def balances(self, type: str = "all"):
         """
         Returns the balance of the node.
         :param: type: str =  "all" | "hopr" | "native" | "safe_native" | "safe_hopr"
