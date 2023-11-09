@@ -44,6 +44,8 @@ class CTCore(Base):
     flag_prefix = "CORE_"
 
     def __init__(self):
+        super().__init__()
+
         self.params = Parameters()
 
         self.nodes = list[Node]()
