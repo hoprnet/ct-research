@@ -68,7 +68,7 @@ jobs:
       - name: Build and push container image
         uses: elgohr/Publish-Docker-Github-Action@v5
         with:
-          workdir: "ct-app"
+          workdir: "ct-app-unified"
           dockerfile: "./Dockerfile"
           name: ${{ secrets.GOOGLE_PROJECT }}/${{ secrets.GOOGLE_REPOSITORY }}/cover-traffic
           registry: ${{ secrets.GOOGLE_REGION }}-docker.pkg.dev
