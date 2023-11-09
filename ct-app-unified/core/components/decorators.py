@@ -30,7 +30,7 @@ def flagguard(func):
         flags = Flags.getEnvironmentFlags(self.flag_prefix)
 
         if func.__name__ not in flags:
-            self._feature(f"Feature `{func.__name__}` not yet available")
+            self._error(f"Feature `{func.__name__}` not yet available")
             return
 
         await func(self, *args, **kwargs)
