@@ -127,9 +127,10 @@ class Node(Base):
         """
         Close incoming channels
         """
-        in_opens = filter(
-            lambda c: ChannelStatus.isOpen(c.status), await self.incomings.get()
-        )
+
+        in_opens = [
+            c for c in await self.incomings.get() if ChannelStatus.isOpen(c.status)
+        ]
 
         for channel in in_opens:
             ok = await self.api.close_channel(channel.channel_id)
@@ -146,9 +147,9 @@ class Node(Base):
         Close channels in PendingToClose state.
         """
 
-        out_pendings = filter(
-            lambda c: ChannelStatus.isPending(c.status), await self.outgoings.get()
-        )
+        out_pendings = [
+            c for c in await self.outgoings.get() if ChannelStatus.isPending(c.status)
+        ]
 
         for channel in out_pendings:
             ok = await self.api.close_channel(channel.channel_id)
@@ -165,12 +166,13 @@ class Node(Base):
         Fund channels that are below minimum threshold.
         """
 
-        out_opens = filter(
-            lambda c: ChannelStatus.isOpen(c.status), await self.outgoings.get()
-        )
-        low_balances = filter(
-            lambda c: int(c.balance) <= self.params.channel_min_balance, out_opens
-        )
+        out_opens = [
+            c for c in await self.outgoings.get() if ChannelStatus.isOpen(c.status)
+        ]
+
+        low_balances = [
+            c for c in out_opens if int(c.balance) <= self.params.channel_min_balance
+        ]
 
         peer_ids = [p.id for p in await self.peers.get()]
 
