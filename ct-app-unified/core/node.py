@@ -169,7 +169,7 @@ class Node(Base):
         """
         Close channels that have been open for too long.
         """
-        outgoings = await self.outgoings.get()
+        outgoings = await self.outgoings.get()  # noqa: F841
 
     @flagguard
     @formalin("Funding channels")
