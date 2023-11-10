@@ -5,7 +5,7 @@ from prometheus_client import start_http_server
 
 from .components.parameters import Parameters
 from .components.utils import Utils
-from .ctcore import CTCore
+from .core import CTCore
 from .node import Node
 
 

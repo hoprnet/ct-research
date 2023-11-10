@@ -160,6 +160,7 @@ class Node(Base):
         peers = {Peer(item["peer_id"], item["peer_address"]) for item in results}
 
         await self.peers.set(peers)
+        self._debug(f"Peers: {len(peers)}")
         PEERS_COUNT.labels(self.address.id).set(len(peers))
 
     @flagguard
@@ -207,7 +208,7 @@ class Node(Base):
         ]
 
     def __str__(self):
-        return f"Node(id='{self.peer_id}')"
+        return f"Node(id='{self.url}')"
 
     @classmethod
     def fromAddressListAndKey(cls, addresses: list[str], key: str):

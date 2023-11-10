@@ -1,5 +1,4 @@
 import asyncio
-from enum import Enum
 
 from prometheus_client import Gauge
 
@@ -13,6 +12,7 @@ from .model.address import Address
 from .model.economic_model import EconomicModel
 from .model.peer import Peer
 from .model.subgraph_entry import SubgraphEntry
+from .model.subgraph_type import SubgraphType
 from .model.topology_entry import TopologyEntry
 from .node import Node
 
@@ -31,23 +31,6 @@ PEER_TF_STAKE = Gauge("peer_tf_stake", "Transformed stake", ["peer_id"])
 PEER_SAFE_COUNT = Gauge("peer_safe_count", "Number of safes", ["peer_id"])
 DISTRIBUTION_DELAY = Gauge("distribution_delay", "Delay between two distributions")
 NEXT_DISTRIBUTION_EPOCH = Gauge("next_distribution_s", "Next distribution (in seconds)")
-
-
-class SubgraphType(Enum):
-    DEFAULT = "default"
-    BACKUP = "backup"
-    NONE = "None"
-
-    @classmethod
-    def callables(cls):
-        return [item for item in cls if item != cls.NONE]
-
-    def toInt(self):
-        if self == SubgraphType.DEFAULT:
-            return 0
-        if self == SubgraphType.BACKUP:
-            return 1
-        return -1
 
 
 class CTCore(Base):
@@ -69,7 +52,9 @@ class CTCore(Base):
         self.subgraph_list = LockedVar("subgraph_list", list[SubgraphEntry]())
         self.eligible_list = LockedVar("eligible_list", list[Peer]())
 
-        self._selected_subgraph = SubgraphType.NONE
+        self._selected_subgraph = (
+            SubgraphType.NONE
+        )  # trick to have the subgraph in use displayed in the terminal
         self.selected_subgraph = SubgraphType.DEFAULT
 
         self.started = False
@@ -309,6 +294,10 @@ class CTCore(Base):
         Start the node.
         """
         self._info(f"CTCore started with {len(self.network_nodes)} nodes.")
+
+        if len(self.network_nodes) == 0:
+            self._error("No nodes available, exiting.")
+            return
 
         if self.tasks:
             return

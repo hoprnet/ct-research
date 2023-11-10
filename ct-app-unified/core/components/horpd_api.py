@@ -1,3 +1,5 @@
+import logging
+
 from hoprd_sdk import ApiClient, Configuration
 from hoprd_sdk.api import (
     AccountApi,
@@ -27,6 +29,7 @@ class HoprdAPI:
         self.configuration = Configuration()
         self.configuration.host = f"{url}/api/v3"
         self.configuration.api_key["x-auth-token"] = token
+        self.logger = logging.getLogger("ct-app")
 
     def __call_api(self, obj, method, *args, **kwargs):
         try:
@@ -36,29 +39,25 @@ class HoprdAPI:
                 thread = api_callback(*args, **kwargs)
                 response = thread.get()
 
-                # print(
-                #     f"Calling {api_callback.__qualname__} "
-                #     + f"with kwargs: {kwargs}, args: {args}, response: {response}"
-                # )
-                return (True, response)
-        except ApiException:
-            # print(
-            #     f"ApiException calling {api_callback.__qualname__} "
-            #     + f"with kwargs: {kwargs}, args: {args}, error is: {e}"
-            # )
-            return (False, None)
+        except ApiException as e:
+            self.logger.error(
+                f"ApiException calling {api_callback.__qualname__} "
+                + f"with kwargs: {kwargs}, args: {args}, error is: {e}"
+            )
         except OSError:
-            # print(
-            #     f"OSError calling {api_callback.__qualname__} "
-            #     + f"with kwargs: {kwargs}, args: {args}:"
-            # )
-            return (False, None)
+            self.logger.error(
+                f"OSError calling {api_callback.__qualname__} "
+                + f"with kwargs: {kwargs}, args: {args}:"
+            )
         except MaxRetryError:
-            # print(
-            #     f"MaxRetryError calling {api_callback.__qualname__} "
-            #     + f"with kwargs: {kwargs}, args: {args}"
-            # )
-            return (False, None)
+            self.logger.error(
+                f"MaxRetryError calling {api_callback.__qualname__} "
+                + f"with kwargs: {kwargs}, args: {args}"
+            )
+        else:
+            return (True, response)
+
+        return (False, None)
 
     async def balances(self, type: str = "all"):
         """
