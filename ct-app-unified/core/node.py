@@ -151,12 +151,23 @@ class Node(Base):
             c for c in await self.outgoings.get() if ChannelStatus.isPending(c.status)
         ]
 
+        self._debug(f"Pending channels: {len(out_pendings)}")
+
         for channel in out_pendings:
             ok = await self.api.close_channel(channel.channel_id)
             if ok:
                 self._debug(f"Closed pending channel {channel.channel_id}")
                 PENDING_CHANNELS_CLOSED.labels(self.address.id).inc()
             CLOSE_PENDING_CHANNELS_CALLS.labels(self.address.id).inc()
+
+    @flagguard
+    @formalin("Closing old channels")
+    @connectguard
+    async def close_old_channels(self):
+        """
+        Close channels that have been open for too long.
+        """
+        outgoings = await self.outgoings.get()
 
     @flagguard
     @formalin("Funding channels")
