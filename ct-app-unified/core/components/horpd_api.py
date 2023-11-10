@@ -1,5 +1,3 @@
-import logging
-
 from hoprd_sdk import ApiClient, Configuration
 from hoprd_sdk.api import (
     AccountApi,
@@ -17,10 +15,12 @@ from hoprd_sdk.models import (
 from hoprd_sdk.rest import ApiException
 from urllib3.exceptions import MaxRetryError
 
+from .baseclass import Base
+
 MESSAGE_TAG = 800
 
 
-class HoprdAPI:
+class HoprdAPI(Base):
     """
     HOPRd API helper to handle exceptions and logging.
     """
@@ -29,7 +29,10 @@ class HoprdAPI:
         self.configuration = Configuration()
         self.configuration.host = f"{url}/api/v3"
         self.configuration.api_key["x-auth-token"] = token
-        self.logger = logging.getLogger("ct-app")
+
+    @property
+    def print_prefix(self) -> str:
+        return "api"
 
     def __call_api(self, obj, method, *args, **kwargs):
         try:
@@ -40,17 +43,17 @@ class HoprdAPI:
                 response = thread.get()
 
         except ApiException as e:
-            self.logger.error(
+            self._error(
                 f"ApiException calling {api_callback.__qualname__} "
                 + f"with kwargs: {kwargs}, args: {args}, error is: {e}"
             )
         except OSError:
-            self.logger.error(
+            self._error(
                 f"OSError calling {api_callback.__qualname__} "
                 + f"with kwargs: {kwargs}, args: {args}:"
             )
         except MaxRetryError:
-            self.logger.error(
+            self._error(
                 f"MaxRetryError calling {api_callback.__qualname__} "
                 + f"with kwargs: {kwargs}, args: {args}"
             )
@@ -79,7 +82,7 @@ class HoprdAPI:
 
         for t in type:
             if not hasattr(response, t):
-                print(f"No '{t}' type returned from the API")
+                self._warning(f"No '{t}' type returned from the API")
                 return None
 
             return_dict[t] = int(getattr(response, t))
@@ -136,11 +139,11 @@ class HoprdAPI:
         )
         if is_ok:
             if not hasattr(response, "incoming"):
-                print("Response does not contain 'incoming'")
+                self._warning("Response does not contain 'incoming'")
                 return []
 
             if len(response.incoming) == 0:
-                print("No incoming channels")
+                self._info("No incoming channels")
                 return []
 
             if only_id:
@@ -158,11 +161,11 @@ class HoprdAPI:
         is_ok, response = self.__call_api(ChannelsApi, "channels_get_channels")
         if is_ok:
             if not hasattr(response, "outgoing"):
-                print("Response does not contain 'outgoing'")
+                self._warning("Response does not contain 'outgoing'")
                 return []
 
             if len(response.outgoing) == 0:
-                print("No outgoing channels")
+                self._info("No outgoing channels")
                 return []
 
             if only_id:
@@ -223,17 +226,17 @@ class HoprdAPI:
             return []
 
         if not hasattr(response, status):
-            print(f"No '{status}' field returned from the API")
+            self._warning(f"No '{status}' field returned from the API")
             return []
 
         if len(getattr(response, status)) == 0:
-            print(f"No peer with is_ok '{status}'")
+            self._info(f"No peer with is_ok '{status}'")
             return []
 
         params = [params] if isinstance(params, str) else params
         for param in params:
             if not hasattr(getattr(response, status)[0], param):
-                print(f"No param '{param}' found for peers")
+                self._warning(f"No param '{param}' found for peers")
                 return []
 
         output_list = []
@@ -262,7 +265,7 @@ class HoprdAPI:
         return_dict = {}
         for item in address:
             if not hasattr(response, item):
-                print(f"No '{item}' address returned from the API")
+                self._warning(f"No '{item}' address returned from the API")
                 return None
 
             return_dict[item] = getattr(response, item)

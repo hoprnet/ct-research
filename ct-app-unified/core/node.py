@@ -97,7 +97,9 @@ class Node(Base):
         Open channels to discovered_peers.
         """
         out_opens = [
-            c for c in await self.outgoings.get() if ChannelStatus.isOpen(c.status)
+            c
+            for c in await self.outgoings.get()
+            if not ChannelStatus.isClosed(c.status)
         ]
 
         addresses_with_channels = {c.destination_address for c in out_opens}
@@ -185,7 +187,9 @@ class Node(Base):
             c for c in out_opens if int(c.balance) <= self.params.channel_min_balance
         ]
 
-        peer_ids = [p.id for p in await self.peers.get()]
+        self._debug(f"Low balance channels: {len(low_balances)}")
+
+        peer_ids = [p.address.id for p in await self.peers.get()]
 
         for channel in low_balances:
             if channel.destination_peer_id in peer_ids:

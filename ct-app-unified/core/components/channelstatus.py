@@ -13,3 +13,7 @@ class ChannelStatus(Enum):
     @classmethod
     def isOpen(cls, value: str):
         return value == cls.Open.value
+
+    @classmethod
+    def isClosed(cls, value: str):
+        return value == cls.Closed.value
