@@ -30,7 +30,7 @@ PEER_SPLIT_STAKE = Gauge("peer_split_stake", "Splitted stake", ["peer_id"])
 PEER_TF_STAKE = Gauge("peer_tf_stake", "Transformed stake", ["peer_id"])
 PEER_SAFE_COUNT = Gauge("peer_safe_count", "Number of safes", ["peer_id"])
 DISTRIBUTION_DELAY = Gauge("distribution_delay", "Delay between two distributions")
-NEXT_DISTRIBUTION_EPOCH = Gauge("next_distribution_s", "Next distribution (in seconds)")
+NEXT_DISTRIBUTION_EPOCH = Gauge("next_distribution_epoch", "Next distribution (epoch)")
 
 
 class CTCore(Base):
