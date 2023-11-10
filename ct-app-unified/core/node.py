@@ -24,6 +24,23 @@ PENDING_CHANNELS_CLOSED = Gauge(
 OUTGOING_CHANNELS = Gauge("outgoing_channels", "Node's outgoing channels", ["peer_id"])
 INCOMING_CHANNELS = Gauge("incoming_channels", "Node's incoming channels", ["peer_id"])
 
+OPEN_CHANNELS_CALLS = Gauge(
+    "open_channels_calls", "Calls to open channels", ["peer_id"]
+)
+CLOSE_PENDING_CHANNELS_CALLS = Gauge(
+    "close_pending_channels_calls", "Calls to close pending channels", ["peer_id"]
+)
+CLOSE_INCOMING_CHANNELS_CALLS = Gauge(
+    "close_incoming_channels_calls", "Calls to close incoming channels", ["peer_id"]
+)
+FUNDED_CHANNELS = Gauge("funded_channels", "Funded channels", ["peer_id"])
+FUND_CHANNELS_CALLS = Gauge(
+    "fund_channels_calls", "Calls to fund channels", ["peer_id"]
+)
+ADDRESSES_WOUT_CHANNELS = Gauge(
+    "addresses_wout_channels", "Addresses without channels", ["peer_id"]
+)
+
 
 class Node(Base):
     flag_prefix = "NODE_"
@@ -88,9 +105,15 @@ class Node(Base):
         addresses_without_channels = all_addresses - addresses_with_channels
 
         for address in addresses_without_channels:
-            await self.api.open_channel(address, self.param.channel_funding_amount)
+            ok = await self.api.open_channel(address, self.param.channel_funding_amount)
+            if ok:
+                self._debug(f"Opened channel to {address}")
+                CHANNELS_OPENED.labels(self.address.id).inc()
+            OPEN_CHANNELS_CALLS.labels(self.address.id).inc()
 
-        CHANNELS_OPENED.labels(self.address.id).set(len(addresses_without_channels))
+        ADDRESSES_WOUT_CHANNELS.labels(self.address.id).set(
+            len(addresses_without_channels)
+        )
 
     @flagguard
     @formalin("Closing incoming channels")
@@ -104,9 +127,11 @@ class Node(Base):
         )
 
         for channel in in_opens:
-            await self.api.close_channel(channel.channel_id)
-
-        INCOMING_CHANNELS_CLOSED.labels(self.address.id).set(len(in_opens))
+            ok = await self.api.close_channel(channel.channel_id)
+            if ok:
+                self._debug(f"Closed channel {channel.channel_id}")
+                INCOMING_CHANNELS_CLOSED.labels(self.address.id).inc()
+            CLOSE_INCOMING_CHANNELS_CALLS.labels(self.address.id).inc()
 
     @flagguard
     @formalin("Closing pending channels")
@@ -121,9 +146,11 @@ class Node(Base):
         )
 
         for channel in out_pendings:
-            await self.api.close_channel(channel.channel_id)
-
-        PENDING_CHANNELS_CLOSED.labels(self.address.id).set(len(out_pendings))
+            ok = await self.api.close_channel(channel.channel_id)
+            if ok:
+                self._debug(f"Closed pending channel {channel.channel_id}")
+                PENDING_CHANNELS_CLOSED.labels(self.address.id).inc()
+            CLOSE_PENDING_CHANNELS_CALLS.labels(self.address.id).inc()
 
     @flagguard
     @formalin("Funding channels")
@@ -144,9 +171,13 @@ class Node(Base):
 
         for channel in low_balances:
             if channel.destination_peer_id in peer_ids:
-                await self.api.fund_channel(
+                ok = await self.api.fund_channel(
                     channel.channel_id, self.params.channel_funding_amount
                 )
+                if ok:
+                    self._debug(f"Funded channel {channel.channel_id}")
+                    FUNDED_CHANNELS.labels(self.address.id).inc()
+                FUND_CHANNELS_CALLS.labels(self.address.id).inc()
 
     @flagguard
     @formalin("Retrieving peers")
