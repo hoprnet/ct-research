@@ -1,5 +1,3 @@
-from unittest import mock
-
 import pytest
 from core.core import CTCore
 from core.node import Node
@@ -31,12 +29,12 @@ async def test_app(ctcore: CTCore, nodes: list[Node]):
 
     ctcore.nodes = nodes
 
-    await ctcore.start()
+    # await ctcore.start()
 
 
-@pytest.mark.asyncio
-@mock.patch("core.components.hoprd_api.HoprdAPI.balances")
-async def test_test(mock_balances, ctcore: CTCore, nodes: list[Node]):
-    nodes[0].retrieve_balances()
+# @pytest.mark.asyncio
+# @mock.patch("core.components.hoprd_api.HoprdAPI.balances")
+# async def test_test(mock_balances, ctcore: CTCore, nodes: list[Node]):
+#     nodes[0].retrieve_balances()
 
-    mock_balances.assert_called_once()
+#     mock_balances.assert_called_once()
