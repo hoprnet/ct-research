@@ -96,16 +96,21 @@ class Node(Base):
         """
         Open channels to discovered_peers.
         """
-        out_opens = filter(
-            lambda c: ChannelStatus.isOpen(c.status), await self.outgoings.get()
-        )
+        out_opens = [
+            c for c in await self.outgoings.get() if ChannelStatus.isOpen(c.status)
+        ]
 
         addresses_with_channels = {c.destination_address for c in out_opens}
-        all_addresses = {p.address for p in await self.peers.get()}
+        all_addresses = {p.address.address for p in await self.peers.get()}
         addresses_without_channels = all_addresses - addresses_with_channels
 
+        self._debug(f"Addresses without channels: {len(addresses_without_channels)}")
+
         for address in addresses_without_channels:
-            ok = await self.api.open_channel(address, self.param.channel_funding_amount)
+            ok = await self.api.open_channel(
+                address,
+                f"{int(self.params.channel_funding_amount*1e18):d}",
+            )
             if ok:
                 self._debug(f"Opened channel to {address}")
                 CHANNELS_OPENED.labels(self.address.id).inc()
