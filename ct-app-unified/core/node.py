@@ -172,10 +172,11 @@ class Node(Base):
         """
         channels = await self.api.all_channels(False)
 
-        outgoings = filter(lambda c: c.source_peer_id == self.address.id, channels.all)
+        outgoings = [c for c in channels.all if c.source_peer_id == self.address.id]
 
-        await self.outgoings.set(list(outgoings))
-        OUTGOING_CHANNELS.labels(self.address.id).set(len(list(outgoings)))
+        await self.outgoings.set(outgoings)
+        self._debug(f"Outgoing channels: {len(outgoings)}")
+        OUTGOING_CHANNELS.labels(self.address.id).set(len(outgoings))
 
     @flagguard
     @formalin("Retrieving incoming channels")
@@ -186,12 +187,13 @@ class Node(Base):
         """
         channels = await self.api.all_channels(False)
 
-        incomings = filter(
-            lambda c: c.destination_peer_id == self.address.id, channels.all
-        )
+        incomings = [
+            c for c in channels.all if c.destination_peer_id == self.address.id
+        ]
 
-        await self.incomings.set(list(incomings))
-        INCOMING_CHANNELS.labels(self.address.id).set(len(list(incomings)))
+        await self.incomings.set(incomings)
+        self._debug(f"Incoming channels: {len(incomings)}")
+        INCOMING_CHANNELS.labels(self.address.id).set(len(incomings))
 
     def tasks(self):
         self._info("Starting node")
