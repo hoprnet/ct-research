@@ -1,4 +1,6 @@
 import asyncio
+from datetime import datetime
+from typing import Optional
 
 from prometheus_client import Gauge
 
@@ -14,6 +16,10 @@ from .model.peer import Peer
 BALANCE = Gauge("balance", "Node balance", ["peer_id", "token"])
 PEERS_COUNT = Gauge("peers_count", "Node peers", ["peer_id"])
 HEALTH = Gauge("node_health", "Node health", ["peer_id"])
+
+OUTGOING_CHANNELS = Gauge("outgoing_channels", "Node's outgoing channels", ["peer_id"])
+INCOMING_CHANNELS = Gauge("incoming_channels", "Node's incoming channels", ["peer_id"])
+
 CHANNELS_OPENED = Gauge("channels_opened", "Node channels opened", ["peer_id"])
 INCOMING_CHANNELS_CLOSED = Gauge(
     "incoming_channels_closed", "Node's incoming channels closed", ["peer_id"]
@@ -21,18 +27,22 @@ INCOMING_CHANNELS_CLOSED = Gauge(
 PENDING_CHANNELS_CLOSED = Gauge(
     "pending_channels_closed", "Node's pending channels closed", ["peer_id"]
 )
-OUTGOING_CHANNELS = Gauge("outgoing_channels", "Node's outgoing channels", ["peer_id"])
-INCOMING_CHANNELS = Gauge("incoming_channels", "Node's incoming channels", ["peer_id"])
+OLD_CHANNELS_CLOSED = Gauge("old_channels_closed", "Old channels closed", ["peer_id"])
 
 OPEN_CHANNELS_CALLS = Gauge(
     "open_channels_calls", "Calls to open channels", ["peer_id"]
 )
-CLOSE_PENDING_CHANNELS_CALLS = Gauge(
-    "close_pending_channels_calls", "Calls to close pending channels", ["peer_id"]
-)
 CLOSE_INCOMING_CHANNELS_CALLS = Gauge(
     "close_incoming_channels_calls", "Calls to close incoming channels", ["peer_id"]
 )
+CLOSE_PENDING_CHANNELS_CALLS = Gauge(
+    "close_pending_channels_calls", "Calls to close pending channels", ["peer_id"]
+)
+
+CLOSE_OLD_CHANNELS_CALLS = Gauge(
+    "close_old_channels_calls", "Calls to close old channels", ["peer_id"]
+)
+
 FUNDED_CHANNELS = Gauge("funded_channels", "Funded channels", ["peer_id"])
 FUND_CHANNELS_CALLS = Gauge(
     "fund_channels_calls", "Calls to fund channels", ["peer_id"]
@@ -50,19 +60,21 @@ class Node(Base):
 
         self.api: HoprdAPI = HoprdAPI(url, key)
         self.url = url
-        self.address = None
+        self.address: Optional[Address] = None
 
         self.peers = LockedVar("peers", set[Peer]())
         self.outgoings = LockedVar("outgoings", [])
         self.incomings = LockedVar("incomings", [])
         self.connected = LockedVar("connected", False)
 
+        self.peer_history = LockedVar("peer_history", dict[str, datetime]())
+
         self.params = Parameters()
 
         self.started = False
 
     @property
-    async def balance(self) -> dict:
+    async def balance(self) -> dict[str, int]:
         return await self.api.balances()
 
     @property
@@ -70,17 +82,25 @@ class Node(Base):
         return f"{self.url}"
 
     async def _retrieve_address(self):
-        addresses = await self.api.get_address("all")
-        self.address = Address(addresses["hopr"], addresses["native"])
+        address = await self.api.get_address("all")
+
+        if not isinstance(address, dict):
+            return
+
+        if "hopr" not in address or "native" not in address:
+            return
+
+        self.address = Address(address["hopr"], address["native"])
 
     @flagguard
     @formalin(None)
-    async def healthcheck(self) -> dict:
+    async def healthcheck(self):
         await self._retrieve_address()
         await self.connected.set(self.address is not None)
 
-        self._debug(f"Connection state: {await self.connected.get()}")
-        HEALTH.labels(self.address.id).set(int(await self.connected.get()))
+        if address := self.address:
+            self._debug(f"Connection state: {await self.connected.get()}")
+            HEALTH.labels(address.id).set(int(await self.connected.get()))
 
     @flagguard
     @formalin("Retrieving balances")
@@ -169,7 +189,45 @@ class Node(Base):
         """
         Close channels that have been open for too long.
         """
-        outgoings = await self.outgoings.get()  # noqa: F841
+        outgoings = await self.outgoings.get()
+        peer_history: dict[str, datetime] = await self.peer_history.get()
+        to_peer_history = dict[str, datetime]()
+        channels_to_close: list[str] = []
+
+        address_to_channel_id = {
+            c.destination_address: c.channel_id
+            for c in outgoings
+            if ChannelStatus.isOpen(c.status)
+        }
+
+        for address, channel_id in address_to_channel_id.items():
+            timestamp = peer_history.get(address, None)
+
+            if timestamp is None:
+                to_peer_history[address] = datetime.now()
+                continue
+
+            if (
+                datetime.now() - timestamp
+            ).total_seconds() < self.params.channel_max_age_seconds:
+                continue
+
+            channels_to_close.append(channel_id)
+
+        await self.peer_history.update(to_peer_history)
+        self._debug(f"Updated peer history with {len(to_peer_history)} new entries")
+
+        self._info(f"Closing {len(channels_to_close)} old channels")
+        for channel in channels_to_close:
+            ok = await self.api.close_channel(channel)
+
+            if ok:
+                self._debug(f"Channel {channel} closed")
+                OLD_CHANNELS_CLOSED.labels(self.address.id).inc()
+            else:
+                self._debug(f"Failed to close channel {channel_id}")
+
+            CLOSE_OLD_CHANNELS_CALLS.labels(self.address.id).inc()
 
     @flagguard
     @formalin("Funding channels")
@@ -212,7 +270,11 @@ class Node(Base):
         results = await self.api.peers(params=["peer_id", "peer_address"], quality=0.5)
         peers = {Peer(item["peer_id"], item["peer_address"]) for item in results}
 
+        addresses_w_timestamp = {p.address.address: datetime.now() for p in peers}
+
         await self.peers.set(peers)
+        await self.peer_history.update(addresses_w_timestamp)
+
         self._debug(f"Peers: {len(peers)}")
         PEERS_COUNT.labels(self.address.id).set(len(peers))
 
@@ -259,6 +321,7 @@ class Node(Base):
             asyncio.create_task(self.open_channels()),
             asyncio.create_task(self.close_incoming_channels()),
             asyncio.create_task(self.close_pending_channels()),
+            asyncio.create_task(self.close_old_channels()),
             asyncio.create_task(self.fund_channels()),
         ]
 

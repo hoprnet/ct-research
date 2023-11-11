@@ -1,3 +1,5 @@
+from typing import Callable, Optional
+
 from hoprd_sdk import ApiClient, Configuration
 from hoprd_sdk.api import (
     AccountApi,
@@ -34,27 +36,29 @@ class HoprdAPI(Base):
     def print_prefix(self) -> str:
         return "api"
 
-    def __call_api(self, obj, method, *args, **kwargs):
+    def __call_api(
+        self, obj: Callable[..., object], method: str, *args, **kwargs
+    ) -> tuple[bool, Optional[object]]:
         try:
             with ApiClient(self.configuration) as client:
-                api_callback = obj(client).__getattribute__(method)
+                api_callback = getattr(obj(client), method)
                 kwargs["async_req"] = True
                 thread = api_callback(*args, **kwargs)
                 response = thread.get()
 
         except ApiException as e:
             self._error(
-                f"ApiException calling {api_callback.__qualname__} "
+                f"ApiException calling {obj.__name__}.{method} "
                 + f"with kwargs: {kwargs}, args: {args}, error is: {e}"
             )
         except OSError:
             self._error(
-                f"OSError calling {api_callback.__qualname__} "
+                f"OSError calling {obj.__name__}.{method} "
                 + f"with kwargs: {kwargs}, args: {args}:"
             )
         except MaxRetryError:
             self._error(
-                f"MaxRetryError calling {api_callback.__qualname__} "
+                f"MaxRetryError calling {obj.__name__}.{method} "
                 + f"with kwargs: {kwargs}, args: {args}"
             )
         else:
@@ -62,7 +66,7 @@ class HoprdAPI(Base):
 
         return (False, None)
 
-    async def balances(self, type: str = "all"):
+    async def balances(self, type: str or list[str] = "all"):
         """
         Returns the balance of the node.
         :param: type: str =  "all" | "hopr" | "native" | "safe_native" | "safe_hopr"
@@ -71,6 +75,7 @@ class HoprdAPI(Base):
         all_types = ["hopr", "native", "safe_native", "safe_hopr"]
         if type == "all":
             type = all_types
+
         elif isinstance(type, str):
             type = [type]
 
@@ -125,7 +130,7 @@ class HoprdAPI(Base):
         is_ok, _ = self.__call_api(ChannelsApi, "channels_close_channel", channel_id)
         return is_ok
 
-    async def incoming_channels(self, only_id: bool = False):
+    async def incoming_channels(self, only_id: bool = False) -> list:
         """
         Returns all open incoming channels.
         :return: channels: list
@@ -245,7 +250,9 @@ class HoprdAPI(Base):
 
         return output_list
 
-    async def get_address(self, address: str or list[str] = "hopr"):
+    async def get_address(
+        self, address: str or list[str] = "hopr"
+    ) -> Optional[dict[str, str]] or Optional[str]:
         """
         Returns the address of the node.
         :param: address: str = "hopr" | "native"
@@ -262,7 +269,7 @@ class HoprdAPI(Base):
         if not is_ok:
             return None
 
-        return_dict = {}
+        return_dict: dict[str, str] = {}
         for item in address:
             if not hasattr(response, item):
                 self._warning(f"No '{item}' address returned from the API")

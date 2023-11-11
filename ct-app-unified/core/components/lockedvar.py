@@ -35,6 +35,17 @@ class LockedVar(Base):
         async with self.lock:
             self.value += value
 
+    async def update(self, value: Any):
+        if self.type and not isinstance(value, self.type):
+            self._warning(
+                f"Trying to change value of type {type(value)} to {self.type}, ignoring"
+            )
+        if not isinstance(value, dict):
+            raise TypeError("Trying to call 'update' on non-dict value")
+
+        async with self.lock:
+            self.value.update(value)
+
     @property
     def print_prefix(self):
         return f"LockedVar({self.name})"

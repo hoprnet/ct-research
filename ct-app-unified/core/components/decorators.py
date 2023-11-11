@@ -1,5 +1,6 @@
 import asyncio
 import functools
+from typing import Optional
 
 from .flags import Flags
 
@@ -38,7 +39,7 @@ def flagguard(func):
     return wrapper
 
 
-def formalin(message: str = None):
+def formalin(message: Optional[str] = None):
     """
     Decorator to log the start of a function, make it run until stopped, and delay the
     next iteration
