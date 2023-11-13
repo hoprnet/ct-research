@@ -1,5 +1,6 @@
 import asyncio
 
+from celery import Celery
 from prometheus_client import Gauge
 
 from .components.baseclass import Base
@@ -280,6 +281,21 @@ class CTCore(Base):
         lines = Peer.toCSV(peers)
         Utils.stringArrayToGCP(self.params.gcp_bucket, filename, lines)
 
+        # create celery tasks
+        app = Celery(
+            name=self.params.celery_project_name,
+            broker=self.params.celery_broker_url,
+        )
+        app.autodiscover_tasks(force=True)
+
+        for peer in peers:
+            Utils.taskSendMessage(
+                app,
+                peer.address.id,
+                peer.message_count_for_reward,
+                peer.economic_model.budget.ticket_price,
+                task_name=self.param.task_name,
+            )
         self._info(f"Distributed rewards to {len(peers)} peers.")
 
         EXECUTIONS_COUNTER.inc()

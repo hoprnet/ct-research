@@ -2,68 +2,32 @@ import asyncio
 import logging
 import random
 import time
-from enum import Enum
 
+from billiard import current_process
 from celery import Celery
 from core.components.horpd_api import HoprdAPI
+from core.components.parameters import Parameters
 from core.components.utils import Utils
+
+from .task_status import TaskStatus
 
 log = logging.getLogger()
 log.setLevel(logging.INFO)
 
+params = Parameters()(env_prefix="PARAM_")
 
-app = Celery(
-    name=Utils.envvar("PROJECT_NAME"), broker=Utils.envvar("CELERY_BROKER_URL")
-)
+app = Celery(name=params.celery_project_name, broker=params.celery_broker_url)
 app.autodiscover_tasks(force=True)
 
 
-class TaskStatus(Enum):
-    """
-    Enum to represent the status of a task. This status is also used when creating a
-    task in the outgoing queue.
-    """
-
-    DEFAULT = "DEFAULT"
-    SUCCESS = "SUCCESS"
-    RETRIED = "RETRIED"
-    SPLITTED = "SPLITTED"
-    TIMEOUT = "TIMEOUT"
-    FAILED = "FAILED"
-
-
-async def channel_balance(api: HoprdAPI, src_peer_id: str, dest_peer_id: str) -> float:
-    """
-    Get the channel balance of a given address.
-    :param api: API helper instance.
-    :param src_peer_id: Source channel peer id.
-    :param dest_peer_id: Destination channel peer id.
-    :return: Channel balance of the address.
-    """
-    channels = await api.all_channels(False)
-
-    channel = [
-        c
-        for c in channels.all
-        if c.destination_peer_id == dest_peer_id and c.source_peer_id == src_peer_id
-    ]
-
-    if len(channel) == 0:
-        return 0
-    else:
-        return int(channel[0].balance) / 1e18
-
-
-def create_batches(total_count, batch_size):
-    if total_count < 0:
+def create_batches(total_count: int, batch_size: int) -> list[int]:
+    if total_count <= 0:
         return []
 
-    full_batches = total_count // batch_size
-    remainder = total_count % batch_size
+    full_batches: int = total_count // batch_size
+    remainder: int = total_count % batch_size
 
-    batches: list = [batch_size] * full_batches + [remainder] * bool(remainder)
-
-    return batches
+    return [batch_size] * full_batches + [remainder] * bool(remainder)
 
 
 async def send_messages_in_batches(
@@ -86,13 +50,12 @@ async def send_messages_in_batches(
 
             issued_count += await api.send_message(
                 recipient,
-                f"From CT: distribution to {relayer} at {timestamp}-"
-                f"{global_index + 1}/{expected_count}",
+                f"{relayer}//{timestamp}-{global_index + 1}/{expected_count}",
                 [relayer],
             )
-            await asyncio.sleep(Utils.envvar("DELAY_BETWEEN_TWO_MESSAGES", float))
+            await asyncio.sleep(params.delay_between_two_messages)
 
-        await asyncio.sleep(Utils.envvar("MESSAGE_DELIVERY_TIMEOUT", float))
+        await asyncio.sleep(params.message_delivery_timeout)
 
         messages = await api.messages_pop_all(0x0320)
         relayed_count += len(messages)
@@ -119,21 +82,17 @@ def send_1_hop_message(
     :param timestamp: Timestamp at first iteration. For timeout purposes.
     :param attempts: Number of attempts to send the message regardless of the node.
     """
+
     if timestamp is None:
         timestamp = time.time()
 
     send_status, node_peer_id, (issued, relayed) = asyncio.run(
-        async_send_1_hop_message(
-            peer,
-            expected,
-            ticket_price,
-            timestamp,
-        )
+        async_send_1_hop_message(peer, expected, ticket_price, timestamp)
     )
 
     attempts += send_status in [TaskStatus.SPLITTED, TaskStatus.SUCCESS]
 
-    if attempts >= Utils.envvar("MAX_ATTEMPTS", int):
+    if attempts >= params.max_attempts:
         send_status = TaskStatus.TIMEOUT
 
     if send_status in [TaskStatus.RETRIED, TaskStatus.SPLITTED]:
@@ -171,11 +130,12 @@ async def async_send_1_hop_message(
     :param attempts: Number of attempts to send the message regardless of the node.
     """
 
-    # pick a random node and test connection
-    addresses, key = Utils.nodesAddresses("NODE_ADDRESS_", "NODE_KEY")
-    api = HoprdAPI(random.choice(addresses), key)
+    # pick the associated node
+    address = Utils.envvar(f"NODE_ADDRESS_{current_process().index+1}")
+    key = Utils.envvar("NODE_KEY")
+    api = HoprdAPI(address, key)
 
-    node_peer_id = api.get_address("hopr")
+    node_peer_id = await api.get_address("hopr")
 
     if node_peer_id is None:
         log.error("Can't connect to the node")
@@ -184,7 +144,7 @@ async def async_send_1_hop_message(
         log.info(f"Node peer id: {node_peer_id}")
 
     # validate balance of peer
-    balance = await channel_balance(api, node_peer_id, peer_id)
+    balance = await api.channel_balance(node_peer_id, peer_id)
     max_possible = min(expected_count, balance // ticket_price)
 
     if max_possible == 0:
@@ -192,12 +152,7 @@ async def async_send_1_hop_message(
         return TaskStatus.RETRIED, node_peer_id, (0, 0)
 
     relayed, issued = await send_messages_in_batches(
-        api,
-        peer_id,
-        max_possible,
-        node_peer_id,
-        timestamp,
-        Utils.envvar("BATCH_SIZE", int),
+        api, peer_id, max_possible, node_peer_id, timestamp, params.batch_size
     )
 
     status = TaskStatus.SUCCESS if relayed == expected_count else TaskStatus.SPLITTED
