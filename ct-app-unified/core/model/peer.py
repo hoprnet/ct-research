@@ -149,6 +149,17 @@ class Peer:
             "message_count_for_reward",
         ]
 
+    @classmethod
+    def toCSV(cls, peers: list) -> list[list[str]]:
+        attributes = Peer.attributesToExport()
+        lines = [["peer_id"] + attributes]
+
+        for peer in peers:
+            line = [peer.address.id] + [getattr(peer, attr) for attr in attributes]
+            lines.append(line)
+
+        return lines
+
     def __repr__(self):
         return f"Peer(address: {self.address})"
 

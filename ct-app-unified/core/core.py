@@ -273,18 +273,13 @@ class CTCore(Base):
 
             await asyncio.sleep(2)
 
-        ### convert to csv
-        attributes = Peer.attributesToExport()
-        lines = [["peer_id"] + attributes]
-
-        for peer in peers:
-            line = [peer.address.id] + [getattr(peer, attr) for attr in attributes]
-            lines.append(line)
-
+        # convert to csv and store on GCP
         filename = Utils.generateFilename(
             self.params.gcp_file_prefix, self.params.gcp_folder
         )
+        lines = Peer.toCSV(peers)
         Utils.stringArrayToGCP(self.params.gcp_bucket, filename, lines)
+
         self._info(f"Distributed rewards to {len(peers)} peers.")
 
         EXECUTIONS_COUNTER.inc()

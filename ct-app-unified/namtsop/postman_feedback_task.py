@@ -1,13 +1,15 @@
+import logging
 from datetime import datetime
 
 from celery import Celery
-
-from tools import envvar, getlogger
+from core.components.utils import Utils  # envvar, getlogger
 from tools.db_connection import DatabaseConnection, Reward
 
-log = getlogger()
+log = logging.getLogger()
 
-app = Celery(name=envvar("PROJECT_NAME"), broker=envvar("CELERY_BROKER_URL"))
+app = Celery(
+    name=Utils.envvar("PROJECT_NAME"), broker=Utils.envvar("CELERY_BROKER_URL")
+)
 
 
 @app.task(name="feedback_task")

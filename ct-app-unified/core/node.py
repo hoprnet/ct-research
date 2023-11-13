@@ -287,7 +287,12 @@ class Node(Base):
         """
         channels = await self.api.all_channels(False)
 
-        outgoings = [c for c in channels.all if c.source_peer_id == self.address.id and not ChannelStatus.isClosed(c.status)]
+        outgoings = [
+            c
+            for c in channels.all
+            if c.source_peer_id == self.address.id
+            and not ChannelStatus.isClosed(c.status)
+        ]
 
         await self.outgoings.set(outgoings)
         self._debug(f"Outgoing channels: {len(outgoings)}")
@@ -303,7 +308,10 @@ class Node(Base):
         channels = await self.api.all_channels(False)
 
         incomings = [
-            c for c in channels.all if c.destination_peer_id == self.address.id and not ChannelStatus.isClosed(c.status)
+            c
+            for c in channels.all
+            if c.destination_peer_id == self.address.id
+            and not ChannelStatus.isClosed(c.status)
         ]
 
         await self.incomings.set(incomings)

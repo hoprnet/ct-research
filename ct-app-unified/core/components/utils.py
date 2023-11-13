@@ -8,6 +8,7 @@ from typing import Any
 
 import aiohttp
 from aiohttp import ClientSession
+from celery import Celery
 from google.cloud import storage
 
 from core.model.address import Address
@@ -269,3 +270,45 @@ class Utils:
             results[c.source_peer_id]["channels_balance"] += int(c.balance) / 1e18
 
         return results
+
+    @classmethod
+    def taskSendMessage(
+        cls,
+        app: Celery,
+        relayer_id: str,
+        expected: int,
+        ticket_price: int,
+        timestamp: float = None,
+        attempts: int = 0,
+    ):
+        app.send_task(
+            "send_1_hop_message",
+            args=(relayer_id, expected, ticket_price, timestamp, attempts),
+            queue="send_messages",
+        )
+
+    @classmethod
+    def taskStoreFeedback(
+        cls,
+        app: Celery,
+        relayer_id: str,
+        node_peer_id: str,
+        expected: int,
+        issued: float,
+        relayed: int,
+        send_status: str,
+        timestamp: float,
+    ):
+        app.send_task(
+            "feedback_task",
+            args=(
+                relayer_id,
+                node_peer_id,
+                expected,
+                issued,
+                relayed,
+                send_status.value,
+                timestamp,
+            ),
+            queue="feedback",
+        )
