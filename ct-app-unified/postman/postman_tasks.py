@@ -5,9 +5,10 @@ import time
 
 from billiard import current_process
 from celery import Celery
-from core.components.horpd_api import HoprdAPI
+from core.components.horpd_api import MESSAGE_TAG, HoprdAPI
 from core.components.parameters import Parameters
 from core.components.utils import Utils
+from db_connection import DatabaseConnection, Peer
 
 from .task_status import TaskStatus
 
@@ -30,6 +31,19 @@ def create_batches(total_count: int, batch_size: int) -> list[int]:
     return [batch_size] * full_batches + [remainder] * bool(remainder)
 
 
+def peerID_to_int(peer_id: str) -> int:
+    with DatabaseConnection() as session:
+        existing_peer = session.query(Peer).filter_by(peer_id=peer_id).first()
+
+        if existing_peer:
+            return existing_peer.id
+        else:
+            new_peer = Peer(peer_id=peer_id)
+            session.add(new_peer)
+            session.commit()
+            return new_peer.id
+
+
 async def send_messages_in_batches(
     api: HoprdAPI,
     relayer: str,
@@ -40,6 +54,8 @@ async def send_messages_in_batches(
 ):
     relayed_count = 0
     issued_count = 0
+
+    unique_id = peerID_to_int(relayer)
 
     batches = create_batches(expected_count, batch_size)
 
@@ -52,12 +68,13 @@ async def send_messages_in_batches(
                 recipient,
                 f"{relayer}//{timestamp}-{global_index + 1}/{expected_count}",
                 [relayer],
+                MESSAGE_TAG + unique_id,
             )
             await asyncio.sleep(params.delay_between_two_messages)
 
         await asyncio.sleep(params.message_delivery_timeout)
 
-        messages = await api.messages_pop_all(0x0320)
+        messages = await api.messages_pop_all(MESSAGE_TAG + unique_id)
         relayed_count += len(messages)
 
     return relayed_count, issued_count
