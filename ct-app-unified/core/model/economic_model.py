@@ -1,4 +1,5 @@
 import os
+
 from prometheus_client import Gauge
 
 from core.components.utils import Utils
@@ -169,7 +170,7 @@ class EconomicModel:
         return cls(equations, parameters, budget)
 
     @classmethod
-    def fromGCPFile(cls, filename: str):
+    def fromGCPFile(cls, bucket: str, filename: str):
         """
         Reads parameters and equations from a JSON file and validates it using a schema.
         :param: filename (str): The name of the JSON file containing the parameters
@@ -179,7 +180,7 @@ class EconomicModel:
         """
         parameters_file_path = os.path.join("assets", filename)
 
-        contents = Utils.jsonFromGCP("ct-platform-ct", parameters_file_path, None)
+        contents = Utils.jsonFromGCP(bucket, parameters_file_path, None)
 
         return EconomicModel.fromDict(contents)
 

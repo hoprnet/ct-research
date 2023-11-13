@@ -1,5 +1,6 @@
 import asyncio
 
+from celery import Celery
 from prometheus_client import Gauge
 
 from .components.baseclass import Base
@@ -228,7 +229,9 @@ class CTCore(Base):
         self._debug(f"Excluded network nodes ({len(excluded)} entries).")
         self._debug(f"Eligible nodes ({len(eligibles)} entries).")
 
-        model = EconomicModel.fromGCPFile(self.params.economic_model_filename)
+        model = EconomicModel.fromGCPFile(
+            self.params.gcp_bucket, self.params.economic_model_filename
+        )
         for peer in eligibles:
             peer.economic_model = model
 
@@ -256,7 +259,9 @@ class CTCore(Base):
     @flagguard
     @formalin("Distributing rewards")
     async def distribute_rewards(self):
-        model = EconomicModel.fromGCPFile(self.params.economic_model_filename)
+        model = EconomicModel.fromGCPFile(
+            self.params.gcp_bucket, self.params.economic_model_filename
+        )
 
         delay = Utils.nextDelayInSeconds(model.delay_between_distributions)
         delay = 5
@@ -273,18 +278,28 @@ class CTCore(Base):
 
             await asyncio.sleep(2)
 
-        ### convert to csv
-        attributes = Peer.attributesToExport()
-        lines = [["peer_id"] + attributes]
-
-        for peer in peers:
-            line = [peer.address.id] + [getattr(peer, attr) for attr in attributes]
-            lines.append(line)
-
+        # convert to csv and store on GCP
         filename = Utils.generateFilename(
             self.params.gcp_file_prefix, self.params.gcp_folder
         )
+        lines = Peer.toCSV(peers)
         Utils.stringArrayToGCP(self.params.gcp_bucket, filename, lines)
+
+        # create celery tasks
+        app = Celery(
+            name=self.params.celery_project_name,
+            broker=self.params.celery_broker_url,
+        )
+        app.autodiscover_tasks(force=True)
+
+        for peer in peers:
+            Utils.taskSendMessage(
+                app,
+                peer.address.id,
+                peer.message_count_for_reward,
+                peer.economic_model.budget.ticket_price,
+                task_name=self.param.task_name,
+            )
         self._info(f"Distributed rewards to {len(peers)} peers.")
 
         EXECUTIONS_COUNTER.inc()

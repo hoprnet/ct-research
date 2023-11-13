@@ -1,24 +1,27 @@
+import logging
 from datetime import datetime
 
 from celery import Celery
+from core.components.parameters import Parameters
+from db_connection import DatabaseConnection, Reward
 
-from tools import envvar, getlogger
-from tools.db_connection import DatabaseConnection, Reward
+log = logging.getLogger()
 
-log = getlogger()
+params = Parameters()(env_prefix="PARAM_")
 
-app = Celery(name=envvar("PROJECT_NAME"), broker=envvar("CELERY_BROKER_URL"))
+app = Celery(name=params.celery_project_name, broker=params.celery_broker_url)
+app.autodiscover_tasks(force=True)
 
 
 @app.task(name="feedback_task")
 def feedback_task(
     peer_id: str,
     node_address: str,
-    effective_count: int,
-    expected_count: int,
+    expected: int,
+    issued: int,
+    relayed: int,
     status: str,
     timestamp: float,
-    issued_count: int,
 ):
     """
     Celery task to store the message delivery status in the database.
@@ -28,11 +31,11 @@ def feedback_task(
         entry = Reward(
             peer_id=peer_id,
             node_address=node_address,
-            expected_count=expected_count,
-            effective_count=effective_count,
+            expected_count=expected,
+            effective_count=relayed,
             status=status,
             timestamp=datetime.fromtimestamp(timestamp),
-            issued_count=issued_count,
+            issued_count=issued,
         )
 
         session.add(entry)
