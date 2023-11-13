@@ -229,7 +229,9 @@ class CTCore(Base):
         self._debug(f"Excluded network nodes ({len(excluded)} entries).")
         self._debug(f"Eligible nodes ({len(eligibles)} entries).")
 
-        model = EconomicModel.fromGCPFile(self.params.economic_model_filename)
+        model = EconomicModel.fromGCPFile(
+            self.params.gcp_bucket, self.params.economic_model_filename
+        )
         for peer in eligibles:
             peer.economic_model = model
 
@@ -257,7 +259,9 @@ class CTCore(Base):
     @flagguard
     @formalin("Distributing rewards")
     async def distribute_rewards(self):
-        model = EconomicModel.fromGCPFile(self.params.economic_model_filename)
+        model = EconomicModel.fromGCPFile(
+            self.params.gcp_bucket, self.params.economic_model_filename
+        )
 
         delay = Utils.nextDelayInSeconds(model.delay_between_distributions)
         delay = 5
