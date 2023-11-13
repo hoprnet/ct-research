@@ -22,3 +22,4 @@ foo*.*
 foo*/
 run_*.sh
 .DS_Store
+test_endurance_rules.json

@@ -248,6 +248,32 @@ class HoprdAPIHelper:
         else:
             return response
 
+    async def channel(self, channel_id: str):
+        """
+        Returns information about the channel with the given id.
+        :param: channel_id: str
+        :return: channel: dict
+        """
+        log.debug(f"Getting channel with id {channel_id}")
+
+        try:
+            with ApiClient(self.configuration) as client:
+                channels_api = ChannelsApi(client)
+                thread = channels_api.channels_get_channel(channel_id, async_req=True)
+                response = thread.get()
+        except ApiException as e:
+            body = json.loads(e.body.decode())
+            log.error(f"ApiException calling ChannelsApi->channels_get_channel: {body}")
+            return None
+        except OSError:
+            log.error("OSError calling ChannelsApi->channels_get_channel")
+            return None
+        except MaxRetryError:
+            log.error("MaxRetryError calling ChannelsApi->channels_get_channel")
+            return None
+
+        return response
+
     async def fund_channel(self, channel_id: str, amount: str):
         """
         Funds a given channel.

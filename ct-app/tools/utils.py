@@ -43,7 +43,7 @@ def getlogger() -> logging.Logger:
     return logger
 
 
-def envvar(name: str, type: type = None) -> str:
+def envvar(name: str, type: type = None, default=None) -> str:
     """
     Gets the string contained in environment variable 'name' and casts it to 'type'.
     :param name: name of the environment variable
@@ -51,12 +51,16 @@ def envvar(name: str, type: type = None) -> str:
     :returns: the string contained in the environment variable
     :raises ValueError: if the environment variable is not found
     """
-    if os.getenv(name) is None:
-        raise ValueError(f"Environment variable [{name}] not found")
-
     value = os.getenv(name)
 
+    if value is None:
+        if default is not None:
+            return default
+        raise ValueError(f"Environment variable [{name}] not found")
+
     if type:
+        if type == bool:
+            return eval(value)
         return type(value)
 
     return value
