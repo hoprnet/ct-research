@@ -14,6 +14,7 @@ from hoprd_sdk.models import (
     MessagesBody,
     MessagesPopBody,
 )
+from hoprd_sdk.models.messages_popall_body import MessagesPopallBody
 from hoprd_sdk.rest import ApiException
 from urllib3.exceptions import MaxRetryError
 
@@ -304,3 +305,36 @@ class HoprdAPI(Base):
         body = MessagesPopBody(tag=tag)
         _, response = self.__call_api(MessagesApi, "messages_pop_message", body=body)
         return response
+
+    async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
+        """
+        Pop all messages from the inbox
+        :param: tag = 0x0320
+        :return: list
+        """
+
+        body = MessagesPopallBody(tag=tag)
+        _, response = self.__call_api(
+            MessagesApi, "messages_pop_all_message", body=body
+        )
+        return response.messages if hasattr(response) else []
+
+    async def channel_balance(self, src_peer_id: str, dest_peer_id: str) -> float:
+        """
+        Get the channel balance of a given address.
+        :param api: API helper instance.
+        :param src_peer_id: Source channel peer id.
+        :param dest_peer_id: Destination channel peer id.
+        :return: Channel balance of the address.
+        """
+        channels = await self.all_channels(False)
+
+        channel = [
+            c
+            for c in channels.all
+            if c.destination_peer_id == dest_peer_id
+            and c.source_peer_id == src_peer_id
+            and c.status == "Open"
+        ]
+
+        return 0 if len(channel) == 0 else int(channel[0].balance) / 1e18
