@@ -280,9 +280,10 @@ class Utils:
         ticket_price: int,
         timestamp: float = None,
         attempts: int = 0,
+        task_name: str = "send_1_hop_message",
     ):
         app.send_task(
-            "send_1_hop_message",
+            task_name,
             args=(relayer_id, expected, ticket_price, timestamp, attempts),
             queue="send_messages",
         )
