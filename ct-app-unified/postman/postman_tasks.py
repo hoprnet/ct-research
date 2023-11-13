@@ -86,6 +86,7 @@ def send_1_hop_message(
     if timestamp is None:
         timestamp = time.time()
 
+    feedback_status = TaskStatus.DEFAULT
     send_status, node_peer_id, (issued, relayed) = asyncio.run(
         async_send_1_hop_message(peer, expected, ticket_price, timestamp)
     )
@@ -101,16 +102,23 @@ def send_1_hop_message(
 
     # store results in database
     if send_status != TaskStatus.RETRIED:
-        Utils.taskStoreFeedback(
-            app,
-            peer,
-            node_peer_id,
-            expected,
-            issued,
-            relayed,
-            send_status.value,
-            timestamp,
-        )
+        try:
+            Utils.taskStoreFeedback(
+                app,
+                peer,
+                node_peer_id,
+                expected,
+                issued,
+                relayed,
+                send_status.value,
+                timestamp,
+            )
+        except Exception:
+            feedback_status = TaskStatus.FAILED
+        else:
+            feedback_status = TaskStatus.SUCCESS
+
+    return send_status, feedback_status
 
 
 async def async_send_1_hop_message(
