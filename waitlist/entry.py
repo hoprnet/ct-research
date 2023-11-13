@@ -23,7 +23,9 @@ class Entry:
     def fromPandaSerie(cls, entry: Series):
         items: dict[str, str] = cls._import_keys_and_values()
 
-        return cls(**{key: entry[value] for key, value in items.items()})
+        return cls(
+            **{key: entry[value] for key, value in items.items() if value in entry}
+        )
 
     def __str__(self):
         attributes = [
