@@ -10,7 +10,9 @@ from .node import Node
 
 
 def main():
-    params = Parameters()(env_prefix="PARAM_")
+    params = Parameters()(
+        "DISTRIBUTION_", "SUBGRAPH_", "GCP_", "ECONOMIC_MODEL_", "CHANNEL_", "RABBITMQ_"
+    )
 
     instance = CTCore()
     instance.nodes = Node.fromAddressListAndKey(

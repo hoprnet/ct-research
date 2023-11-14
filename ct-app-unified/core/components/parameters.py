@@ -3,35 +3,35 @@ from .utils import Utils
 
 class Parameters:
     def __init__(self):
-        self.subgraph_query = """
-            query SafeNodeBalance($first: Int, $skip: Int) {
-                safes(first: $first, skip: $skip) {
-                    registeredNodesInNetworkRegistry {
-                        node { id }
-                        safe { id balance { wxHoprBalance } }
-                    }
-                }
-            }
-        """
+        pass
 
-    def __call__(self, env_prefix: str):
-        for key, value in Utils.envvarWithPrefix(env_prefix).items():
-            k = key.replace(env_prefix, "").lower()
+    def __call__(self, *prefixes: str or list[str]):
+        for prefix in prefixes:
+            subparams = self.__class__()
 
-            try:
-                value = float(value)
-            except ValueError:
-                pass
+            subparams_name = prefix.lower()
+            if subparams_name[-1] == "_":
+                subparams_name = subparams_name[:-1]
 
-            try:
-                integer = int(value)
-                if integer == value:
-                    value = integer
+            for key, value in Utils.envvarWithPrefix(prefix).items():
+                k = key.replace(prefix, "").lower()
 
-            except ValueError:
-                pass
+                try:
+                    value = float(value)
+                except ValueError:
+                    pass
 
-            setattr(self, k, value)
+                try:
+                    integer = int(value)
+                    if integer == value:
+                        value = integer
+
+                except ValueError:
+                    pass
+
+                setattr(subparams, k, value)
+
+            setattr(self, subparams_name, subparams)
 
         return self
 

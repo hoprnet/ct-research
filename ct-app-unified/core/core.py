@@ -90,10 +90,10 @@ class CTCore(Base):
 
     def subgraph_url(self, subgraph: SubgraphType) -> str:
         if subgraph == SubgraphType.DEFAULT:
-            return self.params.subgraph_url
+            return self.params.subgraph.url
 
         if subgraph == SubgraphType.BACKUP:
-            return self.params.subgraph_url_backup
+            return self.params.subgraph.url_backup
 
         return SubgraphType.NONE
 
@@ -114,7 +114,7 @@ class CTCore(Base):
     @formalin("Checking subgraph URLs")
     async def check_subgraph_urls(self):
         data = {
-            "query": self.params.subgraph_query,
+            "query": self.params.subgraph.query,
             "variables": {"first": 1, "skip": 0},
         }
 
@@ -151,8 +151,8 @@ class CTCore(Base):
             return
 
         data = {
-            "query": self.params.subgraph_query,
-            "variables": {"first": self.params.subgraph_pagination_size, "skip": 0},
+            "query": self.params.subgraph.query,
+            "variables": {"first": self.params.subgraph.pagination_size, "skip": 0},
         }
 
         safes = []
@@ -167,8 +167,8 @@ class CTCore(Base):
 
             safes.extend(response["data"]["safes"])
 
-            if len(response["data"]["safes"]) >= self.params.subgraph_pagination_size:
-                data["variables"]["skip"] += self.params.subgraph_pagination_size
+            if len(response["data"]["safes"]) >= self.params.subgraph.pagination_size:
+                data["variables"]["skip"] += self.params.subgraph.pagination_size
             else:
                 break
 
@@ -230,7 +230,7 @@ class CTCore(Base):
         self._debug(f"Eligible nodes ({len(eligibles)} entries).")
 
         model = EconomicModel.fromGCPFile(
-            self.params.gcp_bucket, self.params.economic_model_filename
+            self.params.gcp.bucket, self.params.economic_model.filename
         )
         for peer in eligibles:
             peer.economic_model = model
@@ -260,7 +260,7 @@ class CTCore(Base):
     @formalin("Distributing rewards")
     async def distribute_rewards(self):
         model = EconomicModel.fromGCPFile(
-            self.params.gcp_bucket, self.params.economic_model_filename
+            self.params.gcp.bucket, self.params.economic_model.filename
         )
 
         delay = Utils.nextDelayInSeconds(model.delay_between_distributions)
@@ -268,7 +268,7 @@ class CTCore(Base):
         self._debug(f"Waiting {delay} seconds for next distribution.")
         await asyncio.sleep(delay)
 
-        min_peers = self.params.min_eligible_peers
+        min_peers = self.params.distribution.min_eligible_peers
 
         peers = list[Peer]()
 
@@ -280,15 +280,15 @@ class CTCore(Base):
 
         # convert to csv and store on GCP
         filename = Utils.generateFilename(
-            self.params.gcp_file_prefix, self.params.gcp_folder
+            self.params.gcp.file_prefix, self.params.gcp.folder
         )
         lines = Peer.toCSV(peers)
-        Utils.stringArrayToGCP(self.params.gcp_bucket, filename, lines)
+        Utils.stringArrayToGCP(self.params.gcp.bucket, filename, lines)
 
         # create celery tasks
         app = Celery(
-            name=self.params.celery_project_name,
-            broker=self.params.celery_broker_url,
+            name=self.params.rabbitmq.project_name,
+            broker=self.params.rabbitmq.broker_url,
         )
         app.autodiscover_tasks(force=True)
 

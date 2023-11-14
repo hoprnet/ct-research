@@ -131,7 +131,7 @@ class Node(Base):
         for address in addresses_without_channels:
             ok = await self.api.open_channel(
                 address,
-                f"{int(self.params.channel_funding_amount*1e18):d}",
+                f"{int(self.params.channel.funding_amount*1e18):d}",
             )
             if ok:
                 self._debug(f"Opened channel to {address}")
@@ -209,7 +209,7 @@ class Node(Base):
 
             if (
                 datetime.now() - timestamp
-            ).total_seconds() < self.params.channel_max_age_seconds:
+            ).total_seconds() < self.params.channel.max_age_seconds:
                 continue
 
             channels_to_close.append(channel_id)
@@ -242,7 +242,7 @@ class Node(Base):
         ]
 
         low_balances = [
-            c for c in out_opens if int(c.balance) <= self.params.channel_min_balance
+            c for c in out_opens if int(c.balance) <= self.params.channel.min_balance
         ]
 
         self._debug(f"Low balance channels: {len(low_balances)}")
@@ -252,7 +252,7 @@ class Node(Base):
         for channel in low_balances:
             if channel.destination_peer_id in peer_ids:
                 ok = await self.api.fund_channel(
-                    channel.channel_id, self.params.channel_funding_amount
+                    channel.channel_id, self.params.channel.funding_amount
                 )
                 if ok:
                     self._debug(f"Funded channel {channel.channel_id}")

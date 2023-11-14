@@ -15,9 +15,13 @@ from .task_status import TaskStatus
 log = logging.getLogger()
 log.setLevel(logging.INFO)
 
-params = Parameters()(env_prefix="PARAM_")
+params = Parameters()("PARAM_", "RABBITMQ_")
 
-app = Celery(name=params.celery_project_name, broker=params.celery_broker_url)
+
+app = Celery(
+    name=params.rabbitmq.project_name,
+    broker=f"amqp://{params.rabbitmq.username}:{params.rabbitmq.password}@{params.rabbitmq.host}/{params.rabbitmq.virtualhost}",
+)
 app.autodiscover_tasks(force=True)
 
 
@@ -70,9 +74,9 @@ async def send_messages_in_batches(
                 [relayer],
                 MESSAGE_TAG + unique_id,
             )
-            await asyncio.sleep(params.delay_between_two_messages)
+            await asyncio.sleep(params.param.delay_between_two_messages)
 
-        await asyncio.sleep(params.message_delivery_timeout)
+        await asyncio.sleep(params.param.message_delivery_timeout)
 
         messages = await api.messages_pop_all(MESSAGE_TAG + unique_id)
         relayed_count += len(messages)
@@ -110,7 +114,7 @@ def send_1_hop_message(
 
     attempts += send_status in [TaskStatus.SPLITTED, TaskStatus.SUCCESS]
 
-    if attempts >= params.max_attempts:
+    if attempts >= params.param.max_attempts:
         send_status = TaskStatus.TIMEOUT
 
     if send_status in [TaskStatus.RETRIED, TaskStatus.SPLITTED]:
@@ -177,7 +181,7 @@ async def async_send_1_hop_message(
         return TaskStatus.RETRIED, node_peer_id, (0, 0)
 
     relayed, issued = await send_messages_in_batches(
-        api, peer_id, max_possible, node_peer_id, timestamp, params.batch_size
+        api, peer_id, max_possible, node_peer_id, timestamp, params.param.batch_size
     )
 
     status = TaskStatus.SUCCESS if relayed == expected_count else TaskStatus.SPLITTED
