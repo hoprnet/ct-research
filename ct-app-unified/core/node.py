@@ -7,7 +7,7 @@ from prometheus_client import Gauge
 from .components.baseclass import Base
 from .components.channelstatus import ChannelStatus
 from .components.decorators import connectguard, flagguard, formalin
-from .components.horpd_api import HoprdAPI
+from .components.hoprd_api import HoprdAPI
 from .components.lockedvar import LockedVar
 from .components.parameters import Parameters
 from .model.address import Address
