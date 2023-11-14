@@ -11,9 +11,9 @@ from hoprd_sdk.rest import ApiException
 from hoprd_sdk.api import NodeApi, MessagesApi, AccountApi, ChannelsApi, PeersApi
 from urllib3.exceptions import MaxRetryError
 
-from .utils import getlogger
+import logging
 
-log = getlogger()
+log = logging.getLogger()
 
 
 class HoprdAPIHelper:
@@ -248,6 +248,32 @@ class HoprdAPIHelper:
         else:
             return response
 
+    async def channel(self, channel_id: str):
+        """
+        Returns information about the channel with the given id.
+        :param: channel_id: str
+        :return: channel: dict
+        """
+        log.debug(f"Getting channel with id {channel_id}")
+
+        try:
+            with ApiClient(self.configuration) as client:
+                channels_api = ChannelsApi(client)
+                thread = channels_api.channels_get_channel(channel_id, async_req=True)
+                response = thread.get()
+        except ApiException as e:
+            body = json.loads(e.body.decode())
+            log.error(f"ApiException calling ChannelsApi->channels_get_channel: {body}")
+            return None
+        except OSError:
+            log.error("OSError calling ChannelsApi->channels_get_channel")
+            return None
+        except MaxRetryError:
+            log.error("MaxRetryError calling ChannelsApi->channels_get_channel")
+            return None
+
+        return response
+
     async def fund_channel(self, channel_id: str, amount: str):
         """
         Funds a given channel.
@@ -432,13 +458,24 @@ class HoprdAPIHelper:
 
         return output_list
 
-    async def get_address(self, address: str):
+    async def get_address(self, address: str or list[str] = "hopr"):
         """
         Returns the address of the node.
-        :param: address: str = "hopr" | "native"
+        :param: address: str = "hopr" | "native" | "all"
         :return: address: str
         """
         log.debug("Getting address")
+
+        all_types = ["hopr", "native"]
+        if address == "all":
+            address = all_types
+        elif isinstance(address, str):
+            address = [address]
+
+        for item in address:
+            if item not in all_types:
+                log.error(f"Type `{item}` not supported. Use `all`, `hopr`, `native`")
+                return None
 
         try:
             with ApiClient(self.configuration) as client:
@@ -456,11 +493,16 @@ class HoprdAPIHelper:
             log.error("MaxRetryError calling AccountApi->account_get_address")
             return None
 
-        if not hasattr(response, address):
-            log.error(f"No {address} returned from the API")
-            return None
+        return_dict = {}
 
-        return getattr(response, address)
+        for item in address:
+            if not hasattr(response, item):
+                log.error(f"No {address} returned from the API")
+                return None
+
+            return_dict[item] = getattr(response, item)
+
+        return return_dict if len(return_dict) > 1 else return_dict[address[0]]
 
     async def send_message(
         self, destination: str, message: str, hops: list[str], tag: int = 0x0320

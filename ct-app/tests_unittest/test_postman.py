@@ -47,6 +47,7 @@ async def test_async_send_1_hop_message_hit_timeout():
         expected_count=10,
         node_list=["node1", "node2", "node3"],
         node_index=0,
+        ticket_price=0.001,
         timestamp=time.time() - 10,
         attempts=1,
     )
@@ -70,6 +71,7 @@ async def test_async_send_1_hop_message_hit_retried(mocker):
         expected_count=1,
         node_list=["node1", "node2", "node3"],
         node_index=0,
+        ticket_price=0.001,
         timestamp=time.time(),
         attempts=0,
     )
@@ -91,12 +93,14 @@ async def test_async_send_1_hop_message_hit_splitted(mocker):
     mocker.patch(
         "postman.postman_tasks.HoprdAPIHelper.messages_pop_all", return_value=[]
     )
+    mocker.patch("postman.postman_tasks.channel_balance", return_value=1)
 
     status, fb_status = await pm.async_send_1_hop_message(
         peer_id="foo_peer_id",
         expected_count=1,
         node_list=["node1", "node2", "node3"],
         node_index=0,
+        ticket_price=0.001,
         timestamp=time.time(),
         attempts=0,
     )
@@ -113,6 +117,7 @@ async def test_async_send_1_hop_message_hit_success(mocker):
     mocker.patch(
         "postman.postman_tasks.HoprdAPIHelper.get_address", return_value="foo_address"
     )
+    mocker.patch("postman.postman_tasks.channel_balance", return_value=10)
     mocker.patch("postman.postman_tasks.HoprdAPIHelper.send_message", return_value=True)
     mocker.patch("postman.postman_tasks.HoprdAPIHelper.messages_size", return_value=1)
     mocker.patch(
@@ -124,6 +129,7 @@ async def test_async_send_1_hop_message_hit_success(mocker):
         expected_count=1,
         node_list=["node1", "node2", "node3"],
         node_index=0,
+        ticket_price=0.001,
         timestamp=time.time(),
         attempts=0,
     )

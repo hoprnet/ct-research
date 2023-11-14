@@ -14,5 +14,4 @@ prometheus_client==0.17.1
 sqlalchemy==2.0.20
 psycopg2==2.9.7
 google-cloud-storage==2.10.0
-pyyaml==6.0.1
 # sanic[test]==23.3.0
