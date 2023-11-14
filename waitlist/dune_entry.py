@@ -62,6 +62,7 @@ class DuneEntry(Entry):
         return {
             "date": "deployment_date",
             "safe_address": "safe_address",
+            "node_address": "node_address",
             "deployment_tx_hash": "deployment_tx_hash",
             "wxHOPR_balance": "wxHOPR_balance",
             "nr_nft": "nr_nft",
