@@ -1,5 +1,6 @@
-from core.components.parameters import Parameters
 import os
+
+from core.components.parameters import Parameters
 
 os.environ["ENVPREFIX_STRING"] = "random-string"
 os.environ["ENVPREFIX_VALUE"] = "2"
@@ -8,14 +9,14 @@ os.environ["ENVPREFIX_URL"] = "http://localhost:8000"
 
 
 def test_get_parameters_from_environment():
-    params = Parameters()(env_prefix="ENVPREFIX_")
+    params = Parameters()("ENVPREFIX_")
 
-    assert params.string == os.environ.get("ENVPREFIX_STRING")
-    assert params.value == int(os.environ.get("ENVPREFIX_VALUE"))
-    assert params.decimal == float(os.environ.get("ENVPREFIX_DECIMAL"))
-    assert params.url == os.environ.get("ENVPREFIX_URL")
+    assert params.envprefix.string == os.environ.get("ENVPREFIX_STRING")
+    assert params.envprefix.value == int(os.environ.get("ENVPREFIX_VALUE"))
+    assert params.envprefix.decimal == float(os.environ.get("ENVPREFIX_DECIMAL"))
+    assert params.envprefix.url == os.environ.get("ENVPREFIX_URL")
 
-    assert isinstance(params.string, str)
-    assert isinstance(params.value, int)
-    assert isinstance(params.decimal, float)
-    assert isinstance(params.url, str)
+    assert isinstance(params.envprefix.string, str)
+    assert isinstance(params.envprefix.value, int)
+    assert isinstance(params.envprefix.decimal, float)
+    assert isinstance(params.envprefix.url, str)
