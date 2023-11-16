@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import random
 import time
 
 from billiard import current_process
@@ -8,9 +7,9 @@ from celery import Celery
 from core.components.hoprd_api import MESSAGE_TAG, HoprdAPI
 from core.components.parameters import Parameters
 from core.components.utils import Utils
-from database import DatabaseConnection, Peer
 
 from .task_status import TaskStatus
+from .utils import Utils as PMUtils
 
 log = logging.getLogger()
 log.setLevel(logging.INFO)
@@ -25,37 +24,6 @@ app = Celery(
 app.autodiscover_tasks(force=True)
 
 
-def create_batches(total_count: int, batch_size: int) -> list[int]:
-    if total_count <= 0:
-        return []
-
-    full_batches: int = total_count // batch_size
-    remainder: int = total_count % batch_size
-
-    return [batch_size] * full_batches + [remainder] * bool(remainder)
-
-
-def peerID_to_int(peer_id: str) -> int:
-    with DatabaseConnection() as session:
-        existing_peer = session.query(Peer).filter_by(peer_id=peer_id).first()
-
-        if existing_peer:
-            return existing_peer.id
-        else:
-            new_peer = Peer(peer_id=peer_id)
-            session.add(new_peer)
-            session.commit()
-            return new_peer.id
-
-
-async def delayed_send_message(
-    api: HoprdAPI, recipient: str, relayer: str, tag: int, message: str, iteration: int
-):
-    await asyncio.sleep(iteration * params.param.delay_between_two_messages)
-
-    return await api.send_message(recipient, message, [relayer], tag)
-
-
 async def send_messages_in_batches(
     api: HoprdAPI,
     relayer: str,
@@ -67,19 +35,22 @@ async def send_messages_in_batches(
     relayed_count = 0
     issued_count = 0
 
-    tag = MESSAGE_TAG + peerID_to_int(relayer)
+    tag = MESSAGE_TAG + PMUtils.peerIDToInt(relayer)
 
-    batches = create_batches(expected_count, batch_size)
+    batches = PMUtils.createBatches(expected_count, batch_size)
 
     for batch_index, batch in enumerate(batches):
         tasks = set[asyncio.Task]()
         for it in range(batch):
             global_index = it + batch_index * batch_size
             message = f"{relayer}//{timestamp}-{global_index + 1}/{expected_count}"
+            sleep = it * params.param.delay_between_two_messages
 
             tasks.add(
                 asyncio.create_task(
-                    delayed_send_message(api, recipient, relayer, tag, message, it)
+                    PMUtils.delayedMessageSend(
+                        api, recipient, relayer, message, tag, sleep
+                    )
                 )
             )
 
@@ -128,12 +99,12 @@ def send_1_hop_message(
 
     if send_status in [TaskStatus.RETRIED, TaskStatus.SPLITTED]:
         expected = expected - relayed
-        Utils.taskSendMessage(app, peer, expected, ticket_price, timestamp, attempts)
+        PMUtils.taskSendMessage(app, peer, expected, ticket_price, timestamp, attempts)
 
     # store results in database
     if send_status != TaskStatus.RETRIED:
         try:
-            Utils.taskStoreFeedback(
+            PMUtils.taskStoreFeedback(
                 app,
                 peer,
                 node_peer_id,
@@ -226,16 +197,13 @@ def fake_task(
     log.info(f"Fake task execution started at {timestamp}")
     log.info(f"{expected} messages ment to be sent to {peer}")
 
-    issued = random.randint(1, expected)
-    relayed = random.randint(0, issued)
-
-    Utils.taskStoreFeedback(
+    PMUtils.taskStoreFeedback(
         app,
         peer,
         "fake_node",
         expected,
-        issued,
-        relayed,
+        0,
+        0,
         TaskStatus.SUCCESS.value,
         timestamp,
     )
