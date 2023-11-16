@@ -326,7 +326,7 @@ class Node(Base):
     @flagguard
     @formalin("Retrieving total funds")
     @connectguard
-    async def get_total_funds(self):
+    async def get_total_channel_funds(self):
         """
         Retrieve total funds.
         """
@@ -355,7 +355,7 @@ class Node(Base):
             asyncio.create_task(self.close_pending_channels()),
             asyncio.create_task(self.close_old_channels()),
             asyncio.create_task(self.fund_channels()),
-            asyncio.create_task(self.get_total_funds()),
+            asyncio.create_task(self.get_total_channel_funds()),
         ]
 
     def __str__(self):
