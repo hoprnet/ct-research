@@ -1,6 +1,6 @@
 import asyncio
 
-from core.components.horpd_api import HoprdAPI
+from core.components.hoprd_api import HoprdAPI
 from core.components.utils import Utils
 
 

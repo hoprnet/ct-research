@@ -315,23 +315,16 @@ class CTCore(Base):
     @flagguard
     @formalin("Getting funding data")
     async def get_fundings(self):
-        address_safe_address_dict = {
-            entry.node_address: entry.safe_address
-            for entry in await self.subgraph_list.get()
-        }
         from_address = self.params.subgraph.from_address
+        ct_safe_addresses = {
+            (await node.api.node_info()).node_safe for node in self.network_nodes
+        }
 
-        ct_safe_addresses = set(
-            [
-                address_safe_address_dict.get(node.address.address, None)
-                for node in self.network_nodes
-            ]
-        )
         transactions = []
-
         for to_address in ct_safe_addresses:
             if to_address is None:
                 continue
+
             query: str = self.params.subgraph.wxhopr_txs_query
             query = query.replace("$from", f'"{from_address}"')
             query = query.replace("$to", f'"{to_address}"')
@@ -339,10 +332,11 @@ class CTCore(Base):
             _, response = await Utils.httpPOST(
                 self.params.subgraph.wxhopr_txs_url, {"query": query}
             )
+
             transactions.extend(response["data"]["transactions"])
 
         total_funding = sum([float(tx["amount"]) for tx in transactions])
-        self._error(f"Total funding: {total_funding}.")
+        self._debug(f"Total funding: {total_funding}")
         TOTAL_FUNDING.set(total_funding)
 
     async def start(self):

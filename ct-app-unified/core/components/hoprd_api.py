@@ -317,7 +317,11 @@ class HoprdAPI(Base):
         _, response = self.__call_api(
             MessagesApi, "messages_pop_all_message", body=body
         )
-        return response.messages if hasattr(response) else []
+        return response.messages if hasattr(response, "messages") else []
+
+    async def node_info(self):
+        _, response = self.__call_api(NodeApi, "node_get_info")
+        return response
 
     async def channel_balance(self, src_peer_id: str, dest_peer_id: str) -> float:
         """
