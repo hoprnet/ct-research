@@ -5,10 +5,10 @@ import time
 
 from billiard import current_process
 from celery import Celery
-from core.components.horpd_api import MESSAGE_TAG, HoprdAPI
+from core.components.hoprd_api import MESSAGE_TAG, HoprdAPI
 from core.components.parameters import Parameters
 from core.components.utils import Utils
-from db_connection import DatabaseConnection, Peer
+from database import DatabaseConnection, Peer
 
 from .task_status import TaskStatus
 
@@ -48,6 +48,14 @@ def peerID_to_int(peer_id: str) -> int:
             return new_peer.id
 
 
+async def delayed_send_message(
+    api: HoprdAPI, recipient: str, relayer: str, tag: int, message: str, iteration: int
+):
+    await asyncio.sleep(iteration * params.param.delay_between_two_messages)
+
+    return await api.send_message(recipient, message, [relayer], tag)
+
+
 async def send_messages_in_batches(
     api: HoprdAPI,
     relayer: str,
@@ -59,26 +67,27 @@ async def send_messages_in_batches(
     relayed_count = 0
     issued_count = 0
 
-    unique_id = peerID_to_int(relayer)
+    tag = MESSAGE_TAG + peerID_to_int(relayer)
 
     batches = create_batches(expected_count, batch_size)
 
     for batch_index, batch in enumerate(batches):
-        for message_index in range(batch):
-            # node is reachable, messages can be sent
-            global_index = message_index + batch_index * batch_size
+        tasks = set[asyncio.Task]()
+        for it in range(batch):
+            global_index = it + batch_index * batch_size
+            message = f"{relayer}//{timestamp}-{global_index + 1}/{expected_count}"
 
-            issued_count += await api.send_message(
-                recipient,
-                f"{relayer}//{timestamp}-{global_index + 1}/{expected_count}",
-                [relayer],
-                MESSAGE_TAG + unique_id,
+            tasks.add(
+                asyncio.create_task(
+                    delayed_send_message(api, recipient, relayer, tag, message, it)
+                )
             )
-            await asyncio.sleep(params.param.delay_between_two_messages)
+
+        issued_count += asyncio.gather(*tasks)
 
         await asyncio.sleep(params.param.message_delivery_timeout)
 
-        messages = await api.messages_pop_all(MESSAGE_TAG + unique_id)
+        messages = await api.messages_pop_all(tag)
         relayed_count += len(messages)
 
     return relayed_count, issued_count
