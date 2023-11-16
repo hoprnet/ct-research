@@ -4,7 +4,7 @@ from celery import Celery
 from prometheus_client import Gauge
 
 from .components.baseclass import Base
-from .components.decorators import flagguard, formalin
+from .components.decorators import connectguard, flagguard, formalin
 from .components.hoprd_api import HoprdAPI
 from .components.lockedvar import LockedVar
 from .components.parameters import Parameters
@@ -32,6 +32,7 @@ PEER_TF_STAKE = Gauge("peer_tf_stake", "Transformed stake", ["peer_id"])
 PEER_SAFE_COUNT = Gauge("peer_safe_count", "Number of safes", ["peer_id"])
 DISTRIBUTION_DELAY = Gauge("distribution_delay", "Delay between two distributions")
 NEXT_DISTRIBUTION_EPOCH = Gauge("next_distribution_epoch", "Next distribution (epoch)")
+TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
 
 
 class CTCore(Base):
@@ -53,10 +54,11 @@ class CTCore(Base):
         self.subgraph_list = LockedVar("subgraph_list", list[SubgraphEntry]())
         self.eligible_list = LockedVar("eligible_list", list[Peer]())
 
-        self._selected_subgraph = (
+        self._safes_balance_subgraph_type = (
             SubgraphType.NONE
         )  # trick to have the subgraph in use displayed in the terminal
-        self.selected_subgraph = SubgraphType.DEFAULT
+
+        self.safes_balance_subgraph_type = SubgraphType.DEFAULT
 
         self.started = False
 
@@ -77,23 +79,23 @@ class CTCore(Base):
         return [node.address for node in self.network_nodes]
 
     @property
-    def selected_subgraph(self) -> SubgraphType:
-        return self._selected_subgraph
+    def safes_balance_subgraph_type(self) -> SubgraphType:
+        return self._safes_balance_subgraph_type
 
-    @selected_subgraph.setter
-    def selected_subgraph(self, value: SubgraphType):
-        if value != self.selected_subgraph:
+    @safes_balance_subgraph_type.setter
+    def safes_balance_subgraph_type(self, value: SubgraphType):
+        if value != self.safes_balance_subgraph_type:
             self._warning(f"Now using '{value.value}' subgraph.")
 
         SUBGRAPH_IN_USE.set(value.toInt())
-        self._selected_subgraph = value
+        self._safes_balance_subgraph_type = value
 
-    def subgraph_url(self, subgraph: SubgraphType) -> str:
+    def subgraph_safes_balance_url(self, subgraph: SubgraphType) -> str:
         if subgraph == SubgraphType.DEFAULT:
-            return self.params.subgraph.url
+            return self.params.subgraph.safes_balance_url
 
         if subgraph == SubgraphType.BACKUP:
-            return self.params.subgraph.url_backup
+            return self.params.subgraph.safes_balance_url_backup
 
         return SubgraphType.NONE
 
@@ -114,21 +116,23 @@ class CTCore(Base):
     @formalin("Checking subgraph URLs")
     async def check_subgraph_urls(self):
         data = {
-            "query": self.params.subgraph.query,
+            "query": self.params.subgraph.safes_balance_query,
             "variables": {"first": 1, "skip": 0},
         }
 
         for subgraph in SubgraphType.callables():
-            _, response = await Utils.httpPOST(self.subgraph_url(subgraph), data)
+            _, response = await Utils.httpPOST(
+                self.subgraph_safes_balance_url(subgraph), data
+            )
 
             if not response:
                 continue
 
             SUBGRAPH_CALLS.labels(subgraph.value).inc()
-            self.selected_subgraph = subgraph
+            self.safes_balance_subgraph_type = subgraph
             break
         else:
-            self.selected_subgraph = SubgraphType.NONE
+            self.safes_balance_subgraph_type = SubgraphType.NONE
 
     @flagguard
     @formalin("Aggregating peers")
@@ -146,21 +150,24 @@ class CTCore(Base):
     @flagguard
     @formalin("Getting subgraph data")
     async def get_subgraph_data(self):
-        if self.subgraph_url(self.selected_subgraph) == SubgraphType.NONE:
+        if (
+            self.subgraph_safes_balance_url(self.safes_balance_subgraph_type)
+            == SubgraphType.NONE
+        ):
             self._warning("No subgraph URL available.")
             return
 
         data = {
-            "query": self.params.subgraph.query,
+            "query": self.params.subgraph.safes_balance_query,
             "variables": {"first": self.params.subgraph.pagination_size, "skip": 0},
         }
 
         safes = []
         while True:
             _, response = await Utils.httpPOST(
-                self.subgraph_url(self.selected_subgraph), data
+                self.subgraph_safes_balance_url(self.safes_balance_subgraph_type), data
             )
-            SUBGRAPH_CALLS.labels(self.selected_subgraph.value).inc()
+            SUBGRAPH_CALLS.labels(self.safes_balance_subgraph_type.value).inc()
 
             if "data" not in response:
                 break
@@ -187,6 +194,7 @@ class CTCore(Base):
         self._debug(f"Fetched subgraph data ({len(results)} entries).")
 
     @flagguard
+    @connectguard
     @formalin("Getting topology data")
     async def get_topology_data(self):
         """
@@ -304,6 +312,33 @@ class CTCore(Base):
 
         EXECUTIONS_COUNTER.inc()
 
+    @flagguard
+    @formalin("Getting funding data")
+    async def get_fundings(self):
+        from_address = self.params.subgraph.from_address
+        ct_safe_addresses = {
+            (await node.api.node_info()).node_safe for node in self.network_nodes
+        }
+
+        transactions = []
+        for to_address in ct_safe_addresses:
+            if to_address is None:
+                continue
+
+            query: str = self.params.subgraph.wxhopr_txs_query
+            query = query.replace("$from", f'"{from_address}"')
+            query = query.replace("$to", f'"{to_address}"')
+
+            _, response = await Utils.httpPOST(
+                self.params.subgraph.wxhopr_txs_url, {"query": query}
+            )
+
+            transactions.extend(response["data"]["transactions"])
+
+        total_funding = sum([float(tx["amount"]) for tx in transactions])
+        self._debug(f"Total funding: {total_funding}")
+        TOTAL_FUNDING.set(total_funding)
+
     async def start(self):
         """
         Start the node.
@@ -326,6 +361,7 @@ class CTCore(Base):
 
         self.tasks.add(asyncio.create_task(self.healthcheck()))
         self.tasks.add(asyncio.create_task(self.check_subgraph_urls()))
+        self.tasks.add(asyncio.create_task(self.get_fundings()))
 
         self.tasks.add(asyncio.create_task(self.aggregate_peers()))
         self.tasks.add(asyncio.create_task(self.get_subgraph_data()))

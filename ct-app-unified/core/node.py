@@ -10,8 +10,10 @@ from .components.decorators import connectguard, flagguard, formalin
 from .components.hoprd_api import HoprdAPI
 from .components.lockedvar import LockedVar
 from .components.parameters import Parameters
+from .components.utils import Utils
 from .model.address import Address
 from .model.peer import Peer
+from .model.topology_entry import TopologyEntry
 
 BALANCE = Gauge("balance", "Node balance", ["peer_id", "token"])
 PEERS_COUNT = Gauge("peers_count", "Node peers", ["peer_id"])
@@ -49,6 +51,9 @@ FUND_CHANNELS_CALLS = Gauge(
 )
 ADDRESSES_WOUT_CHANNELS = Gauge(
     "addresses_wout_channels", "Addresses without channels", ["peer_id"]
+)
+TOTAL_CHANNEL_FUNDS = Gauge(
+    "total_channel_funds", "Total funds in outgoing channels", ["peer_id"]
 )
 
 
@@ -318,6 +323,25 @@ class Node(Base):
         self._debug(f"Incoming channels: {len(incomings)}")
         INCOMING_CHANNELS.labels(self.address.id).set(len(incomings))
 
+    @flagguard
+    @formalin("Retrieving total funds")
+    @connectguard
+    async def get_total_channel_funds(self):
+        """
+        Retrieve total funds.
+        """
+        channels = await self.outgoings.get()
+
+        results = await Utils.aggregatePeerBalanceInChannels(channels)
+
+        if self.address.id not in results:
+            return
+
+        entry = TopologyEntry.fromDict(self.address.id, results[self.address.id])
+
+        self._debug(f"Channels funds: { entry.channels_balance}")
+        TOTAL_CHANNEL_FUNDS.labels(self.address.id).set(entry.channels_balance)
+
     def tasks(self):
         self._info("Starting node")
         return [
@@ -331,6 +355,7 @@ class Node(Base):
             asyncio.create_task(self.close_pending_channels()),
             asyncio.create_task(self.close_old_channels()),
             asyncio.create_task(self.fund_channels()),
+            asyncio.create_task(self.get_total_channel_funds()),
         ]
 
     def __str__(self):

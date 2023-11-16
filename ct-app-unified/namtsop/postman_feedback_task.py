@@ -3,7 +3,7 @@ from datetime import datetime
 
 from celery import Celery
 from core.components.parameters import Parameters
-from db_connection import DatabaseConnection, Reward
+from database import DatabaseConnection, Reward
 
 log = logging.getLogger()
 
