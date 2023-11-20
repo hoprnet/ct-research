@@ -7,9 +7,13 @@ from database import DatabaseConnection, Reward
 
 log = logging.getLogger()
 
-params = Parameters()(env_prefix="PARAM_")
+params = Parameters()("RABBITMQ_")
 
-app = Celery(name=params.celery_project_name, broker=params.celery_broker_url)
+
+app = Celery(
+    name=params.rabbitmq.project_name,
+    broker=f"amqp://{params.rabbitmq.username}:{params.rabbitmq.password}@{params.rabbitmq.host}/{params.rabbitmq.virtualhost}",
+)
 app.autodiscover_tasks(force=True)
 
 
