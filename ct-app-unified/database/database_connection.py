@@ -27,20 +27,20 @@ class DatabaseConnection:
     """
 
     def __init__(self):
-        self.params = Parameters()(env_prefix="PG")
+        self.params = Parameters()("PG")
 
         url = URL(
             drivername="postgresql+psycopg2",
-            username=self.params.user,
-            password=self.params.password,
-            host=self.params.host,
-            port=self.params.port,
-            database=self.params.database,
+            username=self.params.pg.user,
+            password=self.params.pg.password,
+            host=self.params.pg.host,
+            port=self.params.pg.port,
+            database=self.params.pg.database,
             query={
-                "sslmode": self.params.sslmode,
-                "sslrootcert": self.params.sslrootcert,
-                "sslcert": self.params.sslcert,
-                "sslkey": self.params.sslkey,
+                "sslmode": self.params.pg.sslmode,
+                "sslrootcert": self.params.pg.sslrootcert,
+                "sslcert": self.params.pg.sslcert,
+                "sslkey": self.params.pg.sslkey,
             },
         )
 
