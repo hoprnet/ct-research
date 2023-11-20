@@ -1,6 +1,5 @@
 import asyncio
 
-from celery import Celery
 from core.components.hoprd_api import HoprdAPI
 from database import DatabaseConnection, Peer
 
@@ -42,46 +41,3 @@ class Utils:
         await asyncio.sleep(sleep)
 
         return await api.send_message(recipient, message, [relayer], tag)
-
-    @classmethod
-    def taskSendMessage(
-        cls,
-        app: Celery,
-        relayer_id: str,
-        expected: int,
-        ticket_price: int,
-        timestamp: float = None,
-        attempts: int = 0,
-        task_name: str = "send_1_hop_message",
-    ):
-        app.send_task(
-            task_name,
-            args=(relayer_id, expected, ticket_price, timestamp, attempts),
-            queue="send_messages",
-        )
-
-    @classmethod
-    def taskStoreFeedback(
-        cls,
-        app: Celery,
-        relayer_id: str,
-        node_peer_id: str,
-        expected: int,
-        issued: float,
-        relayed: int,
-        send_status: str,
-        timestamp: float,
-    ):
-        app.send_task(
-            "feedback_task",
-            args=(
-                relayer_id,
-                node_peer_id,
-                expected,
-                issued,
-                relayed,
-                send_status.value,
-                timestamp,
-            ),
-            queue="feedback",
-        )

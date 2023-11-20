@@ -99,12 +99,12 @@ def send_1_hop_message(
 
     if send_status in [TaskStatus.RETRIED, TaskStatus.SPLITTED]:
         expected = expected - relayed
-        PMUtils.taskSendMessage(app, peer, expected, ticket_price, timestamp, attempts)
+        Utils.taskSendMessage(app, peer, expected, ticket_price, timestamp, attempts)
 
     # store results in database
     if send_status != TaskStatus.RETRIED:
         try:
-            PMUtils.taskStoreFeedback(
+            Utils.taskStoreFeedback(
                 app,
                 peer,
                 node_peer_id,
@@ -197,13 +197,13 @@ def fake_task(
     log.info(f"Fake task execution started at {timestamp}")
     log.info(f"{expected} messages ment to be sent to {peer}")
 
-    PMUtils.taskStoreFeedback(
-        app,
-        peer,
-        "fake_node",
-        expected,
-        0,
-        0,
-        TaskStatus.SUCCESS.value,
-        timestamp,
-    )
+    # PMUtils.taskStoreFeedback(
+    #     app,
+    #     peer,
+    #     "fake_node",
+    #     expected,
+    #     0,
+    #     0,
+    #     TaskStatus.SUCCESS.value,
+    #     timestamp,
+    # )

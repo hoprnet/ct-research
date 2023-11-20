@@ -150,32 +150,36 @@ class CTCore(Base):
     @flagguard
     @formalin("Getting subgraph data")
     async def get_subgraph_data(self):
-        if (
-            self.subgraph_safes_balance_url(self.safes_balance_subgraph_type)
-            == SubgraphType.NONE
-        ):
+        if self.safes_balance_subgraph_type == SubgraphType.NONE:
             self._warning("No subgraph URL available.")
             return
 
-        data = {
-            "query": self.params.subgraph.safes_balance_query,
-            "variables": {"first": self.params.subgraph.pagination_size, "skip": 0},
-        }
-
         safes = []
+        skip = 0
+
         while True:
+            query = self.params.subgraph.safes_balance_query
+            query = query.replace("$first", f"{self.params.subgraph.pagination_size}")
+            query = query.replace("$skip", f"{skip}")
+
             _, response = await Utils.httpPOST(
-                self.subgraph_safes_balance_url(self.safes_balance_subgraph_type), data
+                self.subgraph_safes_balance_url(self.safes_balance_subgraph_type),
+                {"query": query},
             )
             SUBGRAPH_CALLS.labels(self.safes_balance_subgraph_type.value).inc()
 
+            if not response:
+                self._warning("No response from subgraph.")
+                break
+
             if "data" not in response:
+                self._warning("No data in response from subgraph.")
                 break
 
             safes.extend(response["data"]["safes"])
 
             if len(response["data"]["safes"]) >= self.params.subgraph.pagination_size:
-                data["variables"]["skip"] += self.params.subgraph.pagination_size
+                skip += self.params.subgraph.pagination_size
             else:
                 break
 
@@ -223,6 +227,10 @@ class CTCore(Base):
             topology = await self.topology_list.get()
             subgraph = await self.subgraph_list.get()
             peers = await self.all_peers.get()
+
+            print(f"Topology size: {len(topology)}")
+            print(f"Subgraph size: {len(subgraph)}")
+            print(f"Network size: {len(peers)}")
 
             ready = len(topology) and len(subgraph) and len(peers)
             await asyncio.sleep(1)
@@ -272,7 +280,9 @@ class CTCore(Base):
         )
 
         delay = Utils.nextDelayInSeconds(model.delay_between_distributions)
-        delay = 5
+        self._debug(f"Relay delay would be {delay} seconds.")
+        delay = 20
+
         self._debug(f"Waiting {delay} seconds for next distribution.")
         await asyncio.sleep(delay)
 
@@ -281,9 +291,10 @@ class CTCore(Base):
         peers = list[Peer]()
 
         while len(peers) < min_peers:
-            self._warning(f"Min. {min_peers} peers required to distribute rewards.")
             peers = await self.eligible_list.get()
-
+            self._warning(
+                f"Min. {min_peers} peers required to distribute rewards (having {len(peers)})."
+            )
             await asyncio.sleep(2)
 
         # convert to csv and store on GCP
@@ -296,7 +307,7 @@ class CTCore(Base):
         # create celery tasks
         app = Celery(
             name=self.params.rabbitmq.project_name,
-            broker=self.params.rabbitmq.broker_url,
+            broker=f"amqp://{self.params.rabbitmq.username}:{self.params.rabbitmq.password}@{self.params.rabbitmq.host}/",
         )
         app.autodiscover_tasks(force=True)
 
@@ -306,7 +317,7 @@ class CTCore(Base):
                 peer.address.id,
                 peer.message_count_for_reward,
                 peer.economic_model.budget.ticket_price,
-                task_name=self.param.task_name,
+                task_name=self.params.rabbitmq.task_name,
             )
         self._info(f"Distributed rewards to {len(peers)} peers.")
 
