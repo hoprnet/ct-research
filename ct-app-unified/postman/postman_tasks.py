@@ -54,7 +54,7 @@ async def send_messages_in_batches(
                 )
             )
 
-        issued_count += asyncio.gather(*tasks)
+        issued_count += sum(await asyncio.gather(*tasks))
 
         await asyncio.sleep(params.param.message_delivery_timeout)
 
@@ -92,7 +92,7 @@ def send_1_hop_message(
         async_send_1_hop_message(peer, expected, ticket_price, timestamp)
     )
 
-    attempts += send_status in [TaskStatus.SPLITTED, TaskStatus.SUCCESS]
+    attempts += 1  # send_status in [TaskStatus.SPLITTED, TaskStatus.SUCCESS]
 
     if attempts >= params.param.max_attempts:
         send_status = TaskStatus.TIMEOUT
@@ -154,6 +154,10 @@ async def async_send_1_hop_message(
 
     # validate balance of peer
     balance = await api.channel_balance(node_peer_id, peer_id)
+    print(f"{balance=}")
+    print(f"{expected_count=}")
+    print(f"{balance=}")
+    print(f"{ticket_price=}")
     max_possible = min(expected_count, balance // ticket_price)
 
     if max_possible == 0:
@@ -194,16 +198,18 @@ def fake_task(
     if timestamp is None:
         timestamp = time.time()
 
-    log.info(f"Fake task execution started at {timestamp}")
-    log.info(f"{expected} messages ment to be sent to {peer}")
+    address = Utils.envvar(f"NODE_ADDRESS_{current_process().index+1}")
 
-    # PMUtils.taskStoreFeedback(
-    #     app,
-    #     peer,
-    #     "fake_node",
-    #     expected,
-    #     0,
-    #     0,
-    #     TaskStatus.SUCCESS.value,
-    #     timestamp,
-    # )
+    log.info(f"Fake task execution started at {timestamp}")
+    log.info(f"{expected} messages ment to be sent through {peer} by {address}")
+
+    Utils.taskStoreFeedback(
+        app,
+        peer,
+        "fake_node",
+        expected,
+        0,
+        0,
+        TaskStatus.SUCCESS.value,
+        timestamp,
+    )
