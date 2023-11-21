@@ -11,8 +11,4 @@ class SubgraphType(Enum):
         return [item for item in cls if item != cls.NONE]
 
     def toInt(self):
-        if self == SubgraphType.DEFAULT:
-            return 0
-        if self == SubgraphType.BACKUP:
-            return 1
-        return -1
+        return { SubgraphType.DEFAULT: 0, SubgraphType.BACKUP: 1 }.get(self, -1)
