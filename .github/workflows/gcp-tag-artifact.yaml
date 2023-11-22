@@ -1,0 +1,45 @@
+name: GCP Artifact Tagging
+
+on:
+  create:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  tag-artifact:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Login to GCP
+        id: gcloud
+        uses: elgohr/gcloud-login-action@v1 #TODO - v2 is bugged, unable to get outputs
+        with:
+          account_key: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+    - name: Get release tag
+      run: |
+        echo "SHORT_SHA=`echo ${{ github.event.pull_request.head.sha }} | cut -c1-7`" >> $GITHUB_ENV
+        echo "TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV"
+
+    - name: Apply tag to GCP artifact
+      run: |
+        # Replace the following commands with your actual commands to apply the tag to the GCP artifact.
+        # For example, if you are using Google Cloud Storage, you might use gsutil command.
+        # Replace 'YOUR_GCP_COMMANDS' with your actual GCP commands.
+
+        # Example using gsutil:
+        # gsutil tag set "your-tag-key:your-tag-value" gs://your-bucket/path/to/artifact
+
+        docker_registry=${{ secrets.GOOGLE_REGION }}-docker.pkg.dev
+        image=${{ secrets.GOOGLE_PROJECT }}/${{ secrets.GOOGLE_REPOSITORY }}/cover-traffic
+        commit_tag=${{ env.SHORT_SHA }}
+        tag=${{ env.TAG }}
+
+        gcloud artifacts docker tags add ${docker_registry}/${image}:${commit_tag} ${docker_registry}/${image}:${tag}
+
+      env:
+        # Set environment variables needed for GCP commands
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
