@@ -48,17 +48,17 @@ class HoprdAPI(Base):
                 response = thread.get()
 
         except ApiException as e:
-            self._error(
+            self.error(
                 f"ApiException calling {obj.__name__}.{method} "
                 + f"with kwargs: {kwargs}, args: {args}, error is: {e}"
             )
         except OSError:
-            self._error(
+            self.error(
                 f"OSError calling {obj.__name__}.{method} "
                 + f"with kwargs: {kwargs}, args: {args}:"
             )
         except MaxRetryError:
-            self._error(
+            self.error(
                 f"MaxRetryError calling {obj.__name__}.{method} "
                 + f"with kwargs: {kwargs}, args: {args}"
             )
@@ -88,7 +88,7 @@ class HoprdAPI(Base):
 
         for t in type:
             if not hasattr(response, t):
-                self._warning(f"No '{t}' type returned from the API")
+                self.warning(f"No '{t}' type returned from the API")
                 return None
 
             return_dict[t] = int(getattr(response, t))
@@ -145,11 +145,11 @@ class HoprdAPI(Base):
         )
         if is_ok:
             if not hasattr(response, "incoming"):
-                self._warning("Response does not contain 'incoming'")
+                self.warning("Response does not contain 'incoming'")
                 return []
 
             if len(response.incoming) == 0:
-                self._info("No incoming channels")
+                self.info("No incoming channels")
                 return []
 
             if only_id:
@@ -167,11 +167,11 @@ class HoprdAPI(Base):
         is_ok, response = self.__call_api(ChannelsApi, "channels_get_channels")
         if is_ok:
             if not hasattr(response, "outgoing"):
-                self._warning("Response does not contain 'outgoing'")
+                self.warning("Response does not contain 'outgoing'")
                 return []
 
             if len(response.outgoing) == 0:
-                self._info("No outgoing channels")
+                self.info("No outgoing channels")
                 return []
 
             if only_id:
@@ -232,17 +232,17 @@ class HoprdAPI(Base):
             return []
 
         if not hasattr(response, status):
-            self._warning(f"No '{status}' field returned from the API")
+            self.warning(f"No '{status}' field returned from the API")
             return []
 
         if len(getattr(response, status)) == 0:
-            self._info(f"No peer with is_ok '{status}'")
+            self.info(f"No peer with is_ok '{status}'")
             return []
 
         params = [params] if isinstance(params, str) else params
         for param in params:
             if not hasattr(getattr(response, status)[0], param):
-                self._warning(f"No param '{param}' found for peers")
+                self.warning(f"No param '{param}' found for peers")
                 return []
 
         output_list = []
@@ -273,7 +273,7 @@ class HoprdAPI(Base):
         return_dict: dict[str, str] = {}
         for item in address:
             if not hasattr(response, item):
-                self._warning(f"No '{item}' address returned from the API")
+                self.warning(f"No '{item}' address returned from the API")
                 return None
 
             return_dict[item] = getattr(response, item)

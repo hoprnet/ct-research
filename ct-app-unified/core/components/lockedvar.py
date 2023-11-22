@@ -28,7 +28,7 @@ class LockedVar(Base):
 
     async def inc(self, value: Any):
         if self.type and not isinstance(value, self.type):
-            self._warning(
+            self.warning(
                 f"Trying to change value of type {type(value)} to {self.type}, ignoring"
             )
 
@@ -37,7 +37,7 @@ class LockedVar(Base):
 
     async def update(self, value: Any):
         if self.type and not isinstance(value, self.type):
-            self._warning(
+            self.warning(
                 f"Trying to change value of type {type(value)} to {self.type}, ignoring"
             )
         if not isinstance(value, dict):

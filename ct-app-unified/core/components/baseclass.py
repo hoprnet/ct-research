@@ -26,36 +26,35 @@ class Base:
     def _print(self, message: str, color: str = "\033[0m"):
         print(self.__format(message, color))
 
-    def _debug(self, message: str):
+    def debug(self, message: str):
         color = "\033[0;32m"
         if self.doLogging:
             self.logger.debug(self.__format(message, color))
         else:
             self._print(message, color)
 
-    def _info(self, message: str):
+    def info(self, message: str):
         color = "\033[0;34m"
         if self.doLogging:
             self.logger.info(self.__format(message, color))
         else:
             self._print(message, color)
 
-    def _warning(self, message: str):
+    def warning(self, message: str):
         color = "\033[0;33m"
-
         if self.doLogging:
             self.logger.warning(self.__format(message, color))
         else:
             self._print(message, color)
 
-    def _error(self, message: str):
+    def error(self, message: str):
         color = "\033[0;31m"
         if self.doLogging:
             self.logger.error(self.__format(message, color))
         else:
             self._print(message, color)
 
-    def _feature(self, message: str):
+    def feature(self, message: str):
         color = "\033[0;35m"
         if self.doLogging:
             self.logger.info(self.__format(message, color))

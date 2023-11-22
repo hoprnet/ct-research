@@ -85,7 +85,7 @@ class CTCore(Base):
     @safes_balance_subgraph_type.setter
     def safes_balance_subgraph_type(self, value: SubgraphType):
         if value != self.safes_balance_subgraph_type:
-            self._warning(f"Now using '{value.value}' subgraph.")
+            self.warning(f"Now using '{value.value}' subgraph.")
 
         SUBGRAPH_IN_USE.set(value.toInt())
         self._safes_balance_subgraph_type = value
@@ -109,7 +109,7 @@ class CTCore(Base):
         await self._retrieve_address()
         await self.connected.set(self.address is not None)
 
-        self._debug(f"Connection state: {await self.connected.get()}")
+        self.debug(f"Connection state: {await self.connected.get()}")
         HEALTH.set(int(await self.connected.get()))
 
     @flagguard
@@ -144,14 +144,14 @@ class CTCore(Base):
 
         await self.all_peers.set(results)
 
-        self._debug(f"Aggregated peers ({len(results)} entries).")
+        self.debug(f"Aggregated peers ({len(results)} entries).")
         UNIQUE_PEERS.set(len(results))
 
     @flagguard
     @formalin("Getting subgraph data")
     async def get_subgraph_data(self):
         if self.safes_balance_subgraph_type == SubgraphType.NONE:
-            self._warning("No subgraph URL available.")
+            self.warning("No subgraph URL available.")
             return
 
         safes = []
@@ -169,11 +169,11 @@ class CTCore(Base):
             SUBGRAPH_CALLS.labels(self.safes_balance_subgraph_type.value).inc()
 
             if not response:
-                self._warning("No response from subgraph.")
+                self.warning("No response from subgraph.")
                 break
 
             if "data" not in response:
-                self._warning("No data in response from subgraph.")
+                self.warning("No data in response from subgraph.")
                 break
 
             safes.extend(response["data"]["safes"])
@@ -195,7 +195,7 @@ class CTCore(Base):
         await self.subgraph_list.set(results)
 
         SUBGRAPH_SIZE.set(len(results))
-        self._debug(f"Fetched subgraph data ({len(results)} entries).")
+        self.debug(f"Fetched subgraph data ({len(results)} entries).")
 
     @flagguard
     @connectguard
@@ -207,7 +207,7 @@ class CTCore(Base):
         """
         channels = await self.api.all_channels(False)
         if channels is None:
-            self._warning("Topology data not available.")
+            self.warning("Topology data not available.")
             return
 
         results = await Utils.aggregatePeerBalanceInChannels(channels.all)
@@ -216,7 +216,7 @@ class CTCore(Base):
         await self.topology_list.set(topology_list)
 
         TOPOLOGY_SIZE.set(len(topology_list))
-        self._debug(f"Fetched topology links ({len(topology_list)} entries).")
+        self.debug(f"Fetched topology links ({len(topology_list)} entries).")
 
     @flagguard
     @formalin("Applying economic model")
@@ -228,22 +228,22 @@ class CTCore(Base):
             subgraph = await self.subgraph_list.get()
             peers = await self.all_peers.get()
 
-            print(f"Topology size: {len(topology)}")
-            print(f"Subgraph size: {len(subgraph)}")
-            print(f"Network size: {len(peers)}")
+            self.debug(f"Topology size: {len(topology)}")
+            self.debug(f"Subgraph size: {len(subgraph)}")
+            self.debug(f"Network size: {len(peers)}")
 
             ready = len(topology) and len(subgraph) and len(peers)
             await asyncio.sleep(1)
 
         eligibles = Utils.mergeTopologyPeersSubgraph(topology, peers, subgraph)
-        self._debug(f"Merged topology and subgraph data ({len(eligibles)} entries).")
+        self.debug(f"Merged topology and subgraph data ({len(eligibles)} entries).")
 
         Utils.allowManyNodePerSafe(eligibles)
-        self._debug(f"Allowed many nodes per safe ({len(eligibles)} entries).")
+        self.debug(f"Allowed many nodes per safe ({len(eligibles)} entries).")
 
         excluded = Utils.excludeElements(eligibles, self.network_nodes_addresses)
-        self._debug(f"Excluded network nodes ({len(excluded)} entries).")
-        self._debug(f"Eligible nodes ({len(eligibles)} entries).")
+        self.debug(f"Excluded network nodes ({len(excluded)} entries).")
+        self.debug(f"Eligible nodes ({len(eligibles)} entries).")
 
         model = EconomicModel.fromGCPFile(
             self.params.gcp.bucket, self.params.economic_model.filename
@@ -251,10 +251,10 @@ class CTCore(Base):
         for peer in eligibles:
             peer.economic_model = model
 
-        self._debug("Assigned economic model to eligible nodes.")
+        self.debug("Assigned economic model to eligible nodes.")
 
         excluded = Utils.rewardProbability(eligibles)
-        self._debug(f"Excluded nodes with low stakes ({len(excluded)} entries).")
+        self.debug(f"Excluded nodes with low stakes ({len(excluded)} entries).")
 
         await self.eligible_list.set(eligibles)
 
@@ -280,10 +280,10 @@ class CTCore(Base):
         )
 
         delay = Utils.nextDelayInSeconds(model.delay_between_distributions)
-        self._debug(f"Relay delay would be {delay} seconds.")
+        self.debug(f"Relay delay would be {delay} seconds.")
         delay = 20
 
-        self._debug(f"Waiting {delay} seconds for next distribution.")
+        self.debug(f"Waiting {delay} seconds for next distribution.")
         await asyncio.sleep(delay)
 
         min_peers = self.params.distribution.min_eligible_peers
@@ -292,7 +292,7 @@ class CTCore(Base):
 
         while len(peers) < min_peers:
             peers = await self.eligible_list.get()
-            self._warning(
+            self.warning(
                 f"Min. {min_peers} peers required to distribute rewards (having {len(peers)})."
             )
             await asyncio.sleep(2)
@@ -319,7 +319,7 @@ class CTCore(Base):
                 peer.economic_model.budget.ticket_price,
                 task_name=self.params.rabbitmq.task_name,
             )
-        self._info(f"Distributed rewards to {len(peers)} peers.")
+        self.info(f"Distributed rewards to {len(peers)} peers.")
 
         EXECUTIONS_COUNTER.inc()
 
@@ -347,17 +347,17 @@ class CTCore(Base):
             transactions.extend(response["data"]["transactions"])
 
         total_funding = sum([float(tx["amount"]) for tx in transactions])
-        self._debug(f"Total funding: {total_funding}")
+        self.debug(f"Total funding: {total_funding}")
         TOTAL_FUNDING.set(total_funding)
 
     async def start(self):
         """
         Start the node.
         """
-        self._info(f"CTCore started with {len(self.network_nodes)} nodes.")
+        self.info(f"CTCore started with {len(self.network_nodes)} nodes.")
 
         if len(self.network_nodes) == 0:
-            self._error("No nodes available, exiting.")
+            self.error("No nodes available, exiting.")
             return
 
         if self.tasks:

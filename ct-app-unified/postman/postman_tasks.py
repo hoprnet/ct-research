@@ -154,10 +154,6 @@ async def async_send_1_hop_message(
 
     # validate balance of peer
     balance = await api.channel_balance(node_peer_id, peer_id)
-    print(f"{balance=}")
-    print(f"{expected_count=}")
-    print(f"{balance=}")
-    print(f"{ticket_price=}")
     max_possible = min(expected_count, balance // ticket_price)
 
     if max_possible == 0:

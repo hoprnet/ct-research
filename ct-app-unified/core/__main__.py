@@ -33,7 +33,7 @@ def main():
     try:
         loop.run_until_complete(instance.start())
     except asyncio.CancelledError:
-        instance._error("Stopping the instance...")
+        instance.error("Stopping the instance...")
     finally:
         instance.stop()
         loop.close()

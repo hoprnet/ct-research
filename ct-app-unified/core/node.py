@@ -104,7 +104,7 @@ class Node(Base):
         await self.connected.set(self.address is not None)
 
         if address := self.address:
-            self._debug(f"Connection state: {await self.connected.get()}")
+            self.debug(f"Connection state: {await self.connected.get()}")
             HEALTH.labels(address.id).set(int(await self.connected.get()))
 
     @flagguard
@@ -131,7 +131,7 @@ class Node(Base):
         all_addresses = {p.address.address for p in await self.peers.get()}
         addresses_without_channels = all_addresses - addresses_with_channels
 
-        self._debug(f"Addresses without channels: {len(addresses_without_channels)}")
+        self.debug(f"Addresses without channels: {len(addresses_without_channels)}")
 
         for address in addresses_without_channels:
             ok = await self.api.open_channel(
@@ -139,7 +139,7 @@ class Node(Base):
                 f"{int(self.params.channel.funding_amount*1e18):d}",
             )
             if ok:
-                self._debug(f"Opened channel to {address}")
+                self.debug(f"Opened channel to {address}")
                 CHANNELS_OPENED.labels(self.address.id).inc()
             OPEN_CHANNELS_CALLS.labels(self.address.id).inc()
 
@@ -162,7 +162,7 @@ class Node(Base):
         for channel in in_opens:
             ok = await self.api.close_channel(channel.channel_id)
             if ok:
-                self._debug(f"Closed channel {channel.channel_id}")
+                self.debug(f"Closed channel {channel.channel_id}")
                 INCOMING_CHANNELS_CLOSED.labels(self.address.id).inc()
             CLOSE_INCOMING_CHANNELS_CALLS.labels(self.address.id).inc()
 
@@ -178,12 +178,12 @@ class Node(Base):
             c for c in await self.outgoings.get() if ChannelStatus.isPending(c.status)
         ]
 
-        self._debug(f"Pending channels: {len(out_pendings)}")
+        self.debug(f"Pending channels: {len(out_pendings)}")
 
         for channel in out_pendings:
             ok = await self.api.close_channel(channel.channel_id)
             if ok:
-                self._debug(f"Closed pending channel {channel.channel_id}")
+                self.debug(f"Closed pending channel {channel.channel_id}")
                 PENDING_CHANNELS_CLOSED.labels(self.address.id).inc()
             CLOSE_PENDING_CHANNELS_CALLS.labels(self.address.id).inc()
 
@@ -220,17 +220,17 @@ class Node(Base):
             channels_to_close.append(channel_id)
 
         await self.peer_history.update(to_peer_history)
-        self._debug(f"Updated peer history with {len(to_peer_history)} new entries")
+        self.debug(f"Updated peer history with {len(to_peer_history)} new entries")
 
-        self._info(f"Closing {len(channels_to_close)} old channels")
+        self.info(f"Closing {len(channels_to_close)} old channels")
         for channel in channels_to_close:
             ok = await self.api.close_channel(channel)
 
             if ok:
-                self._debug(f"Channel {channel} closed")
+                self.debug(f"Channel {channel} closed")
                 OLD_CHANNELS_CLOSED.labels(self.address.id).inc()
             else:
-                self._debug(f"Failed to close channel {channel_id}")
+                self.debug(f"Failed to close channel {channel_id}")
 
             CLOSE_OLD_CHANNELS_CALLS.labels(self.address.id).inc()
 
@@ -250,7 +250,7 @@ class Node(Base):
             c for c in out_opens if int(c.balance) <= self.params.channel.min_balance
         ]
 
-        self._debug(f"Low balance channels: {len(low_balances)}")
+        self.debug(f"Low balance channels: {len(low_balances)}")
 
         peer_ids = [p.address.id for p in await self.peers.get()]
 
@@ -260,7 +260,7 @@ class Node(Base):
                     channel.channel_id, self.params.channel.funding_amount
                 )
                 if ok:
-                    self._debug(f"Funded channel {channel.channel_id}")
+                    self.debug(f"Funded channel {channel.channel_id}")
                     FUNDED_CHANNELS.labels(self.address.id).inc()
                 FUND_CHANNELS_CALLS.labels(self.address.id).inc()
 
@@ -280,7 +280,7 @@ class Node(Base):
         await self.peers.set(peers)
         await self.peer_history.update(addresses_w_timestamp)
 
-        self._debug(f"Peers: {len(peers)}")
+        self.debug(f"Peers: {len(peers)}")
         PEERS_COUNT.labels(self.address.id).set(len(peers))
 
     @flagguard
@@ -300,7 +300,7 @@ class Node(Base):
         ]
 
         await self.outgoings.set(outgoings)
-        self._debug(f"Outgoing channels: {len(outgoings)}")
+        self.debug(f"Outgoing channels: {len(outgoings)}")
         OUTGOING_CHANNELS.labels(self.address.id).set(len(outgoings))
 
     @flagguard
@@ -320,7 +320,7 @@ class Node(Base):
         ]
 
         await self.incomings.set(incomings)
-        self._debug(f"Incoming channels: {len(incomings)}")
+        self.debug(f"Incoming channels: {len(incomings)}")
         INCOMING_CHANNELS.labels(self.address.id).set(len(incomings))
 
     @flagguard
@@ -339,11 +339,11 @@ class Node(Base):
 
         entry = TopologyEntry.fromDict(self.address.id, results[self.address.id])
 
-        self._debug(f"Channels funds: { entry.channels_balance}")
+        self.debug(f"Channels funds: { entry.channels_balance}")
         TOTAL_CHANNEL_FUNDS.labels(self.address.id).set(entry.channels_balance)
 
     def tasks(self):
-        self._info("Starting node")
+        self.info("Starting node")
         return [
             asyncio.create_task(self.healthcheck()),
             asyncio.create_task(self.retrieve_peers()),
