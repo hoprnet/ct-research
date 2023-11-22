@@ -11,39 +11,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-    - name: Set up Google Cloud credentials_json
-      id: auth
-      uses: google-github-actions/auth@v1
-      with:
-        token_format: "access_token"
-        credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+      - name: Set up Google Cloud credentials_json
+        id: auth
+        uses: google-github-actions/auth@v1
+        with:
+          token_format: "access_token"
+          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
 
-    - name: Set up Google Cloud SDK
-      uses: google-github-actions/setup-gcloud@v1
-      with:
-        project_id: ${{ secrets.GOOGLE_CREDENTIALS }}
-        install_components: beta
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GOOGLE_CREDENTIALS }}
+          install_components: beta
 
-    - name: Login Google Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ secrets.GOOGLE_REGION }}-docker.pkg.dev
-        username: oauth2accesstoken
-        password: ${{ steps.auth.outputs.access_token }}
+      - name: Login Google Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.GOOGLE_REGION }}-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
 
 
-    - name: Apply tag to GCP artifact
-      run: |
-        repository=${{ secrets.GOOGLE_PROJECT }}/${{ secrets.GOOGLE_REPOSITORY }}/cover-traffic
-        docker_registry=${{ secrets.GOOGLE_REGION }}-docker.pkg.dev
-        image=${{ secrets.GOOGLE_PROJECT }}/${{ secrets.GOOGLE_REPOSITORY }}/cover-traffic
-        commit_tag=$(git rev-parse --short "$GITHUB_SHA")
-        tag=${{ github.ref_name }}
+      - name: Apply tag to GCP artifact
+        run: |
+          repository=${{ secrets.GOOGLE_PROJECT }}/${{ secrets.GOOGLE_REPOSITORY }}/cover-traffic
+          docker_registry=${{ secrets.GOOGLE_REGION }}-docker.pkg.dev
+          image=${{ secrets.GOOGLE_PROJECT }}/${{ secrets.GOOGLE_REPOSITORY }}/cover-traffic
+          commit_tag=$(git rev-parse --short "$GITHUB_SHA")
+          tag=${{ github.ref_name }}
 
-        echo "Tag from release: ${tag}"
-        echo "Short sha: ${commit_tag}"
+          echo "Tag from release: ${tag}"
+          echo "Short sha: ${commit_tag}"
 
-        gcloud artifacts docker tags add ${docker_registry}/${image}:${commit_tag} ${docker_registry}/${image}:${tag}
+          gcloud artifacts docker tags add ${docker_registry}/${image}:${commit_tag} ${docker_registry}/${image}:${tag}
