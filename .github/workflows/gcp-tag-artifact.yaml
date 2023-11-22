@@ -14,11 +14,26 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Login to GCP
-      id: gcloud
-      uses: elgohr/gcloud-login-action@v1 #TODO - v2 is bugged, unable to get outputs
+    - name: Set up Google Cloud credentials_json
+      id: auth
+      uses: google-github-actions/auth@v1
       with:
-        account_key: ${{ secrets.GOOGLE_CREDENTIALS }}
+        token_format: "access_token"
+        credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        project_id: ${{ secrets.GOOGLE_CREDENTIALS }}
+        install_components: beta
+
+      - name: Login Google Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.GOOGLE_REGION }}-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
 
     - name: Apply tag to GCP artifact
       run: |
@@ -30,12 +45,6 @@ jobs:
 
         echo "Tag from release: ${tag}"
         echo "Short sha: ${commit_tag}"
-
-        gcloud config set artifacts/repository $repository
-        gcloud config set artifacts/location ${{ secrets.GOOGLE_REGION }}
-        gcloud config set account ${{ secrets.GOOGLE_CREDENTIALS }}
-
-        gcloud auth login --brief
 
         gcloud artifacts docker tags add ${docker_registry}/${image}:${commit_tag} ${docker_registry}/${image}:${tag}
 
