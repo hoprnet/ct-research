@@ -21,7 +21,6 @@ jobs:
 
     - name: Get release tag
       run: |
-        echo "SHORT_SHA=`echo ${{ github.event.pull_request.head.sha }} | cut -c1-7`" >> $GITHUB_ENV
         echo "TAG=${GITHUB_REF/refs\\/tags\\//}" >> $GITHUB_ENV"
 
     - name: Apply tag to GCP artifact
@@ -35,10 +34,11 @@ jobs:
 
         docker_registry=${{ secrets.GOOGLE_REGION }}-docker.pkg.dev
         image=${{ secrets.GOOGLE_PROJECT }}/${{ secrets.GOOGLE_REPOSITORY }}/cover-traffic
-        commit_tag=${{ env.SHORT_SHA }}
+        commit_tag=${{ github.event.release.target_commitish }}
         tag=${{ env.TAG }}
 
-        echo "Tag from release: ${{ steps.get_tag.outputs.tag }}"
+        echo "Tag from release: ${tag}"
+        echo "Short sha: ${commit_tag}"
 
         # gcloud artifacts docker tags add ${docker_registry}/${image}:${commit_tag} ${docker_registry}/${image}:${tag}
 
