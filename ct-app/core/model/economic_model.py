@@ -163,9 +163,9 @@ class EconomicModel:
 
     @classmethod
     def fromDict(cls, _input: dict):
-        equations = Equations.from_dictionary(_input.get("equations", {}))
-        parameters = Parameters.from_dictionary(_input.get("parameters", {}))
-        budget = BudgetParameters.from_dictionary(_input.get("budget_param", {}))
+        equations = Equations.from_dictionary(_input.get("equations"))
+        parameters = Parameters.from_dictionary(_input.get("parameters"))
+        budget = BudgetParameters.from_dictionary(_input.get("budget_param"))
 
         return cls(equations, parameters, budget)
 

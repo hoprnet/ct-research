@@ -233,7 +233,7 @@ class CTCore(Base):
             self.debug(f"Network size: {len(peers)}")
 
             ready = len(topology) and len(subgraph) and len(peers)
-            await asyncio.sleep(1)
+            await asyncio.sleep(2)
 
         eligibles = Utils.mergeTopologyPeersSubgraph(topology, peers, subgraph)
         self.debug(f"Merged topology and subgraph data ({len(eligibles)} entries).")
@@ -280,10 +280,8 @@ class CTCore(Base):
         )
 
         delay = Utils.nextDelayInSeconds(model.delay_between_distributions)
-        self.debug(f"Relay delay would be {delay} seconds.")
-        delay = 20
-
         self.debug(f"Waiting {delay} seconds for next distribution.")
+
         await asyncio.sleep(delay)
 
         min_peers = self.params.distribution.min_eligible_peers
@@ -307,7 +305,7 @@ class CTCore(Base):
         # create celery tasks
         app = Celery(
             name=self.params.rabbitmq.project_name,
-            broker=f"amqp://{self.params.rabbitmq.username}:{self.params.rabbitmq.password}@{self.params.rabbitmq.host}/",
+            broker=f"amqp://{self.params.rabbitmq.username}:{self.params.rabbitmq.password}@{self.params.rabbitmq.host}/{self.params.rabbitmq.virtualhost}",
         )
         app.autodiscover_tasks(force=True)
 
