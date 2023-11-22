@@ -22,13 +22,7 @@ jobs:
 
     - name: Apply tag to GCP artifact
       run: |
-        # Replace the following commands with your actual commands to apply the tag to the GCP artifact.
-        # For example, if you are using Google Cloud Storage, you might use gsutil command.
-        # Replace 'YOUR_GCP_COMMANDS' with your actual GCP commands.
-
-        # Example using gsutil:
-        # gsutil tag set "your-tag-key:your-tag-value" gs://your-bucket/path/to/artifact
-
+        repository=${{ secrets.GOOGLE_PROJECT }}/${{ secrets.GOOGLE_REPOSITORY }}/cover-traffic
         docker_registry=${{ secrets.GOOGLE_REGION }}-docker.pkg.dev
         image=${{ secrets.GOOGLE_PROJECT }}/${{ secrets.GOOGLE_REPOSITORY }}/cover-traffic
         commit_tag=$(git rev-parse --short "$GITHUB_SHA")
@@ -36,6 +30,11 @@ jobs:
 
         echo "Tag from release: ${tag}"
         echo "Short sha: ${commit_tag}"
+
+        gcloud config set artifacts/repository $repository
+        gcloud config set artifacts/location ${{ secrets.GOOGLE_REGION }}
+        gcloud config set username ${{ steps.gcloud.outputs.username }}
+        gcloud config set password ${{ steps.gcloud.outputs.password }}
 
         gcloud artifacts docker tags add ${docker_registry}/${image}:${commit_tag} ${docker_registry}/${image}:${tag}
 
