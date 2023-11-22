@@ -1,9 +1,9 @@
 name: GCP Artifact Tagging
 
 on:
-  create:
+  release:
     tags:
-      - 'v*.*.*'
+      - published
 
 jobs:
   tag-artifact:
@@ -22,7 +22,7 @@ jobs:
     - name: Get release tag
       run: |
         echo "SHORT_SHA=`echo ${{ github.event.pull_request.head.sha }} | cut -c1-7`" >> $GITHUB_ENV
-        echo "TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV"
+        echo "TAG=${GITHUB_REF/refs\\/tags\\//}" >> $GITHUB_ENV"
 
     - name: Apply tag to GCP artifact
       run: |
@@ -38,7 +38,9 @@ jobs:
         commit_tag=${{ env.SHORT_SHA }}
         tag=${{ env.TAG }}
 
-        gcloud artifacts docker tags add ${docker_registry}/${image}:${commit_tag} ${docker_registry}/${image}:${tag}
+        echo "Tag from release: ${{ steps.get_tag.outputs.tag }}"
+
+        # gcloud artifacts docker tags add ${docker_registry}/${image}:${commit_tag} ${docker_registry}/${image}:${tag}
 
       env:
         # Set environment variables needed for GCP commands
