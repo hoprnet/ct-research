@@ -14,10 +14,10 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Login to GCP
-        id: gcloud
-        uses: elgohr/gcloud-login-action@v1 #TODO - v2 is bugged, unable to get outputs
-        with:
-          account_key: ${{ secrets.GOOGLE_CREDENTIALS }}
+      id: gcloud
+      uses: elgohr/gcloud-login-action@v1 #TODO - v2 is bugged, unable to get outputs
+      with:
+        account_key: ${{ secrets.GOOGLE_CREDENTIALS }}
 
     - name: Get release tag
       run: |
