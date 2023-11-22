@@ -16,7 +16,7 @@ def connectguard(func):
             self.warning("Node not connected, skipping")
             return
 
-        await func(self, *args, **kwargs)
+        return await func(self, *args, **kwargs)
 
     return wrapper
 
@@ -34,7 +34,7 @@ def flagguard(func):
             self.error(f"Feature `{func.__name__}` not yet available")
             return
 
-        await func(self, *args, **kwargs)
+        return await func(self, *args, **kwargs)
 
     return wrapper
 

@@ -24,6 +24,6 @@ class Flags:
             cls._cache_flags = [
                 key for key in environ.keys() if key.startswith(cls.global_prefix)
             ]
-
+        
         _prefix = cls.global_prefix + prefix
         return [item.replace(_prefix, "").lower() for item in cls._cache_flags]

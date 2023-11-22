@@ -146,3 +146,9 @@ def test_nextDelayInSeconds():
 
 def test_aggregatePeerBalanceInChannels():
     pytest.skip("Not implemented")
+
+def test_taskSendMessage():
+    pytest.skip("Not implemented")
+
+def test_taskStoreFeedback():
+    pytest.skip("Not implemented")
