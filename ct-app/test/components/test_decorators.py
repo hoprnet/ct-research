@@ -81,6 +81,8 @@ async def test_formalin(foo_class: FooClass):
 
     assert foo_class.counter == 1 # counter increased only once
 
+    del os.environ["FLAG_FOO_FOO_FORMALIN_FUNC"]
+
     # reset flag cache and instance counter
     Flags._cache_flags = None
     foo_class.counter = 0
@@ -96,4 +98,6 @@ async def test_formalin(foo_class: FooClass):
     await asyncio.sleep(0.5)
     
     assert foo_class.counter == 2 # counter increased twice
+    
+    del os.environ["FLAG_FOO_FOO_FORMALIN_FUNC"]
 
