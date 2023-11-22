@@ -1,3 +1,0 @@
-[run]
-source = aggregator, aggregator_trigger, economic_handler, netwatcher, tools
-omit = __init__.py, *abc.py, __main__.py

@@ -22,4 +22,4 @@ foo*/
 scripts/
 # run_*.sh
 .DS_Store
-test_endurance_rules.json
+*/test_endurance_rules.yaml
