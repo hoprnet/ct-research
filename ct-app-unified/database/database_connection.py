@@ -13,21 +13,12 @@ log = logging.getLogger()
 class DatabaseConnection:
     """
     Database connection class.
-
-    This class requires the following environment variables to be set:
-    - PGUSER: the database user name
-    - PGPASSWORD: the database user password
-    - PGHOST: the database host
-    - PGPORT: the database port
-    - PGDATABASE: the database name
-    - PGSSLMODE: the SSL mode
-    - PGSSLROOTCERT: the SSL root certificate
-    - PGSSLCERT: the SSL certificate
-    - PGSSLKEY: the SSL key
     """
 
     def __init__(self):
         self.params = Parameters()("PG")
+
+        self._assert_parameters()
 
         url = URL(
             drivername="postgresql+psycopg2",
@@ -49,6 +40,36 @@ class DatabaseConnection:
         self.session = Session(self.engine)
 
         log.info("Database connection established.")
+
+    def _assert_parameters(self):
+        for group, values in self.required_parameters().items():
+            assert len(getattr(self.params, group).__dict__), (
+                f"Missing all '{group.upper()}' environment variables. "
+                + "The following ones are required: "
+                + f"{', '.join([(group+'(_)'+v).upper() for v in values])}"
+            )
+
+            for value in values:
+                assert hasattr(self.params.pg, value), (
+                    "Environment variable "
+                    + f"'{group.upper()}(_){value.upper()}' missing"
+                )
+
+    @classmethod
+    def required_parameters(cls):
+        return {
+            "pg": [
+                "user",
+                "password",
+                "host",
+                "port",
+                "database",
+                "sslmode",
+                "sslrootcert",
+                "sslcert",
+                "sslkey",
+            ]
+        }
 
     def __enter__(self):
         return self.session
