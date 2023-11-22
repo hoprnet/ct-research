@@ -13,7 +13,7 @@ def connectguard(func):
     @functools.wraps(func)
     async def wrapper(self, *args, **kwargs):
         if not await self.connected.get():
-            self._warning("Node not connected, skipping")
+            self.warning("Node not connected, skipping")
             return
 
         await func(self, *args, **kwargs)
@@ -31,7 +31,7 @@ def flagguard(func):
         flags = Flags.getEnvironmentFlags(self.flag_prefix)
 
         if func.__name__ not in flags:
-            self._error(f"Feature `{func.__name__}` not yet available")
+            self.error(f"Feature `{func.__name__}` not yet available")
             return
 
         await func(self, *args, **kwargs)
@@ -51,11 +51,11 @@ def formalin(message: Optional[str] = None):
             _delay = Flags.getEnvironmentFlagValue(func.__name__, self.flag_prefix)
 
             if _delay != 0:
-                self._debug(f"Running `{func.__name__}` every {_delay} seconds")
+                self.debug(f"Running `{func.__name__}` every {_delay} seconds")
 
             while self.started:
                 if message:
-                    self._feature(message)
+                    self.feature(message)
                 await func(self, *args, **kwargs)
 
                 if _delay == 0:
