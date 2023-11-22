@@ -37,7 +37,7 @@ jobs:
         echo "Tag from release: ${tag}"
         echo "Short sha: ${commit_tag}"
 
-        # gcloud artifacts docker tags add ${docker_registry}/${image}:${commit_tag} ${docker_registry}/${image}:${tag}
+        gcloud artifacts docker tags add ${docker_registry}/${image}:${commit_tag} ${docker_registry}/${image}:${tag}
 
       env:
         # Set environment variables needed for GCP commands
