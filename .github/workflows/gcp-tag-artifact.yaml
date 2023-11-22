@@ -33,8 +33,9 @@ jobs:
 
         gcloud config set artifacts/repository $repository
         gcloud config set artifacts/location ${{ secrets.GOOGLE_REGION }}
-        gcloud config set username ${{ steps.gcloud.outputs.username }}
-        gcloud config set password ${{ steps.gcloud.outputs.password }}
+        gcloud config set account ${{ secrets.GOOGLE_CREDENTIALS }}
+
+        gcloud auth login --brief
 
         gcloud artifacts docker tags add ${docker_registry}/${image}:${commit_tag} ${docker_registry}/${image}:${tag}
 
