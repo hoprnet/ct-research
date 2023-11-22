@@ -27,12 +27,12 @@ jobs:
         project_id: ${{ secrets.GOOGLE_CREDENTIALS }}
         install_components: beta
 
-      - name: Login Google Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ secrets.GOOGLE_REGION }}-docker.pkg.dev
-          username: oauth2accesstoken
-          password: ${{ steps.auth.outputs.access_token }}
+    - name: Login Google Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ secrets.GOOGLE_REGION }}-docker.pkg.dev
+        username: oauth2accesstoken
+        password: ${{ steps.auth.outputs.access_token }}
 
 
     - name: Apply tag to GCP artifact
@@ -47,7 +47,3 @@ jobs:
         echo "Short sha: ${commit_tag}"
 
         gcloud artifacts docker tags add ${docker_registry}/${image}:${commit_tag} ${docker_registry}/${image}:${tag}
-
-      env:
-        # Set environment variables needed for GCP commands
-        GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
