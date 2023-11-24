@@ -84,7 +84,7 @@ class Node(Base):
 
     @property
     def print_prefix(self):
-        return '.'.join(self.url.split("//")[-1].split(".")[:2])
+        return ".".join(self.url.split("//")[-1].split(".")[:2])
 
     async def _retrieve_address(self):
         address = await self.api.get_address("all")
@@ -272,8 +272,13 @@ class Node(Base):
         Retrieve real peers from the network.
         """
 
-        results = await self.api.peers(params=["peer_id", "peer_address"], quality=0.5)
-        peers = {Peer(item["peer_id"], item["peer_address"]) for item in results}
+        results = await self.api.peers(
+            params=["peer_id", "peer_address", "reported_version"], quality=0.5
+        )
+        peers = {
+            Peer(item["peer_id"], item["peer_address"], item["reported_version"])
+            for item in results
+        }
 
         addresses_w_timestamp = {p.address.address: datetime.now() for p in peers}
 
