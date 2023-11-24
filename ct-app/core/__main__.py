@@ -5,7 +5,7 @@ from prometheus_client import start_http_server
 
 from .components.parameters import Parameters
 from .components.utils import Utils
-from .core import CTCore
+from .core import Core
 from .node import Node
 
 
@@ -14,7 +14,7 @@ def main():
         "DISTRIBUTION_", "SUBGRAPH_", "GCP_", "ECONOMIC_MODEL_", "CHANNEL_", "RABBITMQ_"
     )
 
-    instance = CTCore()
+    instance = Core()
     instance.nodes = Node.fromAddressListAndKey(
         *Utils.nodesAddresses("NODE_ADDRESS_", "NODE_KEY")
     )

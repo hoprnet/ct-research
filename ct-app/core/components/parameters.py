@@ -1,9 +1,22 @@
+from typing import Any
+
+from .baseclass import Base
 from .utils import Utils
 
 
-class Parameters:
+class Parameters(Base):
+    table = []
+
     def __init__(self):
-        pass
+        super().__init__()
+
+    def __getattribute__(self, __name: str) -> Any:
+        # self.warning(__name)
+        self.warning(__name)
+        return object.__getattribute__(self, __name)
+
+    def __getattr__(self, item):
+        print("__getattr__ " + item)
 
     def __call__(self, *prefixes: str or list[str]):
         for prefix in prefixes:

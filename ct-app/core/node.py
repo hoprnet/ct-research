@@ -84,7 +84,7 @@ class Node(Base):
 
     @property
     def print_prefix(self):
-        return '.'.join(self.url.split("//")[-1].split(".")[:2])
+        return ".".join(self.url.split("//")[-1].split(".")[:2])
 
     async def _retrieve_address(self):
         address = await self.api.get_address("all")

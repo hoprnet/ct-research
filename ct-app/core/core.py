@@ -35,7 +35,7 @@ NEXT_DISTRIBUTION_EPOCH = Gauge("next_distribution_epoch", "Next distribution (e
 TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
 
 
-class CTCore(Base):
+class Core(Base):
     flag_prefix = "CORE_"
 
     def __init__(self):

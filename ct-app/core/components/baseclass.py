@@ -20,6 +20,10 @@ class Base:
     def print_prefix(self) -> str:
         return ""
 
+    @classmethod
+    def class_prefix(cls) -> str:
+        return f"{cls.__name__.upper()}_"
+
     def __format(self, message: str, color: str = "\033[0m"):
         return f"{color}{self.print_prefix}\033[0m | {message}"
 
