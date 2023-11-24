@@ -91,12 +91,12 @@ jobs:
         uses: google-github-actions/auth@v1
         with:
           token_format: "access_token"
-          credentials_json: ${{ secrets.GOOGLE_HOPRASSOCIATION_CREDENTIALS_REGISTRY }}
+          credentials_json: ${{ secrets.GOOGLE_CTDAPP_SERVICE_ACCOUNT_CREDENTIALS }}
 
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
-          project_id: ${{ secrets.GOOGLE_HOPRASSOCIATION_PROJECT }}
+          project_id: ${{ secrets.GOOGLE_PROJECT }}
           install_components: beta
 
       - name: Login Google Container Registry
