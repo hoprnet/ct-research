@@ -12,66 +12,102 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Lint and test code
+  # test:
+  #   name: Lint and test code
+  #   timeout-minutes: 10
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #     - name: Check out code
+  #       uses: actions/checkout@v3
+
+  #     - name: Set up python 3.9
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: 3.9
+
+  #     - name: Install dependencies
+  #       working-directory: ct-app
+  #       run: |
+  #         python -m pip install --upgrade pip
+  #         pip install ruff pytest -r requirements.txt
+
+  #     - name: Lint with ruff
+  #       working-directory: ct-app
+  #       run: |
+  #         # default set of ruff rules with GitHub Annotations
+  #         ruff --output-format=github --ignore E501 --target-version=py39 .
+
+  #     - name: Test with pytest
+  #       working-directory: ct-app
+  #       run: |
+  #         pytest test
+
+  # image:
+  #   name: Build and push container image
+  #   timeout-minutes: 10
+  #   runs-on: ubuntu-latest
+
+  #   needs:
+  #     - test
+
+  #   steps:
+  #     - name: Check out code
+  #       uses: actions/checkout@v3
+
+  #     - name: Calculate environment variables
+  #       shell: sh
+  #       run: echo "SHORT_SHA=`echo ${{ github.event.pull_request.head.sha }} | cut -c1-7`" >> $GITHUB_ENV
+
+  #     - name: Login to GCP
+  #       id: gcloud
+  #       uses: elgohr/gcloud-login-action@v1 #TODO - v2 is bugged, unable to get outputs
+  #       with:
+  #         account_key: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+  #     - name: Build and push container image
+  #       uses: elgohr/Publish-Docker-Github-Action@v5
+  #       with:
+  #         workdir: "ct-app"
+  #         dockerfile: "./Dockerfile"
+  #         name: ${{ secrets.GOOGLE_PROJECT }}/${{ secrets.GOOGLE_REPOSITORY }}/cover-traffic
+  #         registry: ${{ secrets.GOOGLE_REGION }}-docker.pkg.dev
+  #         username: ${{ steps.gcloud.outputs.username }}
+  #         password: ${{ steps.gcloud.outputs.password }}
+  #         tags: "${{ env.SHORT_SHA }}"
+
+
+  ausias:
+    name: Ausias
     timeout-minutes: 10
     runs-on: ubuntu-latest
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up python 3.9
-        uses: actions/setup-python@v4
+      - name: Set up Google Cloud Credentials
+        id: auth
+        uses: google-github-actions/auth@v1
         with:
-          python-version: 3.9
+          token_format: "access_token"
+          credentials_json: ${{ secrets.GOOGLE_HOPRASSOCIATION_CREDENTIALS_REGISTRY }}
 
-      - name: Install dependencies
-        working-directory: ct-app
-        run: |
-          python -m pip install --upgrade pip
-          pip install ruff pytest -r requirements.txt
-
-      - name: Lint with ruff
-        working-directory: ct-app
-        run: |
-          # default set of ruff rules with GitHub Annotations
-          ruff --output-format=github --ignore E501 --target-version=py39 .
-
-      - name: Test with pytest
-        working-directory: ct-app
-        run: |
-          pytest test
-
-  image:
-    name: Build and push container image
-    timeout-minutes: 10
-    runs-on: ubuntu-latest
-
-    needs:
-      - test
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Calculate environment variables
-        shell: sh
-        run: echo "SHORT_SHA=`echo ${{ github.event.pull_request.head.sha }} | cut -c1-7`" >> $GITHUB_ENV
-
-      - name: Login to GCP
-        id: gcloud
-        uses: elgohr/gcloud-login-action@v1 #TODO - v2 is bugged, unable to get outputs
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
         with:
-          account_key: ${{ secrets.GOOGLE_CREDENTIALS }}
+          project_id: ${{ secrets.GOOGLE_HOPRASSOCIATION_PROJECT }}
+          install_components: beta
 
-      - name: Build and push container image
-        uses: elgohr/Publish-Docker-Github-Action@v5
+      - name: Login Google Container Registry
+        uses: docker/login-action@v3
         with:
-          workdir: "ct-app"
-          dockerfile: "./Dockerfile"
-          name: ${{ secrets.GOOGLE_PROJECT }}/${{ secrets.GOOGLE_REPOSITORY }}/cover-traffic
-          registry: ${{ secrets.GOOGLE_REGION }}-docker.pkg.dev
-          username: ${{ steps.gcloud.outputs.username }}
-          password: ${{ steps.gcloud.outputs.password }}
-          tags: "${{ env.SHORT_SHA }}"
+          registry: europe-west3-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - name: Apply tag to GCP artifact
+        run: |
+          docker_registry=${{ secrets.GOOGLE_REGION }}-docker.pkg.dev
+          image=${{ secrets.GOOGLE_PROJECT }}/${{ secrets.GOOGLE_REPOSITORY }}/cover-traffic
+          gcloud artifacts docker tags add ${docker_registry}/${image}:latest ${docker_registry}/${image}:ausias
