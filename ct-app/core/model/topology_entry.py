@@ -19,6 +19,6 @@ class TopologyEntry:
         )
 
     def to_peer(self) -> Peer:
-        peer = Peer(self.peer_id, self.node_address)
+        peer = Peer(self.peer_id, self.node_address, "v0.0.0")
         peer.channel_balance = self.channels_balance
         return peer
