@@ -342,6 +342,14 @@ class CTCore(Base):
                 self.params.subgraph.wxhopr_txs_url, {"query": query}
             )
 
+            if not response:
+                self.warning("No response from subgraph.")
+                break
+
+            if "data" not in response:
+                self.warning("No data in response from subgraph.")
+                break
+
             transactions.extend(response["data"]["transactions"])
 
         total_funding = sum([float(tx["amount"]) for tx in transactions])
