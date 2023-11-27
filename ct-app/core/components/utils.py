@@ -87,7 +87,7 @@ class Utils:
 
             peer.safe_address = subgraph_entry.safe_address
             peer.safe_balance = subgraph_entry.wxHoprBalance
-            peer.safe_allowance = subgraph_entry.safe_allowance
+            peer.safe_allowance = int(subgraph_entry.safe_allowance)
 
             if peer.complete and peer.address in network_addresses:
                 merged_result.append(peer)
