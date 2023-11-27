@@ -58,8 +58,6 @@ TOTAL_CHANNEL_FUNDS = Gauge(
 
 
 class Node(Base):
-    flag_prefix = "NODE_"
-
     def __init__(self, url: str, key: str):
         super().__init__()
 
