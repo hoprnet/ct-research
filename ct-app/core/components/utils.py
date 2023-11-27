@@ -87,10 +87,11 @@ class Utils:
             if len(entries) > 0:
                 subgraph_entry: SubgraphEntry = entries[0]
             else:
-                subgraph_entry = SubgraphEntry(None, None, None)
+                subgraph_entry = SubgraphEntry(None, None, None, None)
 
             peer.safe_address = subgraph_entry.safe_address
             peer.safe_balance = subgraph_entry.wxHoprBalance
+            peer.safe_allowance = float(subgraph_entry.safe_allowance)
 
             if peer.complete and peer.address in network_addresses:
                 merged_result.append(peer)
@@ -214,6 +215,10 @@ class Utils:
     @classmethod
     def generateFilename(cls, prefix: str, foldername: str, extension: str = "csv"):
         timestamp = time.strftime("%Y%m%d%H%M%S")
+
+        if extension.startswith("."):
+            extension = extension[1:]
+
         filename = f"{prefix}_{timestamp}.{extension}"
         return os.path.join(foldername, filename)
 

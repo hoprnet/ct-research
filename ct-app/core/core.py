@@ -178,6 +178,7 @@ class Core(Base):
 
             safes.extend(response["data"]["safes"])
 
+            print(f"{response['data']['safes']=}")
             if len(response["data"]["safes"]) >= self.params.subgraph.pagination_size:
                 skip += self.params.subgraph.pagination_size
             else:
@@ -241,8 +242,18 @@ class Core(Base):
         Utils.allowManyNodePerSafe(eligibles)
         self.debug(f"Allowed many nodes per safe ({len(eligibles)} entries).")
 
+        print(f"{self.params.economic_model.min_safe_allowance=}")
+        low_allowance_addresses = [
+            peer.address
+            for peer in eligibles
+            if peer.safe_allowance < self.params.economic_model.min_safe_allowance
+        ]
+        excluded = Utils.excludeElements(eligibles, low_allowance_addresses)
+        self.debug(f"Excluded nodes with low safe allowance ({len(excluded)} entries).")
+
         excluded = Utils.excludeElements(eligibles, self.network_nodes_addresses)
         self.debug(f"Excluded network nodes ({len(excluded)} entries).")
+
         self.debug(f"Eligible nodes ({len(eligibles)} entries).")
 
         model = EconomicModel.fromGCPFile(
@@ -341,6 +352,14 @@ class Core(Base):
             _, response = await Utils.httpPOST(
                 self.params.subgraph.wxhopr_txs_url, {"query": query}
             )
+
+            if not response:
+                self.warning("No response from subgraph.")
+                break
+
+            if "data" not in response:
+                self.warning("No data in response from subgraph.")
+                break
 
             transactions.extend(response["data"]["transactions"])
 

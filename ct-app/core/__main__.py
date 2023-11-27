@@ -14,8 +14,13 @@ def main():
     params = Parameters()(
         "DISTRIBUTION_", "SUBGRAPH_", "GCP_", "ECONOMIC_MODEL_", "CHANNEL_", "RABBITMQ_"
     )
+    
+    test_lines = [["header"], ["value"]]
+    filename = Utils.generateFilename("", "startup", "csv")
+    Utils.stringArrayToGCP(params.gcp.bucket, filename, test_lines)
 
-    instance = Core()
+    instance = CTCore()
+
     instance.nodes = Node.fromAddressListAndKey(
         *Utils.nodesAddresses("NODE_ADDRESS_", "NODE_KEY")
     )

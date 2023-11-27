@@ -8,6 +8,7 @@ class Peer:
 
         self.safe_address = None
         self.safe_balance = None
+        self.safe_allowance = None
 
         self._safe_address_count = None
 
@@ -126,6 +127,7 @@ class Peer:
                 self.channel_balance,
                 self.safe_address,
                 self.safe_balance,
+                self.safe_allowance,
             ]
         )
 
