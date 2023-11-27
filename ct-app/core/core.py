@@ -241,8 +241,17 @@ class CTCore(Base):
         Utils.allowManyNodePerSafe(eligibles)
         self.debug(f"Allowed many nodes per safe ({len(eligibles)} entries).")
 
+        low_allowance_addresses = [
+            peer.address
+            for peer in eligibles
+            if peer.safe_allowance < self.params.economic_model.min_safe_allowance
+        ]
+        excluded = Utils.excludeElements(eligibles, low_allowance_addresses)
+        self.debug(f"Excluded nodes with low safe allowance ({len(excluded)} entries).")
+
         excluded = Utils.excludeElements(eligibles, self.network_nodes_addresses)
         self.debug(f"Excluded network nodes ({len(excluded)} entries).")
+
         self.debug(f"Eligible nodes ({len(eligibles)} entries).")
 
         model = EconomicModel.fromGCPFile(
