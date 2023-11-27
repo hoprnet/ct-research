@@ -83,7 +83,7 @@ class Utils:
             if len(entries) > 0:
                 subgraph_entry: SubgraphEntry = entries[0]
             else:
-                subgraph_entry = SubgraphEntry(None, None, None)
+                subgraph_entry = SubgraphEntry(None, None, None, None)
 
             peer.safe_address = subgraph_entry.safe_address
             peer.safe_balance = subgraph_entry.wxHoprBalance
