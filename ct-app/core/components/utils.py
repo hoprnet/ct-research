@@ -34,6 +34,10 @@ class Utils:
         return dict(sorted(var_dict.items()))
 
     @classmethod
+    def envvarExists(cls, var_name: str) -> bool:
+        return var_name in environ
+
+    @classmethod
     def nodesAddresses(cls, address_prefix: str, keyenv: str) -> tuple[list[str], str]:
         addresses = Utils.envvarWithPrefix(address_prefix).values()
         key = Utils.envvar(keyenv)
