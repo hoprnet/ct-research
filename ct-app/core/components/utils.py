@@ -211,6 +211,10 @@ class Utils:
     @classmethod
     def generateFilename(cls, prefix: str, foldername: str, extension: str = "csv"):
         timestamp = time.strftime("%Y%m%d%H%M%S")
+
+        if extension.startswith("."):
+            extension = extension[1:]
+
         filename = f"{prefix}_{timestamp}.{extension}"
         return os.path.join(foldername, filename)
 
