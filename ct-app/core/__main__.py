@@ -42,7 +42,9 @@ def main():
 
 if __name__ == "__main__":
     result = subprocess.run(
-        "sh ./get_params.sh ./core/".split(), capture_output=True, text=True
+        "sh ./scripts/list_required_parameters.sh ./core/".split(),
+        capture_output=True,
+        text=True,
     ).stdout
 
     all_set_flag = True
