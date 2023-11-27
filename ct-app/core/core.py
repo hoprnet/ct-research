@@ -159,14 +159,19 @@ class CTCore(Base):
 
         while True:
             query = self.params.subgraph.safes_balance_query
-            query = query.replace("$first", f"{self.params.subgraph.pagination_size}")
-            query = query.replace("$skip", f"{skip}")
+            query = query.replace("valfirst", f"{self.params.subgraph.pagination_size}")
+            query = query.replace("valskip", f"{skip}")
+
+            self.info(f"{self.params.subgraph.safes_balance_query}")
+            self.info(f"{query}")
 
             _, response = await Utils.httpPOST(
                 self.subgraph_safes_balance_url(self.safes_balance_subgraph_type),
                 {"query": query},
             )
             SUBGRAPH_CALLS.labels(self.safes_balance_subgraph_type.value).inc()
+
+            self.info(f"{response}")
 
             if not response:
                 self.warning("No response from subgraph.")
@@ -344,8 +349,8 @@ class CTCore(Base):
                 continue
 
             query: str = self.params.subgraph.wxhopr_txs_query
-            query = query.replace("$from", f'"{from_address}"')
-            query = query.replace("$to", f'"{to_address}"')
+            query = query.replace("valfrom", f'"{from_address}"')
+            query = query.replace("valto", f'"{to_address}"')
 
             _, response = await Utils.httpPOST(
                 self.params.subgraph.wxhopr_txs_url, {"query": query}
