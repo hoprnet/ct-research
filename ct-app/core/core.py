@@ -162,11 +162,16 @@ class CTCore(Base):
             query = query.replace("$first", f"{self.params.subgraph.pagination_size}")
             query = query.replace("$skip", f"{skip}")
 
+            self.info(f"{self.params.subgraph.safes_balance_query}")
+            self.info(f"{query}")
+
             _, response = await Utils.httpPOST(
                 self.subgraph_safes_balance_url(self.safes_balance_subgraph_type),
                 {"query": query},
             )
             SUBGRAPH_CALLS.labels(self.safes_balance_subgraph_type.value).inc()
+
+            self.info(f"{response}")
 
             if not response:
                 self.warning("No response from subgraph.")
