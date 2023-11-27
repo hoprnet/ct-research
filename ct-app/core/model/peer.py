@@ -1,5 +1,4 @@
 from packaging.version import Version
-from packaging.version import parse as parse_version
 
 from .address import Address
 
@@ -7,7 +6,7 @@ from .address import Address
 class Peer:
     def __init__(self, id: str, address: str, version: str):
         self.address = Address(id, address)
-        self.version = parse_version(version)
+        self.version = version
         self.channel_balance = None
 
         self.safe_address = None
@@ -20,9 +19,20 @@ class Peer:
 
     def version_is_old(self, min_version: str or Version) -> bool:
         if isinstance(min_version, str):
-            min_version = parse_version(min_version)
+            min_version = Version(min_version)
 
         return self.version < min_version
+
+    @property
+    def version(self) -> Version:
+        return self._version
+
+    @version.setter
+    def version(self, value: str or Version):
+        if isinstance(value, str):
+            value = Version(value)
+
+        self._version = value
 
     @property
     def node_address(self) -> str:
