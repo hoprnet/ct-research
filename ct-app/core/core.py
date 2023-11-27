@@ -162,16 +162,11 @@ class CTCore(Base):
             query = query.replace("valfirst", f"{self.params.subgraph.pagination_size}")
             query = query.replace("valskip", f"{skip}")
 
-            self.info(f"{self.params.subgraph.safes_balance_query}")
-            self.info(f"{query}")
-
             _, response = await Utils.httpPOST(
                 self.subgraph_safes_balance_url(self.safes_balance_subgraph_type),
                 {"query": query},
             )
             SUBGRAPH_CALLS.labels(self.safes_balance_subgraph_type.value).inc()
-
-            self.info(f"{response}")
 
             if not response:
                 self.warning("No response from subgraph.")
@@ -183,6 +178,7 @@ class CTCore(Base):
 
             safes.extend(response["data"]["safes"])
 
+            print(f"{response['data']['safes']=}")
             if len(response["data"]["safes"]) >= self.params.subgraph.pagination_size:
                 skip += self.params.subgraph.pagination_size
             else:
@@ -246,6 +242,7 @@ class CTCore(Base):
         Utils.allowManyNodePerSafe(eligibles)
         self.debug(f"Allowed many nodes per safe ({len(eligibles)} entries).")
 
+        print(f"{self.params.economic_model.min_safe_allowance=}")
         low_allowance_addresses = [
             peer.address
             for peer in eligibles
