@@ -58,11 +58,11 @@ async def test_flagguard(foo_class: FooClass):
     # delete flag cache so that new flags are retrieved from env
     Flags._cache_flags = None
 
-    os.environ["FLAG_FOO_FOO_FLAGGUARD_FUNC"] = "1"
+    os.environ["FLAG_FOOCLASS_FOO_FLAGGUARD_FUNC"] = "1"
     res = await foo_class.foo_flagguard_func()
     assert res is True
 
-    del os.environ["FLAG_FOO_FOO_FLAGGUARD_FUNC"]
+    del os.environ["FLAG_FOOCLASS_FOO_FLAGGUARD_FUNC"]
 
 
 @pytest.mark.asyncio
@@ -73,7 +73,7 @@ async def test_formalin(foo_class: FooClass):
     # # # # # # # # # # # # # # # # # # # #
 
     # should run only once
-    os.environ["FLAG_FOO_FOO_FORMALIN_FUNC"] = "0"
+    os.environ["FLAG_FOOCLASS_FOO_FORMALIN_FUNC"] = "0"
 
     foo_class.started = True
     asyncio.create_task(foo_class.foo_formalin_func())
@@ -83,7 +83,7 @@ async def test_formalin(foo_class: FooClass):
 
     assert foo_class.counter == 1  # counter increased only once
 
-    del os.environ["FLAG_FOO_FOO_FORMALIN_FUNC"]
+    del os.environ["FLAG_FOOCLASS_FOO_FORMALIN_FUNC"]
 
     # reset flag cache and instance counter
     Flags._cache_flags = None
@@ -91,7 +91,7 @@ async def test_formalin(foo_class: FooClass):
     # # # # # # # # # # # # # # # # # # # #
 
     # should run twice (every 0.5s in 1.1s)
-    os.environ["FLAG_FOO_FOO_FORMALIN_FUNC"] = "0.5"
+    os.environ["FLAG_FOOCLASS_FOO_FORMALIN_FUNC"] = "0.5"
 
     foo_class.started = True
     asyncio.create_task(foo_class.foo_formalin_func())
@@ -101,4 +101,4 @@ async def test_formalin(foo_class: FooClass):
 
     assert foo_class.counter == 2  # counter increased twice
 
-    del os.environ["FLAG_FOO_FOO_FORMALIN_FUNC"]
+    del os.environ["FLAG_FOOCLASS_FOO_FORMALIN_FUNC"]

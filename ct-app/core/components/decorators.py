@@ -28,7 +28,7 @@ def flagguard(func):
 
     @functools.wraps(func)
     async def wrapper(self, *args, **kwargs):
-        flags = Flags.getEnvironmentFlags(self.flag_prefix)
+        flags = Flags.getEnvironmentFlags(self.class_prefix())
 
         if func.__name__ not in flags:
             self.error(f"Feature `{func.__name__}` not yet available")
