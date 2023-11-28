@@ -1,5 +1,4 @@
 import asyncio
-import subprocess
 from signal import SIGINT, SIGTERM
 
 from prometheus_client import start_http_server
@@ -46,23 +45,5 @@ def main():
 
 
 if __name__ == "__main__":
-    result = subprocess.run(
-        "sh ./scripts/list_required_parameters.sh ./core/".split(),
-        capture_output=True,
-        text=True,
-    ).stdout
-
-    all_set_flag = True
-    for var in result.splitlines():
-        exists = Utils.envvarExists(var)
-        all_set_flag *= exists
-
-        # print var with a leading check mark if it exists or red X (emoji) if it doesn't
-        print(f"{'✅' if exists else '❌'} {var}")
-
-    if all_set_flag:
+    if Utils.checkRequiredEnvVar("core"):
         main()
-    else:
-        print("Some required environment variables are missing !")
-
-# TODO Replace prints by logs
