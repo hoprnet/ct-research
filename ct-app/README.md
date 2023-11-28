@@ -2,7 +2,7 @@
 
 This folder contains the ct-app.
 
-The goal of the ct-app is to distribute wxHOPR token through 1 HOP messages in the monte rosa network. The ct-app is responsible for replacing staking rewards users earn in the current staking season beyond its discontinuation.
+The goal of the ct-app is to distribute wxHOPR token through 1 HOP messages in the Dufour network. The ct-app is responsible for replacing staking rewards users earn in the current staking season beyond its discontinuation.
 
 ## Development Requirements
 
@@ -71,7 +71,7 @@ Successfully installed black-23.3.0 ...
 
 **Notice**: this last step requires that the local development cluster is running.
 
-## How to install and run a local development cluster on Ubuntu
+## (Outdated) How to install and run a local development cluster on Ubuntu
 
 HOPR uses a local development cluster called `Pluto` which allows you to interact with a fully interconnected cluster of HOPR nodes on your local machine.
 
@@ -114,79 +114,112 @@ To execute any of the modules you need to:
 pip install -r requirements.txt
 ```
 
-#### Comments
-- ```python -m <module> --help``` provide a descrition of each parameter.
-- The ```plot-folder``` is the place where all the generated plots are stored. It has a default value that is ```.```. It is highly recommended to specify a different folder. At runtime, the specified folder will be created if necessary.
 
-### Configuration of Parameters
-To run the individual modules of the app, each of them requires a different set of parameters to run. To check which parameters are required for each module, run the following command:
+### Execute the app
 
-```python
-python -m <module> --help
-```
+The app is splitted into 3 components: `ct-core`, `postman` and `namstop`.
 
-#### Aggregator
-parameter | description
---- | ---
-`--module`  | name of the module
-`--host`    | host address for the web server
-`--port`    | exposed port for the web server
-`--db`      | name of the database to store metrics to
-`--dbhost`  | host address of the database
-`--dbuser`  | database connection username
-`--dbpass`  | database connection password
-`--dbport`  | database opened port
 
-```bash
-sh ./run.sh --module aggregator --host <host> --port <port> --db <dbname> --dbhost <dbhost> --dbuser <dbuser> --dbpass <dbpass> --dbport <dbport>
-```
+#### ct-core
+It is the heart of the app. Using multiple hoprd nodes, it observes the network, retrieve the peers connected, compute their rewards, and schedule the reward distribution.
 
-#### Aggregator Trigger
-parameter | description
---- | ---
-`--module`  | name of the module
-`--host`    | host address of the aggregator
-`--port`    | exposed port of the aggregator
-`--route`   | route to trigger 
-```bash
-sh ./run.sh --module aggtrigger --host <host> --port <port> --route <route>
-```
+To execute the module, create a bash script to specify a bunch of environment variables. The required parameters are the following:
 
-#### Economic Handler
-parameter | description
---- | ---
-`--module`     | name of the module
-`--apihost`    | host address of the node to connect to
-`--apiport`    | exposed port of the node to connect to
-`--key`        | connection key for the node
-`--rchpnodes`  | endpoint to retrieve the RCPh nodes IDs
-```bash
-sh ./run.sh --module economic_handler --apihost <apihost> --apikey <apikey> --port <port> --rcphnodes <rcphnodes>
-```
+Parameter | Recommanded value (staging) | Description
+--|--|--
+`DISTRIBUTION_MIN_ELIGIBLE_PEERS` | `5` | Minimum number of eligible peers to distribute rewards
+`GCP_FILE_PREFIX` | `"expected_reward` | File prefix for GCP distribution list storage
+`GCP_FOLDER` | `staging` | Folder on GCP where to store distribution list
+`GCP_BUCKET` | `ct-platform-ct` |
+`ECONOMIC_MODEL_FILENAME` | `parameters-staging.json` | Name of parameter file on staging (in folder `./assets/`)
+`ECONOMIC_MODEL_MIN_SAFE_ALLOWANCE` | `0.0001` | Minimum safe allowance to be eligible
+`PEER_MIN_VERSION` | `"2.0.0"` | Minimum node version to be eligible
+`CHANNEL_MIN_BALANCE` | `0.05` | Threshold to trigger channel funding 
+`CHANNEL_FUNDING_AMOUNT` | `0.2` | Amount to fund a channel with
+`CHANNEL_MAX_AGE_SECONDS` | `30` | If peer is not seen after this delay, its channel gets closed
+`RABBITMQ_TASK_NAME` | `fake_task` | Task to create when distributing rewards
+`RABBITMQ_PROJECT_NAME` | `ct-app` | Name of the RabbitMQ project
+`RABBITMQ_HOST` | (check Bitwarden) | 
+`RABBITMQ_PASSWORD` | (check Bitwarden) | 
+`RABBITMQ_USERNAME` | (check Bitwarden) | 
+`RABBITMQ_VIRTUALHOST` | (check Bitwarden) | 
+`SUBGRAPH_PAGINATION_SIZE` | `1000` | 
+`SUBGRAPH_SAFES_BALANCE_QUERY` |  | Query to `SUBGRAPH_SAFES_BALANCE_URL(_BACKUP)` to get safes balances and allowances
+`SUBGRAPH_WXHOPR_TXS_QUERY` |  |  Query to `SUBGRAPH_WXHOPR_TXS_URL` to get list of incoming transactions from `SUBGRAPH_FROM_ADDRESS`
+`SUBGRAPH_FROM_ADDRESS` | (COMM Safe) | Safe from which funding to ct node come from 
+`SUBGRAPH_WXHOPR_TXS_URL` | (`wxhoprtransactions` (de)centralized subgraph) | 
+`SUBGRAPH_SAFES_BALANCE_URL` | (`hopr-nodes-dufour` decentralized subgraph) | 
+`SUBGRAPH_SAFES_BALANCE_URL_BACKUP` | (`hopr-nodes-dufour` centralized subgraph) | 
+`NODE_ADDRESS_X` (multiple, min. 2) | (check Bitwarden) |
+`NODE_KEY` | (check Bitwarden) | 
 
-#### Netwatcher
-parameter | description
---- | ---
-`--module`  | name of the module
-`--host`    | host address of the node to connect to
-`--port`    | exposed port of the node to connect to
-`--key`     | connection key for the node
-`--aggpost` | POST endpoint to call for transmitting the peer list
-```bash
-sh ./run.sh --module netwatcher --host <host> --port <port> --key <key> --aggpost <aggpost>
-```
 
-### Execute the Program
 
-To execute the program, two methods are available:
-- run the python module directly:
-```python
-python -m <module> [PARAMETERS]
-```
-- run the `run.sh` script:
-```bash
-./run.sh --module <module> --port 13301 --host "127.0.0.1" --key "%th1s-IS-a-S3CR3T-ap1-PUSHING-b1ts-TO-you%" --rcphendpoint "rpch_endpoint"
-```
+Then there's a bunch of optional flags to enable features of the app
+Flag | Recommanded value (staging)
+--|--
+`FLAG_CORE_HEALTHCHECK` |--
+`FLAG_CORE_CHECK_SUBGRAPH_URLS` |--
+`FLAG_CORE_GET_FUNDINGS` |--
+`FLAG_CORE_AGGREGATE_PEERS` |--
+`FLAG_CORE_GET_TOPOLOGY_DATA` |--
+`FLAG_CORE_GET_SUBGRAPH_DATA` |--
+`FLAG_CORE_APPLY_ECONOMIC_MODEL` |--
+`FLAG_CORE_DISTRIBUTE_REWARDS` |--
+
+Flag | Recommanded (staging)
+--|--
+`FLAG_NODE_HEALTHCHECK` |--
+`FLAG_NODE_RETRIEVE_PEERS` |--
+`FLAG_NODE_RETRIEVE_OUTGOING_CHANNELS` |--
+`FLAG_NODE_RETRIEVE_INCOMING_CHANNELS` |--
+`FLAG_NODE_RETRIEVE_BALANCES` |--
+`FLAG_NODE_OPEN_CHANNELS` |--
+`FLAG_NODE_CLOSE_OLD_CHANNELS` |--
+`FLAG_NODE_CLOSE_PENDING_CHANNELS` |--
+`FLAG_NODE_FUND_CHANNELS` |--
+`FLAG_NODE_CLOSE_INCOMING_CHANNELS` (Not available) |--
+`FLAG_NODE_GET_TOTAL_CHANNEL_FUNDS` |--
+
+
+Those flags turn on the corresponding feature if the variable exist. Also, the value associated to the flag defines the delay between two executions of the methods.
+
+#### postman
+This module handles message distribution. It relies on a bunch of parameters:
+
+Parameter | Recommanded value (staging) | Description
+--|--|--
+`PARAM_BATCH_SIZE` | `50` | 
+`PARAM_DELAY_BETWEEN_TWO_MESSAGES` | `0.25` | Delay between two messages
+`PARAM_MESSAGE_DELIVERY_TIMEOUT` | `10` | Delay between two batches
+`PARAM_MAX_ATTEMPTS` | `4` | Maximum number of retries before timing out
+`RABBITMQ_PROJECT_NAME` | `ct-app` | Name of the RabbitMQ project
+`RABBITMQ_HOST` | (check Bitwarden) | 
+`RABBITMQ_PASSWORD` | (check Bitwarden) | 
+`RABBITMQ_USERNAME` | (check Bitwarden) | 
+`RABBITMQ_VIRTUALHOST` | (check Bitwarden) | 
+`PGHOST` | (from gcloud) |
+`PGPORT` | `5432` |
+`PGUSER` | `ctdapp` |
+`PGPASSWORD` | (from gcloud) |
+`PGDATABASE` | `ctdapp` |
+`PGSSLCERT` |  | Path to the SSL user certificate
+`PGSSLKEY` |  | Path to the SSL user key
+`PGSSLROOTCERT` |  | Path to the SSL root certificate
+`PGSSLMODE` | `verify-ca` | 
+`NODE_ADDRESS_X` (multiple, min. 2) | (check Bitwarden) |
+`NODE_KEY` | (check Bitwarden) | 
+
+#### namtsop (deprecated)
+This module handles db storing after distribution. It will be removed in future version, integrated directly in the `postman`. It relies on a bunch of parameters:
+
+Parameter | Recommanded value (staging) | Description
+--|--|--
+`RABBITMQ_PROJECT_NAME` | `ct-app` | Name of the RabbitMQ project
+`RABBITMQ_HOST` | (check Bitwarden) | 
+`RABBITMQ_PASSWORD` | (check Bitwarden) | 
+`RABBITMQ_USERNAME` | (check Bitwarden) | 
+`RABBITMQ_VIRTUALHOST` | (check Bitwarden) | 
 
 ### Logging
 This program logs to STDOUT. The log level is set to INFO by default.
