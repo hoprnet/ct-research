@@ -66,7 +66,7 @@ Successfully installed black-23.3.0 ...
 
 10. Validate that everything is running correctly by launching the test cases. Its required to run a pluto cluster (see below) for the tests to pass. The test for `db_connection.py` are excluded as they require a local postgreSQL database. 
 ```
-(env) $ pytest -k "not db_connection.py"
+(env) $ pytest test
 ```
 
 **Notice**: this last step requires that the local development cluster is running.
@@ -117,7 +117,7 @@ pip install -r requirements.txt
 
 ### Execute the app
 
-The app is splitted into 3 components: `ct-core`, `postman` and `namstop`.
+The app is splitted into 2 components: `ct-core` and `postman`.
 
 
 #### ct-core
@@ -128,12 +128,12 @@ To execute the module, create a bash script to specify a bunch of environment va
 Parameter | Recommanded value (staging) | Description
 --|--|--
 `DISTRIBUTION_MIN_ELIGIBLE_PEERS` | `5` | Minimum number of eligible peers to distribute rewards
-`GCP_FILE_PREFIX` | `"expected_reward` | File prefix for GCP distribution list storage
+`GCP_FILE_PREFIX` | `expected_reward` | File prefix for GCP distribution list storage
 `GCP_FOLDER` | `staging` | Folder on GCP where to store distribution list
 `GCP_BUCKET` | `ct-platform-ct` |
 `ECONOMIC_MODEL_FILENAME` | `parameters-staging.json` | Name of parameter file on staging (in folder `./assets/`)
 `ECONOMIC_MODEL_MIN_SAFE_ALLOWANCE` | `0.0001` | Minimum safe allowance to be eligible
-`PEER_MIN_VERSION` | `"2.0.0"` | Minimum node version to be eligible
+`PEER_MIN_VERSION` | `2.0.0` | Minimum node version to be eligible
 `CHANNEL_MIN_BALANCE` | `0.05` | Threshold to trigger channel funding 
 `CHANNEL_FUNDING_AMOUNT` | `0.2` | Amount to fund a channel with
 `CHANNEL_MAX_AGE_SECONDS` | `30` | If peer is not seen after this delay, its channel gets closed
