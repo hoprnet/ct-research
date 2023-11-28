@@ -210,18 +210,6 @@ Parameter | Recommanded value (staging) | Description
 `NODE_ADDRESS_X` (multiple, min. 2) | (check Bitwarden) |
 `NODE_KEY` | (check Bitwarden) | 
 
-#### namtsop (deprecated)
-This module handles db storing after distribution. It will be removed in future version, integrated directly in the `postman`. It relies on a bunch of parameters:
-
-Parameter | Recommanded value (staging) | Description
---|--|--
-`RABBITMQ_PROJECT_NAME` | `ct-app` | Name of the RabbitMQ project
-`RABBITMQ_HOST` | (check Bitwarden) | 
-`RABBITMQ_PASSWORD` | (check Bitwarden) | 
-`RABBITMQ_USERNAME` | (check Bitwarden) | 
-`RABBITMQ_VIRTUALHOST` | (check Bitwarden) | 
-
-### Logging
 This program logs to STDOUT. The log level is set to INFO by default.
 
 ## Contact
