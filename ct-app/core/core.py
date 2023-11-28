@@ -54,12 +54,6 @@ class CTCore(Base):
         self.subgraph_list = LockedVar("subgraph_list", list[SubgraphEntry]())
         self.eligible_list = LockedVar("eligible_list", list[Peer]())
 
-        self.app = Celery(
-            name=self.params.rabbitmq.project_name,
-            broker=f"amqp://{self.params.rabbitmq.username}:{self.params.rabbitmq.password}@{self.params.rabbitmq.host}/{self.params.rabbitmq.virtualhost}",
-        )
-        self.app.autodiscover_tasks(force=True)
-
         self._safes_balance_subgraph_type = (
             SubgraphType.NONE
         )  # trick to have the subgraph in use displayed in the terminal
@@ -320,9 +314,15 @@ class CTCore(Base):
         Utils.stringArrayToGCP(self.params.gcp.bucket, filename, lines)
 
         # create celery tasks
+        app = Celery(
+            name=self.params.rabbitmq.project_name,
+            broker=f"amqp://{self.params.rabbitmq.username}:{self.params.rabbitmq.password}@{self.params.rabbitmq.host}/{self.params.rabbitmq.virtualhost}",
+        )
+        app.autodiscover_tasks(force=True)
+
         for peer in peers:
             Utils.taskSendMessage(
-                self.app,
+                app,
                 peer.address.id,
                 peer.message_count_for_reward,
                 peer.economic_model.budget.ticket_price,
