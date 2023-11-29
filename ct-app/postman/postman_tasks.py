@@ -5,7 +5,7 @@ from datetime import datetime
 
 from billiard import current_process
 from celery import Celery
-from core.components.hoprd_api import MESSAGE_TAG, HoprdAPI
+from core.components.hoprd_api import HoprdAPI
 from core.components.parameters import Parameters
 from core.components.utils import Utils
 from database import DatabaseConnection, Reward
@@ -24,46 +24,6 @@ app = Celery(
     broker=f"amqp://{params.rabbitmq.username}:{params.rabbitmq.password}@{params.rabbitmq.host}/{params.rabbitmq.virtualhost}",
 )
 app.autodiscover_tasks(force=True)
-
-
-async def send_messages_in_batches(
-    api: HoprdAPI,
-    relayer: str,
-    expected_count: int,
-    recipient: str,
-    timestamp: float,
-    batch_size: int,
-):
-    relayed_count = 0
-    issued_count = 0
-
-    tag = MESSAGE_TAG + PMUtils.peerIDToInt(relayer)
-
-    batches = PMUtils.createBatches(expected_count, batch_size)
-
-    for batch_index, batch in enumerate(batches):
-        tasks = set[asyncio.Task]()
-        for it in range(batch):
-            global_index = it + batch_index * batch_size
-            message = f"{relayer}//{timestamp}-{global_index + 1}/{expected_count}"
-            sleep = it * params.param.delay_between_two_messages
-
-            tasks.add(
-                asyncio.create_task(
-                    PMUtils.delayedMessageSend(
-                        api, recipient, relayer, message, tag, sleep
-                    )
-                )
-            )
-
-        issued_count += sum(await asyncio.gather(*tasks))
-
-        await asyncio.sleep(params.param.message_delivery_timeout)
-
-        messages = await api.messages_pop_all(tag)
-        relayed_count += len(messages)
-
-    return relayed_count, issued_count
 
 
 @app.task(name="send_1_hop_message")
@@ -161,8 +121,15 @@ async def async_send_1_hop_message(
         log.error(f"Balance of {peer_id} doesn't allow to send any message")
         return TaskStatus.RETRIED, node_peer_id, (0, 0)
 
-    relayed, issued = await send_messages_in_batches(
-        api, peer_id, max_possible, node_peer_id, timestamp, params.param.batch_size
+    relayed, issued = await PMUtils.send_messages_in_batches(
+        api,
+        peer_id,
+        max_possible,
+        node_peer_id,
+        timestamp,
+        params.param.batch_size,
+        params.param.delay_between_two_messages,
+        params.param.message_delivery_timeout,
     )
 
     status = TaskStatus.SUCCESS if relayed == expected_count else TaskStatus.SPLITTED
