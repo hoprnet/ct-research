@@ -16,6 +16,8 @@ log.setLevel(logging.INFO)
 
 params = Parameters()("PARAM_", "RABBITMQ_")
 
+if not Utils.checkRequiredEnvVar("postman"):
+    exit(1)
 
 app = Celery(
     name=params.rabbitmq.project_name,

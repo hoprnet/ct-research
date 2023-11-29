@@ -3,12 +3,15 @@ from datetime import datetime
 
 from celery import Celery
 from core.components.parameters import Parameters
+from core.components.utils import Utils
 from database import DatabaseConnection, Reward
 
 log = logging.getLogger()
 
 params = Parameters()("RABBITMQ_")
 
+if not Utils.checkRequiredEnvVar("namtsop"):
+    exit(1)
 
 app = Celery(
     name=params.rabbitmq.project_name,
