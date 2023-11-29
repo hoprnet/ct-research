@@ -292,29 +292,3 @@ class Utils:
             args=(relayer_id, expected, ticket_price, timestamp, attempts),
             queue="send_messages",
         )
-
-    @classmethod
-    def taskStoreFeedback(
-        cls,
-        app: Celery,
-        relayer_id: str,
-        node_peer_id: str,
-        expected: int,
-        issued: float,
-        relayed: int,
-        send_status: str,
-        timestamp: float,
-    ):
-        app.send_task(
-            "feedback_task",
-            args=(
-                relayer_id,
-                node_peer_id,
-                expected,
-                issued,
-                relayed,
-                send_status,
-                timestamp,
-            ),
-            queue="feedback",
-        )

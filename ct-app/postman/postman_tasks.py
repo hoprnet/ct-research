@@ -1,12 +1,14 @@
 import asyncio
 import logging
 import time
+from datetime import datetime
 
 from billiard import current_process
 from celery import Celery
 from core.components.hoprd_api import MESSAGE_TAG, HoprdAPI
 from core.components.parameters import Parameters
 from core.components.utils import Utils
+from database import DatabaseConnection, Reward
 
 from .task_status import TaskStatus
 from .utils import Utils as PMUtils
@@ -87,7 +89,6 @@ def send_1_hop_message(
     if timestamp is None:
         timestamp = time.time()
 
-    feedback_status = TaskStatus.DEFAULT
     send_status, node_peer_id, (issued, relayed) = asyncio.run(
         async_send_1_hop_message(peer, expected, ticket_price, timestamp)
     )
@@ -103,23 +104,23 @@ def send_1_hop_message(
 
     # store results in database
     if send_status != TaskStatus.RETRIED:
-        try:
-            Utils.taskStoreFeedback(
-                app,
-                peer,
-                node_peer_id,
-                expected,
-                issued,
-                relayed,
-                send_status.value,
-                timestamp,
+        with DatabaseConnection() as session:
+            entry = Reward(
+                peer_id=peer,
+                node_address=node_peer_id,
+                expected_count=expected,
+                effective_count=relayed,
+                status=send_status.value,
+                timestamp=datetime.fromtimestamp(timestamp),
+                issued_count=issued,
             )
-        except Exception:
-            feedback_status = TaskStatus.FAILED
-        else:
-            feedback_status = TaskStatus.SUCCESS
 
-    return send_status, feedback_status
+            session.add(entry)
+            session.commit()
+
+            log.debug(f"Stored reward entry in database: {entry}")
+
+    return send_status
 
 
 async def async_send_1_hop_message(
