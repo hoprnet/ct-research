@@ -5,7 +5,7 @@ from prometheus_client import start_http_server
 
 from .components.parameters import Parameters
 from .components.utils import Utils
-from .core import CTCore
+from .core import Core
 from .node import Node
 
 
@@ -18,7 +18,8 @@ def main():
     filename = Utils.generateFilename("", "startup", "csv")
     Utils.stringArrayToGCP(params.gcp.bucket, filename, test_lines)
 
-    instance = CTCore()
+    instance = Core()
+
     instance.nodes = Node.fromAddressListAndKey(
         *Utils.nodesAddresses("NODE_ADDRESS_", "NODE_KEY")
     )
@@ -44,4 +45,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if Utils.checkRequiredEnvVar("core"):
+        main()

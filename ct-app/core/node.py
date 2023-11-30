@@ -58,8 +58,6 @@ TOTAL_CHANNEL_FUNDS = Gauge(
 
 
 class Node(Base):
-    flag_prefix = "NODE_"
-
     def __init__(self, url: str, key: str):
         super().__init__()
 
@@ -84,7 +82,7 @@ class Node(Base):
 
     @property
     def print_prefix(self):
-        return '.'.join(self.url.split("//")[-1].split(".")[:2])
+        return ".".join(self.url.split("//")[-1].split(".")[:2])
 
     async def _retrieve_address(self):
         address = await self.api.get_address("all")

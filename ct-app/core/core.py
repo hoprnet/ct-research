@@ -35,9 +35,7 @@ NEXT_DISTRIBUTION_EPOCH = Gauge("next_distribution_epoch", "Next distribution (e
 TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
 
 
-class CTCore(Base):
-    flag_prefix = "CORE_"
-
+class Core(Base):
     def __init__(self):
         super().__init__()
 
@@ -178,7 +176,6 @@ class CTCore(Base):
 
             safes.extend(response["data"]["safes"])
 
-            print(f"{response['data']['safes']=}")
             if len(response["data"]["safes"]) >= self.params.subgraph.pagination_size:
                 skip += self.params.subgraph.pagination_size
             else:
@@ -242,7 +239,6 @@ class CTCore(Base):
         Utils.allowManyNodePerSafe(eligibles)
         self.debug(f"Allowed many nodes per safe ({len(eligibles)} entries).")
 
-        print(f"{self.params.economic_model.min_safe_allowance=}")
         low_allowance_addresses = [
             peer.address
             for peer in eligibles

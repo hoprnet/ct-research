@@ -1,13 +1,16 @@
+from .baseclass import Base
 from .utils import Utils
 
 
-class Parameters:
+class Parameters(Base):
+    table = []
+
     def __init__(self):
-        pass
+        super().__init__()
 
     def __call__(self, *prefixes: str or list[str]):
         for prefix in prefixes:
-            subparams = self.__class__()
+            subparams = type(self)()
 
             subparams_name = prefix.lower()
             if subparams_name[-1] == "_":
