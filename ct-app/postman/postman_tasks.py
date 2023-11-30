@@ -165,7 +165,7 @@ async def async_send_1_hop_message(
         api, peer_id, max_possible, node_peer_id, timestamp, params.param.batch_size
     )
 
-    status = TaskStatus.SUCCESS if relayed == expected_count else TaskStatus.SPLITTED
+    status = TaskStatus.SPLITTED if relayed < expected_count else TaskStatus.SUCCESS
 
     log.info(
         f"From {node_peer_id} through {peer_id}: relayed {relayed}/{expected_count} (possible: {max_possible})"
