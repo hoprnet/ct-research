@@ -28,7 +28,7 @@ def flagguard(func):
 
     @functools.wraps(func)
     async def wrapper(self, *args, **kwargs):
-        flags = Flags.getEnvironmentFlags(self.flag_prefix)
+        flags = Flags.getEnvironmentFlags(self.class_prefix())
 
         if func.__name__ not in flags:
             self.error(f"Feature `{func.__name__}` not yet available")
@@ -48,7 +48,7 @@ def formalin(message: Optional[str] = None):
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(self, *args, **kwargs):
-            _delay = Flags.getEnvironmentFlagValue(func.__name__, self.flag_prefix)
+            _delay = Flags.getEnvironmentFlagValue(func.__name__, self.class_prefix())
 
             if _delay != 0:
                 self.debug(f"Running `{func.__name__}` every {_delay} seconds")

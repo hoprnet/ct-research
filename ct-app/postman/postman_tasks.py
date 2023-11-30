@@ -18,6 +18,8 @@ log.setLevel(logging.INFO)
 
 params = Parameters()("PARAM_", "RABBITMQ_")
 
+if not Utils.checkRequiredEnvVar("postman"):
+    exit(1)
 
 app = Celery(
     name=params.rabbitmq.project_name,
@@ -58,9 +60,10 @@ def send_1_hop_message(
     if attempts >= params.param.max_attempts:
         send_status = TaskStatus.TIMEOUT
 
-    if send_status in [TaskStatus.RETRIED, TaskStatus.SPLITTED]:
-        expected = expected - relayed
-        Utils.taskSendMessage(app, peer, expected, ticket_price, timestamp, attempts)
+    if send_status in [TaskStatus.RETRIED, TaskStatus.SPLIT]:
+        Utils.taskSendMessage(
+            app, peer, expected - relayed, ticket_price, timestamp, attempts
+        )
 
     # store results in database
     if send_status != TaskStatus.RETRIED:
@@ -132,7 +135,7 @@ async def async_send_1_hop_message(
         params.param.message_delivery_timeout,
     )
 
-    status = TaskStatus.SUCCESS if relayed == expected_count else TaskStatus.SPLITTED
+    status = TaskStatus.SPLIT if relayed < expected_count else TaskStatus.SUCCESS
 
     log.info(
         f"From {node_peer_id} through {peer_id}: relayed {relayed}/{expected_count} (possible: {max_possible})"

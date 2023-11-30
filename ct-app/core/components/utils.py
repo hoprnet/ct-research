@@ -1,6 +1,7 @@
 import csv
 import json
 import os
+import subprocess
 import time
 from datetime import datetime, timedelta
 from os import environ
@@ -16,8 +17,10 @@ from core.model.peer import Peer
 from core.model.subgraph_entry import SubgraphEntry
 from core.model.topology_entry import TopologyEntry
 
+from .baseclass import Base
 
-class Utils:
+
+class Utils(Base):
     @classmethod
     def envvar(cls, var_name: str, default: Any = None, type: type = str):
         if var_name in environ:
@@ -32,6 +35,28 @@ class Utils:
         }
 
         return dict(sorted(var_dict.items()))
+
+    @classmethod
+    def envvarExists(cls, var_name: str) -> bool:
+        return var_name in environ
+
+    @classmethod
+    def checkRequiredEnvVar(cls, folder: str):
+        result = subprocess.run(
+            f"sh ./scripts/list_required_parameters.sh {folder}".split(),
+            capture_output=True,
+            text=True,
+        ).stdout
+
+        all_set_flag = True
+        for var in result.splitlines():
+            exists = Utils.envvarExists(var)
+            all_set_flag *= exists
+
+            # print var with a leading check mark if it exists or red X (emoji) if it doesn't
+            cls().info(f"{'✅' if exists else '❌'} {var}")
+
+        return all_set_flag
 
     @classmethod
     def nodesAddresses(cls, address_prefix: str, keyenv: str) -> tuple[list[str], str]:

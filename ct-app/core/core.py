@@ -35,9 +35,7 @@ NEXT_DISTRIBUTION_EPOCH = Gauge("next_distribution_epoch", "Next distribution (e
 TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
 
 
-class CTCore(Base):
-    flag_prefix = "CORE_"
-
+class Core(Base):
     def __init__(self):
         super().__init__()
 
@@ -178,7 +176,6 @@ class CTCore(Base):
 
             safes.extend(response["data"]["safes"])
 
-            print(f"{response['data']['safes']=}")
             if len(response["data"]["safes"]) >= self.params.subgraph.pagination_size:
                 skip += self.params.subgraph.pagination_size
             else:
@@ -239,10 +236,19 @@ class CTCore(Base):
         eligibles = Utils.mergeTopologyPeersSubgraph(topology, peers, subgraph)
         self.debug(f"Merged topology and subgraph data ({len(eligibles)} entries).")
 
+        old_peer_addresses = [
+            peer.address
+            for peer in eligibles
+            if peer.version_is_old(self.params.peer.min_version)
+        ]
+        excluded = Utils.excludeElements(eligibles, old_peer_addresses)
+        self.debug(
+            f"Excluded peers running on old version (< {self.params.peer.min_version}) ({len(excluded)} entries)."
+        )
+
         Utils.allowManyNodePerSafe(eligibles)
         self.debug(f"Allowed many nodes per safe ({len(eligibles)} entries).")
 
-        print(f"{self.params.economic_model.min_safe_allowance=}")
         low_allowance_addresses = [
             peer.address
             for peer in eligibles

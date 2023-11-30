@@ -19,7 +19,7 @@ logs/
 htmlcov/
 foo*.*
 foo*/
-scripts/
-# run_*.sh
+run_*.sh
+
 .DS_Store
 */test_endurance_rules.yaml
