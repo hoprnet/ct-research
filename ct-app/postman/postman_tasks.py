@@ -98,8 +98,9 @@ def send_1_hop_message(
         send_status = TaskStatus.TIMEOUT
 
     if send_status in [TaskStatus.RETRIED, TaskStatus.SPLITTED]:
-        expected = expected - relayed
-        Utils.taskSendMessage(app, peer, expected, ticket_price, timestamp, attempts)
+        Utils.taskSendMessage(
+            app, peer, expected - relayed, ticket_price, timestamp, attempts
+        )
 
     # store results in database
     if send_status != TaskStatus.RETRIED:
