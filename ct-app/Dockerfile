@@ -6,7 +6,7 @@ WORKDIR /code
 
 # copy the current context to the working directory
 COPY . .
-chmod +x ./scripts/*
+RUN chmod +x ./scripts/*
 
 # update pip and install dependencies
 RUN pip install --upgrade --requirement requirements.txt
