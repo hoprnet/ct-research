@@ -2,7 +2,6 @@ import datetime
 import os
 
 import pytest
-
 from core.components.utils import Utils
 from core.model.address import Address
 from core.model.peer import Peer
@@ -64,10 +63,10 @@ def test_mergeTopologyPeersSubgraph():
 
 
 def test_allowManyNodePerSafe():
-    peer_1 = Peer("id_1", "address_1")
-    peer_2 = Peer("id_2", "address_2")
-    peer_3 = Peer("id_3", "address_3")
-    peer_4 = Peer("id_5", "address_4")
+    peer_1 = Peer("id_1", "address_1", "v1.0.0")
+    peer_2 = Peer("id_2", "address_2", "v1.1.0")
+    peer_3 = Peer("id_3", "address_3", "v1.0.2")
+    peer_4 = Peer("id_4", "address_4", "v1.0.0")
 
     peer_1.safe_address = "safe_address_1"
     peer_2.safe_address = "safe_address_2"
@@ -87,11 +86,11 @@ def test_allowManyNodePerSafe():
 
 def test_excludeElements():
     source_data = [
-        Peer("id_1", "address_1"),
-        Peer("id_2", "address_2"),
-        Peer("id_3", "address_3"),
-        Peer("id_4", "address_4"),
-        Peer("id_5", "address_5"),
+        Peer("id_1", "address_1", "v1.0.0"),
+        Peer("id_2", "address_2", "v1.1.0"),
+        Peer("id_3", "address_3", "v1.0.2"),
+        Peer("id_4", "address_4", "v1.0.0"),
+        Peer("id_5", "address_5", "v1.1.1"),
     ]
     blacklist = [Address("id_2", "address_2"), Address("id_4", "address_4")]
 
@@ -147,8 +146,10 @@ def test_nextDelayInSeconds():
 def test_aggregatePeerBalanceInChannels():
     pytest.skip("Not implemented")
 
+
 def test_taskSendMessage():
     pytest.skip("Not implemented")
+
 
 def test_taskStoreFeedback():
     pytest.skip("Not implemented")

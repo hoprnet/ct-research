@@ -11,7 +11,13 @@ from .node import Node
 
 def main():
     params = Parameters()(
-        "DISTRIBUTION_", "SUBGRAPH_", "GCP_", "ECONOMIC_MODEL_", "CHANNEL_", "RABBITMQ_"
+        "DISTRIBUTION_",
+        "SUBGRAPH_",
+        "GCP_",
+        "ECONOMIC_MODEL_",
+        "CHANNEL_",
+        "RABBITMQ_",
+        "PEER_",
     )
 
     test_lines = [["header"], ["value"]]
