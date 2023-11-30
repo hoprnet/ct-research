@@ -99,9 +99,10 @@ def send_1_hop_message(
     if attempts >= params.param.max_attempts:
         send_status = TaskStatus.TIMEOUT
 
-    if send_status in [TaskStatus.RETRIED, TaskStatus.SPLITTED]:
-        expected = expected - relayed
-        Utils.taskSendMessage(app, peer, expected, ticket_price, timestamp, attempts)
+    if send_status in [TaskStatus.RETRIED, TaskStatus.SPLIT]:
+        Utils.taskSendMessage(
+            app, peer, expected - relayed, ticket_price, timestamp, attempts
+        )
 
     # store results in database
     if send_status != TaskStatus.RETRIED:
@@ -166,7 +167,7 @@ async def async_send_1_hop_message(
         api, peer_id, max_possible, node_peer_id, timestamp, params.param.batch_size
     )
 
-    status = TaskStatus.SUCCESS if relayed == expected_count else TaskStatus.SPLITTED
+    status = TaskStatus.SPLIT if relayed < expected_count else TaskStatus.SUCCESS
 
     log.info(
         f"From {node_peer_id} through {peer_id}: relayed {relayed}/{expected_count} (possible: {max_possible})"

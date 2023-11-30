@@ -10,6 +10,6 @@ class TaskStatus(Enum):
     DEFAULT = "DEFAULT"
     SUCCESS = "SUCCESS"
     RETRIED = "RETRIED"
-    SPLITTED = "SPLITTED"
+    SPLIT = "SPLIT"
     TIMEOUT = "TIMEOUT"
     FAILED = "FAILED"
