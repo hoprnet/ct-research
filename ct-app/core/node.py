@@ -255,7 +255,7 @@ class Node(Base):
         for channel in low_balances:
             if channel.destination_peer_id in peer_ids:
                 ok = await self.api.fund_channel(
-                    channel.channel_id, self.params.channel.funding_amount
+                    channel.channel_id, self.params.channel.funding_amount*1e18
                 )
                 if ok:
                     self.debug(f"Funded channel {channel.channel_id}")
