@@ -245,7 +245,7 @@ class Node(Base):
         ]
 
         low_balances = [
-            c for c in out_opens if int(c.balance) <= self.params.channel.min_balance
+            c for c in out_opens if int(c.balance)/1e18 <= self.params.channel.min_balance
         ]
 
         self.debug(f"Low balance channels: {len(low_balances)}")
