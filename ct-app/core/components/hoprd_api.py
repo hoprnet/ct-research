@@ -116,7 +116,7 @@ class HoprdAPI(Base):
         :param: amount: str
         :return: bool
         """
-        body = ChannelidFundBody(amount=amount)
+        body = ChannelidFundBody(amount=str(amount))
         is_ok, _ = self.__call_api(
             ChannelsApi, "channels_fund_channel", channel_id, body=body
         )
