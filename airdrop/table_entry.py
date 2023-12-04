@@ -1,28 +1,20 @@
 class TableEntry:
     def __init__(self):
         self._peer_id = None
-        self._source_node_address = None
+        self._node_address = None
         self._channels_balance = None
-        self._node_peer_ids = None
         self._safe_address = None
         self._safe_balance = None
         self._total_balance = None
         self._safe_address_count = None
-        self._splitted_stake = None
-        self._trans_stake = None
-        self._prob = None
-        self._budget = None
-        self._budget_split_ratio = None
-        self._distribution_frequency = None
-        self._budget_period_in_sec = None
-        self._apy_pct = None
-        self._total_expected_reward = None
-        self._airdrop_expected_reward = None
-        self._protocol_exp_reward = None
-        self._protocol_exp_reward_per_dist = None
-        self._ticket_price = None
-        self._winning_prob = None
-        self._jobs = None
+        self._split_stake = None
+        self._transformed_stake = None
+        self._apr_percentage = None
+        self._expected_reward = None
+        self._airdrop_reward = None
+        self._protocol_reward = None
+        self._protocol_reward_per_distribution = None
+        self._message_count_for_reward = None
 
     @property
     def peer_id(self):
@@ -33,12 +25,12 @@ class TableEntry:
         self._peer_id = value
 
     @property
-    def source_node_address(self):
-        return self._source_node_address
+    def node_address(self):
+        return self._node_address
 
-    @source_node_address.setter
-    def source_node_address(self, value):
-        self._source_node_address = value
+    @node_address.setter
+    def node_address(self, value):
+        self._node_address = value
 
     @property
     def channels_balance(self):
@@ -89,20 +81,20 @@ class TableEntry:
         self._safe_address_count = value
 
     @property
-    def splitted_stake(self):
-        return float(self._splitted_stake)
+    def split_stake(self):
+        return float(self._split_stake)
 
-    @splitted_stake.setter
-    def splitted_stake(self, value):
-        self._splitted_stake = value
+    @split_stake.setter
+    def split_stake(self, value):
+        self._split_stake = value
 
     @property
-    def trans_stake(self):
-        return float(self._trans_stake)
+    def transformed_stake(self):
+        return float(self._transformed_stake)
 
-    @trans_stake.setter
-    def trans_stake(self, value):
-        self._trans_stake = value
+    @transformed_stake.setter
+    def transformed_stake(self, value):
+        self._transformed_stake = value
 
     @property
     def prob(self):
@@ -130,6 +122,8 @@ class TableEntry:
 
     @property
     def distribution_frequency(self):
+        if self._distribution_frequency is None:
+            return None
         return float(self._distribution_frequency)
 
     @distribution_frequency.setter
@@ -145,44 +139,46 @@ class TableEntry:
         self._budget_period_in_sec = value
 
     @property
-    def apy_pct(self):
-        return float(self._apy_pct)
+    def apr_percentage(self):
+        return float(self._apr_percentage)
 
-    @apy_pct.setter
-    def apy_pct(self, value):
-        self._apy_pct = value
-
-    @property
-    def total_expected_reward(self):
-        return float(self._total_expected_reward)
-
-    @total_expected_reward.setter
-    def total_expected_reward(self, value):
-        self._total_expected_reward = value
+    @apr_percentage.setter
+    def apr_percentage(self, value):
+        self._apr_percentage = value
 
     @property
-    def airdrop_expected_reward(self):
-        return float(self._airdrop_expected_reward)
+    def expected_reward(self):
+        if self._expected_reward is None:
+            return 0
+        return float(self._expected_reward)
 
-    @airdrop_expected_reward.setter
-    def airdrop_expected_reward(self, value):
-        self._airdrop_expected_reward = value
-
-    @property
-    def protocol_exp_reward(self):
-        return float(self._protocol_exp_reward)
-
-    @protocol_exp_reward.setter
-    def protocol_exp_reward(self, value):
-        self._protocol_exp_reward = value
+    @expected_reward.setter
+    def expected_reward(self, value):
+        self._expected_reward = value
 
     @property
-    def protocol_exp_reward_per_dist(self):
-        return float(self._protocol_exp_reward_per_dist)
+    def airdrop_reward(self):
+        return float(self._airdrop_reward)
 
-    @protocol_exp_reward_per_dist.setter
-    def protocol_exp_reward_per_dist(self, value):
-        self._protocol_exp_reward_per_dist = value
+    @airdrop_reward.setter
+    def airdrop_reward(self, value):
+        self._airdrop_reward = value
+
+    @property
+    def protocol_reward(self):
+        return float(self._protocol_reward)
+
+    @protocol_reward.setter
+    def protocol_reward(self, value):
+        self._protocol_reward = value
+
+    @property
+    def protocol_reward_per_distribution(self):
+        return float(self._protocol_reward_per_distribution)
+
+    @protocol_reward_per_distribution.setter
+    def protocol_reward_per_distribution(self, value):
+        self._protocol_reward_per_distribution = value
 
     @property
     def ticket_price(self):
@@ -201,16 +197,12 @@ class TableEntry:
         self._winning_prob = value
 
     @property
-    def jobs(self):
-        return float(self._jobs)
+    def message_count_for_reward(self):
+        return float(self._message_count_for_reward)
 
-    @jobs.setter
-    def jobs(self, value):
-        self._jobs = value
-
-    @property
-    def reward_per_dist(self):
-        return self.total_expected_reward / self.distribution_frequency
+    @message_count_for_reward.setter
+    def message_count_for_reward(self, value):
+        self._message_count_for_reward = value
 
     @classmethod
     def fromList(cls, headers, item):

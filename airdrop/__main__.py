@@ -17,13 +17,13 @@ def main(start: str, end: str, bucket: str, folder: str):
 
     # Get unique list of peers
     peer_rewards = list(
-        {RewardEntry(e.source_node_address, e.safe_address) for e in table_entries}
+        {RewardEntry(e.node_address, e.safe_address) for e in table_entries}
     )
 
     # Sum for each address the rewards_per_dist
     for entry in table_entries:
-        index = peer_rewards.index(RewardEntry(entry.source_node_address))
-        peer_rewards[index].reward += entry.reward_per_dist
+        index = peer_rewards.index(RewardEntry(entry.node_address))
+        peer_rewards[index].reward += entry.protocol_reward_per_distribution
 
     # to csv using prints
     print("node_address,safe_address,reward")
