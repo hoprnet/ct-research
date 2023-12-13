@@ -115,7 +115,7 @@ class Core(Base):
     async def check_subgraph_urls(self):
         data = {
             "query": self.params.subgraph.safes_balance_query,
-            "variables": {"first": 1, "skip": 0},
+            "variables": {"first": 5, "skip": 0},
         }
 
         for subgraph in SubgraphType.callables():
@@ -123,7 +123,7 @@ class Core(Base):
                 self.subgraph_safes_balance_url(subgraph), data
             )
 
-            if not response:
+            if not response or response.get("data", {}).get("safes", None) is None:
                 continue
 
             SUBGRAPH_CALLS.labels(subgraph.value).inc()
