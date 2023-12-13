@@ -113,14 +113,13 @@ class Core(Base):
     @flagguard
     @formalin("Checking subgraph URLs")
     async def check_subgraph_urls(self):
-        data = {
-            "query": self.params.subgraph.safes_balance_query,
-            "variables": {"first": 5, "skip": 0},
-        }
+        query: str = self.params.subgraph.safes_balance_query
+        query = query.replace("valfirst", "10")
+        query = query.replace("valskip", "0")
 
         for subgraph in SubgraphType.callables():
             _, response = await Utils.httpPOST(
-                self.subgraph_safes_balance_url(subgraph), data
+                self.subgraph_safes_balance_url(subgraph), {"query": query}
             )
 
             if not response or response.get("data", {}).get("safes", None) is None:
