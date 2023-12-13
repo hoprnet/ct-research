@@ -113,7 +113,7 @@ class Utils(Base):
             peer.safe_address = subgraph_entry.safe_address
             peer.safe_balance = subgraph_entry.wxHoprBalance
 
-            if subgraph_entry.safe_allowance:
+            if subgraph_entry.safe_allowance is not None:
                 peer.safe_allowance = float(subgraph_entry.safe_allowance)
             else:
                 peer.safe_allowance = None
