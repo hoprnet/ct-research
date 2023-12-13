@@ -66,7 +66,7 @@ class Utils(Base):
         return list(addresses), key
 
     @classmethod
-    async def httpPOST(cls, url, data):
+    async def httpPOST(cls, url, data) -> tuple[int, dict]:
         async def post(session: ClientSession, url: str, data: dict):
             async with session.post(url, json=data) as response:
                 status = response.status
@@ -112,7 +112,11 @@ class Utils(Base):
 
             peer.safe_address = subgraph_entry.safe_address
             peer.safe_balance = subgraph_entry.wxHoprBalance
-            peer.safe_allowance = float(subgraph_entry.safe_allowance)
+
+            if subgraph_entry.safe_allowance:
+                peer.safe_allowance = float(subgraph_entry.safe_allowance)
+            else:
+                peer.safe_allowance = None
 
             if peer.complete and peer.address in network_addresses:
                 merged_result.append(peer)
