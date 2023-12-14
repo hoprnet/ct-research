@@ -266,6 +266,7 @@ class Core(Base):
         )
         for peer in eligibles:
             peer.economic_model = model
+            peer.max_apr = self.params.distribution.max_apr_percentage
 
         self.debug("Assigned economic model to eligible nodes.")
 

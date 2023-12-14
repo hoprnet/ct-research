@@ -18,6 +18,8 @@ class Peer:
         self.economic_model = None
         self.reward_probability = None
 
+        self.max_apr = None
+
     def version_is_old(self, min_version: str or Version) -> bool:
         if isinstance(min_version, str):
             min_version = Version(min_version)
@@ -100,14 +102,30 @@ class Peer:
         if self.economic_model is None:
             raise ValueError("Economic model not set")
 
-        return self.expected_reward * (1 - self.economic_model.budget.s)
+        expected_reward = (
+            self.apr_percentage
+            / 100.0
+            * self.split_stake
+            * self.economic_model.budget.period
+            / (60 * 60 * 24 * 365)
+        )
+
+        return expected_reward * (1 - self.economic_model.budget.s)
 
     @property
     def protocol_reward(self):
         if self.economic_model is None:
             raise ValueError("Economic model not set")
 
-        return self.expected_reward * self.economic_model.budget.s
+        expected_reward = (
+            self.apr_percentage
+            / 100.0
+            * self.split_stake
+            * self.economic_model.budget.period
+            / (60 * 60 * 24 * 365)
+        )
+
+        return expected_reward * self.economic_model.budget.s
 
     @property
     def protocol_reward_per_distribution(self):
@@ -134,9 +152,11 @@ class Peer:
         seconds_in_year = 60 * 60 * 24 * 365
         period = self.economic_model.budget.period
 
-        return (
-            (self.expected_reward * (seconds_in_year / period)) / self.split_stake
-        ) * 100
+        apr = (
+            (self.expected_reward / self.split_stake) * (seconds_in_year / period) * 100
+        )
+
+        return apr if self.max_apr is None else min(self.max_apr, apr)
 
     @property
     def complete(self) -> bool:
@@ -156,7 +176,6 @@ class Peer:
         return [
             "node_address",
             "channel_balance",
-            # "node_peer_ids",
             "safe_address",
             "safe_balance",
             "total_balance",
