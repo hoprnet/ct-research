@@ -18,7 +18,7 @@ class Peer:
         self.economic_model = None
         self.reward_probability = None
 
-        self.max_apr = None
+        self.max_apr = float("inf")
 
     def version_is_old(self, min_version: str or Version) -> bool:
         if isinstance(min_version, str):
@@ -89,7 +89,7 @@ class Peer:
         return self.split_stake < self.economic_model.parameters.l
 
     @property
-    def expected_reward(self):
+    def max_expected_reward(self):
         if self.economic_model is None:
             raise ValueError("Economic model not set")
         if self.reward_probability is None:
@@ -98,11 +98,11 @@ class Peer:
         return self.reward_probability * self.economic_model.budget.budget
 
     @property
-    def airdrop_reward(self):
+    def expected_reward(self):
         if self.economic_model is None:
             raise ValueError("Economic model not set")
 
-        expected_reward = (
+        return (
             self.apr_percentage
             / 100.0
             * self.split_stake
@@ -110,22 +110,19 @@ class Peer:
             / (60 * 60 * 24 * 365)
         )
 
-        return expected_reward * (1 - self.economic_model.budget.s)
+    @property
+    def airdrop_reward(self):
+        if self.economic_model is None:
+            raise ValueError("Economic model not set")
+
+        return self.expected_reward * (1 - self.economic_model.budget.s)
 
     @property
     def protocol_reward(self):
         if self.economic_model is None:
             raise ValueError("Economic model not set")
 
-        expected_reward = (
-            self.apr_percentage
-            / 100.0
-            * self.split_stake
-            * self.economic_model.budget.period
-            / (60 * 60 * 24 * 365)
-        )
-
-        return expected_reward * self.economic_model.budget.s
+        return self.expected_reward * self.economic_model.budget.s
 
     @property
     def protocol_reward_per_distribution(self):
@@ -153,10 +150,12 @@ class Peer:
         period = self.economic_model.budget.period
 
         apr = (
-            (self.expected_reward / self.split_stake) * (seconds_in_year / period) * 100
+            (self.max_expected_reward / self.split_stake)
+            * (seconds_in_year / period)
+            * 100
         )
 
-        return apr if self.max_apr is None else min(self.max_apr, apr)
+        return min(self.max_apr, apr)
 
     @property
     def complete(self) -> bool:
@@ -183,6 +182,7 @@ class Peer:
             "split_stake",
             "transformed_stake",
             "apr_percentage",
+            "max_expected_reward",
             "expected_reward",
             "airdrop_reward",
             "protocol_reward",
