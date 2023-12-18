@@ -162,11 +162,11 @@ class Peer:
         # check that none of the attributes are None
         return all(
             [
-                self.address,
-                self.channel_balance,
-                self.safe_address,
-                self.safe_balance,
-                self.safe_allowance,
+                self.address is not None,
+                self.channel_balance is not None,
+                self.safe_address is not None,
+                self.safe_balance is not None,
+                self.safe_allowance is not None,
             ]
         )
 

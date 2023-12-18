@@ -180,15 +180,17 @@ class Utils(Base):
         ]
 
         # remove entries from the list
+        excluded: list[Peer] = []
         for index in sorted(indexes_to_remove, reverse=True):
-            peers.pop(index)
+            peer: Peer = peers.pop(index)
+            excluded.append(peer)
 
         # compute ct probability
         total_tf_stake = sum(peer.transformed_stake for peer in peers)
         for peer in peers:
             peer.reward_probability = peer.transformed_stake / total_tf_stake
 
-        return indexes_to_remove
+        return excluded
 
     @classmethod
     def jsonFromGCP(cls, bucket_name, blob_name, schema=None):
