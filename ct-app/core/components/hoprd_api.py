@@ -7,6 +7,7 @@ from hoprd_sdk.api import (
     MessagesApi,
     NodeApi,
     PeersApi,
+    TicketsApi,
 )
 from hoprd_sdk.models import (
     ChannelidFundBody,
@@ -322,6 +323,10 @@ class HoprdAPI(Base):
     async def node_info(self):
         _, response = self.__call_api(NodeApi, "node_get_info")
         return response
+
+    async def ticket_price(self) -> int:
+        _, response = self.__call_api(TicketsApi, "tickets_get_ticket_price")
+        return int(response.price) if hasattr(response, "price") else None
 
     async def channel_balance(self, src_peer_id: str, dest_peer_id: str) -> float:
         """

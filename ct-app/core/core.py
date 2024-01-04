@@ -51,6 +51,7 @@ class Core(Base):
         self.topology_list = LockedVar("topology_list", list[TopologyEntry]())
         self.subgraph_list = LockedVar("subgraph_list", list[SubgraphEntry]())
         self.eligible_list = LockedVar("eligible_list", list[Peer]())
+        self.ticket_price = LockedVar("ticket_price", 1)
 
         self._safes_balance_subgraph_type = (
             SubgraphType.NONE
@@ -264,6 +265,8 @@ class Core(Base):
         model = EconomicModel.fromGCPFile(
             self.params.gcp.bucket, self.params.economic_model.filename
         )
+        model.budget.ticket_price = await self.ticket_price.get()
+
         for peer in eligibles:
             peer.economic_model = model
             peer.max_apr = self.params.distribution.max_apr_percentage
@@ -295,6 +298,7 @@ class Core(Base):
         model = EconomicModel.fromGCPFile(
             self.params.gcp.bucket, self.params.economic_model.filename
         )
+        model.budget.ticket_price = await self.ticket_price.get()
 
         delay = Utils.nextDelayInSeconds(model.delay_between_distributions)
         self.debug(f"Waiting {delay} seconds for next distribution.")
@@ -373,6 +377,13 @@ class Core(Base):
         self.debug(f"Total funding: {total_funding}")
         TOTAL_FUNDING.set(total_funding)
 
+    @formalin("Getting ticket price")
+    async def get_ticket_price(self):
+        price = await self.api.ticket_price()
+
+        await self.ticket_price.set(price)
+        self.debug(f"Ticket price: {price}")
+
     async def start(self):
         """
         Start the node.
@@ -396,6 +407,7 @@ class Core(Base):
         self.tasks.add(asyncio.create_task(self.healthcheck()))
         self.tasks.add(asyncio.create_task(self.check_subgraph_urls()))
         self.tasks.add(asyncio.create_task(self.get_fundings()))
+        self.tasks.add(asyncio.create_task(self.get_ticket_price()))
 
         self.tasks.add(asyncio.create_task(self.aggregate_peers()))
         self.tasks.add(asyncio.create_task(self.get_subgraph_data()))
