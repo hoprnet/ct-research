@@ -105,7 +105,7 @@ async def async_send_1_hop_message(
 
     # pick the associated node
     address = Utils.envvar(f"NODE_ADDRESS_{current_process().index+1}")
-    key = Utils.envvar("NODE_KEY")
+    key = Utils.envvar(f"NODE_KEY_{current_process().index+1}")
     api = HoprdAPI(address, key)
 
     node_peer_id = await api.get_address("hopr")
