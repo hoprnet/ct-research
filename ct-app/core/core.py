@@ -1,6 +1,5 @@
 import asyncio
 
-from celery import Celery
 from prometheus_client import Gauge
 
 from .components.baseclass import Base
@@ -296,8 +295,8 @@ class Core(Base):
             PEER_TF_STAKE.labels(peer.address.id).set(peer.transformed_stake)
 
     @flagguard
-    @formalin("Distributing rewards")
-    async def distribute_rewards(self):
+    @formalin("Preparing reward distribution")
+    async def prepare_distribution(self):
         model = EconomicModel.fromGCPFile(
             self.params.gcp.bucket, self.params.economic_model.filename
         )
@@ -325,21 +324,10 @@ class Core(Base):
         lines = Peer.toCSV(peers)
         Utils.stringArrayToGCP(self.params.gcp.bucket, filename, lines)
 
-        # create celery tasks
-        app = Celery(
-            name=self.params.rabbitmq.project_name,
-            broker=f"amqp://{self.params.rabbitmq.username}:{self.params.rabbitmq.password}@{self.params.rabbitmq.host}/{self.params.rabbitmq.virtualhost}",
-        )
-        app.autodiscover_tasks(force=True)
+        # distribute rewards
+        # randomly split peers into groups, one group per node
+        self.multiple_attempts_sending(peers)
 
-        for peer in peers:
-            Utils.taskSendMessage(
-                app,
-                peer.address.id,
-                peer.message_count_for_reward,
-                peer.economic_model.budget.ticket_price,
-                task_name=self.params.rabbitmq.task_name,
-            )
         self.info(f"Distributed rewards to {len(peers)} peers.")
 
         EXECUTIONS_COUNTER.inc()
@@ -380,6 +368,47 @@ class Core(Base):
         self.debug(f"Total funding: {total_funding}")
         TOTAL_FUNDING.set(total_funding)
 
+    async def multiple_attempts_sending(self, peers: list[Peer], max_iterations=4):
+        def _total_messages_to_send(rewards: dict) -> int:
+            return sum([value["count"] for value in rewards.values()])
+
+        iteration: int = 0
+
+        reward_per_peer = {
+            peer.address.id: {
+                "count": peer.message_count_for_reward,
+                "tag": Utils.peerIDToInt(peer.address.id),
+            }
+            for peer in peers
+        }
+
+        while (
+            iteration < max_iterations and _total_messages_to_send(reward_per_peer) > 0
+        ):
+            peers_groups = Utils.splitDict(reward_per_peer, len(reward_per_peer))
+
+            # send rewards to peers
+            tasks = []
+            for node, peers in zip(self.network_nodes, peers_groups):
+                tasks.append(node.distribute_rewards(peers))
+            await asyncio.gather(*tasks)
+
+            asyncio.sleep(self.params.distribution.message_delivery_delay)
+
+            # check inboxes for relayed messages
+            tasks = []
+            for node, peers in zip(self.network_nodes, peers_groups):
+                tasks.append(node.check_inbox(peers))
+            relayed_counts: list[dict] = await asyncio.gather(*tasks)
+
+            # for every peer, substract the relayed count from the total count
+            for peer in reward_per_peer:
+                reward_per_peer[peer]["count"] -= sum(
+                    [res.get(peer, 0) for res in relayed_counts]
+                )
+
+            iteration += 1
+
     async def start(self):
         """
         Start the node.
@@ -409,7 +438,7 @@ class Core(Base):
         self.tasks.add(asyncio.create_task(self.get_topology_data()))
 
         self.tasks.add(asyncio.create_task(self.apply_economic_model()))
-        self.tasks.add(asyncio.create_task(self.distribute_rewards()))
+        self.tasks.add(asyncio.create_task(self.prepare_distribution()))
 
         await asyncio.gather(*self.tasks)
 

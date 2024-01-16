@@ -1,6 +1,7 @@
 import csv
 import json
 import os
+import random
 import subprocess
 import time
 from datetime import datetime, timedelta
@@ -9,7 +10,7 @@ from typing import Any
 
 import aiohttp
 from aiohttp import ClientSession
-from celery import Celery
+from database.database_connection import DatabaseConnection
 from google.cloud import storage
 
 from core.model.address import Address
@@ -310,18 +311,28 @@ class Utils(Base):
         return results
 
     @classmethod
-    def taskSendMessage(
-        cls,
-        app: Celery,
-        relayer_id: str,
-        expected: int,
-        ticket_price: float,
-        timestamp: float = None,
-        attempts: int = 0,
-        task_name: str = "send_1_hop_message",
-    ):
-        app.send_task(
-            task_name,
-            args=(relayer_id, expected, ticket_price, timestamp, attempts),
-            queue="send_messages",
-        )
+    def splitDict(cls, peers: dict[str, int], bins: int) -> list[dict]:
+        """
+        Splits randomly a dict into multiple sub-dictionary.
+        """
+        # Split the dictionary into multiple sub-dictionaries
+        split = [{} for i in range(bins)]
+
+        # Assign a random number to each element in the dictionary
+        for peer_id, data in peers.items():
+            split[random.randint(0, bins - 1)][peer_id] = data
+
+        return split
+
+    @classmethod
+    def peerIDToInt(cls, peer_id: str) -> int:
+        with DatabaseConnection() as session:
+            existing_peer = session.query(Peer).filter_by(peer_id=peer_id).first()
+
+            if existing_peer:
+                return existing_peer.id
+            else:
+                new_peer = Peer(peer_id=peer_id)
+                session.add(new_peer)
+                session.commit()
+                return new_peer.id

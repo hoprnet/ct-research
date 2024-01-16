@@ -347,6 +347,18 @@ class Node(Base):
         self.debug(f"Channels funds: { entry.channels_balance}")
         TOTAL_CHANNEL_FUNDS.labels(self.address.id).set(entry.channels_balance)
 
+    async def distribute_rewards(self, candidates: dict):
+        pass
+
+    async def check_inbox(self, peers: dict) -> dict[str, int]:
+        relayed_count = {peer_id: 0 for peer_id in tags.keys()}
+
+        for peer_id, tag in tags.items():
+            messages = await self.api.messages_pop_all(tag)
+            relayed_count[peer_id] = len(messages)
+
+        return relayed_count
+
     def tasks(self):
         self.info("Starting node")
         return [
