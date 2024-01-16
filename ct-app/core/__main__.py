@@ -26,8 +26,8 @@ def main():
 
     instance = Core()
 
-    instance.nodes = Node.fromAddressListAndKey(
-        *Utils.nodesAddresses("NODE_ADDRESS_", "NODE_KEY")
+    instance.nodes = Node.fromAddressAndKeyLists(
+        *Utils.nodesAddresses("NODE_ADDRESS_", "NODE_KEY_")
     )
 
     instance.params = params

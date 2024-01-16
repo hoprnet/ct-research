@@ -59,11 +59,13 @@ class Utils(Base):
         return all_set_flag
 
     @classmethod
-    def nodesAddresses(cls, address_prefix: str, keyenv: str) -> tuple[list[str], str]:
+    def nodesAddresses(
+        cls, address_prefix: str, keyenv: str
+    ) -> tuple[list[str], list[str]]:
         addresses = Utils.envvarWithPrefix(address_prefix).values()
-        key = Utils.envvar(keyenv)
+        keys = Utils.envvarWithPrefix(keyenv).values()
 
-        return list(addresses), key
+        return list(addresses), list(keys)
 
     @classmethod
     async def httpPOST(cls, url, data) -> tuple[int, dict]:
