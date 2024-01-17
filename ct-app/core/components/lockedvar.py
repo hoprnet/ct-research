@@ -46,6 +46,5 @@ class LockedVar(Base):
         async with self.lock:
             self.value.update(value)
 
-    @property
     def print_prefix(self):
         return f"LockedVar({self.name})"

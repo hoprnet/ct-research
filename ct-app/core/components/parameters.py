@@ -1,5 +1,5 @@
 from .baseclass import Base
-from .utils import Utils
+from .utils import EnvUtils
 
 
 class Parameters(Base):
@@ -16,7 +16,7 @@ class Parameters(Base):
             if subparams_name[-1] == "_":
                 subparams_name = subparams_name[:-1]
 
-            for key, value in Utils.envvarWithPrefix(prefix).items():
+            for key, value in EnvUtils.envvarWithPrefix(prefix).items():
                 k = key.replace(prefix, "").lower()
 
                 try:

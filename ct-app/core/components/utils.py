@@ -10,7 +10,6 @@ from typing import Any
 
 import aiohttp
 from aiohttp import ClientSession
-from database.database_connection import DatabaseConnection
 from google.cloud import storage
 
 from core.model.address import Address
@@ -21,7 +20,10 @@ from core.model.topology_entry import TopologyEntry
 from .baseclass import Base
 
 
-class Utils(Base):
+class EnvUtils(Base):
+    def print_prefix(self) -> str:
+        return "EnvUtils"
+
     @classmethod
     def envvar(cls, var_name: str, default: Any = None, type: type = str):
         if var_name in environ:
@@ -38,10 +40,6 @@ class Utils(Base):
         return dict(sorted(var_dict.items()))
 
     @classmethod
-    def envvarExists(cls, var_name: str) -> bool:
-        return var_name in environ
-
-    @classmethod
     def checkRequiredEnvVar(cls, folder: str):
         result = subprocess.run(
             f"sh ./scripts/list_required_parameters.sh {folder}".split(),
@@ -51,20 +49,24 @@ class Utils(Base):
 
         all_set_flag = True
         for var in result.splitlines():
-            exists = Utils.envvarExists(var)
+            exists = var in environ
             all_set_flag *= exists
 
             # print var with a leading check mark if it exists or red X (emoji) if it doesn't
             cls().info(f"{'✅' if exists else '❌'} {var}")
 
+        if not all_set_flag:
+            cls().error("Some required environment variables are not set.")
         return all_set_flag
 
+
+class Utils(Base):
     @classmethod
     def nodesAddresses(
         cls, address_prefix: str, keyenv: str
     ) -> tuple[list[str], list[str]]:
-        addresses = Utils.envvarWithPrefix(address_prefix).values()
-        keys = Utils.envvarWithPrefix(keyenv).values()
+        addresses = EnvUtils.envvarWithPrefix(address_prefix).values()
+        keys = EnvUtils.envvarWithPrefix(keyenv).values()
 
         return list(addresses), list(keys)
 
@@ -212,18 +214,6 @@ class Utils(Base):
         with blob.open("r") as f:
             contents = json.load(f)
 
-        # if schema is not None:
-        #     try:
-        #         jsonschema.validate(
-        #             contents,
-        #             schema=schema,
-        #         )
-        #     except jsonschema.ValidationError as e:
-        #         log.exception(
-        #             f"The file in'{blob_name}' does not follow the expected structure. {e}"
-        #         )
-        #         return {}
-
         return contents
 
     @classmethod
@@ -323,16 +313,3 @@ class Utils(Base):
             split[random.randint(0, bins - 1)][peer_id] = data
 
         return split
-
-    @classmethod
-    def peerIDToInt(cls, peer_id: str) -> int:
-        with DatabaseConnection() as session:
-            existing_peer = session.query(Peer).filter_by(peer_id=peer_id).first()
-
-            if existing_peer:
-                return existing_peer.id
-            else:
-                new_peer = Peer(peer_id=peer_id)
-                session.add(new_peer)
-                session.commit()
-                return new_peer.id

@@ -9,6 +9,9 @@ from core.components.lockedvar import LockedVar
 
 
 class FooClass(Base):
+    def print_prefix(self):
+        return "FooClass"
+
     def __init__(self):
         super().__init__()
         self.connected = LockedVar("connected", False)

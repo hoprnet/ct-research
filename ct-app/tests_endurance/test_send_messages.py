@@ -1,7 +1,8 @@
 import asyncio
 import random
 
-from tools import HoprdAPIHelper, envvar
+from core.components.hoprd_api import HoprdAPI
+from core.components.utils import EnvUtils
 
 from . import EnduranceTest, Metric
 
@@ -10,7 +11,7 @@ class SendMessages(EnduranceTest):
     async def on_start(self):
         self.results = []
 
-        self.api = HoprdAPIHelper(envvar("API_URL"), envvar("API_KEY"))
+        self.api = HoprdAPI(EnvUtils.envvar("API_URL"), EnvUtils.envvar("API_KEY"))
         self.recipient = await self.api.get_address("hopr")
 
         channels = await self.api.all_channels(False)
@@ -33,20 +34,20 @@ class SendMessages(EnduranceTest):
         self.info(f"status : {channel.status}", prefix="\t")
         self.info(f"balance: {channel.balance}HOPR", prefix="\t")
 
-        await self.api.messages_pop_all(envvar("MESSAGE_TAG", int))
+        await self.api.messages_pop_all(EnvUtils.envvar("MESSAGE_TAG", type=int))
 
     async def task(self) -> bool:
         success = await self.api.send_message(
             self.recipient,
             "Load testing",
             [self.relayer],
-            envvar("MESSAGE_TAG", int),
+            EnvUtils.envvar("MESSAGE_TAG", type=int),
         )
 
         self.results.append(success)
 
     async def on_end(self):
-        sleep_time = envvar("DELAY_BEFORE_INBOX_CHECK", float)
+        sleep_time = EnvUtils.envvar("DELAY_BEFORE_INBOX_CHECK", type=float)
 
         if sum(self.results) > 0:
             self.info(f"Waiting {sleep_time}s for messages to be relayed")
@@ -54,12 +55,14 @@ class SendMessages(EnduranceTest):
         else:
             self.warning("No messages were relayed, skipping wait")
 
-        inbox = await self.api.messages_pop_all(envvar("MESSAGE_TAG", int))
+        inbox = await self.api.messages_pop_all(
+            EnvUtils.envvar("MESSAGE_TAG", type=int)
+        )
         self.inbox_size = len(inbox)
 
     def success_flag(self) -> bool:
         return sum(self.results) / len(self.results) >= 0.9
-    
+
     def metrics(self):
         # Messages counts
         expected_messages = Metric(
@@ -117,5 +120,3 @@ class SendMessages(EnduranceTest):
             issuing_speed,
             delivery_speed,
         ]
-
-    

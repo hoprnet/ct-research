@@ -1,4 +1,5 @@
 import asyncio
+import time
 from datetime import datetime
 from typing import Optional
 
@@ -7,7 +8,7 @@ from prometheus_client import Gauge
 from .components.baseclass import Base
 from .components.channelstatus import ChannelStatus
 from .components.decorators import connectguard, flagguard, formalin
-from .components.hoprd_api import HoprdAPI
+from .components.hoprd_api import MESSAGE_TAG, HoprdAPI
 from .components.lockedvar import LockedVar
 from .components.parameters import Parameters
 from .components.utils import Utils
@@ -80,7 +81,6 @@ class Node(Base):
     async def balance(self) -> dict[str, int]:
         return await self.api.balances()
 
-    @property
     def print_prefix(self):
         return ".".join(self.url.split("//")[-1].split(".")[:2])
 
@@ -347,14 +347,93 @@ class Node(Base):
         self.debug(f"Channels funds: { entry.channels_balance}")
         TOTAL_CHANNEL_FUNDS.labels(self.address.id).set(entry.channels_balance)
 
-    async def distribute_rewards(self, candidates: dict):
-        pass
+    async def distribute_rewards(self, peer_group: dict[str, dict[str, int]]):
+        # format of peer group is:
+        #  {
+        #     "0x1212": {
+        #         "remaining": 10,
+        #         "tag": 49,
+        #         "ticket-price": 0.1,
+        #         ...
+        #     },
+        #     ...
+        # }
 
-    async def check_inbox(self, peers: dict) -> dict[str, int]:
-        relayed_count = {peer_id: 0 for peer_id in tags.keys()}
+        async def _delay_message(
+            api: HoprdAPI,
+            recipient: str,
+            relayer: str,
+            message: str,
+            tag: int,
+            sleep: float,
+        ):
+            await asyncio.sleep(sleep)
 
-        for peer_id, tag in tags.items():
-            messages = await self.api.messages_pop_all(tag)
+            return await api.send_message(recipient, message, [relayer], tag)
+
+        for relayer, data in peer_group.items():
+            if (
+                data.get("remaining", 0) == 0
+                or data.get("tag", None) is None
+                or data.get("ticket-price", None) is None
+            ):
+                self.error(
+                    "Invalid peer in group when sending messages (missing data)"
+                )  # should never happen
+
+            channel_balance = await self.api.channel_balance(self.address.id, relayer)
+            max_possible = min(
+                data["remaining"], channel_balance // data["ticket-price"]
+            )
+
+            if max_possible == 0:
+                self.warning(f"Balance of {relayer} doesn't allow to send any message")
+                continue
+
+            tag = MESSAGE_TAG + data["tag"]
+            tasks = set[asyncio.Task]()
+
+            for it in range(max_possible):
+                sleep = it * self.params.distribution.delay_between_two_messages
+                message = f"{relayer}//{time.time()}-{it + 1}/{max_possible}"
+
+                task = asyncio.create_task(
+                    _delay_message(
+                        self.api,
+                        self.address.id,
+                        relayer,
+                        message,
+                        tag,
+                        sleep,
+                    )
+                )
+                tasks.add(task)
+
+            await asyncio.gather(*tasks)
+
+    async def check_inbox(
+        self, peer_group: dict[str, dict[str, int]]
+    ) -> dict[str, int]:
+        # format of peer group is:
+        #  {
+        #     "0x1212": {
+        #         "remaining": 10,
+        #         "tag": 49,
+        #         "ticket-price": 0.1,
+        #         ...
+        #     },
+        #     ...
+        # }
+        relayed_count = {peer_id: 0 for peer_id in peer_group.keys()}
+
+        for peer_id, data in peer_group.items():
+            if data.get("tag", None) is None:
+                self.error(
+                    "Invalid peer in group when querying inbox (missing tag)"
+                )  # should never happen
+                continue
+
+            messages = await self.api.messages_pop_all(MESSAGE_TAG + data["tag"])
             relayed_count[peer_id] = len(messages)
 
         return relayed_count

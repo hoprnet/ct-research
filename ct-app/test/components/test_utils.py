@@ -2,7 +2,7 @@ import datetime
 import os
 
 import pytest
-from core.components.utils import Utils
+from core.components.utils import EnvUtils, Utils
 from core.model.address import Address
 from core.model.peer import Peer
 
@@ -12,10 +12,10 @@ def test_envvar():
     os.environ["INT_ENVVAR"] = "1"
     os.environ["FLOAT_ENVVAR"] = "1.0"
 
-    assert Utils.envvar("FAKE_STRING_ENVVAR", "default") == "default"
-    assert Utils.envvar("STRING_ENVVAR", type=str) == "string-envvar"
-    assert Utils.envvar("INT_ENVVAR", type=int) == 1
-    assert Utils.envvar("FLOAT_ENVVAR", type=float) == 1.0
+    assert EnvUtils.envvar("FAKE_STRING_ENVVAR", "default") == "default"
+    assert EnvUtils.envvar("STRING_ENVVAR", type=str) == "string-envvar"
+    assert EnvUtils.envvar("INT_ENVVAR", type=int) == 1
+    assert EnvUtils.envvar("FLOAT_ENVVAR", type=float) == 1.0
 
     del os.environ["STRING_ENVVAR"]
     del os.environ["INT_ENVVAR"]
@@ -28,7 +28,7 @@ def test_envvarWithPrefix():
     os.environ["TEST_ENVVAR_3"] = "3"
     os.environ["TEST_ENVVOR_4"] = "3"
 
-    assert Utils.envvarWithPrefix("TEST_ENVVAR_", type=int) == {
+    assert EnvUtils.envvarWithPrefix("TEST_ENVVAR_", type=int) == {
         "TEST_ENVVAR_1": 1,
         "TEST_ENVVAR_2": 2,
         "TEST_ENVVAR_3": 3,

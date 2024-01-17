@@ -33,8 +33,8 @@ class HoprdAPI(Base):
         self.configuration.host = f"{url}/api/v3"
         self.configuration.api_key["x-auth-token"] = token
 
-    @property
-    def print_prefix(self) -> str:
+    @classmethod
+    def print_prefix(cls) -> str:
         return "api"
 
     def __call_api(
@@ -82,7 +82,7 @@ class HoprdAPI(Base):
 
         is_ok, response = self.__call_api(AccountApi, "account_get_balances")
         if not is_ok:
-            return None
+            return {}
 
         return_dict = {}
 

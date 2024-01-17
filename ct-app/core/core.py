@@ -1,5 +1,8 @@
 import asyncio
+import time
 
+from database import DatabaseConnection, Reward
+from database import Utils as DBUtils
 from prometheus_client import Gauge
 
 from .components.baseclass import Base
@@ -59,7 +62,6 @@ class Core(Base):
 
         self.started = False
 
-    @property
     def print_prefix(self) -> str:
         return "ct-core"
 
@@ -326,7 +328,7 @@ class Core(Base):
 
         # distribute rewards
         # randomly split peers into groups, one group per node
-        self.multiple_attempts_sending(peers)
+        self.multiple_attempts_sending(peers, self.params.distribution.max_iterations)
 
         self.info(f"Distributed rewards to {len(peers)} peers.")
 
@@ -368,17 +370,23 @@ class Core(Base):
         self.debug(f"Total funding: {total_funding}")
         TOTAL_FUNDING.set(total_funding)
 
-    async def multiple_attempts_sending(self, peers: list[Peer], max_iterations=4):
-        def _total_messages_to_send(rewards: dict) -> int:
-            return sum([value["count"] for value in rewards.values()])
+    async def multiple_attempts_sending(
+        self, peers: list[Peer], max_iterations: int = 4
+    ):
+        def _total_messages_to_send(rewards: dict[str, dict[str, int]]) -> int:
+            return sum(
+                [max(value.get("remaining", 0), 0) for value in rewards.values()]
+            )
 
         iteration: int = 0
 
         reward_per_peer = {
             peer.address.id: {
-                "count": peer.message_count_for_reward,
-                "tag": Utils.peerIDToInt(peer.address.id),
-            }
+                "expected": peer.message_count_for_reward,
+                "remaining": peer.message_count_for_reward,
+                "tag": DBUtils.peerIDToInt(peer.address.id),
+                "ticket-price": peer.economic_model.budget.ticket_price,
+            }  # will be retrieved from the API once the endpoint is available in 2.1
             for peer in peers
         }
 
@@ -388,26 +396,53 @@ class Core(Base):
             peers_groups = Utils.splitDict(reward_per_peer, len(reward_per_peer))
 
             # send rewards to peers
-            tasks = []
-            for node, peers in zip(self.network_nodes, peers_groups):
-                tasks.append(node.distribute_rewards(peers))
+            tasks = set[asyncio.Task]()
+            for node, peers_group in zip(self.network_nodes, peers_groups):
+                tasks.add(asyncio.create_task(node.distribute_rewards(peers_group)))
             await asyncio.gather(*tasks)
 
+            # wait for message delivery (if needed)
             asyncio.sleep(self.params.distribution.message_delivery_delay)
 
             # check inboxes for relayed messages
-            tasks = []
-            for node, peers in zip(self.network_nodes, peers_groups):
-                tasks.append(node.check_inbox(peers))
+            tasks = set[asyncio.Task]()
+            for node, peers_group in zip(self.network_nodes, peers_groups):
+                tasks.add(asyncio.create_task(node.check_inbox(peers_group)))
             relayed_counts: list[dict] = await asyncio.gather(*tasks)
 
             # for every peer, substract the relayed count from the total count
             for peer in reward_per_peer:
-                reward_per_peer[peer]["count"] -= sum(
+                reward_per_peer[peer]["remaining"] -= sum(
                     [res.get(peer, 0) for res in relayed_counts]
                 )
 
             iteration += 1
+
+        with DatabaseConnection() as session:
+            entries: set[Reward] = []
+            for peer, values in reward_per_peer.items():
+                expected = values.get("expected", 0)
+                remaining = values.get("remaining", 0)
+                effective = expected - remaining
+                status = "SUCCESS" if remaining == 0 else "TIMEOUT"
+
+                entry = Reward(
+                    peer_id=peer,
+                    node_address="",
+                    expected_count=expected,
+                    effective_count=effective,
+                    status=status,
+                    timestamp=time.time(),
+                    issued_count=effective,
+                )  # TODO: fix issued count
+
+                entries.add(entry)
+
+            session.add_all(entries)
+            session.add(entry)
+            session.commit()
+
+            self.debug(f"Stored {len(entries)} reward entries in database: {entry}")
 
     async def start(self):
         """
