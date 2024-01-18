@@ -10,6 +10,7 @@ from . import EnduranceTest, Metric
 class SendMessages(EnduranceTest):
     async def on_start(self):
         self.results = []
+        self.tag = random.randint(0, 2**16 - 1)
 
         self.api = HoprdAPI(EnvUtils.envvar("API_URL"), EnvUtils.envvar("API_KEY"))
         self.recipient = await self.api.get_address("hopr")
@@ -24,24 +25,30 @@ class SendMessages(EnduranceTest):
         if len(open_channels) == 0:
             raise Exception("No open channels found")
 
-        channel = random.choice(open_channels)
-
-        self.relayer = channel.destination_peer_id
+        self.relayer = EnvUtils.envvar("RELAYER_PEER_ID", None)
+        if self.relayer is None:
+            channel = random.choice(open_channels)
+            self.relayer = channel.destination_peer_id
+        else:
+            channel = next(
+                (c for c in open_channels if c.destination_peer_id == self.relayer),
+                None,
+            )
+            if channel is None:
+                raise Exception("Channel not found")
 
         self.info(f"Connected to node {self.recipient}")
         self.info(f"relayer: {self.relayer}", prefix="\t")
         self.info(f"channel: {channel.channel_id}", prefix="\t")
         self.info(f"status : {channel.status}", prefix="\t")
         self.info(f"balance: {channel.balance}HOPR", prefix="\t")
+        self.info(f"tag    : {self.tag}", prefix="\t")
 
-        await self.api.messages_pop_all(EnvUtils.envvar("MESSAGE_TAG", type=int))
+        await self.api.messages_pop_all(self.tag)
 
     async def task(self) -> bool:
         success = await self.api.send_message(
-            self.recipient,
-            "Load testing",
-            [self.relayer],
-            EnvUtils.envvar("MESSAGE_TAG", type=int),
+            self.recipient, "Load testing", [self.relayer], self.tag
         )
 
         self.results.append(success)
@@ -55,13 +62,14 @@ class SendMessages(EnduranceTest):
         else:
             self.warning("No messages were relayed, skipping wait")
 
-        inbox = await self.api.messages_pop_all(
-            EnvUtils.envvar("MESSAGE_TAG", type=int)
-        )
+        inbox = await self.api.messages_pop_all(self.tag)
         self.inbox_size = len(inbox)
 
     def success_flag(self) -> bool:
-        return sum(self.results) / len(self.results) >= 0.9
+        return (
+            abs(1 - self.execution_time.v / self.duration) <= 0.1,
+            f"Execution time differs from expected duration by more than 10% ({self.execution_time.v:.2f} !~ {self.duration:.2f})",
+        )
 
     def metrics(self):
         # Messages counts
