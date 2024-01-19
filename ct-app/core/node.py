@@ -347,7 +347,9 @@ class Node(Base):
         self.debug(f"Channels funds: { entry.channels_balance}")
         TOTAL_CHANNEL_FUNDS.labels(self.address.id).set(entry.channels_balance)
 
-    async def distribute_rewards(self, peer_group: dict[str, dict[str, int]]):
+    async def distribute_rewards(
+        self, peer_group: dict[str, dict[str, int]]
+    ) -> dict[str, int]:
         # format of peer group is:
         #  {
         #     "0x1212": {
@@ -371,6 +373,7 @@ class Node(Base):
 
             return await api.send_message(recipient, message, [relayer], tag)
 
+        issued_count = {peer_id: 0 for peer_id in peer_group.keys()}
         for relayer, data in peer_group.items():
             if (
                 data.get("remaining", 0) == 0
@@ -409,7 +412,10 @@ class Node(Base):
                 )
                 tasks.add(task)
 
-            await asyncio.gather(*tasks)
+            issued = await asyncio.gather(*tasks)
+            issued_count[relayer] = sum(issued)
+
+        return issued_count
 
     async def check_inbox(
         self, peer_group: dict[str, dict[str, int]]

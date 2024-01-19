@@ -384,6 +384,7 @@ class Core(Base):
             peer.address.id: {
                 "expected": peer.message_count_for_reward,
                 "remaining": peer.message_count_for_reward,
+                "issued": 0,
                 "tag": DBUtils.peerIDToInt(peer.address.id),
                 "ticket-price": peer.economic_model.budget.ticket_price,
             }  # will be retrieved from the API once the endpoint is available in 2.1
@@ -399,7 +400,7 @@ class Core(Base):
             tasks = set[asyncio.Task]()
             for node, peers_group in zip(self.network_nodes, peers_groups):
                 tasks.add(asyncio.create_task(node.distribute_rewards(peers_group)))
-            await asyncio.gather(*tasks)
+            issued_counts: list[dict] = await asyncio.gather(*tasks)
 
             # wait for message delivery (if needed)
             asyncio.sleep(self.params.distribution.message_delivery_delay)
@@ -415,6 +416,9 @@ class Core(Base):
                 reward_per_peer[peer]["remaining"] -= sum(
                     [res.get(peer, 0) for res in relayed_counts]
                 )
+                reward_per_peer[peer]["issued"] += sum(
+                    [res.get(peer, 0) for res in issued_counts]
+                )
 
             iteration += 1
 
@@ -423,6 +427,7 @@ class Core(Base):
             for peer, values in reward_per_peer.items():
                 expected = values.get("expected", 0)
                 remaining = values.get("remaining", 0)
+                issued = values.get("issued", 0)
                 effective = expected - remaining
                 status = "SUCCESS" if remaining == 0 else "TIMEOUT"
 
@@ -433,7 +438,7 @@ class Core(Base):
                     effective_count=effective,
                     status=status,
                     timestamp=time.time(),
-                    issued_count=effective,
+                    issued_count=issued,
                 )  # TODO: fix issued count
 
                 entries.add(entry)
@@ -489,3 +494,8 @@ class Core(Base):
         for task in self.tasks:
             task.add_done_callback(self.tasks.discard)
             task.cancel()
+
+
+0.0005613114108
+
+1.7972 * 1e-14
