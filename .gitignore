@@ -7,6 +7,8 @@ env*/
 simulation.env
 .vscode/
 *.env
+*.log
+*.yaml
 
 # logs
 net_viz-*.png
