@@ -126,7 +126,11 @@ class Node(Base):
         ]
 
         addresses_with_channels = {c.destination_address for c in out_opens}
-        all_addresses = {p.address.address for p in await self.peers.get()}
+        all_addresses = {
+            p.address.address
+            for p in await self.peers.get()
+            if not p.version_is_old(self.params.peer.min_version)
+        }
         addresses_without_channels = all_addresses - addresses_with_channels
 
         self.debug(f"Addresses without channels: {len(addresses_without_channels)}")

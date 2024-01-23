@@ -32,6 +32,7 @@ JOBS_PER_PEER = Gauge("jobs_per_peer", "Jobs per peer", ["peer_id"])
 PEER_SPLIT_STAKE = Gauge("peer_split_stake", "Splitted stake", ["peer_id"])
 PEER_TF_STAKE = Gauge("peer_tf_stake", "Transformed stake", ["peer_id"])
 PEER_SAFE_COUNT = Gauge("peer_safe_count", "Number of safes", ["peer_id"])
+PEER_VERSION = Gauge("peer_version", "Peer version", ["peer_id"])
 DISTRIBUTION_DELAY = Gauge("distribution_delay", "Delay between two distributions")
 NEXT_DISTRIBUTION_EPOCH = Gauge("next_distribution_epoch", "Next distribution (epoch)")
 TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
@@ -295,6 +296,7 @@ class Core(Base):
             PEER_SPLIT_STAKE.labels(peer.address.id).set(peer.split_stake)
             PEER_SAFE_COUNT.labels(peer.address.id).set(peer.safe_address_count)
             PEER_TF_STAKE.labels(peer.address.id).set(peer.transformed_stake)
+            PEER_VERSION.labels(peer.address.id).set(peer.version)
 
     @flagguard
     @formalin("Preparing reward distribution")
