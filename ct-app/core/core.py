@@ -330,6 +330,7 @@ class Core(Base):
 
         # distribute rewards
         # randomly split peers into groups, one group per node
+        self.info("Initiating distribution.")
         self.multiple_attempts_sending(peers, self.params.distribution.max_iterations)
 
         self.info(f"Distributed rewards to {len(peers)} peers.")
@@ -426,12 +427,13 @@ class Core(Base):
 
         with DatabaseConnection() as session:
             entries: set[Reward] = []
+
             for peer, values in reward_per_peer.items():
                 expected = values.get("expected", 0)
                 remaining = values.get("remaining", 0)
                 issued = values.get("issued", 0)
                 effective = expected - remaining
-                status = "SUCCESS" if remaining == 0 else "TIMEOUT"
+                status = "SUCCESS" if remaining < 1 else "TIMEOUT"
 
                 entry = Reward(
                     peer_id=peer,
@@ -441,7 +443,7 @@ class Core(Base):
                     status=status,
                     timestamp=time.time(),
                     issued_count=issued,
-                )  # TODO: fix issued count
+                )
 
                 entries.add(entry)
 
