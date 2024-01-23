@@ -2,7 +2,7 @@ import asyncio
 import random
 
 from core.components.hoprd_api import HoprdAPI
-from core.components.utils import EnvUtils
+from core.components.utils import EnvironmentUtils
 
 from . import EnduranceTest, Metric
 
@@ -12,7 +12,9 @@ class SendMessages(EnduranceTest):
         self.results = []
         self.tag = random.randint(0, 2**16 - 1)
 
-        self.api = HoprdAPI(EnvUtils.envvar("API_URL"), EnvUtils.envvar("API_KEY"))
+        self.api = HoprdAPI(
+            EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY")
+        )
         self.recipient = await self.api.get_address("hopr")
 
         channels = await self.api.all_channels(False)
@@ -25,7 +27,7 @@ class SendMessages(EnduranceTest):
         if len(open_channels) == 0:
             raise Exception("No open channels found")
 
-        self.relayer = EnvUtils.envvar("RELAYER_PEER_ID", None)
+        self.relayer = EnvironmentUtils.envvar("RELAYER_PEER_ID", None)
         if self.relayer is None:
             channel = random.choice(open_channels)
             self.relayer = channel.destination_peer_id
@@ -54,7 +56,7 @@ class SendMessages(EnduranceTest):
         self.results.append(success)
 
     async def on_end(self):
-        sleep_time = EnvUtils.envvar("DELAY_BEFORE_INBOX_CHECK", type=float)
+        sleep_time = EnvironmentUtils.envvar("DELAY_BEFORE_INBOX_CHECK", type=float)
 
         if sum(self.results) > 0:
             self.info(f"Waiting {sleep_time}s for messages to be relayed")

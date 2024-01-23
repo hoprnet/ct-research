@@ -4,7 +4,7 @@ from signal import SIGINT, SIGTERM
 from prometheus_client import start_http_server
 
 from .components.parameters import Parameters
-from .components.utils import EnvUtils, Utils
+from .components.utils import EnvironmentUtils, Utils
 from .core import Core
 from .node import Node
 
@@ -51,5 +51,5 @@ def main():
 
 
 if __name__ == "__main__":
-    if EnvUtils.checkRequiredEnvVar("core"):
+    if EnvironmentUtils.checkRequiredEnvVar("core"):
         main()

@@ -7,7 +7,7 @@ from billiard import current_process
 from celery import Celery
 from core.components.hoprd_api import HoprdAPI
 from core.components.parameters import Parameters
-from core.components.utils import EnvUtils, Utils
+from core.components.utils import EnvironmentUtils, Utils
 from database import DatabaseConnection, Reward
 
 from .task_status import TaskStatus
@@ -18,7 +18,7 @@ log.setLevel(logging.INFO)
 
 params = Parameters()("PARAM_", "RABBITMQ_")
 
-if not EnvUtils.checkRequiredEnvVar("postman"):
+if not EnvironmentUtils.checkRequiredEnvVar("postman"):
     exit(1)
 
 app = Celery(
