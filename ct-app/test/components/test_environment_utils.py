@@ -1,6 +1,5 @@
 import os
 from contextlib import contextmanager
-from pathlib import Path
 
 from core.components.utils import EnvironmentUtils
 
@@ -47,7 +46,7 @@ def test_envvarWithPrefix():
 
 
 def test_checkRequiredEnvVar():
-    test_folder = Path(__file__).parent.joinpath("test_code_for_environment")
+    test_folder = "test/components/test_code_for_environment"
 
     assert not EnvironmentUtils.checkRequiredEnvVar(test_folder)
 

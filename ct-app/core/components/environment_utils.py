@@ -35,7 +35,7 @@ class EnvironmentUtils(Base):
         all_set_flag = True
         for var in result.splitlines():
             exists = var in environ
-            all_set_flag *= exists
+            all_set_flag &= exists
 
             # print var with a leading check mark if it exists or red X (emoji) if it doesn't
             cls().info(f"{'✅' if exists else '❌'} {var}")
