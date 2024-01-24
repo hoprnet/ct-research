@@ -14,7 +14,6 @@ from .components.parameters import Parameters
 from .components.utils import Utils
 from .model.address import Address
 from .model.peer import Peer
-from .model.topology_entry import TopologyEntry
 
 BALANCE = Gauge("balance", "Node balance", ["peer_id", "token"])
 PEERS_COUNT = Gauge("peers_count", "Node peers", ["peer_id"])
@@ -109,8 +108,11 @@ class Node(Base):
     @formalin("Retrieving balances")
     @connectguard
     async def retrieve_balances(self):
-        for token, balance in (await self.balance).items():
+        balances = await self.balance
+        for token, balance in balances.items():
             BALANCE.labels(self.address.id, token).set(balance)
+
+        return balances
 
     @flagguard
     @formalin("Opening channels")
@@ -279,6 +281,7 @@ class Node(Base):
         results = await self.api.peers(
             params=["peer_id", "peer_address", "reported_version"], quality=0.5
         )
+
         peers = {
             Peer(item["peer_id"], item["peer_address"], item["reported_version"])
             for item in results
@@ -346,10 +349,23 @@ class Node(Base):
         if self.address.id not in results:
             return
 
-        entry = TopologyEntry.fromDict(self.address.id, results[self.address.id])
+        funds = results[self.address.id].get("channels_balance", 0)
 
-        self.debug(f"Channels funds: { entry.channels_balance}")
-        TOTAL_CHANNEL_FUNDS.labels(self.address.id).set(entry.channels_balance)
+        self.debug(f"Channels funds: {funds}")
+        TOTAL_CHANNEL_FUNDS.labels(self.address.id).set(funds)
+
+        return funds
+
+    async def _delay_message(
+        self,
+        relayer: str,
+        message: str,
+        tag: int,
+        sleep: float,
+    ):
+        await asyncio.sleep(sleep)
+
+        return await self.api.send_message(self.address.id, message, [relayer], tag)
 
     async def distribute_rewards(
         self, peer_group: dict[str, dict[str, int]]
@@ -365,39 +381,29 @@ class Node(Base):
         #     ...
         # }
 
-        async def _delay_message(
-            api: HoprdAPI,
-            recipient: str,
-            relayer: str,
-            message: str,
-            tag: int,
-            sleep: float,
-        ):
-            await asyncio.sleep(sleep)
-
-            return await api.send_message(recipient, message, [relayer], tag)
-
         issued_count = {peer_id: 0 for peer_id in peer_group.keys()}
+
         for relayer, data in peer_group.items():
-            if (
-                data.get("remaining", 0) == 0
-                or data.get("tag", None) is None
-                or data.get("ticket-price", None) is None
-            ):
+            remaining = data.get("remaining", 0)
+            tag = data.get("tag", None)
+            ticket_price = data.get("ticket-price", None)
+
+            if remaining == 0:
+                continue
+
+            if tag is None or ticket_price is None:
                 self.error(
                     "Invalid peer in group when sending messages (missing data)"
                 )  # should never happen
+                continue
 
             channel_balance = await self.api.channel_balance(self.address.id, relayer)
-            max_possible = min(
-                data["remaining"], channel_balance // data["ticket-price"]
-            )
+            max_possible = min(remaining, channel_balance // ticket_price)
 
             if max_possible == 0:
                 self.warning(f"Balance of {relayer} doesn't allow to send any message")
                 continue
 
-            tag = MESSAGE_TAG + data["tag"]
             tasks = set[asyncio.Task]()
 
             for it in range(max_possible):
@@ -405,12 +411,10 @@ class Node(Base):
                 message = f"{relayer}//{time.time()}-{it + 1}/{max_possible}"
 
                 task = asyncio.create_task(
-                    _delay_message(
-                        self.api,
-                        self.address.id,
+                    self._delay_message(
                         relayer,
                         message,
-                        tag,
+                        MESSAGE_TAG + tag,
                         sleep,
                     )
                 )
@@ -437,13 +441,19 @@ class Node(Base):
         relayed_count = {peer_id: 0 for peer_id in peer_group.keys()}
 
         for peer_id, data in peer_group.items():
-            if data.get("tag", None) is None:
+            tag = data.get("tag", None)
+            if tag is None:
                 self.error(
                     "Invalid peer in group when querying inbox (missing tag)"
                 )  # should never happen
                 continue
+            if not isinstance(tag, int):
+                self.error(
+                    f"Invalid peer in group when querying inbox (invalid tag: '{tag}')"
+                )
+                continue
 
-            messages = await self.api.messages_pop_all(MESSAGE_TAG + data["tag"])
+            messages = await self.api.messages_pop_all(MESSAGE_TAG + tag)
             relayed_count[peer_id] = len(messages)
 
         return relayed_count

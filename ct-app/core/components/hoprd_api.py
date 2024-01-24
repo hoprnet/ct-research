@@ -221,7 +221,7 @@ class HoprdAPI(Base):
         params: list or str = "peer_id",
         status: str = "connected",
         quality: float = 0.5,
-    ):
+    ) -> list[dict]:
         """
         Returns a list of peers.
         :param: param: list or str = "peer_id"

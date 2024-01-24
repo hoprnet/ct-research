@@ -1,5 +1,5 @@
 import asyncio
-import os
+from test.components.utils import handle_envvars
 
 import pytest
 from core.components.baseclass import Base
@@ -59,11 +59,9 @@ async def test_flagguard(foo_class: FooClass):
     # delete flag cache so that new flags are retrieved from env
     Flags._cache_flags = None
 
-    os.environ["FLAG_FOOCLASS_FOO_FLAGGUARD_FUNC"] = "1"
-    res = await foo_class.foo_flagguard_func()
-    assert res is True
-
-    del os.environ["FLAG_FOOCLASS_FOO_FLAGGUARD_FUNC"]
+    with handle_envvars(FLAG_FOOCLASS_FOO_FLAGGUARD_FUNC="1"):
+        res = await foo_class.foo_flagguard_func()
+        assert res is True
 
 
 @pytest.mark.asyncio
@@ -74,17 +72,14 @@ async def test_formalin(foo_class: FooClass):
     # # # # # # # # # # # # # # # # # # # #
 
     # should run only once
-    os.environ["FLAG_FOOCLASS_FOO_FORMALIN_FUNC"] = "0"
+    with handle_envvars(FLAG_FOOCLASS_FOO_FORMALIN_FUNC="0"):
+        foo_class.started = True
+        asyncio.create_task(foo_class.foo_formalin_func())
+        await asyncio.sleep(1)
+        foo_class.started = False
+        await asyncio.sleep(0.5)
 
-    foo_class.started = True
-    asyncio.create_task(foo_class.foo_formalin_func())
-    await asyncio.sleep(1)
-    foo_class.started = False
-    await asyncio.sleep(0.5)
-
-    assert foo_class.counter == 1  # counter increased only once
-
-    del os.environ["FLAG_FOOCLASS_FOO_FORMALIN_FUNC"]
+        assert foo_class.counter == 1  # counter increased only once
 
     # reset flag cache and instance counter
     Flags._cache_flags = None
@@ -92,14 +87,11 @@ async def test_formalin(foo_class: FooClass):
     # # # # # # # # # # # # # # # # # # # #
 
     # should run twice (every 0.5s in 1.1s)
-    os.environ["FLAG_FOOCLASS_FOO_FORMALIN_FUNC"] = "0.5"
+    with handle_envvars(FLAG_FOOCLASS_FOO_FORMALIN_FUNC="0.5"):
+        foo_class.started = True
+        asyncio.create_task(foo_class.foo_formalin_func())
+        await asyncio.sleep(1.1)
+        foo_class.started = False
+        await asyncio.sleep(0.5)
 
-    foo_class.started = True
-    asyncio.create_task(foo_class.foo_formalin_func())
-    await asyncio.sleep(1.1)
-    foo_class.started = False
-    await asyncio.sleep(0.5)
-
-    assert foo_class.counter == 2  # counter increased twice
-
-    del os.environ["FLAG_FOOCLASS_FOO_FORMALIN_FUNC"]
+        assert foo_class.counter == 2  # counter increased twice

@@ -1,6 +1,6 @@
 import datetime
-import os
 import random
+from test.components.utils import handle_envvars
 
 import pytest
 from core.components.utils import Utils
@@ -78,19 +78,15 @@ def channel_topology():
 
 
 def test_nodeAddresses():
-    os.environ["NODE_ADDRESS_1"] = "address_1"
-    os.environ["NODE_ADDRESS_2"] = "address_2"
-    os.environ["NODE_KEY_1"] = "address_1_key"
-    os.environ["NODE_KEY_2"] = "address_2_key"
-
-    addresses, keys = Utils.nodesAddresses("NODE_ADDRESS_", "NODE_KEY_")
-    assert addresses == ["address_1", "address_2"]
-    assert keys == ["address_1_key", "address_2_key"]
-
-    del os.environ["NODE_ADDRESS_1"]
-    del os.environ["NODE_ADDRESS_2"]
-    del os.environ["NODE_KEY_1"]
-    del os.environ["NODE_KEY_2"]
+    with handle_envvars(
+        node_address_1="address_1",
+        node_address_2="address_2",
+        node_key_1="address_1_key",
+        node_key_2="address_2_key",
+    ):
+        addresses, keys = Utils.nodesAddresses("NODE_ADDRESS_", "NODE_KEY_")
+        assert addresses == ["address_1", "address_2"]
+        assert keys == ["address_1_key", "address_2_key"]
 
 
 def test_httpPOST():
