@@ -398,7 +398,7 @@ class Node(Base):
                 continue
 
             channel_balance = await self.api.channel_balance(self.address.id, relayer)
-            max_possible = min(remaining, channel_balance // ticket_price)
+            max_possible = int(min(remaining, channel_balance // ticket_price))
 
             if max_possible == 0:
                 self.warning(f"Balance of {relayer} doesn't allow to send any message")

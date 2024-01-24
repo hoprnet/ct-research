@@ -1,8 +1,10 @@
 import asyncio
 import time
+from typing import Any
 
-from database import DatabaseConnection, Reward
 from database import Utils as DBUtils
+from database.database_connection import DatabaseConnection
+from database.models import Reward
 from prometheus_client import Gauge
 
 from .components.baseclass import Base
@@ -60,7 +62,7 @@ class Core(Base):
         )  # trick to have the subgraph in use displayed in the terminal
 
         self.safes_balance_subgraph_type = SubgraphType.DEFAULT
-
+        self.address = None
         self.started = False
 
     def print_prefix(self) -> str:
@@ -97,7 +99,7 @@ class Core(Base):
         if subgraph == SubgraphType.BACKUP:
             return self.params.subgraph.safes_balance_url_backup
 
-        return SubgraphType.NONE
+        return None
 
     async def _retrieve_address(self):
         addresses = await self.api.get_address("all")
@@ -331,7 +333,37 @@ class Core(Base):
         # distribute rewards
         # randomly split peers into groups, one group per node
         self.info("Initiating distribution.")
-        self.multiple_attempts_sending(peers, self.params.distribution.max_iterations)
+        rewards = self.multiple_attempts_sending(
+            peers, self.params.distribution.max_iterations
+        )
+
+        with DatabaseConnection() as session:
+            entries: set[Reward] = []
+
+            for peer, values in rewards.items():
+                expected = values.get("expected", 0)
+                remaining = values.get("remaining", 0)
+                issued = values.get("issued", 0)
+                effective = expected - remaining
+                status = "SUCCESS" if remaining < 1 else "TIMEOUT"
+
+                entry = Reward(
+                    peer_id=peer,
+                    node_address="",
+                    expected_count=expected,
+                    effective_count=effective,
+                    status=status,
+                    timestamp=time.time(),
+                    issued_count=issued,
+                )
+
+                entries.add(entry)
+
+            session.add_all(entries)
+            session.add(entry)
+            session.commit()
+
+            self.debug(f"Stored {len(entries)} reward entries in database: {entry}")
 
         self.info(f"Distributed rewards to {len(peers)} peers.")
 
@@ -375,7 +407,7 @@ class Core(Base):
 
     async def multiple_attempts_sending(
         self, peers: list[Peer], max_iterations: int = 4
-    ):
+    ) -> dict[str, dict[str, Any]]:
         def _total_messages_to_send(rewards: dict[str, dict[str, int]]) -> int:
             return sum(
                 [max(value.get("remaining", 0), 0) for value in rewards.values()]
@@ -425,33 +457,7 @@ class Core(Base):
 
             iteration += 1
 
-        with DatabaseConnection() as session:
-            entries: set[Reward] = []
-
-            for peer, values in reward_per_peer.items():
-                expected = values.get("expected", 0)
-                remaining = values.get("remaining", 0)
-                issued = values.get("issued", 0)
-                effective = expected - remaining
-                status = "SUCCESS" if remaining < 1 else "TIMEOUT"
-
-                entry = Reward(
-                    peer_id=peer,
-                    node_address="",
-                    expected_count=expected,
-                    effective_count=effective,
-                    status=status,
-                    timestamp=time.time(),
-                    issued_count=issued,
-                )
-
-                entries.add(entry)
-
-            session.add_all(entries)
-            session.add(entry)
-            session.commit()
-
-            self.debug(f"Stored {len(entries)} reward entries in database: {entry}")
+        return reward_per_peer
 
     async def start(self):
         """
@@ -498,8 +504,3 @@ class Core(Base):
         for task in self.tasks:
             task.add_done_callback(self.tasks.discard)
             task.cancel()
-
-
-0.0005613114108
-
-1.7972 * 1e-14

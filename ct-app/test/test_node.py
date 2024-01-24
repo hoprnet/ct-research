@@ -1,32 +1,18 @@
 import asyncio
-import random
 import time
-from unittest.mock import patch
+from random import randint, random
+from test.decorators_patches import patches
 
 import pytest
 from core.components.parameters import Parameters
-from core.model.address import Address  # noqa: E402
-from hoprd_sdk.models import ChannelTopology, InlineResponse2006  # noqa: E402
+from core.model.address import Address
+from hoprd_sdk.models import ChannelTopology, InlineResponse2006
 from pytest_mock import MockerFixture
-
-
-def mock_decorator(f):
-    def decorated_function(g):
-        return g
-
-    if callable(f):
-        return decorated_function(f)
-    return decorated_function
-
-
-patches = [
-    patch("core.components.decorators.formalin", mock_decorator),
-    patch("core.components.decorators.flagguard", mock_decorator),
-]
 
 for p in patches:
     p.start()
 
+# needs to be imported after the patches are applied
 from core.node import Node  # noqa: E402
 
 
@@ -75,7 +61,7 @@ def address() -> dict:
 
 
 @pytest.fixture
-def node(
+async def node(
     mocker: MockerFixture,
     peers: list[dict],
     channels: InlineResponse2006,
@@ -93,13 +79,13 @@ def node(
     setattr(node.params, "distribution", Parameters())
     setattr(node.params.distribution, "delay_between_two_messages", 0.2)
 
+    await node.healthcheck()
+
     return node
 
 
 @pytest.mark.asyncio
 async def test__retrieve_address(node: Node, address: dict):
-    assert node.address is None
-
     await node._retrieve_address()
 
     assert node.address == Address(address["hopr"], address["native"])
@@ -107,8 +93,6 @@ async def test__retrieve_address(node: Node, address: dict):
 
 @pytest.mark.asyncio
 async def test_healthcheck(node: Node):
-    assert not await node.connected.get()
-
     await node.healthcheck()
 
     assert await node.connected.get()
@@ -153,8 +137,6 @@ async def test_fund_channels(node: Node):
 
 @pytest.mark.asyncio
 async def test_retrieve_peers(node: Node, peers: list[dict]):
-    await node.healthcheck()
-
     assert await node.peers.get() == set()
     assert await node.peer_history.get() == dict()
 
@@ -166,8 +148,6 @@ async def test_retrieve_peers(node: Node, peers: list[dict]):
 
 @pytest.mark.asyncio
 async def test_retrieve_outgoing_channels(node: Node, channels: InlineResponse2006):
-    await node.healthcheck()
-
     assert await node.outgoings.get() == []
 
     await node.retrieve_outgoing_channels()
@@ -184,8 +164,6 @@ async def test_retrieve_outgoing_channels(node: Node, channels: InlineResponse20
 
 @pytest.mark.asyncio
 async def test_retrieve_incoming_channels(node: Node, channels: InlineResponse2006):
-    await node.healthcheck()
-
     assert await node.incomings.get() == []
 
     await node.retrieve_incoming_channels()
@@ -202,7 +180,6 @@ async def test_retrieve_incoming_channels(node: Node, channels: InlineResponse20
 
 @pytest.mark.asyncio
 async def test_get_total_channel_funds(node: Node, channels: InlineResponse2006):
-    await node.healthcheck()
     await node.retrieve_outgoing_channels()
 
     total_funds_from_node = await node.get_total_channel_funds()
@@ -214,11 +191,10 @@ async def test_get_total_channel_funds(node: Node, channels: InlineResponse2006)
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("num_tasks", [random.randint(10, 20)])
-@pytest.mark.parametrize("sleep", [random.random() * 0.3 + 0.2])
+@pytest.mark.parametrize(
+    "num_tasks,sleep", [(randint(10, 20), round(random() * 0.3 + 0.2, 2))]
+)
 async def test__delay_message(node: Node, num_tasks: int, sleep: float):
-    await node.healthcheck()
-
     tasks = set[asyncio.Task]()
 
     for idx in range(num_tasks):
@@ -239,12 +215,11 @@ async def test__delay_message(node: Node, num_tasks: int, sleep: float):
 
 @pytest.mark.asyncio
 async def test_distribute_rewards(node: Node):
-    await node.healthcheck()
     await node.retrieve_peers()
 
     peer_group = {}
     for idx, peer in enumerate(await node.peers.get()):
-        message_count = random.randint(4, 10)
+        message_count = randint(4, 10)
 
         peer_group[peer.address.id] = {
             "expected": message_count,
