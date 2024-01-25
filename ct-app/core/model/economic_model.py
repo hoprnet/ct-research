@@ -180,7 +180,7 @@ class EconomicModel:
         """
         parameters_file_path = os.path.join("assets", filename)
 
-        contents = Utils.jsonFromGCP(bucket, parameters_file_path, None)
+        contents = Utils.jsonFromGCP(bucket, parameters_file_path)
 
         return EconomicModel.fromDict(contents)
 

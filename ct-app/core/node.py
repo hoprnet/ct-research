@@ -401,7 +401,9 @@ class Node(Base):
             max_possible = int(min(remaining, channel_balance // ticket_price))
 
             if max_possible == 0:
-                self.warning(f"Balance of {relayer} doesn't allow to send any message")
+                self.warning(
+                    f"Channel balance to {relayer} doesn't allow to send any message"
+                )
                 continue
 
             tasks = set[asyncio.Task]()
@@ -423,7 +425,7 @@ class Node(Base):
             issued = await asyncio.gather(*tasks)
             issued_count[relayer] = sum(issued)
 
-            print(f"{issued_count=}")
+            self.debug(f"Sent {issued_count[relayer]} messages through {relayer}")
 
         return issued_count
 
@@ -442,7 +444,7 @@ class Node(Base):
         # }
         relayed_count = {peer_id: 0 for peer_id in peer_group.keys()}
 
-        for peer_id, data in peer_group.items():
+        for relayer, data in peer_group.items():
             tag = data.get("tag", None)
             if tag is None:
                 self.error(
@@ -456,7 +458,8 @@ class Node(Base):
                 continue
 
             messages = await self.api.messages_pop_all(MESSAGE_TAG + tag)
-            relayed_count[peer_id] = len(messages)
+            relayed_count[relayer] = len(messages)
+            self.debug(f"{relayed_count[relayer]} messages relayed by {relayer}")
 
         return relayed_count
 

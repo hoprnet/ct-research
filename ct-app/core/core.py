@@ -34,7 +34,7 @@ JOBS_PER_PEER = Gauge("jobs_per_peer", "Jobs per peer", ["peer_id"])
 PEER_SPLIT_STAKE = Gauge("peer_split_stake", "Splitted stake", ["peer_id"])
 PEER_TF_STAKE = Gauge("peer_tf_stake", "Transformed stake", ["peer_id"])
 PEER_SAFE_COUNT = Gauge("peer_safe_count", "Number of safes", ["peer_id"])
-PEER_VERSION = Gauge("peer_version", "Peer version", ["peer_id"])
+PEER_VERSION = Gauge("peer_version", "Peer version", ["peer_id", "version"])
 DISTRIBUTION_DELAY = Gauge("distribution_delay", "Delay between two distributions")
 NEXT_DISTRIBUTION_EPOCH = Gauge("next_distribution_epoch", "Next distribution (epoch)")
 TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
@@ -298,7 +298,7 @@ class Core(Base):
             PEER_SPLIT_STAKE.labels(peer.address.id).set(peer.split_stake)
             PEER_SAFE_COUNT.labels(peer.address.id).set(peer.safe_address_count)
             PEER_TF_STAKE.labels(peer.address.id).set(peer.transformed_stake)
-            PEER_VERSION.labels(peer.address.id).set(peer.version)
+            PEER_VERSION.labels(peer.address.id, str(peer.version)).set(1)
 
     @flagguard
     @formalin("Preparing reward distribution")
@@ -333,12 +333,18 @@ class Core(Base):
         # distribute rewards
         # randomly split peers into groups, one group per node
         self.info("Initiating distribution.")
-        rewards = self.multiple_attempts_sending(
+
+        t: tuple[dict[str, dict[str, Any]], int] = await self.multiple_attempts_sending(
             peers, self.params.distribution.max_iterations
         )
+        rewards, iterations = t
+        self.info("Distribution completed.")
+
+        self.debug(rewards)
+        self.debug(iterations)
 
         with DatabaseConnection() as session:
-            entries: set[Reward] = []
+            entries = set[Reward]()
 
             for peer, values in rewards.items():
                 expected = values.get("expected", 0)
@@ -360,7 +366,6 @@ class Core(Base):
                 entries.add(entry)
 
             session.add_all(entries)
-            session.add(entry)
             session.commit()
 
             self.debug(f"Stored {len(entries)} reward entries in database: {entry}")
@@ -414,7 +419,6 @@ class Core(Base):
             )
 
         iteration: int = 0
-
         reward_per_peer = {
             peer.address.id: {
                 "expected": peer.message_count_for_reward,
@@ -426,27 +430,36 @@ class Core(Base):
             for peer in peers
         }
 
+        self.debug(f"Distribution summary: {reward_per_peer}")
+
         while (
             iteration < max_iterations and _total_messages_to_send(reward_per_peer) > 0
         ):
+            self.debug("Splitting peers into groups")
             peers_groups = Utils.splitDict(reward_per_peer, len(reward_per_peer))
 
             # send rewards to peers
+            self.debug("Sending rewards to peers")
             tasks = set[asyncio.Task]()
             for node, peers_group in zip(self.network_nodes, peers_groups):
                 tasks.add(asyncio.create_task(node.distribute_rewards(peers_group)))
             issued_counts: list[dict] = await asyncio.gather(*tasks)
 
             # wait for message delivery (if needed)
+            self.debug(
+                f"Waiting {self.params.distribution.message_delivery_delay} for message delivery"
+            )
             await asyncio.sleep(self.params.distribution.message_delivery_delay)
 
             # check inboxes for relayed messages
+            self.debug("Checking inboxes")
             tasks = set[asyncio.Task]()
             for node, peers_group in zip(self.network_nodes, peers_groups):
                 tasks.add(asyncio.create_task(node.check_inbox(peers_group)))
             relayed_counts: list[dict] = await asyncio.gather(*tasks)
 
             # for every peer, substract the relayed count from the total count
+            self.debug("Updating remaining counts")
             for peer in reward_per_peer:
                 reward_per_peer[peer]["remaining"] -= sum(
                     [res.get(peer, 0) for res in relayed_counts]
@@ -454,6 +467,8 @@ class Core(Base):
                 reward_per_peer[peer]["issued"] += sum(
                     [res.get(peer, 0) for res in issued_counts]
                 )
+
+            self.debug(f"Iteration {iteration} completed.")
 
             iteration += 1
 
