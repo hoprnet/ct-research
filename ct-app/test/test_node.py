@@ -1,94 +1,19 @@
 import asyncio
 import time
 from random import randint, random
-from test.decorators_patches import patches
 
 import pytest
-from core.components.parameters import Parameters
 from core.model.address import Address
-from hoprd_sdk.models import ChannelTopology, InlineResponse2006
-from pytest_mock import MockerFixture
+from hoprd_sdk.models import InlineResponse2006
 
-for p in patches:
-    p.start()
-
-# needs to be imported after the patches are applied
-from core.node import Node  # noqa: E402
-
-
-@pytest.fixture
-def peers() -> list[dict]:
-    return [
-        {"peer_id": "id_0", "peer_address": "address_0", "reported_version": "1.0.0"},
-        {"peer_id": "id_1", "peer_address": "address_1", "reported_version": "1.0.0"},
-        {"peer_id": "id_2", "peer_address": "address_2", "reported_version": "1.0.0"},
-        {"peer_id": "id_3", "peer_address": "address_3", "reported_version": "1.0.0"},
-    ]
-
-
-@pytest.fixture
-def channels(peers: list[dict]) -> InlineResponse2006:
-    channels = list[ChannelTopology]()
-    index = 0
-
-    for src in peers:
-        for dest in peers:
-            if src["peer_address"] == dest["peer_address"]:
-                continue
-
-            channels.append(
-                ChannelTopology(
-                    f"channel_{index}",
-                    src["peer_id"],
-                    dest["peer_id"],
-                    src["peer_address"],
-                    dest["peer_address"],
-                    f"{1*1e18:.0f}",
-                    "Open",
-                    "",
-                    "",
-                    "",
-                )
-            )
-            index += 1
-
-    return InlineResponse2006(all=channels)
-
-
-@pytest.fixture
-def address() -> dict:
-    return {"hopr": "id_0", "native": "address_0"}
-
-
-@pytest.fixture
-async def node(
-    mocker: MockerFixture,
-    peers: list[dict],
-    channels: InlineResponse2006,
-    address: dict,
-) -> Node:
-    node = Node("localhost", "random_key")
-
-    mocker.patch.object(node.api, "all_channels", return_value=channels)
-    mocker.patch.object(node.api, "peers", return_value=peers[1:])
-    mocker.patch.object(node.api, "get_address", return_value=address)
-    mocker.patch.object(node.api, "balances", return_value={"hopr": 10, "native": 1})
-    mocker.patch.object(node.api, "channel_balance", return_value=100)
-    mocker.patch.object(node.api, "send_message", return_value=1)
-
-    setattr(node.params, "distribution", Parameters())
-    setattr(node.params.distribution, "delay_between_two_messages", 0.2)
-
-    await node.healthcheck()
-
-    return node
+from .conftest import Node, Peer
 
 
 @pytest.mark.asyncio
-async def test__retrieve_address(node: Node, address: dict):
+async def test__retrieve_address(node: Node, addresses: dict):
     await node._retrieve_address()
 
-    assert node.address == Address(address["hopr"], address["native"])
+    assert node.address == Address(addresses[0]["hopr"], addresses[0]["native"])
 
 
 @pytest.mark.asyncio
@@ -136,7 +61,7 @@ async def test_fund_channels(node: Node):
 
 
 @pytest.mark.asyncio
-async def test_retrieve_peers(node: Node, peers: list[dict]):
+async def test_retrieve_peers(node: Node, peers: list[Peer]):
     assert await node.peers.get() == set()
     assert await node.peer_history.get() == dict()
 
@@ -248,7 +173,3 @@ async def test_fromAddressAndKeyLists(node: Node):
     nodes = Node.fromAddressAndKeyLists(addresses, keys)
 
     assert len(nodes) == len(addresses) == len(keys)
-
-
-for p in patches:
-    p.stop()

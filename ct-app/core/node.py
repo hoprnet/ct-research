@@ -423,6 +423,8 @@ class Node(Base):
             issued = await asyncio.gather(*tasks)
             issued_count[relayer] = sum(issued)
 
+            print(f"{issued_count=}")
+
         return issued_count
 
     async def check_inbox(
