@@ -438,7 +438,7 @@ class Core(Base):
             issued_counts: list[dict] = await asyncio.gather(*tasks)
 
             # wait for message delivery (if needed)
-            asyncio.sleep(self.params.distribution.message_delivery_delay)
+            await asyncio.sleep(self.params.distribution.message_delivery_delay)
 
             # check inboxes for relayed messages
             tasks = set[asyncio.Task]()
@@ -457,7 +457,7 @@ class Core(Base):
 
             iteration += 1
 
-        return reward_per_peer
+        return reward_per_peer, iteration
 
     async def start(self):
         """

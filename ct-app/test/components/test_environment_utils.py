@@ -1,7 +1,6 @@
 from pathlib import Path
 from test.components.utils import handle_envvars
 
-import pytest
 from core.components.utils import EnvironmentUtils
 
 
@@ -35,9 +34,6 @@ def test_envvarWithPrefix():
 
 
 def test_checkRequiredEnvVar():
-    pytest.skip(
-        "TODO: implement test_checkRequiredEnvVar"
-    )  # TODO: put the test back in
     test_folder = Path(__file__).parent.joinpath("test_code_for_environment/")
 
     assert not EnvironmentUtils.checkRequiredEnvVar(test_folder)
@@ -50,3 +46,5 @@ def test_checkRequiredEnvVar():
         var2="val2",
     ):
         assert EnvironmentUtils.checkRequiredEnvVar(test_folder)
+
+    # pytest.skip("Test fails in the CI")

@@ -126,7 +126,9 @@ async def core(
         mocker.patch.object(node.api, "channel_balance", return_value=100)
         mocker.patch.object(node.api, "send_message", return_value=1)
         mocker.patch.object(
-            node.api, "messages_pop_all", return_value=["" for _ in range(5)]
+            node.api,
+            "messages_pop_all",
+            side_effect=[["" for _ in range(randint(5, 10))] for _ in range(10)],
         )
 
         setattr(node.params, "distribution", Parameters())
@@ -185,7 +187,7 @@ async def test_healthcheck(core: Core):
 
 @pytest.mark.asyncio
 async def test_check_subgraph_urls(core: Core):
-    pytest.skip("Not implemented yet")
+    pytest.skip("Not implemented")
 
 
 @pytest.mark.asyncio
@@ -204,7 +206,7 @@ async def test_aggregate_peers(core: Core, peers: list[Peer]):
 
 @pytest.mark.asyncio
 async def test_get_subgraph_data(core: Core):
-    pytest.skip("Not implemented yet")
+    pytest.skip("Not implemented")
 
 
 @pytest.mark.asyncio
@@ -216,24 +218,40 @@ async def test_get_topology_data(core: Core, peers: list[Peer]):
 
 @pytest.mark.asyncio
 async def test_apply_economic_model(core: Core):
-    pytest.skip("Not implemented yet")
+    pytest.skip("Not implemented")
 
 
 @pytest.mark.asyncio
 async def test_prepare_distribution(core: Core):
-    pytest.skip("Not implemented yet")
+    pytest.skip("Not implemented")
 
 
 @pytest.mark.asyncio
 async def test_get_fundings(core: Core):
-    pytest.skip("Not implemented yet")
+    pytest.skip("Not implemented")
 
 
 @pytest.mark.asyncio
-async def test_multiple_attempts_sending(core: Core, peers: list[Peer]):
-    rewards = await core.multiple_attempts_sending(peers)
+async def test_multiple_attempts_sending_stops_by_reward(core: Core, peers: list[Peer]):
+    max_iter = 20
+    rewards, iter = await core.multiple_attempts_sending(peers[:-1], max_iter)
 
-    # TODO: rewards are not being calculated correctly
+    assert iter < max_iter
+    assert len(rewards) == len(peers) - 1
+    assert all([reward["remaining"] <= 0 for reward in rewards.values()])
+    assert all([reward["issued"] >= reward["expected"] for reward in rewards.values()])
+
+
+@pytest.mark.asyncio
+async def test_multiple_attempts_sending_stops_by_max_iter(
+    core: Core, peers: list[Peer]
+):
+    max_iter = 2
+    rewards, iter = await core.multiple_attempts_sending(peers[:-1], max_iter)
+
+    assert iter == max_iter
+    assert len(rewards) == len(peers) - 1
+    assert all([reward["remaining"] >= 0 for reward in rewards.values()])
 
 
 for p in patches:
