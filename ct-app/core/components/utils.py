@@ -101,6 +101,7 @@ class Utils(Base):
         merged_result: list[Peer] = []
 
         network_addresses = [p.address for p in peers_list]
+        peer_versions = {p.address: p.version for p in peers_list}
 
         # Merge based on peer ID with the channel topology as the baseline
         for topology_entry in topology_list:
@@ -121,6 +122,7 @@ class Utils(Base):
                 peer.safe_allowance = None
 
             if peer.complete and peer.address in network_addresses:
+                peer.version = peer_versions[peer.address]
                 merged_result.append(peer)
 
         return merged_result
