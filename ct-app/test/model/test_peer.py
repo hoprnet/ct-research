@@ -28,3 +28,7 @@ def test_peer_version():
     peer.version = "2.0"
     assert peer.version_is_old("2.1")
     assert peer.version_is_old(Version("2.1"))
+
+    peer.version = "2.0.7"
+    assert not peer.version_is_old("2.0.7")
+    assert not peer.version_is_old(Version("2.0.7"))
