@@ -100,6 +100,12 @@ class Core(Base):
 
     async def _retrieve_address(self):
         addresses = await self.api.get_address("all")
+        if not addresses:
+            self.warning("No address retrieved from node.")
+            return
+        if "hopr" not in addresses or "native" not in addresses:
+            self.warning("Invalid address retrieved from node.")
+            return
         self.address = Address(addresses["hopr"], addresses["native"])
 
     @flagguard
@@ -347,7 +353,8 @@ class Core(Base):
     async def get_fundings(self):
         from_address = self.params.subgraph.from_address
         ct_safe_addresses = {
-            (await node.api.node_info()).node_safe for node in self.network_nodes
+            getattr(await node.api.node_info(), "node_safe", None)
+            for node in self.network_nodes
         }
 
         transactions = []

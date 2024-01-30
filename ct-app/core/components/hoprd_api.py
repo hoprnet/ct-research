@@ -33,10 +33,12 @@ class HoprdAPI(Base):
     """
 
     def __init__(self, url: str, token: str):
+        def _refresh_token_hook(self):
+            self.api_key["x-auth-token"] = token
+
         self.configuration = Configuration()
         self.configuration.host = f"{url}/api/v3"
-        self.configuration.api_key["x-auth-token"] = token
-        self.configuration.api_key_prefix["x-auth-token"] = "Bearer"
+        self.configuration.refresh_api_key_hook = _refresh_token_hook
 
     @property
     def print_prefix(self) -> str:

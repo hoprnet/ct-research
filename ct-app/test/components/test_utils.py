@@ -43,15 +43,17 @@ def test_envvarWithPrefix():
 def test_nodeAddresses():
     os.environ["NODE_ADDRESS_1"] = "address_1"
     os.environ["NODE_ADDRESS_2"] = "address_2"
-    os.environ["NODE_KEY"] = "common-key"
+    os.environ["NODE_KEY_1"] = "address_1_key"
+    os.environ["NODE_KEY_2"] = "address_2_key"
 
-    addresses, key = Utils.nodesAddresses("NODE_ADDRESS_", "NODE_KEY")
+    addresses, keys = Utils.nodesAddresses("NODE_ADDRESS_", "NODE_KEY_")
     assert addresses == ["address_1", "address_2"]
-    assert key == "common-key"
+    assert keys == ["address_1_key", "address_2_key"]
 
     del os.environ["NODE_ADDRESS_1"]
     del os.environ["NODE_ADDRESS_2"]
-    del os.environ["NODE_KEY"]
+    del os.environ["NODE_KEY_1"]
+    del os.environ["NODE_KEY_2"]
 
 
 def test_httpPOST():

@@ -367,5 +367,5 @@ class Node(Base):
         return f"Node(id='{self.url}')"
 
     @classmethod
-    def fromAddressListAndKey(cls, addresses: list[str], key: str):
-        return [cls(address, key) for address in addresses]
+    def fromAddressAndKeyLists(cls, addresses: list[str], keys: list[str]):
+        return [cls(address, key) for address, key in zip(addresses, keys)]
