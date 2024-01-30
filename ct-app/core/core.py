@@ -105,11 +105,11 @@ class Core(Base):
     @flagguard
     @formalin(None)
     async def healthcheck(self) -> dict:
-        await self._retrieve_address()
-        await self.connected.set(self.address is not None)
+        health = await self.api.healthyz()
+        await self.connected.set(health)
 
-        self.debug(f"Connection state: {await self.connected.get()}")
-        HEALTH.set(int(await self.connected.get()))
+        self.debug(f"Connection state: {health}")
+        HEALTH.set(int(health))
 
     @flagguard
     @formalin("Checking subgraph URLs")

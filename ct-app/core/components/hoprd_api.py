@@ -1,12 +1,14 @@
+import asyncio
 from typing import Callable, Optional
 
+import requests
 from hoprd_sdk import (
     ApiClient,
     Configuration,
-    FundRequest,
-    OpenChannelRequest,
-    SendMessageReq,
-    TagQuery,
+    FundBodyRequest,
+    OpenChannelBodyRequest,
+    SendMessageBodyRequest,
+    TagQueryRequest,
 )
 from hoprd_sdk.api import (
     AccountApi,
@@ -17,6 +19,7 @@ from hoprd_sdk.api import (
     TicketsApi,
 )
 from hoprd_sdk.rest import ApiException
+from requests import Response
 from urllib3.exceptions import MaxRetryError
 
 from .baseclass import Base
@@ -104,7 +107,7 @@ class HoprdAPI(Base):
         :param: amount: str
         :return: channel id: str | undefined
         """
-        body = OpenChannelRequest(amount, peer_address)
+        body = OpenChannelBodyRequest(amount, peer_address)
 
         is_ok, response = self.__call_api(ChannelsApi, "open_channel", body=body)
         return response.channel_id if is_ok else None
@@ -116,7 +119,7 @@ class HoprdAPI(Base):
         :param: amount: str
         :return: bool
         """
-        body = FundRequest(amount=f"{amount:.0f}")
+        body = FundBodyRequest(amount=f"{amount:.0f}")
         is_ok, _ = self.__call_api(ChannelsApi, "fund_channel", channel_id, body=body)
         return is_ok
 
@@ -294,7 +297,7 @@ class HoprdAPI(Base):
         :param: tag: int = 0x0320
         :return: bool
         """
-        body = SendMessageReq(message, None, hops, destination, tag)
+        body = SendMessageBodyRequest(message, None, hops, destination, tag)
         is_ok, _ = self.__call_api(MessagesApi, "send_message", body=body)
         return is_ok
 
@@ -305,7 +308,7 @@ class HoprdAPI(Base):
         :return: dict
         """
 
-        body = TagQuery(tag=tag)
+        body = TagQueryRequest(tag=tag)
         _, response = self.__call_api(MessagesApi, "pop", body=body)
         return response
 
@@ -316,7 +319,7 @@ class HoprdAPI(Base):
         :return: list
         """
 
-        body = TagQuery(tag=tag)
+        body = TagQueryRequest(tag=tag)
         _, response = self.__call_api(MessagesApi, "pop_all", body=body)
         return response.messages if hasattr(response, "messages") else []
 
@@ -347,3 +350,35 @@ class HoprdAPI(Base):
         ]
 
         return 0 if len(channel) == 0 else int(channel[0].balance) / 1e18
+
+    async def startedz(self, timeout: int = 20):
+        return await is_url_returning_200(
+            f"{self.configuration.host}/startedz", timeout
+        )
+
+    async def readyz(self, timeout: int = 20):
+        return await is_url_returning_200(f"{self.configuration.host}/readyz", timeout)
+
+    async def healthyz(self, timeout: int = 20):
+        return await is_url_returning_200(
+            f"{self.configuration.host}/healthyz", timeout
+        )
+
+
+async def is_url_returning_200(url: str, timeout: int = 20) -> Response:
+    def _query_url(url):
+        return requests.get(url)
+
+    async def _check_url(url: str):
+        while True:
+            try:
+                return _query_url(url)
+            except Exception:
+                await asyncio.sleep(0.25)
+
+    try:
+        result = await asyncio.wait_for(_check_url(url), timeout=timeout)
+    except TimeoutError:
+        return False
+    else:
+        return result.status_code == 200

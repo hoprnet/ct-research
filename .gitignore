@@ -7,12 +7,14 @@ env*/
 simulation.env
 .vscode/
 *.env
+*.yaml
 
 # logs
 net_viz-*.png
 out.mp4
 websocket_client.log
 logs/
+*.log
 
 #misc
 .coverage
