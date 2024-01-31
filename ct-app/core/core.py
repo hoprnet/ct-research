@@ -117,6 +117,16 @@ class Core(Base):
 
         return None
 
+    @property
+    def subgraph_wxhopr_txs_url(self) -> str:
+        if self.subgraph_type == SubgraphType.DEFAULT:
+            return self.params.subgraph.wxhopr_txs_url
+
+        if self.subgraph_type == SubgraphType.BACKUP:
+            return self.params.subgraph.wxhopr_txs_url_backup
+
+        return None
+
     async def _retrieve_address(self):
         addresses = await self.api.get_address("all")
         if not addresses:
@@ -377,7 +387,7 @@ class Core(Base):
             for node in self.network_nodes
         }
 
-        provider = wxHOPRTransactionProvider(self.params.subgraph.wxhopr_txs_url)
+        provider = wxHOPRTransactionProvider(self.subgraph_wxhopr_txs_url)
 
         transactions = list[dict]()
         for to_address in ct_safe_addresses:
