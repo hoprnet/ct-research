@@ -185,7 +185,7 @@ class Core(Base):
 
         results = list[SubgraphEntry]()
         try:
-            for safe in await provider.get_safes(self.params.subgraph.pagination_size):
+            for safe in await provider.get_safes():
                 entries = [
                     SubgraphEntry.fromSubgraphResult(node)
                     for node in safe["registeredNodesInNetworkRegistry"]
@@ -211,7 +211,7 @@ class Core(Base):
 
         results = list[Address]()
         try:
-            for nft in await provider.get_nfts(self.params.subgraph.pagination_size):
+            for nft in await provider.get_nfts():
                 if owner := nft.get("owner", {}).get("id", None):
                     results.append(owner)
 
