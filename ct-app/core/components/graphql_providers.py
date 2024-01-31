@@ -4,8 +4,6 @@ from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 from gql.transport.exceptions import TransportQueryError
 
-from .baseclass import Base
-
 
 class ProviderError(Exception):
     pass
@@ -30,7 +28,7 @@ class GraphQLProvider:
             raise ProviderError(err.errors[0]["message"])
 
 
-class SafesProvider(GraphQLProvider, Base):
+class SafesProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
         self._sku_query = self._load_query(
@@ -69,7 +67,7 @@ class SafesProvider(GraphQLProvider, Base):
         return True
 
 
-class StakingProvider(GraphQLProvider, Base):
+class StakingProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
         self._sku_query = self._load_query("core/subgraph_queries/staking.graphql")
@@ -94,7 +92,7 @@ class StakingProvider(GraphQLProvider, Base):
         return nfts
 
 
-class wxHOPRTransactionProvider(GraphQLProvider, Base):
+class wxHOPRTransactionProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
         self._sku_query = self._load_query(
