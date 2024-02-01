@@ -99,32 +99,30 @@ class Core(Base):
 
     @property
     def subgraph_safes_balance_url(self) -> str:
-        if self.subgraph_type == SubgraphType.DEFAULT:
-            return self.params.subgraph.safes_balance_url
+        subgraph = {
+            SubgraphType.DEFAULT: self.params.subgraph.safes_balance_url,
+            SubgraphType.BACKUP: self.params.subgraph.safes_balance_url_backup,
+        }
 
-        if self.subgraph_type == SubgraphType.BACKUP:
-            return self.params.subgraph.safes_balance_url_backup
-
-        return None
+        return subgraph.get(self.subgraph_type, None)
 
     @property
     def subgraph_staking_url(self) -> str:
-        if self.subgraph_type == SubgraphType.DEFAULT:
-            return self.params.subgraph.staking_url
+        subgraph = {
+            SubgraphType.DEFAULT: self.params.subgraph.staking_url,
+            SubgraphType.BACKUP: self.params.subgraph.staking_url_backup,
+        }
 
-        if self.subgraph_type == SubgraphType.BACKUP:
-            return self.params.subgraph.staking_url_backup
-
-        return None
+        return subgraph.get(self.subgraph_type, None)
 
     @property
     def subgraph_wxhopr_txs_url(self) -> str:
         # the mapping can be a static const member of the class or module
         subgraph = {
             SubgraphType.DEFAULT: self.params.subgraph.wxhopr_txs_url,
-            SubgraphType.BACKUP: self.params.subgraph.wxhopr_txs_url_backup
+            SubgraphType.BACKUP: self.params.subgraph.wxhopr_txs_url_backup,
         }
-        
+
         return subgraph.get(self.subgraph_type, None)
 
     async def _retrieve_address(self):
@@ -153,7 +151,7 @@ class Core(Base):
             self.subgraph_type = type
             provider = SafesProvider(self.subgraph_safes_balance_url)
 
-            if not await provider.test_connection():
+            if not await provider.test():
                 continue
 
             SUBGRAPH_CALLS.labels(type.value).inc()
@@ -185,7 +183,7 @@ class Core(Base):
 
         results = list[SubgraphEntry]()
         try:
-            for safe in await provider.get_safes():
+            for safe in await provider.get():
                 entries = [
                     SubgraphEntry.fromSubgraphResult(node)
                     for node in safe["registeredNodesInNetworkRegistry"]
@@ -211,7 +209,7 @@ class Core(Base):
 
         results = list[Address]()
         try:
-            for nft in await provider.get_nfts():
+            for nft in await provider.get():
                 if owner := nft.get("owner", {}).get("id", None):
                     results.append(owner)
 
@@ -392,7 +390,7 @@ class Core(Base):
         transactions = list[dict]()
         for to_address in ct_safe_addresses:
             try:
-                for transaction in await provider.get_transactions(to_address):
+                for transaction in await provider.get(to=to_address):
                     transactions.append(transaction)
 
             except ProviderError as err:
