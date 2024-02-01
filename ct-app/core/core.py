@@ -119,13 +119,13 @@ class Core(Base):
 
     @property
     def subgraph_wxhopr_txs_url(self) -> str:
-        if self.subgraph_type == SubgraphType.DEFAULT:
-            return self.params.subgraph.wxhopr_txs_url
-
-        if self.subgraph_type == SubgraphType.BACKUP:
-            return self.params.subgraph.wxhopr_txs_url_backup
-
-        return None
+        # the mapping can be a static const member of the class or module
+        subgraph = {
+            SubgraphType.DEFAULT: self.params.subgraph.wxhopr_txs_url,
+            SubgraphType.BACKUP: self.params.subgraph.wxhopr_txs_url_backup
+        }
+        
+        return subgraph.get(self.subgraph_type, None)
 
     async def _retrieve_address(self):
         addresses = await self.api.get_address("all")
