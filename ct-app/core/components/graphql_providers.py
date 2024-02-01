@@ -58,13 +58,7 @@ class SafesProvider(GraphQLProvider):
         vars = {"first": 1, "skip": 0}
         response = await self._execute(self._sku_query, vars)
 
-        if not response:
-            return False
-
-        if "safes" not in response:
-            return False
-
-        return True
+        return response and "safes" in response
 
 
 class StakingProvider(GraphQLProvider):
