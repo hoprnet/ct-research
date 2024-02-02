@@ -20,6 +20,7 @@ from .model.economic_model import EconomicModel
 from .model.peer import Peer
 from .model.subgraph_entry import SubgraphEntry
 from .model.subgraph_type import SubgraphType
+from .model.subgraph_url import SubgraphURL
 from .model.topology_entry import TopologyEntry
 from .node import Node
 
@@ -53,21 +54,41 @@ class Core(Base):
         self.tasks = set[asyncio.Task]()
 
         self.connected = LockedVar("connected", False)
-
         self.all_peers = LockedVar("all_peers", set[Peer]())
         self.topology_list = LockedVar("topology_list", list[TopologyEntry]())
         self.registered_nodes = LockedVar("subgraph_list", list[SubgraphEntry]())
         self.nft_holders = LockedVar("nft_holders", list[str]())
-
         self.eligible_list = LockedVar("eligible_list", list[Peer]())
 
-        self._safes_balance_subgraph_type = (
-            SubgraphType.NONE
-        )  # trick to have the subgraph in use displayed in the terminal
-
+        # subgraphs
+        self._safe_subgraph_url = None
+        self._staking_subgraph_url = None
+        self._wxhopr_txs_subgraph_url = None
+        # trick to have the subgraph in use displayed in the terminal
+        self._subgraph_type = SubgraphType.NONE
         self.subgraph_type = SubgraphType.DEFAULT
 
         self.started = False
+
+    def post_init(self, nodes: list[Node], params: Parameters):
+        self.params = params
+        self.nodes = nodes
+
+        for node in self.nodes:
+            node.params = params
+
+        self._safe_subgraph_url = SubgraphURL(
+            self.params.subgraph.safes_balance_url,
+            self.params.subgraph.safes_balance_url_backup,
+        )
+        self._staking_subgraph_url = SubgraphURL(
+            self.params.subgraph.staking_url,
+            self.params.subgraph.staking_url_backup,
+        )
+        self._wxhopr_txs_subgraph_url = SubgraphURL(
+            self.params.subgraph.wxhopr_txs_url,
+            self.params.subgraph.wxhopr_txs_url_backup,
+        )
 
     @property
     def print_prefix(self) -> str:
@@ -87,7 +108,19 @@ class Core(Base):
 
     @property
     def subgraph_type(self) -> SubgraphType:
-        return self._safes_balance_subgraph_type
+        return self._subgraph_type
+
+    @property
+    def safe_subgraph_url(self) -> str:
+        return self._safe_subgraph_url(self.subgraph_type)
+
+    @property
+    def staking_subgraph_url(self) -> str:
+        return self._staking_subgraph_url(self.subgraph_type)
+
+    @property
+    def wxhopr_txs_subgraph_url(self) -> str:
+        return self._wxhopr_txs_subgraph_url(self.subgraph_type)
 
     @subgraph_type.setter
     def subgraph_type(self, value: SubgraphType):
@@ -95,35 +128,7 @@ class Core(Base):
             self.warning(f"Now using '{value.value}' subgraph.")
 
         SUBGRAPH_IN_USE.set(value.toInt())
-        self._safes_balance_subgraph_type = value
-
-    @property
-    def subgraph_safes_balance_url(self) -> str:
-        subgraph = {
-            SubgraphType.DEFAULT: self.params.subgraph.safes_balance_url,
-            SubgraphType.BACKUP: self.params.subgraph.safes_balance_url_backup,
-        }
-
-        return subgraph.get(self.subgraph_type, None)
-
-    @property
-    def subgraph_staking_url(self) -> str:
-        subgraph = {
-            SubgraphType.DEFAULT: self.params.subgraph.staking_url,
-            SubgraphType.BACKUP: self.params.subgraph.staking_url_backup,
-        }
-
-        return subgraph.get(self.subgraph_type, None)
-
-    @property
-    def subgraph_wxhopr_txs_url(self) -> str:
-        # the mapping can be a static const member of the class or module
-        subgraph = {
-            SubgraphType.DEFAULT: self.params.subgraph.wxhopr_txs_url,
-            SubgraphType.BACKUP: self.params.subgraph.wxhopr_txs_url_backup,
-        }
-
-        return subgraph.get(self.subgraph_type, None)
+        self._subgraph_type = value
 
     async def _retrieve_address(self):
         addresses = await self.api.get_address("all")
@@ -149,15 +154,16 @@ class Core(Base):
     async def check_subgraph_urls(self):
         for type in SubgraphType.callables():
             self.subgraph_type = type
-            provider = SafesProvider(self.subgraph_safes_balance_url)
+            provider = SafesProvider(self.safe_subgraph_url)
 
             if not await provider.test():
                 continue
-
-            SUBGRAPH_CALLS.labels(type.value).inc()
-            break
+            else:
+                break
         else:
             self.subgraph_type = SubgraphType.NONE
+
+        SUBGRAPH_CALLS.labels(type.value).inc()
 
     @flagguard
     @formalin("Aggregating peers")
@@ -179,8 +185,7 @@ class Core(Base):
             self.warning("No subgraph URL available.")
             return
 
-        provider = SafesProvider(self.subgraph_safes_balance_url)
-
+        provider = SafesProvider(self.safe_subgraph_url)
         results = list[SubgraphEntry]()
         try:
             for safe in await provider.get():
@@ -205,7 +210,7 @@ class Core(Base):
             self.warning("No subgraph URL available.")
             return
 
-        provider = StakingProvider(self.subgraph_staking_url)
+        provider = StakingProvider(self.staking_subgraph_url)
 
         results = list[Address]()
         try:
@@ -385,7 +390,7 @@ class Core(Base):
             for node in self.network_nodes
         }
 
-        provider = wxHOPRTransactionProvider(self.subgraph_wxhopr_txs_url)
+        provider = wxHOPRTransactionProvider(self.wxhopr_txs_subgraph_url)
 
         transactions = list[dict]()
         for to_address in ct_safe_addresses:

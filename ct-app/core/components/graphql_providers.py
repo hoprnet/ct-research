@@ -90,7 +90,7 @@ class GraphQLProvider(Base):
         """
 
         if key is None and self._default_key is not None:
-            key = self.default_key
+            key = self._default_key
         else:
             self.warning(
                 "No key provided for the query, and no default key set. Skipping query..."
@@ -105,35 +105,47 @@ class GraphQLProvider(Base):
         :param kwargs: The variables to use in the query (dict).
         :return: True if the query is successful, False otherwise.
         """
-        if self.default_key is None:
+        if self._default_key is None:
             self.warning(
                 "No key provided for the query, and no default key set. Skipping test query..."
             )
             return False
 
-        return await self._test_query(self.default_key, **kwargs)
+        return await self._test_query(self._default_key, **kwargs)
 
 
 class SafesProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
-        self.default_key = "safes"
+        self._default_key = "safes"
         self._sku_query = self._load_query(
             "core/subgraph_queries/safes_balance.graphql"
         )
+
+    @property
+    def print_prefix(self) -> str:
+        return "safe-provider"
 
 
 class StakingProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
-        self.default_key = "boosts"
+        self._default_key = "boosts"
         self._sku_query = self._load_query("core/subgraph_queries/staking.graphql")
+
+    @property
+    def print_prefix(self) -> str:
+        return "staking-provider"
 
 
 class wxHOPRTransactionProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
-        self.default_key = "transactions"
+        self._default_key = "transactions"
         self._sku_query = self._load_query(
             "core/subgraph_queries/wxhopr_transactions.graphql"
         )
+
+    @property
+    def print_prefix(self) -> str:
+        return "transaction-provider"
