@@ -1,0 +1,7 @@
+query ($first: Int!, $skip: Int!, $to: String!) {
+    transactions(first: $first, skip: $skip, where: {from: "0xd9a00176cf49dfb9ca3ef61805a2850f45cb1d05", to: $to}) {
+        from 
+        to
+        amount
+    }
+}

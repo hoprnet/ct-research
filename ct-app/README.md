@@ -127,32 +127,32 @@ To execute the module, create a bash script to specify a bunch of environment va
 
 Parameter | Recommanded value (staging) | Description
 --|--|--
-`DISTRIBUTION_MIN_ELIGIBLE_PEERS` | `5` | Minimum number of eligible peers to distribute rewards
-`GCP_FILE_PREFIX` | `expected_reward` | File prefix for GCP distribution list storage
-`GCP_FOLDER` | `staging` | Folder on GCP where to store distribution list
-`GCP_BUCKET` | `ct-platform-ct` |
-`ECONOMIC_MODEL_FILENAME` | `parameters-staging.json` | Name of parameter file on staging (in folder `./assets/`)
-`ECONOMIC_MODEL_MIN_SAFE_ALLOWANCE` | `0.0001` | Minimum safe allowance to be eligible
-`PEER_MIN_VERSION` | `2.0.0` | Minimum node version to be eligible
 `CHANNEL_MIN_BALANCE` | `0.05` | Threshold to trigger channel funding 
 `CHANNEL_FUNDING_AMOUNT` | `0.2` | Amount to fund a channel with
 `CHANNEL_MAX_AGE_SECONDS` | `30` | If peer is not seen after this delay, its channel gets closed
-`RABBITMQ_TASK_NAME` | `fake_task` | Task to create when distributing rewards
-`RABBITMQ_PROJECT_NAME` | `ct-app` | Name of the RabbitMQ project
+`DISTRIBUTION_MAX_APR_PERCENTAGE` | `15` | APR upperbound 
+`DISTRIBUTION_MIN_ELIGIBLE_PEERS` | `5` | Minimum number of eligible peers to distribute rewards
+`ECONOMIC_MODEL_FILENAME` | `parameters-staging.json` | Name of parameter file on staging (in folder `./assets/`)
+`ECONOMIC_MODEL_MIN_SAFE_ALLOWANCE` | `0.0001` | Minimum safe allowance to be eligible
+`ECONOMIC_MODEL_NFT_THRESHOLD` | `30000` | Minimum stake if someone's not holding a NR-NFT
+`GCP_BUCKET` | `ct-platform-ct` |
+`GCP_FILE_PREFIX` | `expected_reward` | File prefix for GCP distribution list storage
+`GCP_FOLDER` | `staging` | Folder on GCP where to store distribution list
+`PEER_MIN_VERSION` | `2.0.0` | Minimum node version to be eligible
 `RABBITMQ_HOST` | (check Bitwarden) | 
 `RABBITMQ_PASSWORD` | (check Bitwarden) | 
+`RABBITMQ_PROJECT_NAME` | `ct-app` | Name of the RabbitMQ project
+`RABBITMQ_TASK_NAME` | `fake_task` | Task to create when distributing rewards
 `RABBITMQ_USERNAME` | (check Bitwarden) | 
 `RABBITMQ_VIRTUALHOST` | (check Bitwarden) | 
-`SUBGRAPH_PAGINATION_SIZE` | `1000` | 
-`SUBGRAPH_SAFES_BALANCE_QUERY` |  | Query to `SUBGRAPH_SAFES_BALANCE_URL(_BACKUP)` to get safes balances and allowances
-`SUBGRAPH_WXHOPR_TXS_QUERY` |  |  Query to `SUBGRAPH_WXHOPR_TXS_URL` to get list of incoming transactions from `SUBGRAPH_FROM_ADDRESS`
-`SUBGRAPH_FROM_ADDRESS` | (COMM Safe) | Safe from which funding to ct node come from 
-`SUBGRAPH_WXHOPR_TXS_URL` | (`wxhoprtransactions` (de)centralized subgraph) | 
 `SUBGRAPH_SAFES_BALANCE_URL` | (`hopr-nodes-dufour` decentralized subgraph) | 
 `SUBGRAPH_SAFES_BALANCE_URL_BACKUP` | (`hopr-nodes-dufour` centralized subgraph) | 
+`SUBGRAPH_STAKING_URL` | |
+`SUBGRAPH_STAKING_URL_BACKUP` | |
+`SUBGRAPH_WXHOPR_TXS_URL` | (`wxhoprtransactions` decentralized subgraph) | 
+`SUBGRAPH_WXHOPR_TXS_URL_BACKUP` | (`wxhoprtransactions` centralized subgraph) | 
 `NODE_ADDRESS_X` (multiple, min. 2) | (check Bitwarden) |
-`NODE_KEY` | (check Bitwarden) | 
-
+`NODE_KEY_X` | (check Bitwarden) | 
 
 
 Then there's a bunch of optional flags to enable features of the app
@@ -163,12 +163,10 @@ Flag | Recommanded value (staging)
 `FLAG_CORE_GET_FUNDINGS` |--
 `FLAG_CORE_AGGREGATE_PEERS` |--
 `FLAG_CORE_GET_TOPOLOGY_DATA` |--
-`FLAG_CORE_GET_SUBGRAPH_DATA` |--
+`FLAG_CORE_GET_REGISTERED_NODES` |--
+`FLAG_CORE_GET_NFT_HOLDERS` |--
 `FLAG_CORE_APPLY_ECONOMIC_MODEL` |--
 `FLAG_CORE_DISTRIBUTE_REWARDS` |--
-
-Flag | Recommanded (staging)
---|--
 `FLAG_NODE_HEALTHCHECK` |--
 `FLAG_NODE_RETRIEVE_PEERS` |--
 `FLAG_NODE_RETRIEVE_OUTGOING_CHANNELS` |--
