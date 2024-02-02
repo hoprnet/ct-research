@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from typing import Callable, Optional
 
 import requests
@@ -34,10 +35,10 @@ class HoprdAPI(Base):
 
     def __init__(self, url: str, token: str):
         def _refresh_token_hook(self):
-            self.api_key["x-auth-token"] = token
+            self.api_key["X-Auth-Token"] = token
 
         self.configuration = Configuration()
-        self.configuration.host = f"{url}/api/v3"
+        self.configuration.host = f"{url}"
         self.configuration.refresh_api_key_hook = _refresh_token_hook
 
     @property
@@ -331,6 +332,8 @@ class HoprdAPI(Base):
 
     async def ticket_price(self) -> int:
         _, response = self.__call_api(TicketsApi, "price")
+
+        logging.error("price")
         return int(response.price) if hasattr(response, "price") else None
 
     async def channel_balance(self, src_peer_id: str, dest_peer_id: str) -> float:
@@ -368,13 +371,11 @@ class HoprdAPI(Base):
 
 
 async def is_url_returning_200(url: str, timeout: int = 20) -> Response:
-    def _query_url(url):
-        return requests.get(url)
-
     async def _check_url(url: str):
         while True:
             try:
-                return _query_url(url)
+                req = requests.get(url)
+                return req
             except Exception:
                 await asyncio.sleep(0.25)
 

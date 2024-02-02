@@ -299,6 +299,7 @@ class Core(Base):
             PEER_TF_STAKE.labels(peer.address.id).set(peer.transformed_stake)
 
     @flagguard
+    @connectguard
     @formalin("Distributing rewards")
     async def distribute_rewards(self):
         model = EconomicModel.fromGCPFile(
@@ -349,6 +350,7 @@ class Core(Base):
         EXECUTIONS_COUNTER.inc()
 
     @flagguard
+    @connectguard
     @formalin("Getting funding data")
     async def get_fundings(self):
         from_address = self.params.subgraph.from_address
@@ -384,6 +386,8 @@ class Core(Base):
         self.debug(f"Total funding: {total_funding}")
         TOTAL_FUNDING.set(total_funding)
 
+    @flagguard
+    @connectguard
     @formalin("Getting ticket price")
     async def get_ticket_price(self):
         price = await self.api.ticket_price()
