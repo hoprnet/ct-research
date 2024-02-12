@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from typing import Callable, Optional
 
 import requests
@@ -15,9 +14,9 @@ from hoprd_sdk.api import (
     AccountApi,
     ChannelsApi,
     MessagesApi,
+    NetworkApi,
     NodeApi,
     PeersApi,
-    TicketsApi,
 )
 from hoprd_sdk.rest import ApiException
 from requests import Response
@@ -208,9 +207,10 @@ class HoprdAPI(Base):
         is_ok, response = self.__call_api(
             ChannelsApi,
             "list_channels",
-            full_topology=True,
-            including_closed=include_closed,
+            full_topology="true",
+            including_closed="true" if include_closed else "false",
         )
+
         return response if is_ok else []
 
     async def ping(self, peer_id: str):
@@ -331,10 +331,9 @@ class HoprdAPI(Base):
         return response
 
     async def ticket_price(self) -> int:
-        _, response = self.__call_api(TicketsApi, "price")
+        _, response = self.__call_api(NetworkApi, "price")
 
-        logging.error("price")
-        return int(response.price) if hasattr(response, "price") else None
+        return float(response.price) / 1e18 if hasattr(response, "price") else None
 
     async def channel_balance(self, src_peer_id: str, dest_peer_id: str) -> float:
         """

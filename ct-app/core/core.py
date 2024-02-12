@@ -51,7 +51,7 @@ class Core(Base):
         self.topology_list = LockedVar("topology_list", list[TopologyEntry]())
         self.subgraph_list = LockedVar("subgraph_list", list[SubgraphEntry]())
         self.eligible_list = LockedVar("eligible_list", list[Peer]())
-        self.ticket_price = LockedVar("ticket_price", 1)
+        self.ticket_price = LockedVar("ticket_price", 1.0)
 
         self._safes_balance_subgraph_type = (
             SubgraphType.NONE
@@ -202,8 +202,8 @@ class Core(Base):
         self.debug(f"Fetched subgraph data ({len(results)} entries).")
 
     @flagguard
-    @connectguard
     @formalin("Getting topology data")
+    @connectguard
     async def get_topology_data(self):
         """
         Gets a dictionary containing all unique source_peerId-source_address links
@@ -299,8 +299,8 @@ class Core(Base):
             PEER_TF_STAKE.labels(peer.address.id).set(peer.transformed_stake)
 
     @flagguard
-    @connectguard
     @formalin("Distributing rewards")
+    @connectguard
     async def distribute_rewards(self):
         model = EconomicModel.fromGCPFile(
             self.params.gcp.bucket, self.params.economic_model.filename
@@ -350,8 +350,8 @@ class Core(Base):
         EXECUTIONS_COUNTER.inc()
 
     @flagguard
-    @connectguard
     @formalin("Getting funding data")
+    @connectguard
     async def get_fundings(self):
         from_address = self.params.subgraph.from_address
         ct_safe_addresses = {
@@ -387,8 +387,8 @@ class Core(Base):
         TOTAL_FUNDING.set(total_funding)
 
     @flagguard
-    @connectguard
     @formalin("Getting ticket price")
+    @connectguard
     async def get_ticket_price(self):
         price = await self.api.ticket_price()
 
