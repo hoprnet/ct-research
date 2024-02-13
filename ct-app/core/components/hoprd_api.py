@@ -74,7 +74,7 @@ class HoprdAPI(Base):
 
         return (False, None)
 
-    async def balances(self, type: str or list[str] = "all"):
+    async def balances(self, type: str | list[str] = "all"):
         """
         Returns the balance of the node.
         :param: type: str =  "all" | "hopr" | "native" | "safe_native" | "safe_hopr"
@@ -224,7 +224,7 @@ class HoprdAPI(Base):
 
     async def peers(
         self,
-        params: list or str = "peer_id",
+        params: list | str = "peer_id",
         status: str = "connected",
         quality: float = 0.5,
     ):
@@ -261,8 +261,8 @@ class HoprdAPI(Base):
         return output_list
 
     async def get_address(
-        self, address: str or list[str] = "hopr"
-    ) -> Optional[dict[str, str]] or Optional[str]:
+        self, address: str | list[str] = "hopr"
+    ) -> Optional[dict[str, str]] | Optional[str]:
         """
         Returns the address of the node.
         :param: address: str = "hopr" | "native"
@@ -356,20 +356,33 @@ class HoprdAPI(Base):
         return 0 if len(channel) == 0 else int(channel[0].balance) / 1e18
 
     async def startedz(self, timeout: int = 20):
+        """
+        Checks if the node is started. Return True if `startedz` returns 200 after max `timeout` seconds.
+        """
         return await is_url_returning_200(
             f"{self.configuration.host}/startedz", timeout
         )
 
     async def readyz(self, timeout: int = 20):
+        """
+        Checks if the node is ready. Return True if `readyz` returns 200 after max `timeout` seconds.
+        """
         return await is_url_returning_200(f"{self.configuration.host}/readyz", timeout)
 
     async def healthyz(self, timeout: int = 20):
+        """
+        Checks if the node is healthy. Return True if `healthyz` returns 200 after max `timeout` seconds.
+        """
         return await is_url_returning_200(
             f"{self.configuration.host}/healthyz", timeout
         )
 
 
 async def is_url_returning_200(url: str, timeout: int = 20) -> Response:
+    """
+    Checks if the given URL is returning 200 after max `timeout` seconds.
+    """
+
     async def _check_url(url: str):
         while True:
             try:

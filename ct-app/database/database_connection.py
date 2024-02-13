@@ -16,8 +16,10 @@ class DatabaseConnection:
     """
 
     def __init__(self):
+        """
+        Create a new DatabaseConnection based on environment variables setting user, password, host, port, database, sslmode, sslrootcert, sslcert and sslkey.
+        """
         self.params = Parameters()("PG")
-
         self._assert_parameters()
 
         url = URL(
@@ -42,6 +44,9 @@ class DatabaseConnection:
         log.info("Database connection established.")
 
     def _assert_parameters(self):
+        """
+        Asserts that all required parameters are set.
+        """
         for group, values in self.required_parameters().items():
             assert len(getattr(self.params, group).__dict__), (
                 f"Missing all '{group.upper()}' environment variables. "
@@ -57,6 +62,9 @@ class DatabaseConnection:
 
     @classmethod
     def required_parameters(cls):
+        """
+        Returns the required parameters for the DatabaseConnection.
+        """
         return {
             "pg": [
                 "user",
@@ -72,9 +80,15 @@ class DatabaseConnection:
         }
 
     def __enter__(self):
+        """
+        Return the session (used by context manager)
+        """
         return self.session
 
     def __exit__(self, exc_type, exc_value, traceback):
+        """
+        Close the session and the engine (used by context manager)
+        """
         self.session.close()
         self.engine.dispose()
         log.info("Database connection closed.")

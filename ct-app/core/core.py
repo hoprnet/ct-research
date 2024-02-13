@@ -36,6 +36,10 @@ TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
 
 
 class Core(Base):
+    """
+    The Core class represents the main class of the application. It is responsible for managing the nodes, the economic model and the distribution of rewards.
+    """
+
     def __init__(self):
         super().__init__()
 
@@ -90,6 +94,9 @@ class Core(Base):
         self._safes_balance_subgraph_type = value
 
     def subgraph_safes_balance_url(self, subgraph: SubgraphType) -> str:
+        """
+        Returns the subgraph URL for the specified subgraph type.
+        """
         if subgraph == SubgraphType.DEFAULT:
             return self.params.subgraph.safes_balance_url
 
@@ -99,6 +106,9 @@ class Core(Base):
         return SubgraphType.NONE
 
     async def _retrieve_address(self):
+        """
+        Retrieves the address from the node.
+        """
         addresses = await self.api.get_address("all")
         if not addresses:
             self.warning("No address retrieved from node.")
@@ -111,6 +121,9 @@ class Core(Base):
     @flagguard
     @formalin(None)
     async def healthcheck(self) -> dict:
+        """
+        Checks the health of the node. Sets the connected status (LockedVar) and the Prometheus metric accordingly.
+        """
         health = await self.api.healthyz()
         await self.connected.set(health)
 
@@ -120,6 +133,9 @@ class Core(Base):
     @flagguard
     @formalin("Checking subgraph URLs")
     async def check_subgraph_urls(self):
+        """
+        Checks the subgraph URLs and sets the subgraph type in use (default, backup or none)
+        """
         query: str = self.params.subgraph.safes_balance_query
         query = query.replace("valfirst", "10")
         query = query.replace("valskip", "0")
@@ -141,6 +157,9 @@ class Core(Base):
     @flagguard
     @formalin("Aggregating peers")
     async def aggregate_peers(self):
+        """
+        Aggregates the peers from all nodes and sets the all_peers LockedVar.
+        """
         results = set[Peer]()
 
         for node in self.nodes:
@@ -154,6 +173,9 @@ class Core(Base):
     @flagguard
     @formalin("Getting subgraph data")
     async def get_subgraph_data(self):
+        """
+        Gets the subgraph data and sets the subgraph_list LockedVar.
+        """
         if self.safes_balance_subgraph_type == SubgraphType.NONE:
             self.warning("No subgraph URL available.")
             return
@@ -225,6 +247,9 @@ class Core(Base):
     @flagguard
     @formalin("Applying economic model")
     async def apply_economic_model(self):
+        """
+        Applies the economic model to the eligible peers (after multiple filtering layers) and sets the eligible_list LockedVar.
+        """
         ready: bool = False
 
         while not ready:
@@ -302,6 +327,10 @@ class Core(Base):
     @formalin("Distributing rewards")
     @connectguard
     async def distribute_rewards(self):
+        """
+        Distributes the rewards to the eligible peers, based on the economic model.
+        """
+
         model = EconomicModel.fromGCPFile(
             self.params.gcp.bucket, self.params.economic_model.filename
         )
@@ -353,6 +382,9 @@ class Core(Base):
     @formalin("Getting funding data")
     @connectguard
     async def get_fundings(self):
+        """
+        Gets the amount of funds all managed nodes have received from a specified address.
+        """
         from_address = self.params.subgraph.from_address
         ct_safe_addresses = {
             getattr(await node.api.node_info(), "node_safe", None)
@@ -390,6 +422,9 @@ class Core(Base):
     @formalin("Getting ticket price")
     @connectguard
     async def get_ticket_price(self):
+        """
+        Gets the ticket price from the api and sets the ticket_price LockedVar. The ticket price is used in the economic model to calculate the number of messages to send to a peer.
+        """
         price = await self.api.ticket_price()
 
         await self.ticket_price.set(price)
