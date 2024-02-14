@@ -10,7 +10,7 @@ class Parameters(Base):
     def __init__(self):
         super().__init__()
 
-    def __call__(self, *prefixes: str | list[str]):
+    def __call__(self, *prefixes: str or list[str]):
         """
         Load the parameters from the environment variables with the specified prefixes. The parameters will be stored in the instance with the name of the prefix in lowercase. If the prefix ends with an underscore, the underscore will be removed. The parameters will be stored in a new instance of the Parameters class.
 
@@ -32,7 +32,9 @@ class Parameters(Base):
                     pass
 
                 try:
-                    value = int(value)
+                    integer = int(value)
+                    if integer == value:
+                        value = integer
                 except ValueError:
                     pass
 

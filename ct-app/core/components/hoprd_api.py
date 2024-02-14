@@ -74,7 +74,7 @@ class HoprdAPI(Base):
 
         return (False, None)
 
-    async def balances(self, type: str | list[str] = "all"):
+    async def balances(self, type: str or list[str] = "all"):
         """
         Returns the balance of the node.
         :param: type: str =  "all" | "hopr" | "native" | "safe_native" | "safe_hopr"
@@ -224,7 +224,7 @@ class HoprdAPI(Base):
 
     async def peers(
         self,
-        params: list | str = "peer_id",
+        params: list or str = "peer_id",
         status: str = "connected",
         quality: float = 0.5,
     ):
@@ -261,8 +261,8 @@ class HoprdAPI(Base):
         return output_list
 
     async def get_address(
-        self, address: str | list[str] = "hopr"
-    ) -> Optional[dict[str, str]] | Optional[str]:
+        self, address: str or list[str] = "hopr"
+    ) -> Optional[dict[str, str]] or Optional[str]:
         """
         Returns the address of the node.
         :param: address: str = "hopr" | "native"

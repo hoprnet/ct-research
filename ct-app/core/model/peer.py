@@ -30,7 +30,7 @@ class Peer:
 
         self.max_apr = float("inf")
 
-    def version_is_old(self, min_version: str | Version) -> bool:
+    def version_is_old(self, min_version: str or Version) -> bool:
         """
         Check if the peer's version is older than the specified version.
         :param min_version: The minimum version to check against.
@@ -45,7 +45,7 @@ class Peer:
         return self._version
 
     @version.setter
-    def version(self, value: str | Version):
+    def version(self, value: str or Version):
         if isinstance(value, str):
             value = Version(value)
 
