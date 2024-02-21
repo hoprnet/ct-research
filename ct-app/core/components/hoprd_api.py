@@ -16,7 +16,6 @@ from hoprd_sdk.api import (
     MessagesApi,
     NetworkApi,
     NodeApi,
-    PeersApi,
 )
 from hoprd_sdk.rest import ApiException
 from requests import Response
@@ -114,15 +113,15 @@ class HoprdAPI(Base):
         is_ok, response = self.__call_api(ChannelsApi, "open_channel", body=body)
         return response.channel_id if is_ok else None
 
-    async def fund_channel(self, channel_id: str, amount: str):
+    async def fund_channel(self, channel_id: str, amount: float):
         """
         Funds a given channel.
         :param: channel_id: str
-        :param: amount: str
+        :param: amount: float
         :return: bool
         """
         body = FundBodyRequest(amount=f"{amount:.0f}")
-        is_ok, _ = self.__call_api(ChannelsApi, "fund_channel", channel_id, body=body)
+        is_ok, _ = self.__call_api(ChannelsApi, "fund_channel", body, channel_id)
         return is_ok
 
     async def close_channel(self, channel_id: str):
@@ -189,15 +188,6 @@ class HoprdAPI(Base):
         else:
             return []
 
-    async def get_channel(self, channel_id: str):
-        """
-        Returns the channel object.
-        :param: channel_id: str
-        :return: channel: response
-        """
-        _, response = self.__call_api(ChannelsApi, "show_channel", channel_id)
-        return response
-
     async def all_channels(self, include_closed: bool):
         """
         Returns all channels.
@@ -212,15 +202,6 @@ class HoprdAPI(Base):
         )
 
         return response if is_ok else []
-
-    async def ping(self, peer_id: str):
-        """
-        Pings the given peer_id and returns the measure.
-        :param: peer_id: str
-        :return: response: dict
-        """
-        _, response = self.__call_api(PeersApi, "ping_peer", peer_id)
-        return response
 
     async def peers(
         self,
@@ -300,6 +281,7 @@ class HoprdAPI(Base):
         :param: tag: int = 0x0320
         :return: bool
         """
+
         body = SendMessageBodyRequest(message, None, hops, destination, tag)
         is_ok, _ = self.__call_api(MessagesApi, "send_message", body=body)
         return is_ok

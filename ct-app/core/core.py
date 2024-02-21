@@ -264,7 +264,7 @@ class Core(Base):
             ready = len(topology) and len(subgraph) and len(peers)
             await asyncio.sleep(2)
 
-        eligibles = Utils.mergeTopologyPeersSubgraph(topology, peers, subgraph)
+        eligibles = Utils.mergeTopoPeersSafes(topology, peers, subgraph)
         self.debug(f"Merged topology and subgraph data ({len(eligibles)} entries).")
 
         old_peer_addresses = [
@@ -272,7 +272,7 @@ class Core(Base):
             for peer in eligibles
             if peer.version_is_old(self.params.peer.min_version)
         ]
-        excluded = Utils.excludeElements(eligibles, old_peer_addresses)
+        excluded = Utils.exclude(eligibles, old_peer_addresses)
         self.debug(
             f"Excluded peers running on old version (< {self.params.peer.min_version}) ({len(excluded)} entries)."
         )
@@ -285,13 +285,11 @@ class Core(Base):
             for peer in eligibles
             if peer.safe_allowance < self.params.economic_model.min_safe_allowance
         ]
-        excluded = Utils.excludeElements(eligibles, low_allowance_addresses)
+        excluded = Utils.exclude(eligibles, low_allowance_addresses)
         self.debug(f"Excluded nodes with low safe allowance ({len(excluded)} entries).")
 
-        excluded = Utils.excludeElements(eligibles, self.network_nodes_addresses)
+        excluded = Utils.exclude(eligibles, self.network_nodes_addresses)
         self.debug(f"Excluded network nodes ({len(excluded)} entries).")
-
-        self.debug(f"Eligible nodes ({len(eligibles)} entries).")
 
         model = EconomicModel.fromGCPFile(
             self.params.gcp.bucket, self.params.economic_model.filename
@@ -306,6 +304,8 @@ class Core(Base):
 
         excluded = Utils.rewardProbability(eligibles)
         self.debug(f"Excluded nodes with low stakes ({len(excluded)} entries).")
+
+        self.debug(f"Eligible nodes ({len(eligibles)} entries).")
 
         await self.eligible_list.set(eligibles)
 

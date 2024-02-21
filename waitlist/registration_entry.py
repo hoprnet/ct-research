@@ -1,4 +1,5 @@
 from pandas import Series
+
 from .entry import Entry
 
 
@@ -12,7 +13,6 @@ class RegistrationEntry(Entry):
         nr_nft: str,
         communication_service: str,
         telegram: str,
-        email: str,
     ):
         self.time = time
         self.participant = participant
@@ -21,7 +21,6 @@ class RegistrationEntry(Entry):
         self.nr_nft = nr_nft
         self.communication_service = communication_service
         self.telegram = telegram
-        self.email = email
 
     @property
     def safe_address(self) -> str:
@@ -54,13 +53,14 @@ class RegistrationEntry(Entry):
             time=entry["Time"],
             participant=entry["Participant"],
             safe_address=entry["What is your HOPR safe address?"],
-            node_address=entry["What is your Node address"],
+            node_address=entry[
+                "What is your Node address? (If you want to add multiple, just include one node per row)"
+            ],
             nr_nft=entry["Do you already have the Network Registry NFT?"],
             communication_service=entry[
                 "How would you like to be informed once you're able to join the network?"
             ],
             telegram=entry["What is your Telegram handle?"],
-            email=entry["What is your e-mail?"],
         )
 
     @classmethod
@@ -74,5 +74,4 @@ class RegistrationEntry(Entry):
             "communication_service": "How would you like to be informed once you're "
             + "able to join the network?",
             "telegram": "What is your Telegram handle?",
-            "email": "What is your e-mail?",
         }
