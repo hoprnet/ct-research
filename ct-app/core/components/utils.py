@@ -98,8 +98,6 @@ class Utils(Base):
             topo = next(filter(lambda t: t.node_address == address, topology), None)
             safe = next(filter(lambda s: s.node_address == address, safes), None)
 
-            safe = SubgraphEntry("0x0", "10000", "0x0", "10")
-
             if peer is None or topo is None or safe is None:
                 continue
 

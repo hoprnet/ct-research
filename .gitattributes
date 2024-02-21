@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# ignore jupyter notebooks in postprocessing in the language bar on github
+notebooks/** linguist-vendored
