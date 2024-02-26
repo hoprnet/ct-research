@@ -1,6 +1,10 @@
 import asyncio
+import time
+from typing import Any
 
-from celery import Celery
+from database import Utils as DBUtils
+from database.database_connection import DatabaseConnection
+from database.models import Reward
 from prometheus_client import Gauge
 
 from .components.baseclass import Base
@@ -30,6 +34,7 @@ JOBS_PER_PEER = Gauge("jobs_per_peer", "Jobs per peer", ["peer_id"])
 PEER_SPLIT_STAKE = Gauge("peer_split_stake", "Splitted stake", ["peer_id"])
 PEER_TF_STAKE = Gauge("peer_tf_stake", "Transformed stake", ["peer_id"])
 PEER_SAFE_COUNT = Gauge("peer_safe_count", "Number of safes", ["peer_id"])
+PEER_VERSION = Gauge("peer_version", "Peer version", ["peer_id", "version"])
 DISTRIBUTION_DELAY = Gauge("distribution_delay", "Delay between two distributions")
 NEXT_DISTRIBUTION_EPOCH = Gauge("next_distribution_epoch", "Next distribution (epoch)")
 TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
@@ -62,10 +67,9 @@ class Core(Base):
         )  # trick to have the subgraph in use displayed in the terminal
 
         self.safes_balance_subgraph_type = SubgraphType.DEFAULT
-
+        self.address = None
         self.started = False
 
-    @property
     def print_prefix(self) -> str:
         return "ct-core"
 
@@ -103,7 +107,7 @@ class Core(Base):
         if subgraph == SubgraphType.BACKUP:
             return self.params.subgraph.safes_balance_url_backup
 
-        return SubgraphType.NONE
+        return None
 
     async def _retrieve_address(self):
         """
@@ -322,6 +326,7 @@ class Core(Base):
             PEER_SPLIT_STAKE.labels(peer.address.id).set(peer.split_stake)
             PEER_SAFE_COUNT.labels(peer.address.id).set(peer.safe_address_count)
             PEER_TF_STAKE.labels(peer.address.id).set(peer.transformed_stake)
+            PEER_VERSION.labels(peer.address.id, str(peer.version)).set(1)
 
     @flagguard
     @formalin("Distributing rewards")
@@ -359,21 +364,46 @@ class Core(Base):
         lines = Peer.toCSV(peers)
         Utils.stringArrayToGCP(self.params.gcp.bucket, filename, lines)
 
-        # create celery tasks
-        app = Celery(
-            name=self.params.rabbitmq.project_name,
-            broker=f"amqp://{self.params.rabbitmq.username}:{self.params.rabbitmq.password}@{self.params.rabbitmq.host}/{self.params.rabbitmq.virtualhost}",
-        )
-        app.autodiscover_tasks(force=True)
+        # distribute rewards
+        # randomly split peers into groups, one group per node
+        self.info("Initiating distribution.")
 
-        for peer in peers:
-            Utils.taskSendMessage(
-                app,
-                peer.address.id,
-                peer.message_count_for_reward,
-                peer.economic_model.budget.ticket_price,
-                task_name=self.params.rabbitmq.task_name,
-            )
+        t: tuple[dict[str, dict[str, Any]], int] = await self.multiple_attempts_sending(
+            peers, self.params.distribution.max_iterations
+        )
+        rewards, iterations = t
+        self.info("Distribution completed.")
+
+        self.debug(rewards)
+        self.debug(iterations)
+
+        with DatabaseConnection() as session:
+            entries = set[Reward]()
+
+            for peer, values in rewards.items():
+                expected = values.get("expected", 0)
+                remaining = values.get("remaining", 0)
+                issued = values.get("issued", 0)
+                effective = expected - remaining
+                status = "SUCCESS" if remaining < 1 else "TIMEOUT"
+
+                entry = Reward(
+                    peer_id=peer,
+                    node_address="",
+                    expected_count=expected,
+                    effective_count=effective,
+                    status=status,
+                    timestamp=time.time(),
+                    issued_count=issued,
+                )
+
+                entries.add(entry)
+
+            session.add_all(entries)
+            session.commit()
+
+            self.debug(f"Stored {len(entries)} reward entries in database: {entry}")
+
         self.info(f"Distributed rewards to {len(peers)} peers.")
 
         EXECUTIONS_COUNTER.inc()
@@ -418,6 +448,70 @@ class Core(Base):
         self.debug(f"Total funding: {total_funding}")
         TOTAL_FUNDING.set(total_funding)
 
+    async def multiple_attempts_sending(
+        self, peers: list[Peer], max_iterations: int = 4
+    ) -> dict[str, dict[str, Any]]:
+        def _total_messages_to_send(rewards: dict[str, dict[str, int]]) -> int:
+            return sum(
+                [max(value.get("remaining", 0), 0) for value in rewards.values()]
+            )
+
+        iteration: int = 0
+        reward_per_peer = {
+            peer.address.id: {
+                "expected": peer.message_count_for_reward,
+                "remaining": peer.message_count_for_reward,
+                "issued": 0,
+                "tag": DBUtils.peerIDToInt(peer.address.id),
+                "ticket-price": peer.economic_model.budget.ticket_price,
+            }  # will be retrieved from the API once the endpoint is available in 2.1
+            for peer in peers
+        }
+
+        self.debug(f"Distribution summary: {reward_per_peer}")
+
+        while (
+            iteration < max_iterations and _total_messages_to_send(reward_per_peer) > 0
+        ):
+            self.debug("Splitting peers into groups")
+            peers_groups = Utils.splitDict(reward_per_peer, len(reward_per_peer))
+
+            # send rewards to peers
+            self.debug("Sending rewards to peers")
+            tasks = set[asyncio.Task]()
+            for node, peers_group in zip(self.network_nodes, peers_groups):
+                tasks.add(asyncio.create_task(node.distribute_rewards(peers_group)))
+            issued_counts: list[dict] = await asyncio.gather(*tasks)
+
+            # wait for message delivery (if needed)
+            self.debug(
+                f"Waiting {self.params.distribution.message_delivery_delay} for message delivery"
+            )
+            await asyncio.sleep(self.params.distribution.message_delivery_delay)
+
+            # check inboxes for relayed messages
+            self.debug("Checking inboxes")
+            tasks = set[asyncio.Task]()
+            for node, peers_group in zip(self.network_nodes, peers_groups):
+                tasks.add(asyncio.create_task(node.check_inbox(peers_group)))
+            relayed_counts: list[dict] = await asyncio.gather(*tasks)
+
+            # for every peer, substract the relayed count from the total count
+            self.debug("Updating remaining counts")
+            for peer in reward_per_peer:
+                reward_per_peer[peer]["remaining"] -= sum(
+                    [res.get(peer, 0) for res in relayed_counts]
+                )
+                reward_per_peer[peer]["issued"] += sum(
+                    [res.get(peer, 0) for res in issued_counts]
+                )
+
+            self.debug(f"Iteration {iteration} completed.")
+
+            iteration += 1
+
+        return reward_per_peer, iteration
+
     @flagguard
     @formalin("Getting ticket price")
     @connectguard
@@ -460,7 +554,7 @@ class Core(Base):
         self.tasks.add(asyncio.create_task(self.get_topology_data()))
 
         self.tasks.add(asyncio.create_task(self.apply_economic_model()))
-        self.tasks.add(asyncio.create_task(self.distribute_rewards()))
+        self.tasks.add(asyncio.create_task(self.prepare_distribution()))
 
         await asyncio.gather(*self.tasks)
 

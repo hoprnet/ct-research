@@ -39,8 +39,8 @@ class HoprdAPI(Base):
         self.configuration.host = f"{url}"
         self.configuration.refresh_api_key_hook = _refresh_token_hook
 
-    @property
-    def print_prefix(self) -> str:
+    @classmethod
+    def print_prefix(cls) -> str:
         return "api"
 
     def __call_api(
@@ -88,7 +88,7 @@ class HoprdAPI(Base):
 
         is_ok, response = self.__call_api(AccountApi, "balances")
         if not is_ok:
-            return None
+            return {}
 
         return_dict = {}
 
@@ -208,7 +208,7 @@ class HoprdAPI(Base):
         params: list or str = "peer_id",
         status: str = "connected",
         quality: float = 0.5,
-    ):
+    ) -> list[dict]:
         """
         Returns a list of peers.
         :param: param: list or str = "peer_id"

@@ -1,15 +1,13 @@
 import csv
 import json
 import os
-import subprocess
+import random
 import time
 from datetime import datetime, timedelta
-from os import environ
 from typing import Any
 
 import aiohttp
 from aiohttp import ClientSession
-from celery import Celery
 from google.cloud import storage
 
 from core.model.address import Address
@@ -18,58 +16,36 @@ from core.model.subgraph_entry import SubgraphEntry
 from core.model.topology_entry import TopologyEntry
 
 from .baseclass import Base
+from .channelstatus import ChannelStatus
+from .environment_utils import EnvironmentUtils
 
 
 class Utils(Base):
     @classmethod
-    def envvar(cls, var_name: str, default: Any = None, type: type = str):
-        if var_name in environ:
-            return type(environ[var_name])
-        else:
-            return default
-
-    @classmethod
-    def envvarWithPrefix(cls, prefix: str, type=str) -> dict[str, Any]:
-        var_dict = {
-            key: type(v) for key, v in environ.items() if key.startswith(prefix)
-        }
-
-        return dict(sorted(var_dict.items()))
-
-    @classmethod
-    def envvarExists(cls, var_name: str) -> bool:
-        return var_name in environ
-
-    @classmethod
-    def checkRequiredEnvVar(cls, folder: str):
-        result = subprocess.run(
-            f"sh ./scripts/list_required_parameters.sh {folder}".split(),
-            capture_output=True,
-            text=True,
-        ).stdout
-
-        all_set_flag = True
-        for var in result.splitlines():
-            exists = Utils.envvarExists(var)
-            all_set_flag *= exists
-
-            # print var with a leading check mark if it exists or red X (emoji) if it doesn't
-            cls().info(f"{'✅' if exists else '❌'} {var}")
-
-        return all_set_flag
-
-    @classmethod
     def nodesAddresses(
         cls, address_prefix: str, keyenv: str
     ) -> tuple[list[str], list[str]]:
-        addresses = Utils.envvarWithPrefix(address_prefix).values()
-        keys = Utils.envvarWithPrefix(keyenv).values()
+        """
+        Returns a tuple containing the addresses and keys of the nodes.
+        :param address_prefix: The prefix of the environment variables containing addresses.
+        :param keyenv: The prefix of the environment variables containing keys.
+        :returns: A tuple containing the addresses and keys.
+        """
+        addresses = EnvironmentUtils.envvarWithPrefix(address_prefix).values()
+        keys = EnvironmentUtils.envvarWithPrefix(keyenv).values()
 
         return list(addresses), list(keys)
 
     @classmethod
-    async def httpPOST(cls, url, data) -> tuple[int, dict]:
-        async def post(session: ClientSession, url: str, data: dict):
+    async def httpPOST(cls, url: str, data: dict) -> tuple[int, dict]:
+        """
+        Performs an HTTP POST request.
+        :param url: The URL to send the request to.
+        :param data: The data to be sent.
+        :returns: A tuple containing the status code and the response.
+        """
+
+        async def _post(session: ClientSession, url: str, data: dict):
             async with session.post(url, json=data) as response:
                 status = response.status
                 response = await response.json()
@@ -77,7 +53,7 @@ class Utils(Base):
 
         async with aiohttp.ClientSession() as session:
             try:
-                status, response = await post(session, url, data)
+                status, response = await _post(session, url, data)
             except Exception:
                 return None, None
             else:
@@ -98,7 +74,12 @@ class Utils(Base):
             topo = next(filter(lambda t: t.node_address == address, topology), None)
             safe = next(filter(lambda s: s.node_address == address, safes), None)
 
-            if peer is None or topo is None or safe is None:
+            if (
+                peer is None
+                or topo is None
+                or safe is None
+                or safe.wxHoprBalance is None
+            ):
                 continue
 
             peer.safe_address = safe.safe_address
@@ -115,7 +96,7 @@ class Utils(Base):
         """
         Split the stake managed by a safe address equaly between the nodes
         that the safe manages.
-        :param: peer: list of peers
+        :param peer: list of peers
         :returns: nothing.
         """
         safe_counts = {peer.safe_address: 0 for peer in peers}
@@ -132,9 +113,9 @@ class Utils(Base):
     def exclude(cls, source_data: list[Peer], blacklist: list[Address]) -> list[Peer]:
         """
         Removes elements from a dictionary based on a blacklist.
-        :param: source_data (dict): The dictionary to be updated.
-        :param: blacklist (list): A list containing the keys to be removed.
-        :returns: nothing.
+        :param source_data (dict): The dictionary to be updated.
+        :param blacklist (list): A list containing the keys to be removed.
+        :returns: A list containing the removed elements.
         """
 
         addresses = [peer.address for peer in source_data]
@@ -152,8 +133,8 @@ class Utils(Base):
     def rewardProbability(cls, peers: list[Peer]) -> list[int]:
         """
         Evaluate the function for each stake value in the eligible_peers dictionary.
-        :param eligible_peers: A dict containing the data.
-        :returns: nothing.
+        :param peers: A dict containing the data.
+        :returns: A list containing the excluded elements due to low stake.
         """
 
         indexes_to_remove = [
@@ -174,13 +155,12 @@ class Utils(Base):
         return excluded
 
     @classmethod
-    def jsonFromGCP(cls, bucket_name, blob_name, schema=None):
+    def jsonFromGCP(cls, bucket_name: str, blob_name: str):
         """
         Reads a JSON file and validates its contents using a schema.
-        :param: bucket_name: The name of the bucket
-        :param: blob_name: The name of the blob
-        ;param: schema (opt): The validation schema
-        :returns: (dict): The contents of the JSON file.
+        :param bucket_name: The name of the bucket
+        :param blob_name: The name of the blob
+        :returns: The contents of the JSON file.
         """
 
         storage_client = storage.Client()
@@ -189,18 +169,6 @@ class Utils(Base):
 
         with blob.open("r") as f:
             contents = json.load(f)
-
-        # if schema is not None:
-        #     try:
-        #         jsonschema.validate(
-        #             contents,
-        #             schema=schema,
-        #         )
-        #     except jsonschema.ValidationError as e:
-        #         log.exception(
-        #             f"The file in'{blob_name}' does not follow the expected structure. {e}"
-        #         )
-        #         return {}
 
         return contents
 
@@ -222,6 +190,14 @@ class Utils(Base):
 
     @classmethod
     def generateFilename(cls, prefix: str, foldername: str, extension: str = "csv"):
+        """
+        Generates a filename with the following format:
+        <prefix>_<timestamp>.<extension>
+        :param prefix: The prefix of the filename
+        :param foldername: The folder where the file will be stored
+        :param extension: The extension of the file
+        :returns: The filename
+        """
         timestamp = time.strftime("%Y%m%d%H%M%S")
 
         if extension.startswith("."):
@@ -235,6 +211,7 @@ class Utils(Base):
         """
         Calculates the delay until the next whole `minutes`min and `seconds`sec.
         :param seconds: next whole second to trigger the function
+        :returns: The next epoch
         """
         if seconds == 0:
             raise ValueError("'seconds' must be greater than 0")
@@ -249,6 +226,7 @@ class Utils(Base):
         """
         Calculates the delay until the next whole `minutes`min and `seconds`sec.
         :param seconds: next whole second to trigger the function
+        :returns: The delay in seconds.
         """
         if seconds == 0:
             return 1
@@ -264,6 +242,8 @@ class Utils(Base):
     async def aggregatePeerBalanceInChannels(cls, channels: list) -> dict[str, dict]:
         """
         Returns a dict containing all unique source_peerId-source_address links.
+        :param channels: The list of channels.
+        :returns: A dict containing all peerIds-balanceInChannels links.
         """
 
         results: dict[str, dict] = {}
@@ -272,10 +252,11 @@ class Utils(Base):
                 hasattr(c, "source_peer_id")
                 and hasattr(c, "source_address")
                 and hasattr(c, "status")
+                and hasattr(c, "balance")
             ):
                 continue
 
-            if c.status != "Open":
+            if ChannelStatus(c.status) != ChannelStatus.Open:
                 continue
 
             if c.source_peer_id not in results:
@@ -289,18 +270,18 @@ class Utils(Base):
         return results
 
     @classmethod
-    def taskSendMessage(
-        cls,
-        app: Celery,
-        relayer_id: str,
-        expected: int,
-        ticket_price: float,
-        timestamp: float = None,
-        attempts: int = 0,
-        task_name: str = "send_1_hop_message",
-    ):
-        app.send_task(
-            task_name,
-            args=(relayer_id, expected, ticket_price, timestamp, attempts),
-            queue="send_messages",
-        )
+    def splitDict(cls, src: dict[str, Any], bins: int) -> list[dict[str, Any]]:
+        """
+        Splits randomly a dict into multiple sub-dictionary of almost equal sizes.
+        :param src: The dict to be split.
+        :param bins: The number of sub-dictionaries.
+        :returns: A list containing the sub-dictionaries.
+        """
+        # Split the dictionary into multiple sub-dictionaries
+        split = [{} for _ in range(bins)]
+
+        # Assign a random number to each element in the dictionary
+        for idx, (key, value) in enumerate(random.sample(src.items(), len(src))):
+            split[idx % bins][key] = value
+
+        return split
