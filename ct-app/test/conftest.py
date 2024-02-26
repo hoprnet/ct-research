@@ -13,7 +13,7 @@ from core.model.economic_model import (
 from core.model.economic_model import Parameters as EMParameters
 from core.model.peer import Peer
 from database import Utils as DBUtils
-from hoprd_sdk.models import ChannelTopology, InlineResponse2006
+from hoprd_sdk.models import ChannelInfoResponse, NodeChannelsResponse
 from pytest_mock import MockerFixture
 
 for p in patches:
@@ -79,7 +79,7 @@ def economic_model() -> EconomicModel:
         Equation("a * c + (x - c) ** (1 / b)", "x > c"),
     )
     parameters = EMParameters(1, 1, 3, 0)
-    budget = BudgetParameters(100, 15, 0.25, 2, 0.01, 1)
+    budget = BudgetParameters(100, 15, 0.25, 2, 1)
     return EconomicModel(equations, parameters, budget)
 
 
@@ -109,6 +109,7 @@ def peers(peers_raw: list[dict], economic_model: EconomicModel) -> list[Peer]:
         peer.reward_probability = 0.02
         peer.safe_balance = randint(100, 200)
         peer.channel_balance = randint(10, 50)
+        peer.economic_model.budget.ticket_price = 0.01
 
     return peers
 
@@ -136,8 +137,8 @@ def nodes() -> list[Node]:
 
 
 @pytest.fixture
-def channels(peers: list[Peer]) -> InlineResponse2006:
-    channels = list[ChannelTopology]()
+def channels(peers: list[Peer]) -> NodeChannelsResponse:
+    channels = list[ChannelInfoResponse]()
     index = 0
 
     for src in peers:
@@ -146,22 +147,23 @@ def channels(peers: list[Peer]) -> InlineResponse2006:
                 continue
 
             channels.append(
-                ChannelTopology(
+                ChannelInfoResponse(
+                    f"{1*1e18:.0f}",
+                    1,
                     f"channel_{index}",
-                    src.address.id,
+                    5,
+                    dest.address.address,
                     dest.address.id,
                     src.address.address,
-                    dest.address.address,
-                    f"{1*1e18:.0f}",
+                    src.address.id,
                     "Open",
-                    "",
-                    "",
-                    "",
+                    0,
                 )
             )
+
             index += 1
 
-    return InlineResponse2006(all=channels)
+    return NodeChannelsResponse(all=channels, incoming=[], outgoing=[])
 
 
 @pytest.fixture
@@ -170,7 +172,7 @@ async def core(
     nodes: list[Node],
     peers: list[Peer],
     addresses: list[dict],
-    channels: InlineResponse2006,
+    channels: NodeChannelsResponse,
 ) -> Core:
     core = Core()
     core.nodes = nodes
@@ -184,6 +186,7 @@ async def core(
         mocker.patch.object(
             node.api, "channel_balance", side_effect=SideEffect().channel_balance
         )
+
         mocker.patch.object(
             node.api, "send_message", side_effect=SideEffect().send_message_success
         )
@@ -195,6 +198,10 @@ async def core(
         setattr(node.params.distribution, "delay_between_two_messages", 0.001)
 
         await node._retrieve_address()
+
+    mocker.patch.object(core.api, "healthyz", return_value=True)
+    mocker.patch.object(core.api, "startedz", return_value=True)
+    mocker.patch.object(core.api, "ticket_price", return_value=0.01)
 
     setattr(core.params, "subgraph", Parameters())
     setattr(core.params.subgraph, "safes_balance_query", "safes query")
@@ -221,6 +228,7 @@ async def core(
     setattr(core.params.distribution, "message_delivery_delay", 1)
 
     await core.healthcheck()
+    await core._retrieve_address()
 
     return core
 
@@ -229,7 +237,7 @@ async def core(
 async def node(
     mocker: MockerFixture,
     peers_raw: list[dict],
-    channels: InlineResponse2006,
+    channels: NodeChannelsResponse,
     addresses: dict,
 ) -> Node:
     node = Node("localhost", "random_key")
@@ -242,11 +250,14 @@ async def node(
         node.api, "channel_balance", side_effect=SideEffect().channel_balance
     )
     mocker.patch.object(node.api, "send_message", return_value=1)
+    mocker.patch.object(node.api, "healthyz", return_value=True)
+    mocker.patch.object(node.api, "startedz", side_effect=True)
 
     setattr(node.params, "distribution", Parameters())
     setattr(node.params.distribution, "delay_between_two_messages", 0.2)
 
     await node.healthcheck()
+    await node._retrieve_address()
 
     return node
 

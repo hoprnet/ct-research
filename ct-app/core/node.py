@@ -129,7 +129,8 @@ class Node(Base):
         """
         Retrieve the balances of the node.
         """
-        for token, balance in (await self.balance).items():
+        balances = await self.balance
+        for token, balance in balances.items():
             BALANCE.labels(self.address.id, token).set(balance)
 
         return balances

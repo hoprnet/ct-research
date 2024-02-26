@@ -4,7 +4,7 @@ from random import randint, random
 
 import pytest
 from core.model.address import Address
-from hoprd_sdk.models import InlineResponse2006
+from hoprd_sdk.models import NodeChannelsResponse
 
 from .conftest import Node, Peer
 
@@ -72,7 +72,7 @@ async def test_retrieve_peers(node: Node, peers: list[Peer]):
 
 
 @pytest.mark.asyncio
-async def test_retrieve_outgoing_channels(node: Node, channels: InlineResponse2006):
+async def test_retrieve_outgoing_channels(node: Node, channels: NodeChannelsResponse):
     assert await node.outgoings.get() == []
 
     await node.retrieve_outgoing_channels()
@@ -88,7 +88,7 @@ async def test_retrieve_outgoing_channels(node: Node, channels: InlineResponse20
 
 
 @pytest.mark.asyncio
-async def test_retrieve_incoming_channels(node: Node, channels: InlineResponse2006):
+async def test_retrieve_incoming_channels(node: Node, channels: NodeChannelsResponse):
     assert await node.incomings.get() == []
 
     await node.retrieve_incoming_channels()
@@ -104,7 +104,7 @@ async def test_retrieve_incoming_channels(node: Node, channels: InlineResponse20
 
 
 @pytest.mark.asyncio
-async def test_get_total_channel_funds(node: Node, channels: InlineResponse2006):
+async def test_get_total_channel_funds(node: Node, channels: NodeChannelsResponse):
     await node.retrieve_outgoing_channels()
 
     total_funds_from_node = await node.get_total_channel_funds()

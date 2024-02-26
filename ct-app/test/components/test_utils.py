@@ -8,71 +8,71 @@ from core.model.address import Address
 from core.model.peer import Peer
 from core.model.subgraph_entry import SubgraphEntry
 from core.model.topology_entry import TopologyEntry
-from hoprd_sdk.models import ChannelTopology
+from hoprd_sdk.models import ChannelInfoResponse
 
 
 @pytest.fixture
 def channel_topology():
     return [
-        ChannelTopology(
+        ChannelInfoResponse(
+            f"{1*1e18:.0f}",
+            1,
             "channel_1",
-            "src_1",
+            5,
+            "dst_addr_1",
             "dst_1",
             "src_addr_1",
-            "dst_addr_1",
-            f"{1*1e18:.0f}",
-            "Open",
-            "",
-            "",
-            "",
-        ),
-        ChannelTopology(
-            "channel_2",
             "src_1",
+            "Open",
+            0,
+        ),
+        ChannelInfoResponse(
+            f"{2*1e18:.0f}",
+            1,
+            "channel_2",
+            5,
+            "dst_addr_2",
             "dst_2",
             "src_addr_1",
-            "dst_addr_2",
-            f"{2*1e18:.0f}",
-            "Open",
-            "",
-            "",
-            "",
-        ),
-        ChannelTopology(
-            "channel_3",
             "src_1",
+            "Open",
+            0,
+        ),
+        ChannelInfoResponse(
+            f"{3*1e18:.0f}",
+            1,
+            "channel_3",
+            5,
+            "dst_addr_3",
             "dst_3",
             "src_addr_1",
-            "dst_addr_3",
-            f"{3*1e18:.0f}",
+            "src_1",
             "Closed",
-            "",
-            "",
-            "",
+            0,
         ),
-        ChannelTopology(
+        ChannelInfoResponse(
+            f"{4*1e18:.0f}",
+            1,
             "channel_4",
-            "src_2",
+            5,
+            "dst_addr_1",
             "dst_1",
             "src_addr_2",
-            "dst_addr_1",
-            f"{4*1e18:.0f}",
-            "Open",
-            "",
-            "",
-            "",
-        ),
-        ChannelTopology(
-            "channel_5",
             "src_2",
+            "Open",
+            0,
+        ),
+        ChannelInfoResponse(
+            f"{1*1e18:.0f}",
+            1,
+            "channel_5",
+            5,
+            "dst_addr_2",
             "dst_2",
             "src_addr_2",
-            "dst_addr_2",
-            f"{1*1e18:.0f}",
+            "src_2",
             "Open",
-            "",
-            "",
-            "",
+            0,
         ),
     ]
 
@@ -93,7 +93,7 @@ def test_httpPOST():
     pytest.skip("Not implemented")
 
 
-def test_mergeTopologyPeersSubgraph():
+def test_mergeTopoPeersSafes():
     topology_list = [
         TopologyEntry(None, None, 1),
         TopologyEntry("peer_id_2", "address_2", 2),
@@ -111,7 +111,7 @@ def test_mergeTopologyPeersSubgraph():
         SubgraphEntry("address_3", None, "safe_address_3", "3"),
     ]
 
-    merged = Utils.mergeTopologyPeersSubgraph(topology_list, peers_list, subgraph_list)
+    merged = Utils.mergeTopoPeersSafes(topology_list, peers_list, subgraph_list)
     assert len(merged) == 1
 
 

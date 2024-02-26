@@ -74,7 +74,12 @@ class Utils(Base):
             topo = next(filter(lambda t: t.node_address == address, topology), None)
             safe = next(filter(lambda s: s.node_address == address, safes), None)
 
-            if peer is None or topo is None or safe is None:
+            if (
+                peer is None
+                or topo is None
+                or safe is None
+                or safe.wxHoprBalance is None
+            ):
                 continue
 
             peer.safe_address = safe.safe_address
