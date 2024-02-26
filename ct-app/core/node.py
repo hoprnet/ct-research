@@ -85,13 +85,6 @@ class Node(Base):
 
         self.started = False
 
-    @property
-    async def balance(self) -> dict[str, int]:
-        """
-        Retrieve the balance of the node.
-        """
-        return await self.api.balances()
-
     def print_prefix(self):
         return ".".join(self.url.split("//")[-1].split(".")[:2])
 
@@ -129,7 +122,7 @@ class Node(Base):
         """
         Retrieve the balances of the node.
         """
-        balances = await self.balance
+        balances: dict = await self.api.balances()
         for token, balance in balances.items():
             BALANCE.labels(self.address.id, token).set(balance)
 
