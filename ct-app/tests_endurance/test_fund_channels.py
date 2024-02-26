@@ -1,15 +1,17 @@
 import asyncio
 import random
 
-from tools import HoprdAPIHelper, envvar
+from core.components.hoprd_api import HoprdAPI
+from core.components.utils import Utils
 
+# tools import HoprdAPIHelper, envvar
 from . import EnduranceTest, Metric
 
 
 class FundChannels(EnduranceTest):
     async def on_start(self):
         self.results = []
-        self.api = HoprdAPIHelper(envvar("API_URL"), envvar("API_KEY"))
+        self.api = HoprdAPI(Utils.envvar("API_URL"), Utils.envvar("API_KEY"))
 
         address = await self.api.get_address("hopr")
         self.info(f"Connected to node '...{address[-10:]}'")
@@ -29,7 +31,9 @@ class FundChannels(EnduranceTest):
         self.info(f"balance: {self.inital_balance}", prefix="\t")
 
     async def task(self) -> bool:
-        success = await self.api.fund_channel(self.channel.id, envvar("FUND_AMOUNT"))
+        success = await self.api.fund_channel(
+            self.channel.id, Utils.envvar("FUND_AMOUNT")
+        )
         self.results.append(success)
 
     async def on_end(self):
@@ -44,7 +48,7 @@ class FundChannels(EnduranceTest):
 
             return channel.balance
 
-        timeout = envvar("BALANCE_CHANGE_TIMEOUT", float)
+        timeout = Utils.envvar("BALANCE_CHANGE_TIMEOUT", float)
         self.info(f"Waiting up to {timeout}s for the balance to change")
         try:
             self.final_balance = await asyncio.wait_for(

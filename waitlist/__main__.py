@@ -1,3 +1,4 @@
+import pprint
 from os import environ as env
 
 import click
@@ -6,7 +7,6 @@ from dune_client.client import DuneClient
 from dune_client.query import QueryBase
 
 from .dune_entry import DuneEntry
-from .network_waitlist_entry import NetworkWaitlistEntry
 from .registration_entry import RegistrationEntry
 
 load_dotenv()
@@ -71,42 +71,54 @@ def main(nrfile: str, waitlist: str, output_file: str):
     # Loading onboarding waitlist (from Dune)
     onboarding_data = dune.run_query_dataframe(QueryBase(env.get("DUNE_QUERY_ID")))
     onboardings = DuneEntry.fromDataFrame(onboarding_data)
-    unique_onboarding = remove_duplicates(onboardings, "safe_address", True)
+    unique_onboarding = remove_duplicates(onboardings, "node_address", True)
     addresses_from_onboarding = [e.safe_address for e in unique_onboarding]
 
     # Loading registration data (from Andrius)
     registrations = RegistrationEntry.fromXLSX(nrfile)
-    unique_registrations = remove_duplicates(registrations, "safe_address", True)
+    unique_registrations = remove_duplicates(registrations, "node_address", True)
+
+    print(f"Registrations\t\t\t{len(unique_registrations)}")
+    pprint(unique_registrations)
 
     # Loading network waitlist (from Cryptpad)
-    network_waitlist = NetworkWaitlistEntry.fromXLSX(waitlist)
-    eligible_addresses = [e.safe_address for e in network_waitlist if e.eligible]
+    # network_waitlist = NetworkWaitlistEntry.fromXLSX(waitlist)
+    # eligible_addresses = [e.safe_address for e in network_waitlist if e.eligible]
 
-    print(f"Eligible addresses\t\t{len(eligible_addresses)}")
+    # print(f"Eligible addresses\t\t{len(eligible_addresses)}")
 
     # Cleanup registrations to get only valid candidates
-    waitlist_candidates = [
-        e for e in unique_registrations if e.safe_address not in eligible_addresses
-    ]
-    print(f"Candidates after cleanup\t{len(waitlist_candidates)}")
+    # waitlist_candidates = [
+    #     e for e in unique_registrations if e.safe_address not in eligible_addresses
+    # ]
+    print(f"Candidates after cleanup\t{len(unique_registrations)}")
 
     # Filtering candidates by stake and NFT ownership
     waitlist = []
-    for c in waitlist_candidates:
+    for c in unique_registrations:
         if c.safe_address not in addresses_from_onboarding:
+            print(f"Address not in onboarding: {c.safe_address}")
             continue
 
         index = addresses_from_onboarding.index(c.safe_address)
+
         candidate = unique_onboarding[index]
         candidate.node_address = c.node_address
 
         if candidate.wxHOPR_balance < 10000:
+            print(f"Low balance: {candidate.safe_address} ({candidate.wxHOPR_balance})")
             continue
 
         if candidate.wxHOPR_balance < 30000 and not candidate.nr_nft:
+            print(
+                f"Low balance (NFT): {candidate.safe_address} ({candidate.wxHOPR_balance})"
+            )
             continue
 
         if not candidate.node_address.startswith("0x"):
+            print(
+                f"Invalid node address: {candidate.safe_address} ({candidate.node_address})"
+            )
             continue
 
         waitlist.append(candidate)

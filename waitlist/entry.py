@@ -10,6 +10,10 @@ class Entry:
     @classmethod
     def fromDataFrame(cls, entries: DataFrame):
         entries = [cls.fromPandaSerie(entry) for _, entry in entries.iterrows()]
+
+        if len(entries) > 0 and isinstance(entries[0], list):
+            entries = sum(entries, start=[])
+
         entries = [entry for entry in entries if entry is not None]
 
         # write in bold
@@ -26,6 +30,10 @@ class Entry:
         return cls(
             **{key: entry[value] for key, value in items.items() if value in entry}
         )
+
+    @classmethod
+    def _import_keys_and_values(self) -> dict[str, str]:
+        raise NotImplementedError
 
     def __str__(self):
         attributes = [

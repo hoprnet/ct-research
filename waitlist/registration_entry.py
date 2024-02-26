@@ -43,25 +43,40 @@ class RegistrationEntry(Entry):
             "RegistrationEntry("
             + f"{self.participant}, "
             + f"{self.safe_address}, "
-            + f"{self.node_address}, "
+            + f"{self.node_address}"
             + ")"
         )
 
     @classmethod
     def fromPandaSerie(cls, entry: Series):
-        return cls(
-            time=entry["Time"],
-            participant=entry["Participant"],
-            safe_address=entry["What is your HOPR safe address?"],
-            node_address=entry[
-                "What is your Node address? (If you want to add multiple, just include one node per row)"
-            ],
-            nr_nft=entry["Do you already have the Network Registry NFT?"],
-            communication_service=entry[
-                "How would you like to be informed once you're able to join the network?"
-            ],
-            telegram=entry["What is your Telegram handle?"],
-        )
+        node_addresses_raw_string: str = entry[
+            "What is your Node address? (If you want to add multiple, just include one node per row)"
+        ]
+
+        node_addresses = [
+            line.strip() for line in node_addresses_raw_string.split("\n")
+        ]
+
+        instances = []
+        for node_address in node_addresses:
+            if node_address.strip() == "":
+                continue
+
+            instances.append(
+                cls(
+                    time=entry["Time"],
+                    participant=entry["Participant"],
+                    safe_address=entry["What is your HOPR safe address?"],
+                    node_address=node_address,
+                    nr_nft=entry["Do you already have the Network Registry NFT?"],
+                    communication_service=entry[
+                        "How would you like to be informed once you're able to join the network?"
+                    ],
+                    telegram=entry["What is your Telegram handle?"],
+                )
+            )
+
+        return instances
 
     @classmethod
     def _import_keys_and_values(self) -> dict[str, str]:
