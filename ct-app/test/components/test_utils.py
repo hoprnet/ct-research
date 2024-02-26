@@ -147,7 +147,7 @@ def test_excludeElements():
     ]
     blacklist = [Address("id_2", "address_2"), Address("id_4", "address_4")]
 
-    excluded = Utils.excludeElements(source_data, blacklist)
+    excluded = Utils.exclude(source_data, blacklist)
 
     assert len(source_data) == 3
     assert len(excluded) == 2

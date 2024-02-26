@@ -41,6 +41,10 @@ TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
 
 
 class Core(Base):
+    """
+    The Core class represents the main class of the application. It is responsible for managing the nodes, the economic model and the distribution of rewards.
+    """
+
     def __init__(self):
         super().__init__()
 
@@ -56,6 +60,7 @@ class Core(Base):
         self.topology_list = LockedVar("topology_list", list[TopologyEntry]())
         self.subgraph_list = LockedVar("subgraph_list", list[SubgraphEntry]())
         self.eligible_list = LockedVar("eligible_list", list[Peer]())
+        self.ticket_price = LockedVar("ticket_price", 1.0)
 
         self._safes_balance_subgraph_type = (
             SubgraphType.NONE
@@ -93,6 +98,9 @@ class Core(Base):
         self._safes_balance_subgraph_type = value
 
     def subgraph_safes_balance_url(self, subgraph: SubgraphType) -> str:
+        """
+        Returns the subgraph URL for the specified subgraph type.
+        """
         if subgraph == SubgraphType.DEFAULT:
             return self.params.subgraph.safes_balance_url
 
@@ -102,6 +110,9 @@ class Core(Base):
         return None
 
     async def _retrieve_address(self):
+        """
+        Retrieves the address from the node.
+        """
         addresses = await self.api.get_address("all")
         if not addresses:
             self.warning("No address retrieved from node.")
@@ -114,15 +125,21 @@ class Core(Base):
     @flagguard
     @formalin(None)
     async def healthcheck(self) -> dict:
-        await self._retrieve_address()
-        await self.connected.set(self.address is not None)
+        """
+        Checks the health of the node. Sets the connected status (LockedVar) and the Prometheus metric accordingly.
+        """
+        health = await self.api.healthyz()
+        await self.connected.set(health)
 
-        self.debug(f"Connection state: {await self.connected.get()}")
-        HEALTH.set(int(await self.connected.get()))
+        self.debug(f"Connection state: {health}")
+        HEALTH.set(int(health))
 
     @flagguard
     @formalin("Checking subgraph URLs")
     async def check_subgraph_urls(self):
+        """
+        Checks the subgraph URLs and sets the subgraph type in use (default, backup or none)
+        """
         query: str = self.params.subgraph.safes_balance_query
         query = query.replace("valfirst", "10")
         query = query.replace("valskip", "0")
@@ -144,6 +161,9 @@ class Core(Base):
     @flagguard
     @formalin("Aggregating peers")
     async def aggregate_peers(self):
+        """
+        Aggregates the peers from all nodes and sets the all_peers LockedVar.
+        """
         results = set[Peer]()
 
         for node in self.nodes:
@@ -157,6 +177,9 @@ class Core(Base):
     @flagguard
     @formalin("Getting subgraph data")
     async def get_subgraph_data(self):
+        """
+        Gets the subgraph data and sets the subgraph_list LockedVar.
+        """
         if self.safes_balance_subgraph_type == SubgraphType.NONE:
             self.warning("No subgraph URL available.")
             return
@@ -205,8 +228,8 @@ class Core(Base):
         self.debug(f"Fetched subgraph data ({len(results)} entries).")
 
     @flagguard
-    @connectguard
     @formalin("Getting topology data")
+    @connectguard
     async def get_topology_data(self):
         """
         Gets a dictionary containing all unique source_peerId-source_address links
@@ -228,6 +251,9 @@ class Core(Base):
     @flagguard
     @formalin("Applying economic model")
     async def apply_economic_model(self):
+        """
+        Applies the economic model to the eligible peers (after multiple filtering layers) and sets the eligible_list LockedVar.
+        """
         ready: bool = False
 
         while not ready:
@@ -242,7 +268,7 @@ class Core(Base):
             ready = len(topology) and len(subgraph) and len(peers)
             await asyncio.sleep(2)
 
-        eligibles = Utils.mergeTopologyPeersSubgraph(topology, peers, subgraph)
+        eligibles = Utils.mergeTopoPeersSafes(topology, peers, subgraph)
         self.debug(f"Merged topology and subgraph data ({len(eligibles)} entries).")
 
         old_peer_addresses = [
@@ -250,7 +276,7 @@ class Core(Base):
             for peer in eligibles
             if peer.version_is_old(self.params.peer.min_version)
         ]
-        excluded = Utils.excludeElements(eligibles, old_peer_addresses)
+        excluded = Utils.exclude(eligibles, old_peer_addresses)
         self.debug(
             f"Excluded peers running on old version (< {self.params.peer.min_version}) ({len(excluded)} entries)."
         )
@@ -263,17 +289,17 @@ class Core(Base):
             for peer in eligibles
             if peer.safe_allowance < self.params.economic_model.min_safe_allowance
         ]
-        excluded = Utils.excludeElements(eligibles, low_allowance_addresses)
+        excluded = Utils.exclude(eligibles, low_allowance_addresses)
         self.debug(f"Excluded nodes with low safe allowance ({len(excluded)} entries).")
 
-        excluded = Utils.excludeElements(eligibles, self.network_nodes_addresses)
+        excluded = Utils.exclude(eligibles, self.network_nodes_addresses)
         self.debug(f"Excluded network nodes ({len(excluded)} entries).")
-
-        self.debug(f"Eligible nodes ({len(eligibles)} entries).")
 
         model = EconomicModel.fromGCPFile(
             self.params.gcp.bucket, self.params.economic_model.filename
         )
+        model.budget.ticket_price = await self.ticket_price.get()
+
         for peer in eligibles:
             peer.economic_model = model
             peer.max_apr = self.params.distribution.max_apr_percentage
@@ -282,6 +308,8 @@ class Core(Base):
 
         excluded = Utils.rewardProbability(eligibles)
         self.debug(f"Excluded nodes with low stakes ({len(excluded)} entries).")
+
+        self.debug(f"Eligible nodes ({len(eligibles)} entries).")
 
         await self.eligible_list.set(eligibles)
 
@@ -301,11 +329,17 @@ class Core(Base):
             PEER_VERSION.labels(peer.address.id, str(peer.version)).set(1)
 
     @flagguard
-    @formalin("Preparing reward distribution")
-    async def prepare_distribution(self):
+    @formalin("Distributing rewards")
+    @connectguard
+    async def distribute_rewards(self):
+        """
+        Distributes the rewards to the eligible peers, based on the economic model.
+        """
+
         model = EconomicModel.fromGCPFile(
             self.params.gcp.bucket, self.params.economic_model.filename
         )
+        model.budget.ticket_price = await self.ticket_price.get()
 
         delay = Utils.nextDelayInSeconds(model.delay_between_distributions)
         self.debug(f"Waiting {delay} seconds for next distribution.")
@@ -376,7 +410,11 @@ class Core(Base):
 
     @flagguard
     @formalin("Getting funding data")
+    @connectguard
     async def get_fundings(self):
+        """
+        Gets the amount of funds all managed nodes have received from a specified address.
+        """
         from_address = self.params.subgraph.from_address
         ct_safe_addresses = {
             getattr(await node.api.node_info(), "node_safe", None)
@@ -474,6 +512,18 @@ class Core(Base):
 
         return reward_per_peer, iteration
 
+    @flagguard
+    @formalin("Getting ticket price")
+    @connectguard
+    async def get_ticket_price(self):
+        """
+        Gets the ticket price from the api and sets the ticket_price LockedVar. The ticket price is used in the economic model to calculate the number of messages to send to a peer.
+        """
+        price = await self.api.ticket_price()
+
+        await self.ticket_price.set(price)
+        self.debug(f"Ticket price: {price}")
+
     async def start(self):
         """
         Start the node.
@@ -497,6 +547,7 @@ class Core(Base):
         self.tasks.add(asyncio.create_task(self.healthcheck()))
         self.tasks.add(asyncio.create_task(self.check_subgraph_urls()))
         self.tasks.add(asyncio.create_task(self.get_fundings()))
+        self.tasks.add(asyncio.create_task(self.get_ticket_price()))
 
         self.tasks.add(asyncio.create_task(self.aggregate_peers()))
         self.tasks.add(asyncio.create_task(self.get_subgraph_data()))

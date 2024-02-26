@@ -58,7 +58,16 @@ TOTAL_CHANNEL_FUNDS = Gauge(
 
 
 class Node(Base):
+    """
+    A Node represents a single node in the network, managed by HOPR, and used to distribute rewards.
+    """
+
     def __init__(self, url: str, key: str):
+        """
+        Create a new Node with the specified url and key.
+        :param url: The url of the node.
+        :param key: The key of the node.
+        """
         super().__init__()
 
         self.api: HoprdAPI = HoprdAPI(url, key)
@@ -78,12 +87,18 @@ class Node(Base):
 
     @property
     async def balance(self) -> dict[str, int]:
+        """
+        Retrieve the balance of the node.
+        """
         return await self.api.balances()
 
     def print_prefix(self):
         return ".".join(self.url.split("//")[-1].split(".")[:2])
 
     async def _retrieve_address(self):
+        """
+        Retrieve the address of the node.
+        """
         address = await self.api.get_address("all")
 
         if not isinstance(address, dict):
@@ -97,19 +112,24 @@ class Node(Base):
     @flagguard
     @formalin(None)
     async def healthcheck(self):
-        await self._retrieve_address()
-        await self.connected.set(self.address is not None)
+        """
+        Perform a healthcheck on the node.
+        """
+        health = await self.api.healthyz()
+        await self.connected.set(health)
+        self.debug(f"Connection state: {health}")
 
         if address := self.address:
-            self.debug(f"Connection state: {await self.connected.get()}")
-            HEALTH.labels(address.id).set(int(await self.connected.get()))
+            HEALTH.labels(address.id).set(int(health))
 
     @flagguard
     @formalin("Retrieving balances")
     @connectguard
     async def retrieve_balances(self):
-        balances = await self.balance
-        for token, balance in balances.items():
+        """
+        Retrieve the balances of the node.
+        """
+        for token, balance in (await self.balance).items():
             BALANCE.labels(self.address.id, token).set(balance)
 
         return balances
@@ -177,7 +197,6 @@ class Node(Base):
         """
         Close channels in PendingToClose state.
         """
-
         out_pendings = [
             c for c in await self.outgoings.get() if ChannelStatus.isPending(c.status)
         ]
@@ -245,7 +264,6 @@ class Node(Base):
         """
         Fund channels that are below minimum threshold.
         """
-
         out_opens = [
             c for c in await self.outgoings.get() if ChannelStatus.isOpen(c.status)
         ]
@@ -277,7 +295,6 @@ class Node(Base):
         """
         Retrieve real peers from the network.
         """
-
         results = await self.api.peers(
             params=["peer_id", "peer_address", "reported_version"], quality=0.5
         )
