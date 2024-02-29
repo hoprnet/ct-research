@@ -1,0 +1,31 @@
+environments:
+  staging:
+    values:
+      - values-common.yaml
+      - values-staging.yaml
+    secrets:
+      - secrets-staging.sops.yaml
+  prod:
+    values:
+      - values-common.yaml
+      - values-prod.yaml
+    secrets:
+      - secrets-prod.sops.yaml
+---
+repositories:
+ - name: hoprassociation
+   url: europe-west3-docker.pkg.dev/hoprassociation/helm-charts
+   oci: true
+releases:
+- name: hoprd-ctdapp
+  namespace: ctdapp
+  chart: hoprassociation/cluster-hoprd
+  version: 0.3.0-rc.2
+  wait: true
+  timeout: 5
+  values:
+    - values-common.yaml
+    - values-{{ .Environment.Name }}.yaml
+  secrets:
+    - secrets-{{ .Environment.Name }}.sops.yaml
+
