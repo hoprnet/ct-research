@@ -43,6 +43,9 @@ class HoprdAPI(Base):
     def __call_api(
         self, obj: Callable[..., object], method: str, *args, **kwargs
     ) -> tuple[bool, Optional[object]]:
+        self.debug(
+            f"Calling {obj.__name__}.{method} with kwargs: {kwargs}, args: {args}"
+        )
         try:
             with ApiClient(self.configuration) as client:
                 api_callback = getattr(obj(client), method)

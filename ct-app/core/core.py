@@ -201,8 +201,8 @@ class Core(Base):
         self.debug(f"Fetched subgraph data ({len(results)} entries).")
 
     @flagguard
-    @connectguard
     @formalin("Getting topology data")
+    @connectguard
     async def get_topology_data(self):
         """
         Gets a dictionary containing all unique source_peerId-source_address links
@@ -346,6 +346,7 @@ class Core(Base):
 
     @flagguard
     @formalin("Getting funding data")
+    @connectguard
     async def get_fundings(self):
         from_address = self.params.subgraph.from_address
         ct_safe_addresses = {

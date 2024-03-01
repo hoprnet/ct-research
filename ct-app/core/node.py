@@ -104,6 +104,8 @@ class Node(Base):
         if address := self.address:
             self.debug(f"Connection state: {await self.connected.get()}")
             HEALTH.labels(address.id).set(int(await self.connected.get()))
+        else:
+            self.warning("No address found")
 
     @flagguard
     @formalin("Retrieving balances")
@@ -132,6 +134,7 @@ class Node(Base):
         self.debug(f"Addresses without channels: {len(addresses_without_channels)}")
 
         for address in addresses_without_channels:
+            self.debug(f"Opening channel to {address}")
             ok = await self.api.open_channel(
                 address,
                 f"{int(self.params.channel.funding_amount*1e18):d}",
@@ -139,6 +142,8 @@ class Node(Base):
             if ok:
                 self.debug(f"Opened channel to {address}")
                 CHANNELS_OPENED.labels(self.address.id).inc()
+            else:
+                self.warning(f"Failed to open channel to {address}")
             OPEN_CHANNELS_CALLS.labels(self.address.id).inc()
 
         ADDRESSES_WOUT_CHANNELS.labels(self.address.id).set(
@@ -158,10 +163,13 @@ class Node(Base):
         ]
 
         for channel in in_opens:
+            self.debug(f"Closing incoming channel {channel.channel_id}")
             ok = await self.api.close_channel(channel.channel_id)
             if ok:
                 self.debug(f"Closed channel {channel.channel_id}")
                 INCOMING_CHANNELS_CLOSED.labels(self.address.id).inc()
+            else:
+                self.warning(f"Failed to close channel {channel.channel_id}")
             CLOSE_INCOMING_CHANNELS_CALLS.labels(self.address.id).inc()
 
     @flagguard
@@ -179,10 +187,13 @@ class Node(Base):
         self.debug(f"Pending channels: {len(out_pendings)}")
 
         for channel in out_pendings:
+            self.debug(f"Closing pending channel {channel.channel_id}")
             ok = await self.api.close_channel(channel.channel_id)
             if ok:
                 self.debug(f"Closed pending channel {channel.channel_id}")
                 PENDING_CHANNELS_CLOSED.labels(self.address.id).inc()
+            else:
+                self.warning(f"Failed to close pending channel {channel.channel_id}")
             CLOSE_PENDING_CHANNELS_CALLS.labels(self.address.id).inc()
 
     @flagguard
@@ -222,13 +233,14 @@ class Node(Base):
 
         self.info(f"Closing {len(channels_to_close)} old channels")
         for channel in channels_to_close:
+            self.debug(f"Closing channel {channel}")
             ok = await self.api.close_channel(channel)
 
             if ok:
                 self.debug(f"Channel {channel} closed")
                 OLD_CHANNELS_CLOSED.labels(self.address.id).inc()
             else:
-                self.debug(f"Failed to close channel {channel_id}")
+                self.warning(f"Failed to close channel {channel_id}")
 
             CLOSE_OLD_CHANNELS_CALLS.labels(self.address.id).inc()
 
@@ -256,12 +268,15 @@ class Node(Base):
 
         for channel in low_balances:
             if channel.destination_peer_id in peer_ids:
+                self.debug(f"Funding channel {channel.channel_id}")
                 ok = await self.api.fund_channel(
                     channel.channel_id, self.params.channel.funding_amount * 1e18
                 )
                 if ok:
                     self.debug(f"Funded channel {channel.channel_id}")
                     FUNDED_CHANNELS.labels(self.address.id).inc()
+                else:
+                    self.warning(f"Failed to fund channel {channel.channel_id}")
                 FUND_CHANNELS_CALLS.labels(self.address.id).inc()
 
     @flagguard
@@ -340,6 +355,7 @@ class Node(Base):
         results = await Utils.aggregatePeerBalanceInChannels(channels)
 
         if self.address.id not in results:
+            self.warning("Funding info not found")
             return
 
         entry = TopologyEntry.fromDict(self.address.id, results[self.address.id])
