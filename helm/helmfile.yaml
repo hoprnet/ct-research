@@ -20,7 +20,7 @@ releases:
 - name: hoprd-ctdapp
   namespace: ctdapp
   chart: hoprassociation/cluster-hoprd
-  version: 0.3.0-rc.2
+  version: 0.3.0
   wait: true
   timeout: 5
   values:
