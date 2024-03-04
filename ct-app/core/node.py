@@ -77,10 +77,6 @@ class Node(Base):
         self.started = False
 
     @property
-    async def balance(self) -> dict[str, int]:
-        return await self.api.balances()
-
-    @property
     def print_prefix(self):
         return ".".join(self.url.split("//")[-1].split(".")[:2])
 
@@ -111,7 +107,7 @@ class Node(Base):
     @formalin("Retrieving balances")
     @connectguard
     async def retrieve_balances(self):
-        for token, balance in (await self.balance).items():
+        for token, balance in (await self.api.balances()).items():
             BALANCE.labels(self.address.id, token).set(balance)
 
     @flagguard
