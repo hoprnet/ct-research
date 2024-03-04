@@ -81,6 +81,11 @@ class HoprdAPI(Base):
                     f"MaxRetryError calling {obj.__name__}.{method} "
                     + f"with kwargs: {kwargs}, args: {args}"
                 )
+            except Exception as e:
+                self.error(
+                    f"Exception calling {obj.__name__}.{method} "
+                    + f"with kwargs: {kwargs}, args: {args}, error is: {e}"
+                )
             else:
                 return (True, response)
 
