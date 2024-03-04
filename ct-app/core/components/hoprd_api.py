@@ -53,7 +53,7 @@ class HoprdAPI(Base):
             f"Calling {obj.__name__}.{method} with kwargs: {kwargs}, args: {args}"
         )
 
-        async def call(
+        async def __call(
             obj: Callable[..., object],
             method: str,
             *args,
@@ -93,7 +93,8 @@ class HoprdAPI(Base):
 
         try:
             return await asyncio.wait_for(
-                asyncio.create_task(call(obj, method, *args, **kwargs)), timeout=timeout
+                asyncio.create_task(__call(obj, method, *args, **kwargs)),
+                timeout=timeout,
             )
         except asyncio.TimeoutError:
             self.error(
