@@ -1,5 +1,5 @@
 import asyncio
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 from hoprd_sdk import ApiClient, Configuration
 from hoprd_sdk.api import (
@@ -52,7 +52,13 @@ class HoprdAPI(Base):
         self.debug(
             f"Calling {obj.__name__}.{method} with kwargs: {kwargs}, args: {args}"
         )
-        async with asyncio.timeout(timeout):
+
+        async def call(
+            obj: Callable[..., object],
+            method: str,
+            *args,
+            **kwargs,
+        ):
             try:
                 with ApiClient(self.configuration) as client:
                     api_callback = getattr(obj(client), method)
@@ -78,9 +84,20 @@ class HoprdAPI(Base):
             else:
                 return (True, response)
 
-        return (False, None)
+            return (False, None)
 
-    async def balances(self, type: str | list[str] = "all"):
+        try:
+            return await asyncio.wait_for(
+                asyncio.create_task(call(obj, method, *args, **kwargs)), timeout=timeout
+            )
+        except asyncio.TimeoutError:
+            self.error(
+                f"TimeoutError calling {obj.__name__}.{method} "
+                + f"with kwargs: {kwargs}, args: {args}"
+            )
+            return (False, None)
+
+    async def balances(self, type: Union[str, list[str]] = "all"):
         """
         Returns the balance of the node.
         :param: type: str =  "all" | "hopr" | "native" | "safe_native" | "safe_hopr"
@@ -232,7 +249,7 @@ class HoprdAPI(Base):
 
     async def peers(
         self,
-        params: list | str = "peer_id",
+        params: Union[list, str] = "peer_id",
         status: str = "connected",
         quality: float = 0.5,
     ):
@@ -271,8 +288,8 @@ class HoprdAPI(Base):
         return output_list
 
     async def get_address(
-        self, address: str | list[str] = "hopr"
-    ) -> Optional[dict[str, str]] | Optional[str]:
+        self, address: Union[str, list[str]] = "hopr"
+    ) -> Optional[Union[dict[str, str], str]]:
         """
         Returns the address of the node.
         :param: address: str = "hopr" | "native"
