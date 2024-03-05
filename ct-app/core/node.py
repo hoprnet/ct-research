@@ -109,7 +109,7 @@ class Node(Base):
     @connectguard
     async def retrieve_balances(self):
         for token, balance in (await self.api.balances()).items():
-            BALANCE.labels(self.address.id, token).set(balance)
+            BALANCE.labels((await self.address.get()).id, token).set(balance)
 
     @flagguard
     @formalin("Opening channels")
