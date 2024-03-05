@@ -1,4 +1,4 @@
-replicas: 1
+replicas: 2
 network: dufour
 version: 2.0.8
 supportedRelease: providence
