@@ -46,6 +46,7 @@ class Core(Base):
         self.tasks = set[asyncio.Task]()
 
         self.connected = LockedVar("connected", False)
+        self.address = None
 
         self.all_peers = LockedVar("all_peers", set[Peer]())
         self.topology_list = LockedVar("topology_list", list[TopologyEntry]())
@@ -74,7 +75,9 @@ class Core(Base):
 
     @property
     async def network_nodes_addresses(self) -> list[Address]:
-        return await asyncio.gather(*[node.address.get() for node in self.network_nodes])
+        return await asyncio.gather(
+            *[node.address.get() for node in self.network_nodes]
+        )
 
     @property
     def safes_balance_subgraph_type(self) -> SubgraphType:
