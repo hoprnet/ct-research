@@ -45,7 +45,6 @@ class HoprdAPI(Base):
         self,
         obj: Callable[..., object],
         method: str,
-        timeout: int = 60,
         *args,
         **kwargs,
     ) -> tuple[bool, Optional[object]]:
@@ -94,7 +93,7 @@ class HoprdAPI(Base):
         try:
             return await asyncio.wait_for(
                 asyncio.create_task(__call(obj, method, *args, **kwargs)),
-                timeout=timeout,
+                timeout=60,
             )
         except asyncio.TimeoutError:
             self.error(
