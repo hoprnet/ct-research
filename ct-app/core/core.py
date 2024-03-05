@@ -74,7 +74,7 @@ class Core(Base):
 
     @property
     async def network_nodes_addresses(self) -> list[Address]:
-        return [await node.address.get() for node in self.network_nodes]
+        return await asyncio.gather(*[node.address.get() for node in self.network_nodes])
 
     @property
     def safes_balance_subgraph_type(self) -> SubgraphType:
