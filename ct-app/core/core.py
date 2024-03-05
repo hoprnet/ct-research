@@ -73,8 +73,8 @@ class Core(Base):
         return self.nodes[:-1]
 
     @property
-    def network_nodes_addresses(self) -> list[Address]:
-        return [node.address for node in self.network_nodes]
+    async def network_nodes_addresses(self) -> list[Address]:
+        return await asyncio.gather(*[node.address.get() for node in self.network_nodes])
 
     @property
     def safes_balance_subgraph_type(self) -> SubgraphType:
@@ -262,7 +262,7 @@ class Core(Base):
         excluded = Utils.excludeElements(eligibles, low_allowance_addresses)
         self.debug(f"Excluded nodes with low safe allowance ({len(excluded)} entries).")
 
-        excluded = Utils.excludeElements(eligibles, self.network_nodes_addresses)
+        excluded = Utils.excludeElements(eligibles, await self.network_nodes_addresses)
         self.debug(f"Excluded network nodes ({len(excluded)} entries).")
 
         self.debug(f"Eligible nodes ({len(eligibles)} entries).")

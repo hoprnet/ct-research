@@ -68,16 +68,18 @@ class Utils(Base):
         return list(addresses), list(keys)
 
     @classmethod
-    async def httpPOST(cls, url, data) -> tuple[int, dict]:
-        async def post(session: ClientSession, url: str, data: dict):
-            async with session.post(url, json=data) as response:
+    async def httpPOST(
+        cls, url: str, data: dict, timeout: int = 60
+    ) -> tuple[int, dict]:
+        async def post(session: ClientSession, url: str, data: dict, timeout: int):
+            async with session.post(url, json=data, timeout=timeout) as response:
                 status = response.status
                 response = await response.json()
                 return status, response
 
         async with aiohttp.ClientSession() as session:
             try:
-                status, response = await post(session, url, data)
+                status, response = await post(session, url, data, timeout)
             except Exception:
                 return None, None
             else:
