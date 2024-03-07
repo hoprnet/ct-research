@@ -21,7 +21,7 @@
         postVenvCreation = ''
           unset SOURCE_DATE_EPOCH
           pip install -U pip setuptools wheel
-          pip install -r requirements_dev.txt
+          pip install -r requirements.txt
         '' + pkgs.lib.optionalString pkgs.stdenv.isLinux ''
           autoPatchelf ./.venv
         '';
