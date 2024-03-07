@@ -25,7 +25,6 @@
         '' + pkgs.lib.optionalString pkgs.stdenv.isLinux ''
           autoPatchelf ./.venv
         '';
-
       };
     }
   );
