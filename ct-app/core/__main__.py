@@ -35,7 +35,7 @@ def main():
         node.params = params
 
     # start the prometheus client
-    start_http_server(8080)
+    start_http_server(8083)
 
     loop = asyncio.new_event_loop()
     loop.add_signal_handler(SIGINT, instance.stop)
