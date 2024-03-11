@@ -115,10 +115,9 @@ class Node(Base):
         await self.connected.set(health)
         self.debug(f"Connection state: {health}")
 
-        if address := self.address:
+        if address := await self._retrieve_address():
             self.debug(f"Connection state: {await self.connected.get()}")
             HEALTH.labels(address.id).set(int(health))
-
 
     @flagguard
     @formalin("Retrieving balances")

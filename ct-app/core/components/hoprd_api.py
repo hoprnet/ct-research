@@ -118,7 +118,7 @@ class HoprdAPI(Base):
             type = [type]
 
         is_ok, response = await self.__call_api(AccountApi, "account_get_balances")
-        
+
         if not is_ok:
             return None
 
@@ -155,7 +155,7 @@ class HoprdAPI(Base):
         :param: amount: float
         :return: bool
         """
-        body = ChannelidFundBody(amount=f"{amount:.0f}")
+        body = FundBodyRequest(amount=f"{amount:.0f}")
         is_ok, _ = await self.__call_api(
             ChannelsApi, "fund_channel", channelid=channel_id, body=body
         )
@@ -244,7 +244,6 @@ class HoprdAPI(Base):
 
         return response if is_ok else []
 
-
     async def peers(
         self,
         params: Union[list, str] = "peer_id",
@@ -269,7 +268,7 @@ class HoprdAPI(Base):
             return []
 
         if len(getattr(response, status)) == 0:
-            self.info(f"No peer with is_ok '{status}'")
+            self.info(f"No peer with state '{status}'")
             return []
 
         params = [params] if isinstance(params, str) else params
@@ -325,7 +324,7 @@ class HoprdAPI(Base):
         :param: tag: int = 0x0320
         :return: bool
         """
-        
+
         body = SendMessageBodyRequest(message, None, hops, destination, tag)
         is_ok, _ = await self.__call_api(MessagesApi, "send_message", body=body)
 
@@ -359,7 +358,7 @@ class HoprdAPI(Base):
         return response
 
     async def ticket_price(self) -> int:
-        _, response = self.__call_api(NetworkApi, "price")
+        _, response = await self.__call_api(NetworkApi, "price")
 
         return float(response.price) / 1e18 if hasattr(response, "price") else None
 
