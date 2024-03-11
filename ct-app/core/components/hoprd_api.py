@@ -1,5 +1,5 @@
 import asyncio
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 import requests
 from hoprd_sdk import (
@@ -43,37 +43,68 @@ class HoprdAPI(Base):
     def print_prefix(self) -> str:
         return "api"
 
-    def __call_api(
-        self, obj: Callable[..., object], method: str, *args, **kwargs
+    async def __call_api(
+        self,
+        obj: Callable[..., object],
+        method: str,
+        *args,
+        **kwargs,
     ) -> tuple[bool, Optional[object]]:
-        try:
-            with ApiClient(self.configuration) as client:
-                api_callback = getattr(obj(client), method)
-                kwargs["async_req"] = True
-                thread = api_callback(*args, **kwargs)
-                response = thread.get()
+        self.debug(
+            f"Calling {obj.__name__}.{method} with kwargs: {kwargs}, args: {args}"
+        )
 
-        except ApiException as e:
-            self.error(
-                f"ApiException calling {obj.__name__}.{method} "
-                + f"with kwargs: {kwargs}, args: {args}, error is: {e}"
+        async def __call(
+            obj: Callable[..., object],
+            method: str,
+            *args,
+            **kwargs,
+        ):
+            try:
+                with ApiClient(self.configuration) as client:
+                    api_callback = getattr(obj(client), method)
+                    kwargs["async_req"] = True
+                    thread = api_callback(*args, **kwargs)
+                    response = thread.get()
+
+            except ApiException as e:
+                self.error(
+                    f"ApiException calling {obj.__name__}.{method} "
+                    + f"with kwargs: {kwargs}, args: {args}, error is: {e}"
+                )
+            except OSError:
+                self.error(
+                    f"OSError calling {obj.__name__}.{method} "
+                    + f"with kwargs: {kwargs}, args: {args}:"
+                )
+            except MaxRetryError:
+                self.error(
+                    f"MaxRetryError calling {obj.__name__}.{method} "
+                    + f"with kwargs: {kwargs}, args: {args}"
+                )
+            except Exception as e:
+                self.error(
+                    f"Exception calling {obj.__name__}.{method} "
+                    + f"with kwargs: {kwargs}, args: {args}, error is: {e}"
+                )
+            else:
+                return (True, response)
+
+            return (False, None)
+
+        try:
+            return await asyncio.wait_for(
+                asyncio.create_task(__call(obj, method, *args, **kwargs)),
+                timeout=60,
             )
-        except OSError:
+        except asyncio.TimeoutError:
             self.error(
-                f"OSError calling {obj.__name__}.{method} "
-                + f"with kwargs: {kwargs}, args: {args}:"
-            )
-        except MaxRetryError:
-            self.error(
-                f"MaxRetryError calling {obj.__name__}.{method} "
+                f"TimeoutError calling {obj.__name__}.{method} "
                 + f"with kwargs: {kwargs}, args: {args}"
             )
-        else:
-            return (True, response)
+            return (False, None)
 
-        return (False, None)
-
-    async def balances(self, type: str or list[str] = "all"):
+    async def balances(self, type: Union[str, list[str]] = "all"):
         """
         Returns the balance of the node.
         :param: type: str =  "all" | "hopr" | "native" | "safe_native" | "safe_hopr"
@@ -86,7 +117,8 @@ class HoprdAPI(Base):
         elif isinstance(type, str):
             type = [type]
 
-        is_ok, response = self.__call_api(AccountApi, "balances")
+        is_ok, response = await self.__call_api(AccountApi, "account_get_balances")
+        
         if not is_ok:
             return None
 
@@ -110,7 +142,10 @@ class HoprdAPI(Base):
         """
         body = OpenChannelBodyRequest(amount, peer_address)
 
-        is_ok, response = self.__call_api(ChannelsApi, "open_channel", body=body)
+        is_ok, response = await self.__call_api(
+            ChannelsApi, "channels_open_channel", body=body
+        )
+
         return response.channel_id if is_ok else None
 
     async def fund_channel(self, channel_id: str, amount: float):
@@ -120,8 +155,11 @@ class HoprdAPI(Base):
         :param: amount: float
         :return: bool
         """
-        body = FundBodyRequest(amount=f"{amount:.0f}")
-        is_ok, _ = self.__call_api(ChannelsApi, "fund_channel", body, channel_id)
+        body = ChannelidFundBody(amount=f"{amount:.0f}")
+        is_ok, _ = await self.__call_api(
+            ChannelsApi, "fund_channel", channelid=channel_id, body=body
+        )
+
         return is_ok
 
     async def close_channel(self, channel_id: str):
@@ -130,7 +168,9 @@ class HoprdAPI(Base):
         :param: channel_id: str
         :return: bool
         """
-        is_ok, _ = self.__call_api(ChannelsApi, "close_channel", channel_id)
+        is_ok, _ = await self.__call_api(
+            ChannelsApi, "close_channel", channelid=channel_id
+        )
         return is_ok
 
     async def incoming_channels(self, only_id: bool = False) -> list:
@@ -139,7 +179,7 @@ class HoprdAPI(Base):
         :return: channels: list
         """
 
-        is_ok, response = self.__call_api(
+        is_ok, response = await self.__call_api(
             ChannelsApi,
             "list_channels",
             full_topology=False,
@@ -166,12 +206,13 @@ class HoprdAPI(Base):
         Returns all open outgoing channels.
         :return: channels: list
         """
-        is_ok, response = self.__call_api(
+        is_ok, response = await self.__call_api(
             ChannelsApi,
             "list_channels",
             full_topology=False,
             including_closed=False,
         )
+
         if is_ok:
             if not hasattr(response, "outgoing"):
                 self.warning("Response does not contain 'outgoing'")
@@ -194,7 +235,7 @@ class HoprdAPI(Base):
         :param: include_closed: bool
         :return: channels: list
         """
-        is_ok, response = self.__call_api(
+        is_ok, response = await self.__call_api(
             ChannelsApi,
             "list_channels",
             full_topology="true",
@@ -203,9 +244,10 @@ class HoprdAPI(Base):
 
         return response if is_ok else []
 
+
     async def peers(
         self,
-        params: list or str = "peer_id",
+        params: Union[list, str] = "peer_id",
         status: str = "connected",
         quality: float = 0.5,
     ):
@@ -217,7 +259,8 @@ class HoprdAPI(Base):
         :return: peers: list
         """
 
-        is_ok, response = self.__call_api(NodeApi, "peers", quality=quality)
+        is_ok, response = await self.__call_api(NodeApi, "peers", quality=quality)
+
         if not is_ok:
             return []
 
@@ -242,8 +285,8 @@ class HoprdAPI(Base):
         return output_list
 
     async def get_address(
-        self, address: str or list[str] = "hopr"
-    ) -> Optional[dict[str, str]] or Optional[str]:
+        self, address: Union[str, list[str]] = "hopr"
+    ) -> Optional[Union[dict[str, str], str]]:
         """
         Returns the address of the node.
         :param: address: str = "hopr" | "native"
@@ -256,7 +299,8 @@ class HoprdAPI(Base):
         elif isinstance(address, str):
             address = [address]
 
-        is_ok, response = self.__call_api(AccountApi, "addresses")
+        is_ok, response = await self.__call_api(AccountApi, "addresses")
+
         if not is_ok:
             return None
 
@@ -281,9 +325,10 @@ class HoprdAPI(Base):
         :param: tag: int = 0x0320
         :return: bool
         """
-
+        
         body = SendMessageBodyRequest(message, None, hops, destination, tag)
-        is_ok, _ = self.__call_api(MessagesApi, "send_message", body=body)
+        is_ok, _ = await self.__call_api(MessagesApi, "send_message", body=body)
+
         return is_ok
 
     async def messages_pop(self, tag: int = MESSAGE_TAG) -> bool:
@@ -294,7 +339,8 @@ class HoprdAPI(Base):
         """
 
         body = TagQueryRequest(tag=tag)
-        _, response = self.__call_api(MessagesApi, "pop", body=body)
+        _, response = await self.__call_api(MessagesApi, "pop", body=body)
+
         return response
 
     async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
@@ -303,13 +349,13 @@ class HoprdAPI(Base):
         :param: tag = 0x0320
         :return: list
         """
-
         body = TagQueryRequest(tag=tag)
-        _, response = self.__call_api(MessagesApi, "pop_all", body=body)
+        _, response = await self.__call_api(MessagesApi, "pop_all", body=body)
         return response.messages if hasattr(response, "messages") else []
 
     async def node_info(self):
-        _, response = self.__call_api(NodeApi, "info")
+        _, response = await self.__call_api(NodeApi, "info")
+
         return response
 
     async def ticket_price(self) -> int:

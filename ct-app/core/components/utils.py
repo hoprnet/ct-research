@@ -1,7 +1,6 @@
 import csv
 import json
 import os
-import subprocess
 import time
 from datetime import datetime, timedelta
 from os import environ
@@ -11,6 +10,7 @@ import aiohttp
 from aiohttp import ClientSession
 from celery import Celery
 from google.cloud import storage
+from scripts.list_required_parameters import list_parameters
 
 from core.model.address import Address
 from core.model.peer import Peer
@@ -42,19 +42,11 @@ class Utils(Base):
 
     @classmethod
     def checkRequiredEnvVar(cls, folder: str):
-        result = subprocess.run(
-            f"sh ./scripts/list_required_parameters.sh {folder}".split(),
-            capture_output=True,
-            text=True,
-        ).stdout
-
         all_set_flag = True
-        for var in result.splitlines():
-            exists = Utils.envvarExists(var)
+        for param in list_parameters(folder):
+            exists = Utils.envvarExists(param)
+            cls().info(f"{'✅' if exists else '❌'} {param}")
             all_set_flag *= exists
-
-            # print var with a leading check mark if it exists or red X (emoji) if it doesn't
-            cls().info(f"{'✅' if exists else '❌'} {var}")
 
         return all_set_flag
 
@@ -68,16 +60,18 @@ class Utils(Base):
         return list(addresses), list(keys)
 
     @classmethod
-    async def httpPOST(cls, url, data) -> tuple[int, dict]:
-        async def post(session: ClientSession, url: str, data: dict):
-            async with session.post(url, json=data) as response:
+    async def httpPOST(
+        cls, url: str, data: dict, timeout: int = 60
+    ) -> tuple[int, dict]:
+        async def post(session: ClientSession, url: str, data: dict, timeout: int):
+            async with session.post(url, json=data, timeout=timeout) as response:
                 status = response.status
                 response = await response.json()
                 return status, response
 
         async with aiohttp.ClientSession() as session:
             try:
-                status, response = await post(session, url, data)
+                status, response = await post(session, url, data, timeout)
             except Exception:
                 return None, None
             else:

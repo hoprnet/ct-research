@@ -1,4 +1,0 @@
--r requirements.txt
-black>=23.3.0
-pip-chill>=1.0.3
-ruff>=0.0.270

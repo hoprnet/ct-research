@@ -4,10 +4,12 @@ __pycache__/
 
 # envs
 env*/
+.direnv/
 simulation.env
 .vscode/
 *.env
-*.yaml
+*.log
+*_rules.yaml
 
 # logs
 net_viz-*.png
@@ -24,4 +26,3 @@ foo*/
 run_*.sh
 
 .DS_Store
-*/test_endurance_rules.yaml
