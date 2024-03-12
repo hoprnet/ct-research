@@ -45,7 +45,6 @@ class HoprdAPI(Base):
         self,
         obj: Callable[..., object],
         method: str,
-        timeout: int = 60,
         *args,
         **kwargs,
     ) -> tuple[bool, Optional[object]]:
@@ -94,7 +93,7 @@ class HoprdAPI(Base):
         try:
             return await asyncio.wait_for(
                 asyncio.create_task(__call(obj, method, *args, **kwargs)),
-                timeout=timeout,
+                timeout=60,
             )
         except asyncio.TimeoutError:
             self.error(
@@ -165,7 +164,7 @@ class HoprdAPI(Base):
         :return: bool
         """
         is_ok, _ = await self.__call_api(
-            ChannelsApi, "channels_close_channel", channel_id
+            ChannelsApi, "channels_close_channel", channelid=channel_id
         )
         return is_ok
 
@@ -250,7 +249,7 @@ class HoprdAPI(Base):
         :param: peer_id: str
         :return: response: dict
         """
-        _, response = await self.__call_api(PeersApi, "peers_ping_peer", peer_id)
+        _, response = await self.__call_api(PeersApi, "peers_ping_peer", peerid=peer_id)
         return response
 
     async def peers(

@@ -4,6 +4,7 @@ __pycache__/
 
 # envs
 env*/
+.direnv/
 simulation.env
 .vscode/
 *.env

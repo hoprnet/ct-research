@@ -1,7 +1,6 @@
 import csv
 import json
 import os
-import subprocess
 import time
 from datetime import datetime, timedelta
 from os import environ
@@ -11,6 +10,7 @@ import aiohttp
 from aiohttp import ClientSession
 from celery import Celery
 from google.cloud import storage
+from scripts.list_required_parameters import list_parameters
 
 from core.model.address import Address
 from core.model.peer import Peer
@@ -42,19 +42,11 @@ class Utils(Base):
 
     @classmethod
     def checkRequiredEnvVar(cls, folder: str):
-        result = subprocess.run(
-            f"sh ./scripts/list_required_parameters.sh {folder}".split(),
-            capture_output=True,
-            text=True,
-        ).stdout
-
         all_set_flag = True
-        for var in result.splitlines():
-            exists = Utils.envvarExists(var)
+        for param in list_parameters(folder):
+            exists = Utils.envvarExists(param)
+            cls().info(f"{'✅' if exists else '❌'} {param}")
             all_set_flag *= exists
-
-            # print var with a leading check mark if it exists or red X (emoji) if it doesn't
-            cls().info(f"{'✅' if exists else '❌'} {var}")
 
         return all_set_flag
 
