@@ -3,12 +3,13 @@ import logging
 import pprint
 import time
 from datetime import timedelta
+from logging import getLogger
 
-from tools.utils import envvar, getlogger
+from core.components.utils import Utils
 
 from .metric import Metric
 
-log = getlogger()
+log = getLogger()
 
 
 class EnduranceTest(object):
@@ -27,8 +28,8 @@ class EnduranceTest(object):
         self.metric_list: list[Metric] = []
         self._progress_bar_length = 45
 
-        log.setLevel(getattr(logging, envvar("LOG_LEVEL", default="INFO")))
-        log.disabled = not envvar("LOG_ENABLED", type=bool, default=True)
+        log.setLevel(getattr(logging, Utils.envvar("LOG_LEVEL", default="INFO")))
+        log.disabled = not Utils.envvar("LOG_ENABLED", type=bool, default=True)
 
     async def progress_bar(self):
         """

@@ -1,4 +1,5 @@
-from pandas import Series, DataFrame
+from pandas import DataFrame, Series
+
 from .entry import Entry
 
 
@@ -13,12 +14,13 @@ class DuneEntry(Entry):
         nft_id: int,
     ):
         self.date = date
-        self.node_address = ""
         self.safe_address = safe_address
         self.deployment_tx_hash = deployment_tx_hash
         self.wxHOPR_balance = wxHOPR_balance
         self.nr_nft = nr_nft
         self.nft_id = nft_id
+
+        self.node_address = ""
 
     @property
     def safe_address(self) -> str:

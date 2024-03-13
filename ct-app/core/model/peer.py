@@ -150,10 +150,10 @@ class Peer:
         if self.economic_model is None:
             raise ValueError("Economic model not set")
 
-        budget = self.economic_model.budget
-        denominator = budget.ticket_price * budget.winning_probability
+        # budget = self.economic_model.budget
+        # denominator = budget.ticket_price * budget.winning_probability
 
-        return round(self.protocol_reward_per_distribution / denominator)
+        return 30  # round(self.protocol_reward_per_distribution / denominator)
 
     @property
     def apr_percentage(self):
