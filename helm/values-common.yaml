@@ -1,4 +1,9 @@
 deployment:
+  env: |
+    - name: RUST_BACKTRACE
+      value: full
+    - name: RUST_LOG
+      value: debug
   resources: |
     limits:
       cpu: 1500m
