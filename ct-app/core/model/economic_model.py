@@ -61,14 +61,12 @@ class BudgetParameters:
         period: float,
         s: float,
         distribution_frequency: float,
-        ticket_price: float,
         winning_probability: float,
     ):
         self.budget = budget
         self.period = period
         self.s = s
         self.distribution_frequency = distribution_frequency
-        self.ticket_price = ticket_price
         self.winning_probability = winning_probability
 
     @property
@@ -122,12 +120,9 @@ class BudgetParameters:
         period = _input.get("budget_period", {}).get("value", None)
         s = _input.get("s", {}).get("value", None)
         distribution_frequency = _input.get("dist_freq", {}).get("value", None)
-        ticket_price = _input.get("ticket_price", {}).get("value", None)
         winning_probability = _input.get("winning_prob", {}).get("value", None)
 
-        return cls(
-            budget, period, s, distribution_frequency, ticket_price, winning_probability
-        )
+        return cls(budget, period, s, distribution_frequency, winning_probability)
 
     @property
     def delay_between_distributions(self):

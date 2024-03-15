@@ -57,7 +57,16 @@ TOTAL_CHANNEL_FUNDS = Gauge(
 
 
 class Node(Base):
+    """
+    A Node represents a single node in the network, managed by HOPR, and used to distribute rewards.
+    """
+
     def __init__(self, url: str, key: str):
+        """
+        Create a new Node with the specified url and key.
+        :param url: The url of the node.
+        :param key: The key of the node.
+        """
         super().__init__()
 
         self.api: HoprdAPI = HoprdAPI(url, key)
@@ -79,7 +88,11 @@ class Node(Base):
     def print_prefix(self):
         return ".".join(self.url.split("//")[-1].split(".")[:2])
 
-    async def _retrieve_address(self) -> Address:
+    async def _retrieve_address(self):
+        """
+        Retrieve the address of the node.
+        """
+
         address = await self.api.get_address("all")
 
         if not isinstance(address, dict):
@@ -95,19 +108,24 @@ class Node(Base):
     @flagguard
     @formalin(None)
     async def healthcheck(self):
-        node_address = await self._retrieve_address()
-        await self.connected.set(node_address is not None)
+        """
+        Perform a healthcheck on the node.
+        """
+        health = await self.api.healthyz()
+        await self.connected.set(health)
+        self.debug(f"Connection state: {health}")
 
-        if address := node_address:
+        if address := await self._retrieve_address():
             self.debug(f"Connection state: {await self.connected.get()}")
-            HEALTH.labels(address.id).set(int(await self.connected.get()))
-        else:
-            self.warning("No address found")
+            HEALTH.labels(address.id).set(int(health))
 
     @flagguard
     @formalin("Retrieving balances")
     @connectguard
     async def retrieve_balances(self):
+        """
+        Retrieve the balances of the node.
+        """
         for token, balance in (await self.api.balances()).items():
             BALANCE.labels((await self.address.get()).id, token).set(balance)
 
@@ -179,8 +197,8 @@ class Node(Base):
         """
         Close channels in PendingToClose state.
         """
-        node_address = await self.address.get()
 
+        node_address = await self.address.get()
         out_pendings = [
             c for c in await self.outgoings.get() if ChannelStatus.isPending(c.status)
         ]

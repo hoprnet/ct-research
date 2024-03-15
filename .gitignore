@@ -3,7 +3,7 @@ __pycache__/
 .pytest_cache/
 
 # envs
-env*/
+.venv*/
 .direnv/
 simulation.env
 .vscode/
@@ -16,6 +16,7 @@ net_viz-*.png
 out.mp4
 websocket_client.log
 logs/
+*.log
 
 #misc
 .coverage

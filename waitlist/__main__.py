@@ -1,24 +1,34 @@
-from os import environ as env
+import asyncio
+import os
+import pickle
+from datetime import datetime
 
 import click
 from dotenv import load_dotenv
 from dune_client.client import DuneClient
-from dune_client.query import QueryBase
 
 from .dune_entry import DuneEntry
-from .network_waitlist_entry import NetworkWaitlistEntry
+from .graphql_providers import ProviderError, SafesProvider
 from .registration_entry import RegistrationEntry
+from .subgraph_entry import SubgraphEntry
 
 load_dotenv()
 dune = DuneClient.from_env()
 
+# turnoff gql.transport.aiohttp loggings
+import logging
+
+logging.getLogger('gql.transport.aiohttp').setLevel(logging.CRITICAL)
 
 def remove_duplicates(
-    data: list, attribute: str = "safe_address", keep_last: bool = False
+    data: list, param_list: list[str] = ["safe_address"], keep_last: bool = False
 ) -> list:
     _data = data[-1::-1] if keep_last else data
-    attributes = [getattr(entry, attribute) for entry in _data]
+    attributes = []
 
+    for entry in _data:
+        attributes.append("-".join(getattr(entry, param) for param in param_list))
+    
     duplicates_free = []
     for attribute in set(attributes):
         index = attributes.index(attribute)
@@ -69,36 +79,64 @@ def applyCOMMrules(nr_waitlist: list, stake_waitlist: list, chunk_sizes: tuple):
 )
 def main(nrfile: str, waitlist: str, output_file: str):
     # Loading onboarding waitlist (from Dune)
-    onboarding_data = dune.run_query_dataframe(QueryBase(env.get("DUNE_QUERY_ID")))
-    onboardings = DuneEntry.fromDataFrame(onboarding_data)
-    unique_onboarding = remove_duplicates(onboardings, "safe_address", True)
-    addresses_from_onboarding = [e.safe_address for e in unique_onboarding]
+    # onboarding_data = dune.run_query_dataframe(QueryBase(env.get("DUNE_QUERY_ID")))
 
+    with open("onboarding_data.pkl", "rb") as f:
+        onboarding_data = pickle.load(f)
+
+    dune_data = DuneEntry.fromDataFrame(onboarding_data)
+    dune_unique = remove_duplicates(dune_data, ["safe_address"], True)
+    unique_dune_safe_addresses = [e.safe_address for e in dune_unique]
+
+
+    provider = SafesProvider(os.environ.get("SUBGRAPH_SAFES_BALANCE_URL_BACKUP"))
+    deployed_safes = list[SubgraphEntry]()
+    try:
+        for safe in asyncio.run(provider.get()):
+            entries = [
+                SubgraphEntry.fromSubgraphResult(safe["registeredNodesInNetworkRegistry"])
+            ]
+            deployed_safes.extend(entries)
+
+    except ProviderError as err:
+        print(f"get_registered_nodes: {err}")
+    deployed_safes_addresses = [s.safe_address for s in deployed_safes]
+    running_nodes = sum([s.nodes for s in deployed_safes], [])
+
+    print("\033[1m", end="")
+    print(f"SubgraphEntry // Loaded {len(deployed_safes_addresses)} entries", end="")
+    print("\033[0m") # requires refactoring
+    
     # Loading registration data (from Andrius)
     registrations = RegistrationEntry.fromXLSX(nrfile)
-    unique_registrations = remove_duplicates(registrations, "safe_address", True)
+    unique_registrations = remove_duplicates(registrations, ["safe_address","node_address"], True)
 
-    # Loading network waitlist (from Cryptpad)
-    network_waitlist = NetworkWaitlistEntry.fromXLSX(waitlist)
-    eligible_addresses = [e.safe_address for e in network_waitlist if e.eligible]
-
-    print(f"Eligible addresses\t\t{len(eligible_addresses)}")
-
-    # Cleanup registrations to get only valid candidates
-    waitlist_candidates = [
-        e for e in unique_registrations if e.safe_address not in eligible_addresses
-    ]
+    waitlist_candidates = unique_registrations
     print(f"Candidates after cleanup\t{len(waitlist_candidates)}")
 
     # Filtering candidates by stake and NFT ownership
     waitlist = []
     for c in waitlist_candidates:
-        if c.safe_address not in addresses_from_onboarding:
-            continue
+        if c.safe_address in unique_dune_safe_addresses:
+            index = unique_dune_safe_addresses.index(c.safe_address)
+            candidate = dune_unique[index]
+            candidate.node_address = c.node_address
 
-        index = addresses_from_onboarding.index(c.safe_address)
-        candidate = unique_onboarding[index]
-        candidate.node_address = c.node_address
+        elif c.safe_address in deployed_safes_addresses:
+            index = deployed_safes_addresses.index(c.safe_address)
+            deployed_safe = deployed_safes[index]
+            candidate = DuneEntry(
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                deployed_safe.safe_address, 
+                "", 
+                deployed_safe.wxHoprBalance, 
+                False,
+                None,
+            )
+            candidate.node_address = c.node_address
+            
+        else:
+            continue
 
         if candidate.wxHOPR_balance < 10000:
             continue
@@ -107,6 +145,9 @@ def main(nrfile: str, waitlist: str, output_file: str):
             continue
 
         if not candidate.node_address.startswith("0x"):
+            continue
+
+        if candidate.node_address in running_nodes:
             continue
 
         waitlist.append(candidate)
@@ -123,7 +164,7 @@ def main(nrfile: str, waitlist: str, output_file: str):
 
     # Sanity check
     assert len(ordered_waitlist) == len(nr_waitlist) + len(stake_waitlist)
-    assert len(ordered_waitlist) == (len(remove_duplicates(ordered_waitlist)))
+    assert len(ordered_waitlist) == (len(remove_duplicates(ordered_waitlist, ["safe_address", "node_address"])))
 
     # Exporting waitlist
     DuneEntry.toDataFrame(ordered_waitlist).to_excel(output_file, index=False)
