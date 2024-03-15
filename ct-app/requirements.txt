@@ -14,3 +14,6 @@ google-cloud-storage==2.10.0
 black>=23.3.0
 pip-chill>=1.0.3
 ruff>=0.0.270
+python-dotenv>=1.0.1
+pandas>=2.2.1
+dune-client>=1.5.1

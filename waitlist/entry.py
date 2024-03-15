@@ -9,7 +9,7 @@ class Entry:
 
     @classmethod
     def fromDataFrame(cls, entries: DataFrame):
-        entries = [cls.fromPandaSerie(entry) for _, entry in entries.iterrows()]
+        entries = sum([cls.fromPandaSerie(entry) for _, entry in entries.iterrows()], [])
         entries = [entry for entry in entries if entry is not None]
 
         # write in bold
@@ -23,9 +23,9 @@ class Entry:
     def fromPandaSerie(cls, entry: Series):
         items: dict[str, str] = cls._import_keys_and_values()
 
-        return cls(
+        return [cls(
             **{key: entry[value] for key, value in items.items() if value in entry}
-        )
+        )]
 
     def __str__(self):
         attributes = [
