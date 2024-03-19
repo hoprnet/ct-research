@@ -17,7 +17,7 @@
           python39Packages.venvShellHook
         ];
 
-        venvDir = "./env";
+        venvDir = "./.venv";
         postVenvCreation = ''
           unset SOURCE_DATE_EPOCH
           pip install -U pip setuptools wheel

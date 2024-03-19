@@ -7,7 +7,7 @@ env*/
 .direnv/
 simulation.env
 .vscode/
-*.env
+*.*env
 *.log
 *_rules.yaml
 
@@ -16,12 +16,14 @@ net_viz-*.png
 out.mp4
 websocket_client.log
 logs/
+*.csv
 
 #misc
 .coverage
 htmlcov/
-foo*.*
+foo_*.*
 foo*/
 run_*.sh
+foo*.*
 
 .DS_Store
