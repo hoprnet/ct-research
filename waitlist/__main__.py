@@ -1,11 +1,11 @@
 import asyncio
 import os
-import pickle
 from datetime import datetime
 
 import click
 from dotenv import load_dotenv
 from dune_client.client import DuneClient
+from dune_client.query import QueryBase
 
 from .dune_entry import DuneEntry
 from .graphql_providers import ProviderError, SafesProvider
@@ -15,7 +15,6 @@ from .subgraph_entry import SubgraphEntry
 load_dotenv()
 dune = DuneClient.from_env()
 
-# turnoff gql.transport.aiohttp loggings
 import logging
 
 logging.getLogger('gql.transport.aiohttp').setLevel(logging.CRITICAL)
@@ -68,22 +67,15 @@ def applyCOMMrules(nr_waitlist: list, stake_waitlist: list, chunk_sizes: tuple):
     help="Network register file (.xlsx)",
 )
 @click.option(
-    "--waitlist",
-    default="network_waitlist.xlsx",
-    help="Network waitlist file (.xlsx)",
-)
-@click.option(
     "--output-file",
     default="final_waitlist.xlsx",
     help="Output file (.xlsx)",
 )
-def main(nrfile: str, waitlist: str, output_file: str):
+def main(nrfile: str, output_file: str):
     # Loading onboarding waitlist (from Dune)
-    # onboarding_data = dune.run_query_dataframe(QueryBase(env.get("DUNE_QUERY_ID")))
-
-    with open("onboarding_data.pkl", "rb") as f:
-        onboarding_data = pickle.load(f)
-
+    dune_query = QueryBase(os.environ.get("DUNE_QUERY_ID"))
+    onboarding_data = dune.run_query_dataframe(dune_query)
+        
     dune_data = DuneEntry.fromDataFrame(onboarding_data)
     dune_unique = remove_duplicates(dune_data, ["safe_address"], True)
     unique_dune_safe_addresses = [e.safe_address for e in dune_unique]
@@ -162,13 +154,12 @@ def main(nrfile: str, waitlist: str, output_file: str):
     ordered_waitlist = applyCOMMrules(nr_waitlist, stake_waitlist, (20, 10))
     print(f"Final waitlist size\t\t{len(ordered_waitlist)}")
 
-    # Sanity check
-    assert len(ordered_waitlist) == len(nr_waitlist) + len(stake_waitlist)
-    assert len(ordered_waitlist) == (len(remove_duplicates(ordered_waitlist, ["safe_address", "node_address"])))
-
     # Exporting waitlist
     DuneEntry.toDataFrame(ordered_waitlist).to_excel(output_file, index=False)
 
+    # Sanity check
+    assert len(ordered_waitlist) == len(nr_waitlist) + len(stake_waitlist)
+    assert len(ordered_waitlist) == (len(remove_duplicates(ordered_waitlist, ["safe_address", "node_address"])))
 
 if __name__ == "__main__":
     main()

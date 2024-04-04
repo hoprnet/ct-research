@@ -11,9 +11,11 @@ prometheus_client==0.17.1
 sqlalchemy==2.0.20
 psycopg2==2.9.7
 google-cloud-storage==2.10.0
-black>=23.3.0
-pip-chill>=1.0.3
-ruff>=0.0.270
-python-dotenv>=1.0.1
+black==24.3.0
+pip-chill==1.0.3
+ruff==0.3.3
+python-dotenv==1.0.1
 pandas>=2.2.1
-dune-client>=1.5.1
+dune-client==1.7.0
+openpyxl==3.1.2
+dataclasses-json==0.6.4
