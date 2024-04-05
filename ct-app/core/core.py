@@ -217,7 +217,7 @@ class Core(Base):
 
         provider = StakingProvider(self.staking_subgraph_url)
 
-        results = list[Address]()
+        results = list[str]()
         try:
             for nft in await provider.get():
                 if owner := nft.get("owner", {}).get("id", None):
@@ -302,16 +302,17 @@ class Core(Base):
         excluded = Utils.excludeElements(eligibles, await self.network_nodes_addresses)
         self.debug(f"Excluded network nodes ({len(excluded)} entries).")
 
-        low_stake_non_nft_holders = [
-            peer.address
-            for peer in eligibles
-            if peer.safe_address not in nft_holders
-            and peer.split_stake < self.params.economic_model.nft_threshold
-        ]
-        excluded = Utils.excludeElements(eligibles, low_stake_non_nft_holders)
-        self.debug(
-            f"Excluded non-nft-holders with stake < {self.params.economic_model.nft_threshold} ({len(excluded)} entries)."
-        )
+        if threshold := self.params.economic_model.nft_threshold:
+            low_stake_non_nft_holders = [
+                peer.address
+                for peer in eligibles
+                if peer.safe_address not in nft_holders
+                and peer.split_stake < threshold
+            ]
+            excluded = Utils.excludeElements(eligibles, low_stake_non_nft_holders)
+            self.debug(
+                f"Excluded non-nft-holders with stake < {threshold} ({len(excluded)} entries)."
+            )
 
         model = EconomicModel.fromGCPFile(
             self.params.gcp.bucket, self.params.economic_model.filename
