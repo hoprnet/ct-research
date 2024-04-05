@@ -244,6 +244,8 @@ class Core(Base):
         eligibles = Utils.mergeTopologyPeersSubgraph(topology, peers, subgraph)
         self.debug(f"Merged topology and subgraph data ({len(eligibles)} entries).")
 
+        self.debug(f"after merge: {[el.address.id for el in eligibles]}")
+
         old_peer_addresses = [
             peer.address
             for peer in eligibles
@@ -253,6 +255,7 @@ class Core(Base):
         self.debug(
             f"Excluded peers running on old version (< {self.params.peer.min_version}) ({len(excluded)} entries)."
         )
+        self.debug(f"peers on wrong version: {[el.address.id for el in excluded]}")
 
         Utils.allowManyNodePerSafe(eligibles)
         self.debug(f"Allowed many nodes per safe ({len(eligibles)} entries).")
@@ -264,11 +267,11 @@ class Core(Base):
         ]
         excluded = Utils.excludeElements(eligibles, low_allowance_addresses)
         self.debug(f"Excluded nodes with low safe allowance ({len(excluded)} entries).")
+        self.debug(f"peers with low allowance {[el.address.id for el in excluded]}")
 
         excluded = Utils.excludeElements(eligibles, await self.network_nodes_addresses)
         self.debug(f"Excluded network nodes ({len(excluded)} entries).")
-
-        self.debug(f"Eligible nodes ({len(eligibles)} entries).")
+        self.debug(f"ct nodes {[el.address.id for el in excluded]}")
 
         model = EconomicModel.fromGCPFile(
             self.params.gcp.bucket, self.params.economic_model.filename
@@ -281,6 +284,9 @@ class Core(Base):
 
         excluded = Utils.rewardProbability(eligibles)
         self.debug(f"Excluded nodes with low stakes ({len(excluded)} entries).")
+
+        self.debug(f"Eligible nodes ({len(eligibles)} entries).")
+        self.debug(f"final eligible list {[el.address.id for el in eligibles]}")
 
         await self.eligible_list.set(eligibles)
 

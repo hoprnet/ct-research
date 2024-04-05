@@ -108,7 +108,13 @@ class Node(Base):
     @formalin("Retrieving balances")
     @connectguard
     async def retrieve_balances(self):
-        for token, balance in (await self.api.balances()).items():
+        balances = await self.api.balances()
+
+        if balances is None:
+            self.warning("Failed to retrieve balances")
+            return
+        
+        for token, balance in balances.items():
             BALANCE.labels((await self.address.get()).id, token).set(balance)
 
     @flagguard
