@@ -81,16 +81,13 @@ class Core(Base):
             node.params = params
 
         self._safe_subgraph_url = SubgraphURL(
-            self.params.subgraph.safes_balance_url,
-            self.params.subgraph.safes_balance_url_backup,
+            self.params.subgraph.deployer_key, self.params.subgraph.safes_balance
         )
         self._staking_subgraph_url = SubgraphURL(
-            self.params.subgraph.staking_url,
-            self.params.subgraph.staking_url_backup,
+            self.params.subgraph.deployer_key, self.params.subgraph.staking
         )
         self._wxhopr_txs_subgraph_url = SubgraphURL(
-            self.params.subgraph.wxhopr_txs_url,
-            self.params.subgraph.wxhopr_txs_url_backup,
+            self.params.subgraph.deployer_key, self.params.subgraph.wxhopr_txs
         )
 
     @property
@@ -306,8 +303,7 @@ class Core(Base):
             low_stake_non_nft_holders = [
                 peer.address
                 for peer in eligibles
-                if peer.safe_address not in nft_holders
-                and peer.split_stake < threshold
+                if peer.safe_address not in nft_holders and peer.split_stake < threshold
             ]
             excluded = Utils.excludeElements(eligibles, low_stake_non_nft_holders)
             self.debug(
@@ -420,6 +416,12 @@ class Core(Base):
         self.debug(f"Total funding: {total_funding}")
         TOTAL_FUNDING.set(total_funding)
 
+    @flagguard
+    @formalin("Getting peers rewards")
+    @connectguard
+    async def get_peers_rewards(self):
+        pass
+
     async def start(self):
         """
         Start the node.
@@ -443,11 +445,12 @@ class Core(Base):
         self.tasks.add(asyncio.create_task(self.healthcheck()))
         self.tasks.add(asyncio.create_task(self.check_subgraph_urls()))
         self.tasks.add(asyncio.create_task(self.get_fundings()))
-        self.tasks.add(asyncio.create_task(self.get_nft_holders()))
+        self.tasks.add(asyncio.create_task(self.get_peers_rewards()))
 
         self.tasks.add(asyncio.create_task(self.aggregate_peers()))
         self.tasks.add(asyncio.create_task(self.get_registered_nodes()))
         self.tasks.add(asyncio.create_task(self.get_topology_data()))
+        self.tasks.add(asyncio.create_task(self.get_nft_holders()))
 
         self.tasks.add(asyncio.create_task(self.apply_economic_model()))
         self.tasks.add(asyncio.create_task(self.distribute_rewards()))

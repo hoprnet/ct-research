@@ -2,8 +2,6 @@ import asyncio
 import functools
 from typing import Optional
 
-from .flags import Flags
-
 
 def connectguard(func):
     """
@@ -28,10 +26,12 @@ def flagguard(func):
 
     @functools.wraps(func)
     async def wrapper(self, *args, **kwargs):
-        flags = Flags.getEnvironmentFlags(self.class_prefix())
+        cls_name = self.class_prefix()
+        func_name = func.__name__
 
-        if func.__name__ not in flags:
-            self.error(f"Feature `{func.__name__}` not yet available")
+        flag = getattr(getattr(self.params.flags, cls_name), func_name, None)
+        if flag is None:
+            self.error(f"Feature `{func_name}` not yet available")
             return
 
         return await func(self, *args, **kwargs)
@@ -48,18 +48,18 @@ def formalin(message: Optional[str] = None):
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(self, *args, **kwargs):
-            _delay = Flags.getEnvironmentFlagValue(func.__name__, self.class_prefix())
+            # _delay = Flags.getEnvironmentFlagValue(func.__name__, self.class_prefix())
 
-            if _delay != 0:
-                self.debug(f"Running `{func.__name__}` every {_delay} seconds")
+            cls_name = self.class_prefix()
+            func_name = func.__name__
+            _delay = getattr(getattr(self.params.flags, cls_name), func_name)
+
+            self.debug(f"Running `{func.__name__}` every {_delay} seconds")
 
             while self.started:
                 if message:
                     self.feature(message)
                 await func(self, *args, **kwargs)
-
-                if _delay == 0:
-                    break
 
                 if _delay is not None:
                     await asyncio.sleep(_delay)

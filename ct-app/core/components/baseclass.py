@@ -22,7 +22,7 @@ class Base:
 
     @classmethod
     def class_prefix(cls) -> str:
-        return f"{cls.__name__.upper()}_"
+        return cls.__name__.lower()
 
     def __format(self, message: str, color: str = "\033[0m"):
         return f"{self.print_prefix} | {message}"

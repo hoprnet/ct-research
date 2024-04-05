@@ -26,4 +26,5 @@ class Flags:
             ]
 
         _prefix = cls.global_prefix + prefix
+
         return [item.replace(_prefix, "").lower() for item in cls._cache_flags]
