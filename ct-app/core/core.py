@@ -38,6 +38,7 @@ JOBS_PER_PEER = Gauge("jobs_per_peer", "Jobs per peer", ["peer_id"])
 PEER_SPLIT_STAKE = Gauge("peer_split_stake", "Splitted stake", ["peer_id"])
 PEER_TF_STAKE = Gauge("peer_tf_stake", "Transformed stake", ["peer_id"])
 PEER_SAFE_COUNT = Gauge("peer_safe_count", "Number of safes", ["peer_id"])
+PEER_VERSION = Gauge("peer_version", "Peer version", ["peer_id", "version"])
 DISTRIBUTION_DELAY = Gauge("distribution_delay", "Delay between two distributions")
 NEXT_DISTRIBUTION_EPOCH = Gauge("next_distribution_epoch", "Next distribution (epoch)")
 TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
@@ -54,6 +55,8 @@ class Core(Base):
         self.tasks = set[asyncio.Task]()
 
         self.connected = LockedVar("connected", False)
+        self.address = None
+
         self.all_peers = LockedVar("all_peers", set[Peer]())
         self.topology_list = LockedVar("topology_list", list[TopologyEntry]())
         self.registered_nodes = LockedVar("subgraph_list", list[SubgraphEntry]())
@@ -103,8 +106,10 @@ class Core(Base):
         return self.nodes[:-1]
 
     @property
-    def network_nodes_addresses(self) -> list[Address]:
-        return [node.address for node in self.network_nodes]
+    async def network_nodes_addresses(self) -> list[Address]:
+        return await asyncio.gather(
+            *[node.address.get() for node in self.network_nodes]
+        )
 
     @property
     def subgraph_type(self) -> SubgraphType:
@@ -227,8 +232,8 @@ class Core(Base):
         self.debug(f"Fetched NFT holders ({len(results)} entries).")
 
     @flagguard
-    @connectguard
     @formalin("Getting topology data")
+    @connectguard
     async def get_topology_data(self):
         """
         Gets a dictionary containing all unique source_peerId-source_address links
@@ -269,6 +274,8 @@ class Core(Base):
         eligibles = Utils.mergeDataSources(topology, peers, registered_nodes)
         self.debug(f"Merged topology and subgraph data ({len(eligibles)} entries).")
 
+        self.debug(f"after merge: {[el.address.id for el in eligibles]}")
+
         old_peer_addresses = [
             peer.address
             for peer in eligibles
@@ -278,6 +285,7 @@ class Core(Base):
         self.debug(
             f"Excluded peers running on old version (< {self.params.peer.min_version}) ({len(excluded)} entries)."
         )
+        self.debug(f"peers on wrong version: {[el.address.id for el in excluded]}")
 
         Utils.allowManyNodePerSafe(eligibles)
         self.debug(f"Allowed many nodes per safe ({len(eligibles)} entries).")
@@ -289,8 +297,9 @@ class Core(Base):
         ]
         excluded = Utils.excludeElements(eligibles, low_allowance_addresses)
         self.debug(f"Excluded nodes with low safe allowance ({len(excluded)} entries).")
+        self.debug(f"peers with low allowance {[el.address.id for el in excluded]}")
 
-        excluded = Utils.excludeElements(eligibles, self.network_nodes_addresses)
+        excluded = Utils.excludeElements(eligibles, await self.network_nodes_addresses)
         self.debug(f"Excluded network nodes ({len(excluded)} entries).")
 
         low_stake_non_nft_holders = [
@@ -316,7 +325,10 @@ class Core(Base):
         excluded = Utils.rewardProbability(eligibles)
         self.debug(f"Excluded nodes with low stakes ({len(excluded)} entries).")
 
-        self.debug(f"Eligible nodes ({len(eligibles)} entries).")
+        self.info(f"Eligible nodes ({len(eligibles)} entries).")
+
+        self.debug(f"final eligible list {[el.address.id for el in eligibles]}")
+
         await self.eligible_list.set(eligibles)
 
         # set prometheus metrics
@@ -332,6 +344,7 @@ class Core(Base):
             PEER_SPLIT_STAKE.labels(peer.address.id).set(peer.split_stake)
             PEER_SAFE_COUNT.labels(peer.address.id).set(peer.safe_address_count)
             PEER_TF_STAKE.labels(peer.address.id).set(peer.transformed_stake)
+            PEER_VERSION.labels(peer.address.id, peer.version).set(1)
 
     @flagguard
     @formalin("Distributing rewards")
@@ -384,6 +397,7 @@ class Core(Base):
 
     @flagguard
     @formalin("Getting funding data")
+    @connectguard
     async def get_fundings(self):
         ct_safe_addresses = {
             getattr(await node.api.node_info(), "node_safe", None)
