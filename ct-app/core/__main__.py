@@ -20,6 +20,7 @@ def main(configfile: str = None):
     # import envvars to params, such as self.params.subgraph.deployer_key
     params = Parameters()
     params.parse(config)
+    params.from_env("SUBGRAPH_", "PG", "RABBITMQ_")
 
     Utils.stringArrayToGCP(
         params.gcp.bucket,
