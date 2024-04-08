@@ -67,6 +67,7 @@ class Core(Base):
         self._safe_subgraph_url = None
         self._staking_subgraph_url = None
         self._wxhopr_txs_subgraph_url = None
+
         # trick to have the subgraph in use displayed in the terminal
         self._subgraph_type = SubgraphType.NONE
         self.subgraph_type = SubgraphType.DEFAULT
@@ -81,13 +82,13 @@ class Core(Base):
             node.params = params
 
         self._safe_subgraph_url = SubgraphURL(
-            self.params.subgraph.deployer_key, self.params.subgraph.safes_balance
+            self.params.subgraph.deployerKey, self.params.subgraph.safesBalance
         )
         self._staking_subgraph_url = SubgraphURL(
-            self.params.subgraph.deployer_key, self.params.subgraph.staking
+            self.params.subgraph.deployerKey, self.params.subgraph.staking
         )
         self._wxhopr_txs_subgraph_url = SubgraphURL(
-            self.params.subgraph.deployer_key, self.params.subgraph.wxhopr_txs
+            self.params.subgraph.deployerKey, self.params.subgraph.wxHOPRTxs
         )
 
     @property
@@ -238,7 +239,7 @@ class Core(Base):
         """
         channels = await self.api.all_channels(False)
         if channels is None:
-            self.warning("Topology data not available.")
+            self.warning("Topology data not available")
             return
 
         results = await Utils.aggregatePeerBalanceInChannels(channels.all)
@@ -252,22 +253,21 @@ class Core(Base):
     @flagguard
     @formalin("Applying economic model")
     async def apply_economic_model(self):
-        ready: bool = False
+        topology = await self.topology_list.get()
+        registered_nodes = await self.registered_nodes.get()
+        peers = await self.all_peers.get()
+        nft_holders = await self.nft_holders.get()
 
-        while not ready:
-            topology = await self.topology_list.get()
-            registered_nodes = await self.registered_nodes.get()
-            peers = await self.all_peers.get()
-            nft_holders = await self.nft_holders.get()
+        self.debug(f"Topology size: {len(topology)}")
+        self.debug(f"Subgraph size: {len(registered_nodes)}")
+        self.debug(f"Network size: {len(peers)}")
+        self.debug(f"NFT holders: {len(nft_holders)}")
 
-            self.debug(f"Topology size: {len(topology)}")
-            self.debug(f"Subgraph size: {len(registered_nodes)}")
-            self.debug(f"Network size: {len(peers)}")
-            self.debug(f"NFT holders: {len(nft_holders)}")
-
-            ready = len(topology) and len(registered_nodes) and len(peers)
-            await asyncio.sleep(2)
-
+        ready = len(topology) and len(registered_nodes) and len(peers)
+        if not ready:
+            self.warning("Not enough data to apply economic model.")
+            return
+        
         eligibles = Utils.mergeDataSources(topology, peers, registered_nodes)
         self.debug(f"Merged topology and subgraph data ({len(eligibles)} entries).")
 
@@ -276,11 +276,11 @@ class Core(Base):
         old_peer_addresses = [
             peer.address
             for peer in eligibles
-            if peer.version_is_old(self.params.peer.min_version)
+            if peer.version_is_old(self.params.peer.minVersion)
         ]
         excluded = Utils.excludeElements(eligibles, old_peer_addresses)
         self.debug(
-            f"Excluded peers running on old version (< {self.params.peer.min_version}) ({len(excluded)} entries)."
+            f"Excluded peers running on old version (< {self.params.peer.minVersion}) ({len(excluded)} entries)."
         )
         self.debug(f"peers on wrong version: {[el.address.id for el in excluded]}")
 
@@ -290,7 +290,7 @@ class Core(Base):
         low_allowance_addresses = [
             peer.address
             for peer in eligibles
-            if peer.safe_allowance < self.params.economic_model.min_safe_allowance
+            if peer.safe_allowance < self.params.economicModel.minSafeAllowance
         ]
         excluded = Utils.excludeElements(eligibles, low_allowance_addresses)
         self.debug(f"Excluded nodes with low safe allowance ({len(excluded)} entries).")
@@ -299,7 +299,7 @@ class Core(Base):
         excluded = Utils.excludeElements(eligibles, await self.network_nodes_addresses)
         self.debug(f"Excluded network nodes ({len(excluded)} entries).")
 
-        if threshold := self.params.economic_model.nft_threshold:
+        if threshold := self.params.economicModel.NFTThreshold:
             low_stake_non_nft_holders = [
                 peer.address
                 for peer in eligibles
@@ -310,12 +310,11 @@ class Core(Base):
                 f"Excluded non-nft-holders with stake < {threshold} ({len(excluded)} entries)."
             )
 
-        model = EconomicModel.fromGCPFile(
-            self.params.gcp.bucket, self.params.economic_model.filename
-        )
+        model = EconomicModel.fromParameters(self.params.economicModel)
+
         for peer in eligibles:
             peer.economic_model = model
-            peer.max_apr = self.params.distribution.max_apr_percentage
+            peer.max_apr = self.params.economicModel.maxAPRPercentage
 
         self.debug("Assigned economic model to eligible nodes.")
 
@@ -347,7 +346,7 @@ class Core(Base):
     @formalin("Distributing rewards")
     async def distribute_rewards(self):
         model = EconomicModel.fromGCPFile(
-            self.params.gcp.bucket, self.params.economic_model.filename
+            self.params.gcp.bucket, self.params.economicModel.filename
         )
 
         delay = Utils.nextDelayInSeconds(model.delay_between_distributions)
@@ -355,7 +354,7 @@ class Core(Base):
 
         await asyncio.sleep(delay)
 
-        min_peers = self.params.distribution.min_eligible_peers
+        min_peers = self.params.distribution.minEligiblePeers
 
         peers = list[Peer]()
 
@@ -368,14 +367,14 @@ class Core(Base):
 
         # convert to csv and store on GCP
         filename = Utils.generateFilename(
-            self.params.gcp.file_prefix, self.params.gcp.folder
+            self.params.gcp.filePrefix, self.params.gcp.folder
         )
         lines = Peer.toCSV(peers)
         Utils.stringArrayToGCP(self.params.gcp.bucket, filename, lines)
 
         # create celery tasks
         app = Celery(
-            name=self.params.rabbitmq.project_name,
+            name=self.params.rabbitmq.projectName,
             broker=f"amqp://{self.params.rabbitmq.username}:{self.params.rabbitmq.password}@{self.params.rabbitmq.host}/{self.params.rabbitmq.virtualhost}",
         )
         app.autodiscover_tasks(force=True)
@@ -386,7 +385,7 @@ class Core(Base):
                 peer.address.id,
                 peer.message_count_for_reward,
                 peer.economic_model.budget.ticket_price,
-                task_name=self.params.rabbitmq.task_name,
+                task_name=self.params.rabbitmq.taskName,
             )
         self.info(f"Distributed rewards to {len(peers)} peers.")
 

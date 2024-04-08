@@ -113,7 +113,7 @@ class Node(Base):
         if balances is None:
             self.warning("Failed to retrieve balances")
             return
-        
+
         for token, balance in balances.items():
             BALANCE.labels((await self.address.get()).id, token).set(balance)
 
@@ -142,7 +142,7 @@ class Node(Base):
             self.debug(f"Opening channel to {address}")
             ok = await self.api.open_channel(
                 address,
-                f"{int(self.params.channel.funding_amount*1e18):d}",
+                f"{int(self.params.channel.fundingAmount*1e18):d}",
             )
             if ok:
                 self.debug(f"Opened channel to {address}")
@@ -232,7 +232,7 @@ class Node(Base):
 
             if (
                 datetime.now() - timestamp
-            ).total_seconds() < self.params.channel.max_age_seconds:
+            ).total_seconds() < self.params.channel.maxAgeSeconds:
                 continue
 
             channels_to_close.append(channel_id)
@@ -269,7 +269,7 @@ class Node(Base):
         low_balances = [
             c
             for c in out_opens
-            if int(c.balance) / 1e18 <= self.params.channel.min_balance
+            if int(c.balance) / 1e18 <= self.params.channel.minBalance
         ]
 
         self.debug(f"Low balance channels: {len(low_balances)}")
@@ -280,7 +280,7 @@ class Node(Base):
             if channel.destination_peer_id in peer_ids:
                 self.debug(f"Funding channel {channel.channel_id}")
                 ok = await self.api.fund_channel(
-                    channel.channel_id, self.params.channel.funding_amount * 1e18
+                    channel.channel_id, self.params.channel.fundingAmount * 1e18
                 )
                 if ok:
                     self.debug(f"Funded channel {channel.channel_id}")

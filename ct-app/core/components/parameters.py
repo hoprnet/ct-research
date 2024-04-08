@@ -1,5 +1,3 @@
-import os
-
 from .baseclass import Base
 from .utils import Utils
 
@@ -17,20 +15,49 @@ class Parameters(Base):
             if isinstance(value, dict):
                 subparams.parse(value)
             else:
-                if v := os.environ.get(f"OVERRIDE_{key.upper()}", None):
-                    value = self._convert(v)
                 setattr(self, key, value)
+
+    def overrides(self, prefix: str):
+        for key, value in Utils.envvarWithPrefix(prefix).items():
+            path = key.replace(prefix, "").lower().split("_")
+
+            parent = self
+
+            for p in path:
+                raw_attrs = dir(parent)
+                attrs = list(map(lambda str: str.lower(), raw_attrs))
+
+                if p.lower() in attrs:
+                    param_name = raw_attrs[attrs.index(p)]
+                    child = getattr(parent, param_name)
+
+                    if isinstance(child, type(self)):
+                        parent = child
+                    else:
+                        setattr(parent, param_name, self._convert(value))
+                else:
+                    print(f"{key} not found")
+
 
     def from_env(self, *prefixes: list[str]):
         for prefix in prefixes:
-            subparams = type(self)()
-
             subparams_name = prefix.lower()
             if subparams_name[-1] == "_":
                 subparams_name = subparams_name[:-1]
 
+            raw_attrs = dir(self)
+            attrs = list(map(lambda str: str.lower(), raw_attrs))
+            if subparams_name in attrs:
+                subparams = getattr(self, raw_attrs[attrs.index(subparams_name)])
+            else:
+                subparams = type(self)()
+
             for key, value in Utils.envvarWithPrefix(prefix).items():
                 k = key.replace(prefix, "").lower()
+
+                # convert snake case to camel case
+                k = k.replace("_", " ").title().replace(" ", "")
+                k = k[0].lower() + k[1:]
 
                 try:
                     value = float(value)

@@ -103,8 +103,8 @@ rabbitmq:
 # =============================================================================
 subgraph:
   safesBalance:
-    queryID: FcyLT3XGc2nEtaKjfB2SqigXsrEaGGBYsDfhEmsQ26dA
-    URLBackup: https://api.studio.thegraph.com/query/40439/hopr-nodes-rotsee/version/latest
+    queryID: FEQcaX9qfh31YL2K7rxRN5a3sr9rjMWkguJnby7StNRo
+    URLBackup: https://api.studio.thegraph.com/query/40439/hopr-nodes-dufour/version/latest
 
   staking:
     queryID: DrkbaCvNGVcNH1RghepLRy6NSHFi8Dmwp4T2LN3LqcjY

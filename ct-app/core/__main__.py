@@ -21,6 +21,8 @@ def main(configfile: str = None):
     params = Parameters()
     params.parse(config)
     params.from_env("SUBGRAPH_", "PG", "RABBITMQ_")
+    params.overrides("OVERRIDE_")
+
 
     Utils.stringArrayToGCP(
         params.gcp.bucket,

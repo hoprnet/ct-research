@@ -26,12 +26,19 @@ def flagguard(func):
 
     @functools.wraps(func)
     async def wrapper(self, *args, **kwargs):
-        cls_name = self.class_prefix()
-        func_name = func.__name__
+        func_name_clean = func.__name__.replace("_", "").lower()
+        class_flags = getattr(self.params.flags, self.class_prefix())
 
-        flag = getattr(getattr(self.params.flags, cls_name), func_name, None)
-        if flag is None:
-            self.error(f"Feature `{func_name}` not yet available")
+        params_raw = dir(class_flags)
+        params_clean = list(map(lambda s: s.lower(), params_raw))
+
+        if func_name_clean not in params_clean:
+            self.error(f"Feature `{func.__name__}` not in config file")
+            return
+
+        index = params_clean.index(func_name_clean)
+        if getattr(class_flags, params_raw[index]) is None:
+            self.error(f"Feature `{params_raw[index]}` not yet available")
             return
 
         return await func(self, *args, **kwargs)
@@ -48,21 +55,28 @@ def formalin(message: Optional[str] = None):
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(self, *args, **kwargs):
-            # _delay = Flags.getEnvironmentFlagValue(func.__name__, self.class_prefix())
+            func_name_clean = func.__name__.replace("_", "").lower()
+            class_flags = getattr(self.params.flags, self.class_prefix())
 
-            cls_name = self.class_prefix()
-            func_name = func.__name__
-            _delay = getattr(getattr(self.params.flags, cls_name), func_name)
+            params_raw = dir(class_flags)
+            params_clean = list(map(lambda s: s.lower(), params_raw))
 
-            self.debug(f"Running `{func.__name__}` every {_delay} seconds")
+            if func_name_clean not in params_clean:
+                self.error(f"Feature `{func.__name__}` not regonized")
+                return
+            
+            index = params_clean.index(func_name_clean)
+            delay = getattr(class_flags, params_raw[index])
+
+            self.debug(f"Running `{params_raw[index]}` every {delay} seconds")
 
             while self.started:
                 if message:
                     self.feature(message)
                 await func(self, *args, **kwargs)
 
-                if _delay is not None:
-                    await asyncio.sleep(_delay)
+                if delay is not None:
+                    await asyncio.sleep(delay)
 
         return wrapper
 
