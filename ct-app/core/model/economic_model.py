@@ -47,7 +47,7 @@ class Coefficients:
         )
 
 
-class BudgetParameters:
+class Budget:
     def __init__(
         self,
         amount: float,
@@ -127,20 +127,20 @@ class BudgetParameters:
 
 class EconomicModel:
     def __init__(
-        self, equations: Equations, parameters: Parameters, budget: BudgetParameters
+        self, equations: Equations, coefficients: Coefficients, budget: Budget
     ):
         """
         Initialisation of the class.
         """
         self.equations = equations
-        self.parameters = parameters
+        self.coefficients = coefficients
         self.budget = budget
 
     def transformed_stake(self, stake: float):
         func = self.equations.f_x
 
         # convert parameters attribute to dictionary
-        kwargs = vars(self.parameters)
+        kwargs = vars(self.coefficients)
         kwargs.update({"x": stake})
 
         if not eval(func.condition, kwargs):
@@ -157,8 +157,8 @@ class EconomicModel:
         return EconomicModel(
             Equations.fromParameters(parameters.equations), 
             Coefficients.fromParameters(parameters.coefficients), 
-            BudgetParameters.fromParameters(parameters.budget),
+            Budget.fromParameters(parameters.budget),
         )
     
     def __repr__(self):
-        return f"EconomicModel({self.equations}, {self.parameters}, {self.budget})"
+        return f"EconomicModel({self.equations}, {self.coefficients}, {self.budget})"

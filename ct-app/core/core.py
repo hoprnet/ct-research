@@ -10,6 +10,7 @@ from .components.graphql_providers import (
     SafesProvider,
     StakingProvider,
     wxHOPRTransactionProvider,
+    RewardsProvider
 )
 from .components.hoprd_api import HoprdAPI
 from .components.lockedvar import LockedVar
@@ -62,6 +63,7 @@ class Core(Base):
         self.registered_nodes = LockedVar("subgraph_list", list[SubgraphEntry]())
         self.nft_holders = LockedVar("nft_holders", list[str]())
         self.eligible_list = LockedVar("eligible_list", list[Peer]())
+        self.peer_rewards = LockedVar("peer_rewards", dict[str, float]())
 
         # subgraphs
         self._safe_subgraph_url = None
@@ -89,6 +91,10 @@ class Core(Base):
         )
         self._wxhopr_txs_subgraph_url = SubgraphURL(
             self.params.subgraph.deployerKey, self.params.subgraph.wxHOPRTxs
+        )
+
+        self._rewards_subgraph_url = SubgraphURL(
+            self.params.subgraph.deployerKey, self.params.subgraph.rewards
         )
 
     @property
@@ -125,6 +131,10 @@ class Core(Base):
     def wxhopr_txs_subgraph_url(self) -> str:
         return self._wxhopr_txs_subgraph_url(self.subgraph_type)
 
+    @property
+    def rewards_subgraph_url(self) -> str:
+        return self._rewards_subgraph_url(self.subgraph_type)
+    
     @subgraph_type.setter
     def subgraph_type(self, value: SubgraphType):
         if value != self.subgraph_type:
@@ -312,8 +322,10 @@ class Core(Base):
 
         model = EconomicModel.fromParameters(self.params.economicModel)
 
+        redeemed_rewards = await self.peer_rewards.get()
         for peer in eligibles:
             peer.economic_model = model
+            peer.economic_model.coefficients.c += redeemed_rewards.get(peer.address.address,0.0)
             peer.max_apr = self.params.economicModel.maxAPRPercentage
 
         self.debug("Assigned economic model to eligible nodes.")
@@ -416,10 +428,25 @@ class Core(Base):
         TOTAL_FUNDING.set(total_funding)
 
     @flagguard
-    @formalin("Getting peers rewards")
-    @connectguard
+    @formalin("Getting peers rewards amounts")
     async def get_peers_rewards(self):
-        pass
+        if self.subgraph_type == SubgraphType.NONE:
+            self.warning("No subgraph URL available.")
+            return
+
+        provider = RewardsProvider(self.rewards_subgraph_url)
+
+        results = dict()
+        try:
+            for account in await provider.get():
+                results[account["id"]] = account["redeemedValue"]
+
+        except ProviderError as err:
+            self.error(f"get_peers_rewards: {err}")
+
+        await self.peer_rewards.set(results)
+
+        self.debug(f"Fetched peers rewards amounts ({len(results)} entries).")
 
     async def start(self):
         """
