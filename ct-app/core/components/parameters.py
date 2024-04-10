@@ -36,7 +36,7 @@ class Parameters(Base):
                     else:
                         setattr(parent, param_name, self._convert(value))
                 else:
-                    print(f"{key} not found")
+                    raise KeyError(f"Key {key} not found in parameters")
 
 
     def from_env(self, *prefixes: list[str]):
@@ -91,6 +91,3 @@ class Parameters(Base):
             pass
 
         return value
-
-    def __str__(self):
-        return

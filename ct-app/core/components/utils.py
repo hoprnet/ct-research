@@ -37,20 +37,6 @@ class Utils(Base):
         return dict(sorted(var_dict.items()))
 
     @classmethod
-    def envvarExists(cls, var_name: str) -> bool:
-        return var_name in environ
-
-    @classmethod
-    def checkRequiredEnvVar(cls, folder: str):
-        all_set_flag = True
-        for param in list_parameters(folder):
-            exists = Utils.envvarExists(param)
-            cls().info(f"{'✅' if exists else '❌'} {param}")
-            all_set_flag *= exists
-
-        return all_set_flag
-
-    @classmethod
     def nodesAddresses(
         cls, address_prefix: str, keyenv: str
     ) -> tuple[list[str], list[str]]:
@@ -189,37 +175,6 @@ class Utils(Base):
             peer.reward_probability = peer.transformed_stake / total_tf_stake
 
         return excluded
-
-    @classmethod
-    def jsonFromGCP(cls, bucket_name, blob_name, schema=None):
-        """
-        Reads a JSON file and validates its contents using a schema.
-        :param: bucket_name: The name of the bucket
-        :param: blob_name: The name of the blob
-        ;param: schema (opt): The validation schema
-        :returns: (dict): The contents of the JSON file.
-        """
-
-        storage_client = storage.Client()
-        bucket = storage_client.bucket(bucket_name)
-        blob = bucket.blob(blob_name)
-
-        with blob.open("r") as f:
-            contents = json.load(f)
-
-        # if schema is not None:
-        #     try:
-        #         jsonschema.validate(
-        #             contents,
-        #             schema=schema,
-        #         )
-        #     except jsonschema.ValidationError as e:
-        #         log.exception(
-        #             f"The file in'{blob_name}' does not follow the expected structure. {e}"
-        #         )
-        #         return {}
-
-        return contents
 
     @classmethod
     def stringArrayToGCP(cls, bucket_name: str, blob_name: str, data: list[str]):

@@ -1,12 +1,20 @@
 import asyncio
-import os
+from copy import deepcopy
 
 import pytest
 from core.components.baseclass import Base
 from core.components.decorators import connectguard, flagguard, formalin
-from core.components.flags import Flags
 from core.components.lockedvar import LockedVar
+from core.components.parameters import Parameters
 
+flag_dictionary = {
+    "flags": {
+        "fooclass": {
+            "fooFlagguardFunc": 1,
+            "fooFormalinFunc": 1
+        }
+    }
+}
 
 class FooClass(Base):
     def __init__(self):
@@ -14,6 +22,7 @@ class FooClass(Base):
         self.connected = LockedVar("connected", False)
         self.started = False
         self.counter = 0
+        self.params = Parameters()
 
     @connectguard
     async def foo_connectguard_func(self):
@@ -30,7 +39,6 @@ class FooClass(Base):
     async def foo_formalin_func(self):
         self.counter += 1
         await asyncio.sleep(0.1)
-
 
 @pytest.fixture
 def foo_class():
@@ -54,24 +62,60 @@ async def test_flagguard(foo_class: FooClass):
     assert res is None
 
     # delete flag cache so that new flags are retrieved from env
-    Flags._cache_flags = None
+    foo_class.params.parse(flag_dictionary)
 
-    os.environ["FLAG_FOOCLASS_FOO_FLAGGUARD_FUNC"] = "1"
     res = await foo_class.foo_flagguard_func()
     assert res is True
 
-    del os.environ["FLAG_FOOCLASS_FOO_FLAGGUARD_FUNC"]
+@pytest.mark.asyncio
+async def test_flagguard_missing_flags(foo_class: FooClass):
+    # reset instance counter
+    flags = deepcopy(flag_dictionary)
+    # # # # # # # # # # # # # # # # # # # #
+
+    # should not run
+    del flags["flags"]["fooclass"]["fooFlagguardFunc"]
+
+    foo_class.params.parse(flags)
+
+    with pytest.raises(AttributeError):
+        await foo_class.foo_flagguard_func()
+
+
+    # reset instance counter
+    flags = deepcopy(flag_dictionary)
+    foo_class.params = Parameters()
+    # # # # # # # # # # # # # # # # # # # #
+
+    del flags["flags"]["fooclass"]
+    foo_class.params.parse(flags)
+
+    with pytest.raises(AttributeError):
+        await foo_class.foo_flagguard_func()
+
+
+    # reset instance counter
+    flags = deepcopy(flag_dictionary)
+    foo_class.params = Parameters()
+    # # # # # # # # # # # # # # # # # # # #
+
+    foo_class.params.parse(flag_dictionary)
+    foo_class.params.flags.fooclass.fooFlagguardFunc = None
+
+    await foo_class.foo_flagguard_func()
+
+    assert foo_class.counter == 0  # counter increased only once
 
 
 @pytest.mark.asyncio
 async def test_formalin(foo_class: FooClass):
-    # reset flag cache and instance counter
-    Flags._cache_flags = None
+    # reset instance counter
     foo_class.counter = 0
     # # # # # # # # # # # # # # # # # # # #
 
     # should run only once
-    os.environ["FLAG_FOOCLASS_FOO_FORMALIN_FUNC"] = "0"
+    foo_class.params.parse(flag_dictionary)
+    foo_class.params.flags.fooclass.fooFormalinFunc = 0
 
     foo_class.started = True
     asyncio.create_task(foo_class.foo_formalin_func())
@@ -81,15 +125,12 @@ async def test_formalin(foo_class: FooClass):
 
     assert foo_class.counter == 1  # counter increased only once
 
-    del os.environ["FLAG_FOOCLASS_FOO_FORMALIN_FUNC"]
-
-    # reset flag cache and instance counter
-    Flags._cache_flags = None
+    # reset instance counter
     foo_class.counter = 0
     # # # # # # # # # # # # # # # # # # # #
 
     # should run twice (every 0.5s in 1.1s)
-    os.environ["FLAG_FOOCLASS_FOO_FORMALIN_FUNC"] = "0.5"
+    foo_class.params.flags.fooclass.fooFormalinFunc = 0.5
 
     foo_class.started = True
     asyncio.create_task(foo_class.foo_formalin_func())
@@ -98,5 +139,3 @@ async def test_formalin(foo_class: FooClass):
     await asyncio.sleep(0.5)
 
     assert foo_class.counter == 2  # counter increased twice
-
-    del os.environ["FLAG_FOOCLASS_FOO_FORMALIN_FUNC"]

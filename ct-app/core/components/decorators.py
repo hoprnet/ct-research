@@ -27,14 +27,21 @@ def flagguard(func):
     @functools.wraps(func)
     async def wrapper(self, *args, **kwargs):
         func_name_clean = func.__name__.replace("_", "").lower()
+
+        if not hasattr(self.params, "flags"):
+            self.error("No flags available")
+            return
+        
+        if not hasattr(self.params.flags, self.class_prefix()):
+            raise AttributeError(f"Feature `{func.__name__}` not in config file")
+        
         class_flags = getattr(self.params.flags, self.class_prefix())
 
         params_raw = dir(class_flags)
         params_clean = list(map(lambda s: s.lower(), params_raw))
 
         if func_name_clean not in params_clean:
-            self.error(f"Feature `{func.__name__}` not in config file")
-            return
+            raise AttributeError(f"Feature `{func.__name__}` not in config file")
 
         index = params_clean.index(func_name_clean)
         if getattr(class_flags, params_raw[index]) is None:
@@ -68,15 +75,20 @@ def formalin(message: Optional[str] = None):
             index = params_clean.index(func_name_clean)
             delay = getattr(class_flags, params_raw[index])
 
-            self.debug(f"Running `{params_raw[index]}` every {delay} seconds")
+            if delay is not None:
+                self.debug(f"Running `{params_raw[index]}` every {delay} seconds")
 
             while self.started:
                 if message:
                     self.feature(message)
                 await func(self, *args, **kwargs)
 
+                if delay == 0:
+                    break
+                
                 if delay is not None:
                     await asyncio.sleep(delay)
+
 
         return wrapper
 
