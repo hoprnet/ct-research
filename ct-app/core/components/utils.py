@@ -1,5 +1,4 @@
 import csv
-import json
 import os
 import time
 from datetime import datetime, timedelta
@@ -10,7 +9,6 @@ import aiohttp
 from aiohttp import ClientSession
 from celery import Celery
 from google.cloud import storage
-from scripts.list_required_parameters import list_parameters
 
 from core.model.address import Address
 from core.model.peer import Peer
