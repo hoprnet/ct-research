@@ -28,8 +28,8 @@ data:
   DISTRIBUTION_MAX_APR_PERCENTAGE: "100.0"
   PEER_MIN_VERSION: "0.0.0"
   GCP_FILE_PREFIX: expected_reward
-  GCP_FOLDER: staging_expected_rewards
-  GCP_BUCKET: ct-platform-ct
+  GCP_FOLDER: expected_rewards
+  GCP_BUCKET: hoprnet-ctdapp-{{ .Values.environmentName }}
   ECONOMIC_MODEL_FILENAME: parameters-staging.json
   ECONOMIC_MODEL_MIN_SAFE_ALLOWANCE: "0.000000001"
   CHANNEL_MIN_BALANCE: "0.05"

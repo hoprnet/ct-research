@@ -1,3 +1,4 @@
+environmentName: prod
 legacy-nodes:
   enabled: true
 blue-nodes:
