@@ -28,6 +28,7 @@ releases:
   timeout: 5
   values:
     - values-common.yaml
+    - environmentName: {{ .Environment.Name }}
   secrets:
     - secrets-{{ .Environment.Name }}.sops.yaml
 - name: hoprd-ctdapp

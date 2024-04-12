@@ -1,4 +1,3 @@
-environmentName: staging
 legacy-nodes:
   enabled: false
 blue-nodes:
