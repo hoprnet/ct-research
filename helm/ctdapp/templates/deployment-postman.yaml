@@ -7,7 +7,7 @@ metadata:
   labels:
     {{- include "ctdapp.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.ctdapp.replicaCount }}
+  replicas: {{ .Values.ctdapp.postman.replicas }}
   selector:
     matchLabels:
       {{- include "ctdapp.selectorLabels" . | nindent 6 }}
@@ -25,7 +25,6 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      replicas: {{ .Values.ctdapp.postman.replicas }}
       serviceAccountName: {{ include "ctdapp.serviceAccountName" . }}
       containers:
         - name: {{ .Chart.Name }}

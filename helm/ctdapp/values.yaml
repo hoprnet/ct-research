@@ -1,6 +1,5 @@
 environmentName: ""
 ctdapp:
-  replicaCount: 1
 
   image:
     core:
