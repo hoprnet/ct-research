@@ -37,6 +37,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: core-config
+            - configMapRef:
+                name: hoprd-nodes
             - secretRef:
                 name: hoprd-nodes
             - secretRef:

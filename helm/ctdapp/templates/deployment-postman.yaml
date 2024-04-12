@@ -33,6 +33,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: postman-config
+            - configMapRef:
+                name: hoprd-nodes
             - secretRef:
                 name: hoprd-nodes
             - secretRef:
