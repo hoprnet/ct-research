@@ -3,4 +3,4 @@ legacy-nodes:
 blue-nodes:
   enabled: true
 green-nodes:
-  enabled: false
+  enabled: true
