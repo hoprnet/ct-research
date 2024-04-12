@@ -36,6 +36,7 @@ ctdapp:
 
 
   core:
+    replicas: 1
     extraEnvVars: {}
     resources:
       limits:
@@ -46,6 +47,7 @@ ctdapp:
         memory: 256Mi
 
   postman:
+    replicas: 1
     extraEnvVars: {}
     resources:
       limits:
