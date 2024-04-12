@@ -1,0 +1,55 @@
+ctdapp:
+  replicaCount: 1
+
+  image:
+    core:
+      repository: europe-west6-docker.pkg.dev/ctdapp-391309/ctdapp/cover-traffic
+      pullPolicy: Always
+      tag: ba586d0
+    postman:
+      repository: europe-west6-docker.pkg.dev/ctdapp-391309/ctdapp/cover-traffic
+      pullPolicy: Always
+      tag: ba586d0
+
+  nameOverride: ""
+  fullnameOverride: ""
+
+  serviceAccount:
+    # Specifies whether a service account should be created
+    create: true
+    # Automatically mount a ServiceAccount's API credentials?
+    automount: true
+    # Annotations to add to the service account
+    annotations: {}
+    # The name of the service account to use.
+    # If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+  podAnnotations: {}
+  podLabels: {}
+
+  service:
+    type: ClusterIP
+    port: 8080
+
+
+
+  core:
+    extraEnvVars: {}
+    resources:
+      limits:
+        cpu: 1
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+  postman:
+    extraEnvVars: {}
+    resources:
+      limits:
+        cpu: 1
+        memory: 1Gi
+      requests:
+        cpu: 500m
+        memory: 512Mi

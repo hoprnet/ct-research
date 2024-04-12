@@ -1,0 +1,45 @@
+replicas: 5
+network: dufour
+version: saint-louis-latest
+
+config: |
+  hopr:
+    chain:
+      network: dufour
+      provider: https://gnosis-chain.rpc.rank1.co
+    strategy:
+      on_fail_continue: true
+      allow_recursive: false
+      strategies: []
+
+identities:
+  ctdapp-green-node-1:
+    identityFile: ""
+    peerId: ""
+    nativeAddress: ""
+    safeAddress: ""
+    moduleAddress: ""
+  ctdapp-green-node-2:
+    identityFile: ""
+    peerId: ""
+    nativeAddress: ""
+    safeAddress: ""
+    moduleAddress: ""
+  ctdapp-green-node-3:
+    identityFile: ""
+    peerId: ""
+    nativeAddress: ""
+    safeAddress: ""
+    moduleAddress: ""
+  ctdapp-green-node-4:
+    identityFile: ""
+    peerId: ""
+    nativeAddress: ""
+    safeAddress: ""
+    moduleAddress: ""
+  ctdapp-green-node-5:
+    identityFile: ""
+    peerId: ""
+    nativeAddress: ""
+    safeAddress: ""
+    moduleAddress: ""
