@@ -351,7 +351,7 @@ class Core(Base):
         excluded = Utils.rewardProbability(eligibles)
         self.debug(f"Excluded nodes with low stakes ({len(excluded)} entries).")
         self.info(f"Eligible nodes ({len(eligibles)} entries).")
-        self.debug(f"final eligible list {[el.address.id for el in eligibles]}")
+        self.debug(f"Final eligible list {[el.address.id for el in eligibles]}")
 
         await self.eligible_list.set(eligibles)
 

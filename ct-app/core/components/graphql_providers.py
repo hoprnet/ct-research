@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 from gql import Client, gql
@@ -50,7 +51,9 @@ class GraphQLProvider(Base):
         """
         vars = {"first": 1, "skip": 0}
         vars.update(kwargs)
-        response = await self._execute(self._sku_query, vars)
+
+        # call `self._execute(self._sku_query, vars)` with a timeout
+        response = await asyncio.wait_for(self._execute(self._sku_query, vars), timeout=30)
 
         return response and key in response
 
@@ -69,7 +72,7 @@ class GraphQLProvider(Base):
             vars = {"first": page_size, "skip": skip}
             vars.update(kwargs)
 
-            response = await self._execute(self._sku_query, vars)
+            response = await asyncio.wait_for(self._execute(self._sku_query, vars), timeout=30)
 
             content = response.get(key, [])
             data.extend(content)

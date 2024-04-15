@@ -92,7 +92,6 @@ class Node(Base):
         """
         Retrieve the address of the node.
         """
-
         address = await self.api.get_address("all")
 
         if not isinstance(address, dict):

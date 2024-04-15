@@ -241,7 +241,6 @@ class HoprdAPI(Base):
             full_topology="true",
             including_closed="true" if include_closed else "false",
         )
-
         return response if is_ok else []
 
     async def peers(
@@ -257,7 +256,6 @@ class HoprdAPI(Base):
         :param: quality: int = 0..1
         :return: peers: list
         """
-
         is_ok, response = await self.__call_api(NodeApi, "peers", quality=quality)
 
         if not is_ok:
@@ -324,7 +322,6 @@ class HoprdAPI(Base):
         :param: tag: int = 0x0320
         :return: bool
         """
-
         body = SendMessageBodyRequest(message, None, hops, destination, tag)
         is_ok, _ = await self.__call_api(MessagesApi, "send_message", body=body)
 
@@ -336,10 +333,9 @@ class HoprdAPI(Base):
         :param: tag = 0x0320
         :return: dict
         """
-
         body = TagQueryRequest(tag=tag)
         _, response = await self.__call_api(MessagesApi, "pop", body=body)
-
+    
         return response
 
     async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
@@ -354,7 +350,7 @@ class HoprdAPI(Base):
 
     async def node_info(self):
         _, response = await self.__call_api(NodeApi, "info")
-
+        
         return response
 
     async def ticket_price(self) -> int:
