@@ -4,10 +4,12 @@ __pycache__/
 
 # envs
 .venv*/
+env*/
+
 .direnv/
 simulation.env
 .vscode/
-*.env
+*.*env
 *.log
 *_rules.yaml
 

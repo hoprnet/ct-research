@@ -78,7 +78,7 @@ class Utils(Base):
                 return status, response
 
     @classmethod
-    def mergeTopoPeersSafes(
+    def mergeDataSources(
         cls,
         topology: list[TopologyEntry],
         peers: list[Peer],

@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: {{ include "ctdapp.fullname" . }}-core
+  labels:
+    {{- include "ctdapp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.ctdapp.core.replicas }}
+  selector:
+    matchLabels:
+      {{- include "ctdapp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: core
+  template:
+    metadata:
+      {{- with .Values.ctdapp.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        app.kubernetes.io/component: core
+        {{- include "ctdapp.labels" . | nindent 8 }}
+	{{- with .Values.ctdapp.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "ctdapp.serviceAccountName" . }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.ctdapp.image.core.repository }}:{{ .Values.ctdapp.image.core.tag }}"
+          imagePullPolicy: {{ .Values.ctdapp.image.core.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.ctdapp.service.port }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: core-config
+            - configMapRef:
+                name: hoprd-nodes
+            - secretRef:
+                name: hoprd-nodes
+            - secretRef:
+                name: subgraph
+            - secretRef:
+                name: rabbitmq-ctdapp
+          args:
+            - python
+            - '-m'
+            - core
+          resources:
+            {{- toYaml .Values.ctdapp.core.resources | nindent 12 }}
