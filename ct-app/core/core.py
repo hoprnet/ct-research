@@ -323,7 +323,7 @@ class Core(Base):
         self.debug(f"Excluded nodes with low safe allowance ({len(excluded)} entries).")
         self.debug(f"peers with low allowance {[el.address.id for el in excluded]}")
 
-        excluded = Utils.excludeElements(eligibles, await self.network_nodes_addresses)
+        excluded = Utils.exclude(eligibles, await self.network_nodes_addresses)
         self.debug(f"Excluded network nodes ({len(excluded)} entries).")
 
         if threshold := self.params.economic_model.nft_threshold:
@@ -333,7 +333,7 @@ class Core(Base):
                 if peer.safe_address not in nft_holders
                 and peer.split_stake < threshold
             ]
-            excluded = Utils.excludeElements(eligibles, low_stake_non_nft_holders)
+            excluded = Utils.exclude(eligibles, low_stake_non_nft_holders)
             self.debug(
                 f"Excluded non-nft-holders with stake < {threshold} ({len(excluded)} entries)."
             )

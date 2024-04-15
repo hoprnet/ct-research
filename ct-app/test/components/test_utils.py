@@ -86,7 +86,7 @@ def test_allowManyNodePerSafe():
     assert peer_3.safe_address_count == 1
 
 
-def test_excludeElements():
+def test_exclude():
     source_data = [
         Peer("id_1", "address_1", "v1.0.0"),
         Peer("id_2", "address_2", "v1.1.0"),
