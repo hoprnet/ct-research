@@ -2,7 +2,7 @@ import logging
 
 logging.basicConfig()
 logging.getLogger("asyncio").setLevel(logging.WARNING)
-formatter = logging.Formatter("%(message)s")
+formatter = logging.Formatter("%(asctime)s %(levelname)s:%(message)s")
 
 
 class Base:
@@ -29,7 +29,7 @@ class Base:
         return f"{cls.__name__.upper()}_"
 
     def __format(self, message: str, color: str = "\033[0m"):
-        return f"{color}{self.print_prefix}\033[0m | {message}"
+        return f"{self.print_prefix} | {message}"
 
     def _print(self, message: str, color: str = "\033[0m"):
         print(self.__format(message, color))

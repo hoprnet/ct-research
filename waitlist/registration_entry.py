@@ -11,7 +11,7 @@ class RegistrationEntry(Entry):
         safe_address: str,
         node_address: str,
         nr_nft: str,
-        communication_service: str,
+        # communication_service: str,
         telegram: str,
     ):
         self.time = time
@@ -19,7 +19,7 @@ class RegistrationEntry(Entry):
         self.safe_address = safe_address
         self.node_address = node_address
         self.nr_nft = nr_nft
-        self.communication_service = communication_service
+        # self.communication_service = communication_service
         self.telegram = telegram
 
     @property
@@ -49,33 +49,30 @@ class RegistrationEntry(Entry):
 
     @classmethod
     def fromPandaSerie(cls, entry: Series):
-        node_addresses_raw_string: str = entry[
-            "What is your Node address? (If you want to add multiple, just include one node per row)"
-        ]
+        node_addresses = entry[
+                "What is your Node address? (If you want to add multiple, just include one node per row)"
+            ].replace("&#xA;", "\n").split("\n")
 
-        node_addresses = [
-            line.strip() for line in node_addresses_raw_string.split("\n")
-        ]
-
+        
         instances = []
-        for node_address in node_addresses:
-            if node_address.strip() == "":
+        for address in node_addresses:
+            address = address.strip().lower()
+            if address == "":
                 continue
 
-            instances.append(
-                cls(
-                    time=entry["Time"],
-                    participant=entry["Participant"],
-                    safe_address=entry["What is your HOPR safe address?"],
-                    node_address=node_address,
-                    nr_nft=entry["Do you already have the Network Registry NFT?"],
-                    communication_service=entry[
-                        "How would you like to be informed once you're able to join the network?"
-                    ],
-                    telegram=entry["What is your Telegram handle?"],
-                )
+            instance = cls(
+                time=entry["Time"],
+                participant=entry["Participant"],
+                safe_address=entry["What is your HOPR safe address?"],
+                node_address=address,
+                nr_nft=entry["Do you already have the Network Registry NFT?"],
+                # communication_service=entry[
+                #     "How would you like to be informed once you're able to join the network?"
+                # ],
+                telegram=entry["What is your Telegram handle?"],
             )
 
+            instances.append(instance)
         return instances
 
     @classmethod
@@ -86,7 +83,6 @@ class RegistrationEntry(Entry):
             "safe_address": "What is your HOPR safe address?",
             "node_address": "What is your Node address",
             "nr_nft": "Do you already have the Network Registry NFT?",
-            "communication_service": "How would you like to be informed once you're "
-            + "able to join the network?",
+            # "communication_service": "How would you like to be informed once you're able to join the network?",
             "telegram": "What is your Telegram handle?",
         }
