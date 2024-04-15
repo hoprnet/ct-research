@@ -384,7 +384,11 @@ class Node(Base):
         channels = await self.outgoings.get()
         node_address = await self.address.get()
 
+        self.debug(f"Channels before channels balance aggregation: {channels}")
+
         results = await Utils.aggregatePeerBalanceInChannels(channels)
+
+        self.debug(f"Results of channels balance aggregation: {results}")
 
         if node_address.id not in results:
             self.warning("Funding info not found")

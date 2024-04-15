@@ -433,7 +433,7 @@ class Core(Base):
         Gets the amount of funds all managed nodes have received from a specified address.
         """
         ct_safe_addresses = {
-            getattr(await node.api.node_info(), "node_safe", None)
+            getattr(await node.api.node_info(), "hopr_node_safe", None)
             for node in self.network_nodes
         }
 

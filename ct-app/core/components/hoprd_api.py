@@ -117,7 +117,7 @@ class HoprdAPI(Base):
         elif isinstance(type, str):
             type = [type]
 
-        is_ok, response = await self.__call_api(AccountApi, "account_get_balances")
+        is_ok, response = await self.__call_api(AccountApi, "balances")
 
         if not is_ok:
             return None
