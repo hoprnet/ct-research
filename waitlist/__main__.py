@@ -131,12 +131,19 @@ def main(nrfile: str, output_file: str):
             continue
 
         if candidate.wxHOPR_balance < 10000:
+            print(f"Low balance: {candidate.safe_address} ({candidate.wxHOPR_balance})")
             continue
 
         if candidate.wxHOPR_balance < 30000 and not candidate.nr_nft:
+            print(
+                f"Low balance (NFT): {candidate.safe_address} ({candidate.wxHOPR_balance})"
+            )
             continue
 
         if not candidate.node_address.startswith("0x"):
+            print(
+                f"Invalid node address: {candidate.safe_address} ({candidate.node_address})"
+            )
             continue
 
         if candidate.node_address in running_nodes:

@@ -27,6 +27,10 @@ class Entry:
             **{key: entry[value] for key, value in items.items() if value in entry}
         )]
 
+    @classmethod
+    def _import_keys_and_values(self) -> dict[str, str]:
+        raise NotImplementedError
+
     def __str__(self):
         attributes = [
             attr

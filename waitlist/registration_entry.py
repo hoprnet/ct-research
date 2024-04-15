@@ -43,7 +43,7 @@ class RegistrationEntry(Entry):
             "RegistrationEntry("
             + f"{self.participant}, "
             + f"{self.safe_address}, "
-            + f"{self.node_address}, "
+            + f"{self.node_address}"
             + ")"
         )
 
@@ -73,7 +73,6 @@ class RegistrationEntry(Entry):
             )
 
             instances.append(instance)
-        
         return instances
 
     @classmethod
