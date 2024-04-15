@@ -7,7 +7,7 @@ __pycache__/
 .direnv/
 simulation.env
 .vscode/
-*.env
+*.*env
 *.log
 *_rules.yaml
 

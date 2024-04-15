@@ -3,12 +3,16 @@ environments:
     values:
       - values-common.yaml
       - values-staging.yaml
+      - values-staging-blue.yaml
+      - values-staging-green.yaml
     secrets:
       - secrets-staging.sops.yaml
   prod:
     values:
       - values-common.yaml
       - values-prod.yaml
+      - values-prod-blue.yaml
+      - values-prod-gren.yaml
     secrets:
       - secrets-prod.sops.yaml
 ---
@@ -17,15 +21,54 @@ repositories:
    url: europe-west3-docker.pkg.dev/hoprassociation/helm-charts
    oci: true
 releases:
+- name: ctdapp
+  namespace: ctdapp
+  chart: ./ctdapp
+  wait: true
+  timeout: 5
+  values:
+    - values-common.yaml
+    - values-{{ .Environment.Name }}.yaml
+    - environmentName: {{ .Environment.Name }}
+  secrets:
+    - secrets-{{ .Environment.Name }}.sops.yaml
 - name: hoprd-ctdapp
   namespace: ctdapp
   chart: hoprassociation/cluster-hoprd
+  condition: legacy-nodes.enabled
+  version: 0.3.0
+  wait: true
+  timeout: 5
+  values:
+    - values-common.yaml
+    - values-prod.yaml
+    - values-prod-legacy.yaml
+  secrets:
+    - secrets-{{ .Environment.Name }}.sops.yaml
+- name: ctdapp-blue-node
+  namespace: ctdapp
+  chart: hoprassociation/cluster-hoprd
+  condition: blue-nodes.enabled
   version: 0.3.0
   wait: true
   timeout: 5
   values:
     - values-common.yaml
     - values-{{ .Environment.Name }}.yaml
+    - values-{{ .Environment.Name }}-blue.yaml
+  secrets:
+    - secrets-{{ .Environment.Name }}.sops.yaml
+- name: ctdapp-green-node
+  namespace: ctdapp
+  chart: hoprassociation/cluster-hoprd
+  condition: green-nodes.enabled
+  version: 0.3.0
+  wait: true
+  timeout: 5
+  values:
+    - values-common.yaml
+    - values-{{ .Environment.Name }}.yaml
+    - values-{{ .Environment.Name }}-green.yaml
   secrets:
     - secrets-{{ .Environment.Name }}.sops.yaml
 
