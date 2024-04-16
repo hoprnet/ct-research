@@ -7,7 +7,7 @@ deployment:
       cpu: 750m
       memory: 1G
   startupProbe: |
-    failureThreshold: 800
+    failureThreshold: 3
     httpGet:
       path: /startedz
       port: 3001
