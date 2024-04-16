@@ -6,7 +6,7 @@ config: |
   hopr:
     chain:
       network: rotsee
-      provider: http://gnosis.rpc-provider.svc:8545
+      provider: http://gnosis-rpc-provider.rpc-provider.svc:8545
     strategy:
       on_fail_continue: true
       allow_recursive: false
