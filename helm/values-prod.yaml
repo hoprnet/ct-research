@@ -62,7 +62,7 @@ config: |
   network: dufour
   chain:
     announce: true
-    provider: https://gnosis-chain.rpc.rank1.co
+    provider: http://gnosis-rpc-provider.rpc-provider.svc:8545
     check_unrealized_balance: true
   safe_module:
     safe_transaction_service_provider:
