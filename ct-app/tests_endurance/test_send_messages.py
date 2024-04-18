@@ -7,6 +7,11 @@ from core.components.utils import Utils
 from . import EnduranceTest, Metric
 
 
+import logging
+
+logger = logging.getLogger("ct-app")
+logger.setLevel(logging.ERROR)
+
 class SendMessages(EnduranceTest):
     async def on_start(self):
         self.results = []

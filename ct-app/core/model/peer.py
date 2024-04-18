@@ -1,4 +1,5 @@
-from packaging.version import Version
+from typing import Union
+from packaging.version import Version, InvalidVersion
 
 from .address import Address
 
@@ -45,11 +46,14 @@ class Peer:
         return self._version
 
     @version.setter
-    def version(self, value: str or Version):
-        if isinstance(value, str):
-            value = Version(value)
-
-        self._version = value
+    def version(self, value: Union[str, Version]):
+        try:
+            if isinstance(value, str):
+                value = Version(value)
+        except InvalidVersion:
+            self._version = Version("0.0.0")
+        else:
+            self._version = value
 
     @property
     def node_address(self) -> str:

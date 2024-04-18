@@ -36,9 +36,11 @@ class GraphQLProvider(Base):
         :param query: The query to execute.
         :param variable_values: The variables to use in the query (dict)"""
         try:
-            return await self._client.execute_async(
-                query, variable_values=variable_values
-            )
+            try:
+                return await self._client.execute_async(query, variable_values=variable_values)
+            except TimeoutError:
+                self.error("TimeoutError in _execute")
+                return {}
         except TransportQueryError as err:
             raise ProviderError(err.errors[0]["message"])
 
@@ -53,7 +55,11 @@ class GraphQLProvider(Base):
         vars.update(kwargs)
 
         # call `self._execute(self._sku_query, vars)` with a timeout
-        response = await asyncio.wait_for(self._execute(self._sku_query, vars), timeout=30)
+        try:
+            response = await asyncio.wait_for(self._execute(self._sku_query, vars), timeout=30)
+        except TimeoutError:
+            self.error("TimeoutError in _test_query")
+            return False
 
         return response and key in response
 

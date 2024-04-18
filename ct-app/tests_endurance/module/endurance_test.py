@@ -27,6 +27,8 @@ class EnduranceTest(object):
         self.execution_time = None
         self.metric_list: list[Metric] = []
         self._progress_bar_length = 45
+        self.start_time = 0
+        self.end_time = 0
 
         log.setLevel(getattr(logging, Utils.envvar("LOG_LEVEL", default="INFO")))
         log.disabled = not Utils.envvar("LOG_ENABLED", type=bool, default=True)
@@ -77,6 +79,9 @@ class EnduranceTest(object):
         Run the test.
         """
 
+        await self.on_start()
+
+
         for it in range(self.iterations):
             self.tasks.add(
                 asyncio.create_task(self.delayed_task(getattr(self, "task"), it))
@@ -86,8 +91,6 @@ class EnduranceTest(object):
         Metric("Test duration", self.duration, "s").print_line()
         Metric("Test rate", self.rate, "/s").print_line()
         print("")
-
-        await self.on_start()
 
         self.start_time = time.time()
         await asyncio.gather(*self.tasks)
