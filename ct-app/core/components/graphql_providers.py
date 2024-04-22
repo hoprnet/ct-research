@@ -113,7 +113,7 @@ class GraphQLProvider(Base):
             )
             return False
 
-        results = await self._test_query(self._default_key, **kwargs)
+        return await self._test_query(self._default_key, **kwargs)
 
 class SafesProvider(GraphQLProvider):
     def __init__(self, url: str):
