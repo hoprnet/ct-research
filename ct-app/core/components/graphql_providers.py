@@ -72,6 +72,9 @@ class GraphQLProvider(Base):
             vars.update(kwargs)
 
             response = await self._execute(self._sku_query, vars)
+            
+            if response is None:
+                break
 
             content = response.get(key, [])
             data.extend(content)
@@ -113,7 +116,12 @@ class GraphQLProvider(Base):
             )
             return False
 
-        return await self._test_query(self._default_key, **kwargs)
+        result = await self._test_query(self._default_key, **kwargs)
+
+        if result is None:
+            return False
+        
+        return result
 
 class SafesProvider(GraphQLProvider):
     def __init__(self, url: str):
