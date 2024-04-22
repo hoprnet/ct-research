@@ -40,6 +40,8 @@ class GraphQLProvider(Base):
             )
         except TransportQueryError as err:
             raise ProviderError(err.errors[0]["message"])
+        except TimeoutError as err:
+            self.error("Timeout error: ", err)
 
     async def _test_query(self, key: str, **kwargs) -> bool:
         """
@@ -112,7 +114,6 @@ class GraphQLProvider(Base):
             return False
 
         return await self._test_query(self._default_key, **kwargs)
-
 
 class SafesProvider(GraphQLProvider):
     def __init__(self, url: str):
