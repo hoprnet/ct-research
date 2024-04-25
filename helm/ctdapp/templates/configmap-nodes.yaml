@@ -5,10 +5,10 @@ metadata:
     argocd.argoproj.io/sync-wave: "1"
   name: hoprd-nodes
 data:
-    NODE_ADDRESS_1: http://ctdapp-blue-node-1:3001
-    NODE_ADDRESS_2: http://ctdapp-blue-node-2:3001
-    NODE_ADDRESS_3: http://ctdapp-blue-node-3:3001
-    NODE_ADDRESS_4: http://ctdapp-blue-node-4:3001
-    NODE_ADDRESS_5: http://ctdapp-blue-node-5:3001
+    NODE_ADDRESS_1: http://hoprd-ctdapp-1:3001
+    NODE_ADDRESS_2: http://hoprd-ctdapp--2:3001
+    NODE_ADDRESS_3: http://hoprd-ctdapp--3:3001
+    NODE_ADDRESS_4: http://hoprd-ctdapp--4:3001
+    NODE_ADDRESS_5: http://hoprd-ctdapp--5:3001
 
 
