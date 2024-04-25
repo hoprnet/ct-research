@@ -4,3 +4,9 @@ blue-nodes:
   enabled: true
 green-nodes:
   enabled: false
+
+ctdapp:
+  core:
+    replicas: 0
+  postman:
+    replicas: 0
