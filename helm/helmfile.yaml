@@ -12,7 +12,7 @@ environments:
       - values-common.yaml
       - values-prod.yaml
       - values-prod-blue.yaml
-      - values-prod-gren.yaml
+      - values-prod-green.yaml
     secrets:
       - secrets-prod.sops.yaml
 ---
