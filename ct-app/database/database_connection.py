@@ -26,7 +26,8 @@ class DatabaseConnection:
             password=self.params.pg.password,
             host=self.params.pg.host,
             port=self.params.pg.port,
-            database=self.params.pg.database
+            database=self.params.pg.database,
+            query={}
         )
 
         self.engine = create_engine(url)
