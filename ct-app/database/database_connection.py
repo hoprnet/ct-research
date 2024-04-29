@@ -57,11 +57,7 @@ class DatabaseConnection:
                 "password",
                 "host",
                 "port",
-                "database",
-                "sslmode",
-                "sslrootcert",
-                "sslcert",
-                "sslkey",
+                "database"
             ]
         }
 
