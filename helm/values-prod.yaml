@@ -6,6 +6,11 @@ green-nodes:
   enabled: false
 
 ctdapp:
+  image:
+    core:
+      tag: v2.1.9
+    postman:
+      tag: v2.1.9
   core:
     replicas: 1
   postman:
