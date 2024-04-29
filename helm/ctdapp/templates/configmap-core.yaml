@@ -24,8 +24,6 @@ data:
   _FLAG_NODE_CLOSE_PENDING_CHANNELS: "900"
   FLAG_NODE_FUND_CHANNELS: "60"
   FLAG_NODE_GET_TOTAL_CHANNEL_FUNDS: "60"
-  DISTRIBUTION_MIN_ELIGIBLE_PEERS: "100"
-  DISTRIBUTION_MAX_APR_PERCENTAGE: "15.0"
   PEER_MIN_VERSION: "2.0.7"
   GCP_FILE_PREFIX: expected_reward
   GCP_FOLDER: expected_rewards
@@ -42,6 +40,6 @@ data:
   SUBGRAPH_SAFES_BALANCE_QUERY: "{ safes(first: valfirst, skip: valskip) { registeredNodesInNetworkRegistry { node { id } safe { id balance { wxHoprBalance } allowance { wxHoprAllowance } } } } }"
   SUBGRAPH_WXHOPR_TXS_QUERY: "{ transactions(where: { from: valfrom, to: valto }) { from to amount }} "
   SUBGRAPH_FROM_ADDRESS: "0xd9a00176cf49dfb9ca3ef61805a2850f45cb1d05"
-  {{- if .Values.ctdapp.core.extraEnvVars }}
+  {{- if .Values.ctdapp.core.extraEnvVars -}}
   {{ .Values.ctdapp.core.extraEnvVars | toYaml | nindent 2 }}
   {{- end }}

@@ -13,8 +13,10 @@ ctdapp:
       tag: v2.1.9
   core:
     replicas: 0
-    # extraEnvVars:
-    #   DISTRIBUTION_MIN_ELIGIBLE_PEERS: "100"
-    #   DISTRIBUTION_MAX_APR_PERCENTAGE: "15.0"
+    extraEnvVars:
+      DISTRIBUTION_MIN_ELIGIBLE_PEERS: "100"
+      DISTRIBUTION_MAX_APR_PERCENTAGE: "15.0"
   postman:
     replicas: 0
+    # extraEnvVars:
+    #   PROPERTY_NAME: PROPERTY_VALUE
