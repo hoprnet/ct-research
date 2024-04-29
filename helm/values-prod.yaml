@@ -44,7 +44,7 @@ ctdapp:
 
       GCP_FILE_PREFIX: expected_reward
       GCP_FOLDER: expected_rewards
-      GCP_BUCKET: ct-platform-ct
+      GCP_BUCKET: hoprnet-ctdapp-prod
 
       ECONOMIC_MODEL_FILENAME: parameters-production.json
       ECONOMIC_MODEL_MIN_SAFE_ALLOWANCE: "-1"
