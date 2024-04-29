@@ -12,7 +12,7 @@ ctdapp:
     postman:
       tag: v2.1.9
   core:
-    replicas: 0
+    replicas: 1
     extraEnvVars:
       FLAG_CORE_HEALTHCHECK: "60"
       FLAG_CORE_CHECK_SUBGRAPH_URLS: "200"
@@ -62,7 +62,7 @@ ctdapp:
       LEGACY_SUBGRAPH_WXHOPR_TXS_QUERY: "{ transactions(where: { from: valfrom, to: valto }) { from to amount }} "
       LEGACY_SUBGRAPH_FROM_ADDRESS: 0xd9a00176cf49dfb9ca3ef61805a2850f45cb1d05
   postman:
-    replicas: 0
+    replicas: 1
     extraEnvVars:
       PARAM_BATCH_SIZE: "200"
       PARAM_DELAY_BETWEEN_TWO_MESSAGES: "0.2"
