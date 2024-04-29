@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  name: {{ include "ctdapp.fullname" . }}-postman
+  labels:
+    {{- include "ctdapp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.ctdapp.postman.replicas }}
+  selector:
+    matchLabels:
+      {{- include "ctdapp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: postman
+  template:
+    metadata:
+      {{- with .Values.ctdapp.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        app.kubernetes.io/component: postman
+        {{- include "ctdapp.labels" . | nindent 8 }}
+        {{- with .Values.ctdapp.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "ctdapp.serviceAccountName" . }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.ctdapp.image.postman.repository }}:{{ .Values.ctdapp.image.postman.tag }}"
+          imagePullPolicy: {{ .Values.ctdapp.image.postman.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: postman-config
+            - configMapRef:
+                name: hoprd-nodes
+            - secretRef:
+                name: hoprd-nodes
+            - secretRef:
+                name: postgres
+            - secretRef:
+                name: rabbitmq-ctdapp
+          args:
+            - /bin/sh
+            - -c
+            - |
+              celery -A postman.postman_tasks.app worker -c 4 -n worker@%h -l info -E -Q "send_messages"
+          resources:
+            {{- toYaml .Values.ctdapp.postman.resources | nindent 12 }}
