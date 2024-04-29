@@ -45,6 +45,6 @@ spec:
             - /bin/sh
             - -c
             - |
-              celery -A postman.postman_tasks.app worker -c 4 -n worker@%h -l info -E -Q "send_messages"
+              celery -A postman.postman_tasks.app worker -c 5 -n worker@%h -l info -E -Q "send_messages"
           resources:
             {{- toYaml .Values.ctdapp.postman.resources | nindent 12 }}
