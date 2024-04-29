@@ -7,6 +7,6 @@ green-nodes:
 
 ctdapp:
   core:
-    replicas: 0
+    replicas: 1
   postman:
-    replicas: 0
+    replicas: 1
