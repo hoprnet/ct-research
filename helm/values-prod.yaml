@@ -6,6 +6,11 @@ green-nodes:
   enabled: false
 
 ctdapp:
+  image:
+    core:
+      tag: v2.1.10
+    postman:
+      tag: v2.1.10
   core:
     replicas: 1
     tag: v2.1.10
@@ -18,6 +23,7 @@ ctdapp:
       GCP_BUCKET: hoprnet-ctdapp-prod
 
       ECONOMIC_MODEL_FILENAME: parameters-production.json
+
 
       CHANNEL_MIN_BALANCE: "15"
       CHANNEL_FUNDING_AMOUNT: "50"

@@ -40,7 +40,6 @@ data:
 
   RABBITMQ_TASK_NAME: send_1_hop_message
   RABBITMQ_PROJECT_NAME: ct-app
-
   {{- if .Values.ctdapp.core.extraEnvVars -}}
   {{ .Values.ctdapp.core.extraEnvVars | toYaml | nindent 2 }}
   {{- end }}
