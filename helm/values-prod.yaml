@@ -6,21 +6,15 @@ green-nodes:
   enabled: false
 
 ctdapp:
-  image:
-    core:
-      tag: v2.1.10
-    postman:
-      tag: v2.1.10
   core:
     replicas: 1
+    tag: v2.1.10
     extraEnvVars:
       FLAG_CORE_DISTRIBUTE_REWARDS: "1"
 
-      FLAG_NODE_OPEN_CHANNELS: "900"
-      FLAG_NODE_CLOSE_OLD_CHANNELS: "900"
-      FLAG_NODE_CLOSE_PENDING_CHANNELS: "1800"
-      FLAG_NODE_FUND_CHANNELS: "900"
-
+      DISTRIBUTION_MIN_ELIGIBLE_PEERS: "5"
+      DISTRIBUTION_MAX_APR_PERCENTAGE: "15.0"
+      
       GCP_BUCKET: hoprnet-ctdapp-prod
 
       ECONOMIC_MODEL_FILENAME: parameters-production.json
@@ -30,3 +24,4 @@ ctdapp:
       CHANNEL_MAX_AGE_SECONDS: "172800"
   postman:
     replicas: 1
+    tag: v2.1.10
