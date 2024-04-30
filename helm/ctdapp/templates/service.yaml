@@ -3,9 +3,10 @@ kind: Service
 metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "5"
-  name: {{ include "ctdapp.fullname" . }}
+  name: {{ include "ctdapp.fullname" . }}-core
   labels:
     {{- include "ctdapp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: core
 spec:
   type: {{ .Values.ctdapp.service.type }}
   ports:

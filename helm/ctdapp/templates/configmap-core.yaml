@@ -5,42 +5,6 @@ metadata:
     argocd.argoproj.io/sync-wave: "1"
   name: core-config
 data:
-  FLAG_CORE_HEALTHCHECK: "60"
-  FLAG_CORE_CHECK_SUBGRAPH_URLS: "200"
-  FLAG_CORE_GET_FUNDINGS: "600"
-  FLAG_CORE_AGGREGATE_PEERS: "30"
-  FLAG_CORE_GET_TOPOLOGY_DATA: "30"
-  FLAG_CORE_GET_SUBGRAPH_DATA: "30"
-  FLAG_CORE_APPLY_ECONOMIC_MODEL: "20"
-  FLAG_CORE_DISTRIBUTE_REWARDS: "1"
-  FLAG_CORE_GET_TICKET_PRICE: "60"
-  FLAG_NODE_HEALTHCHECK: "60"
-  FLAG_NODE_RETRIEVE_PEERS: "60"
-  FLAG_NODE_RETRIEVE_OUTGOING_CHANNELS: "60"
-  FLAG_NODE_RETRIEVE_INCOMING_CHANNELS: "60"
-  FLAG_NODE_RETRIEVE_BALANCES: "900"
-  FLAG_NODE_OPEN_CHANNELS: "60"
-  _FLAG_NODE_CLOSE_OLD_CHANNELS: "900"
-  _FLAG_NODE_CLOSE_PENDING_CHANNELS: "900"
-  FLAG_NODE_FUND_CHANNELS: "60"
-  FLAG_NODE_GET_TOTAL_CHANNEL_FUNDS: "60"
-  DISTRIBUTION_MIN_ELIGIBLE_PEERS: "5"
-  DISTRIBUTION_MAX_APR_PERCENTAGE: "100.0"
-  PEER_MIN_VERSION: "0.0.0"
-  GCP_FILE_PREFIX: expected_reward
-  GCP_FOLDER: expected_rewards
-  GCP_BUCKET: hoprnet-ctdapp-{{ .Values.environmentName }}
-  ECONOMIC_MODEL_FILENAME: parameters-staging.json
-  ECONOMIC_MODEL_MIN_SAFE_ALLOWANCE: "0.000000001"
-  CHANNEL_MIN_BALANCE: "0.05"
-  CHANNEL_FUNDING_AMOUNT: "0.2"
-  CHANNEL_MAX_AGE_SECONDS: "172800"
-  RABBITMQ_TASK_NAME: send_1_hop_message
-  RABBITMQ_PROJECT_NAME: ct-app
-  SUBGRAPH_PAGINATION_SIZE: "1000"
-  SUBGRAPH_SAFES_BALANCE_QUERY: "{ safes(first: valfirst, skip: valskip) { registeredNodesInNetworkRegistry { node { id } safe { id balance { wxHoprBalance } allowance { wxHoprAllowance } } } } }"
-  SUBGRAPH_WXHOPR_TXS_QUERY: "{ transactions(where: { from: valfrom, to: valto }) { from to amount }} "
-  SUBGRAPH_FROM_ADDRESS: "0xd9a00176cf49dfb9ca3ef61805a2850f45cb1d05"
-  {{- if .Values.ctdapp.core.extraEnvVars }}
+  {{- if .Values.ctdapp.core.extraEnvVars -}}
   {{ .Values.ctdapp.core.extraEnvVars | toYaml | nindent 2 }}
   {{- end }}

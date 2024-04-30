@@ -12,6 +12,10 @@ config: |
       allow_recursive: false
       strategies: []
 
+identityPool:
+  funding:
+    schedule: 10 8 * * 1
+
 identities:
   ctdapp-green-node-1:
     identityFile: ""
