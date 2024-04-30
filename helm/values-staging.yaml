@@ -8,5 +8,20 @@ green-nodes:
 ctdapp:
   core:
     replicas: 0
+    tag: ba586d0
+    extraEnvVars:
+      FLAG_NODE_OPEN_CHANNELS: "900"
+      FLAG_NODE_CLOSE_OLD_CHANNELS: "900"
+      FLAG_NODE_CLOSE_PENDING_CHANNELS: "1800"
+      FLAG_NODE_FUND_CHANNELS: "900"
+
+      GCP_BUCKET: hoprnet-ctdapp-staging
+
+      ECONOMIC_MODEL_FILENAME: parameters-staging.json
+
+      CHANNEL_MIN_BALANCE: "0.05"
+      CHANNEL_FUNDING_AMOUNT: "0.2"
+      CHANNEL_MAX_AGE_SECONDS: "172800"
   postman:
     replicas: 0
+    tag: ba586d0
