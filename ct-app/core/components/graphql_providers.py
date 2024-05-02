@@ -55,7 +55,11 @@ class GraphQLProvider(Base):
         vars.update(kwargs)
 
         # call `self._execute(self._sku_query, vars)` with a timeout
-        response = await asyncio.wait_for(self._execute(self._sku_query, vars), timeout=30)
+        try:
+            response = await asyncio.wait_for(self._execute(self._sku_query, vars), timeout=30)
+        except asyncio.TimeoutError:
+            self.error("Query timeout occurred")
+            return False
 
         return response and key in response
 
