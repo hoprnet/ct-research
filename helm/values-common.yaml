@@ -36,6 +36,5 @@ deployment:
 
 identityPool:
   funding:
-    enabled: false
-    schedule: 0 1 * * 1
+    enabled: true
     nativeAmount: 1

@@ -29,12 +29,7 @@ class DatabaseConnection:
             host=self.params.pg.host,
             port=self.params.pg.port,
             database=self.params.pg.database,
-            query={
-                "sslmode": self.params.pg.sslmode,
-                "sslrootcert": self.params.pg.sslrootcert,
-                "sslcert": self.params.pg.sslcert,
-                "sslkey": self.params.pg.sslkey,
-            },
+            query={}
         )
 
         self.engine = create_engine(url)
@@ -71,11 +66,7 @@ class DatabaseConnection:
                 "password",
                 "host",
                 "port",
-                "database",
-                "sslmode",
-                "sslrootcert",
-                "sslcert",
-                "sslkey",
+                "database"
             ]
         }
 
