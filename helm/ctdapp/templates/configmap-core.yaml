@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  name: core-config
+data:
+  {{- if .Values.ctdapp.core.extraEnvVars -}}
+  {{ .Values.ctdapp.core.extraEnvVars | toYaml | nindent 2 }}
+  {{- end }}

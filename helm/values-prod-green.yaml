@@ -1,0 +1,49 @@
+replicas: 5
+network: dufour
+version: 2.1.0-rc.3
+
+config: |
+  hopr:
+    chain:
+      network: dufour
+      provider: http://gnosis-rpc-provider.rpc-provider.svc:8545
+    strategy:
+      on_fail_continue: true
+      allow_recursive: false
+      strategies: []
+
+identityPool:
+  funding:
+    schedule: 10 8 * * 1
+
+identities:
+  ctdapp-green-node-1:
+    identityFile: ""
+    peerId: ""
+    nativeAddress: ""
+    safeAddress: ""
+    moduleAddress: ""
+  ctdapp-green-node-2:
+    identityFile: ""
+    peerId: ""
+    nativeAddress: ""
+    safeAddress: ""
+    moduleAddress: ""
+  ctdapp-green-node-3:
+    identityFile: ""
+    peerId: ""
+    nativeAddress: ""
+    safeAddress: ""
+    moduleAddress: ""
+  ctdapp-green-node-4:
+    identityFile: ""
+    peerId: ""
+    nativeAddress: ""
+    safeAddress: ""
+    moduleAddress: ""
+  ctdapp-green-node-5:
+    identityFile: ""
+    peerId: ""
+    nativeAddress: ""
+    safeAddress: ""
+    moduleAddress: ""
