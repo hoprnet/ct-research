@@ -50,7 +50,13 @@ jobs:
 
       - name: Calculate environment variables
         shell: sh
-        run: echo "SHORT_SHA=`echo ${{ github.event.pull_request.head.sha }} | cut -c1-7`" >> $GITHUB_ENV
+        run: |
+          commit_hash="${{ github.event.pull_request.head.sha }}"
+          if [ -z "${commit_hash}" ]; then
+             echo "docker_tag=latest" >> $GITHUB_ENV
+          else
+             echo "docker_tag=`echo ${commit_hash} | cut -c1-7`" >> $GITHUB_ENV
+          fi
 
       - name: Set up Google Cloud Credentials
         id: auth
@@ -77,4 +83,4 @@ jobs:
         with:
           push: true
           context: ct-app
-          tags: europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic:latest
+          tags: europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic:${{ env.docker_tag }}
