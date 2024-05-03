@@ -77,4 +77,4 @@ jobs:
         with:
           push: true
           context: ct-app
-          tags: europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic:${{ env.SHORT_SHA }}
+          tags: europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic:latest
