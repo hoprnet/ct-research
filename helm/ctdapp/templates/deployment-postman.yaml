@@ -28,8 +28,8 @@ spec:
       serviceAccountName: {{ include "ctdapp.serviceAccountName" . }}
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.ctdapp.image.postman.repository }}:{{ .Values.ctdapp.image.postman.tag }}"
-          imagePullPolicy: {{ .Values.ctdapp.image.postman.pullPolicy }}
+          image: "{{ .Values.ctdapp.postman.repository }}:{{ .Values.ctdapp.postman.tag }}"
+          imagePullPolicy: {{ .Values.ctdapp.postman.pullPolicy }}
           envFrom:
             - configMapRef:
                 name: postman-config

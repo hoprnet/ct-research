@@ -1,6 +1,5 @@
 environmentName: ""
 ctdapp:
-
   image:
     core:
       repository: europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic
