@@ -1,14 +1,13 @@
 environmentName: ""
 ctdapp:
-  image:
-    core:
-      repository: europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic
-      pullPolicy: Always
-      tag: f65697a
-    postman:
-      repository: europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic
-      pullPolicy: Always
-      tag: f65697a
+  core:
+    repository: europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic
+    pullPolicy: Always
+    tag: f65697a
+  postman:
+    repository: europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic
+    pullPolicy: Always
+    tag: f65697a
 
   nameOverride: ""
   fullnameOverride: ""
