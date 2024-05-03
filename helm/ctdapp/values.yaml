@@ -1,13 +1,5 @@
 environmentName: ""
 ctdapp:
-  core:
-    repository: europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic
-    pullPolicy: Always
-    tag: f65697a
-  postman:
-    repository: europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic
-    pullPolicy: Always
-    tag: f65697a
 
   nameOverride: ""
   fullnameOverride: ""
@@ -33,6 +25,9 @@ ctdapp:
 
 
   core:
+    repository: europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic
+    pullPolicy: Always
+    tag: ""
     replicas: 1
     extraEnvVars: {}
     resources:
@@ -42,8 +37,10 @@ ctdapp:
       requests:
         cpu: 250m
         memory: 256Mi
-
   postman:
+    repository: europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic
+    pullPolicy: Always
+    tag: ""
     replicas: 1
     extraEnvVars: {}
     resources:
