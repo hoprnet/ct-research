@@ -78,8 +78,11 @@ class GraphQLProvider(Base):
             vars = {"first": page_size, "skip": skip}
             vars.update(kwargs)
 
-            response = await asyncio.wait_for(self._execute(self._sku_query, vars), timeout=30)
-            
+            try:
+                response = await asyncio.wait_for(self._execute(self._sku_query, vars), timeout=30)
+            except asyncio.TimeoutError:
+                self.error("Timeout error while fetching data from subgraph.")
+                break            
             if response is None:
                 break
 
