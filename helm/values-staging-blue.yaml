@@ -1,6 +1,6 @@
 replicas: 5
 network: rotsee
-version: 2.1.0-rc.4-pr.6206
+version: 2.1.0-rc.4-pr.6236
 
 config: |
   hopr:
