@@ -36,7 +36,7 @@ releases:
   namespace: ctdapp
   chart: hoprassociation/cluster-hoprd
   condition: legacy-nodes.enabled
-  version: 0.3.0
+  version: 0.3.1
   wait: true
   timeout: 5
   values:
