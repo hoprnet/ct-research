@@ -1,4 +1,7 @@
 environmentName: ""
+backup:
+  enabled: false
+  schedule:
 ctdapp:
 
   nameOverride: ""
