@@ -5,6 +5,10 @@ blue-nodes:
 green-nodes:
   enabled: true
 
+backup:
+  enabled: true
+  schedule: 30 21 * * * # 9:30 PM UTC
+
 ctdapp:
   core:
     replicas: 0
