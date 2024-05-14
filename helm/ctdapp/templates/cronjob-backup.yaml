@@ -3,7 +3,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: phttp-backup
+  name: ctdapp-backup
 spec:
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 1
