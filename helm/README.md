@@ -1,6 +1,5 @@
 # ctdApp Deployment docs
 
-
 ## Connect to Database
 
 ```bash
