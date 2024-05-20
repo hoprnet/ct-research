@@ -42,6 +42,10 @@ class GraphQLProvider(Base):
             raise ProviderError(err.errors[0]["message"])
         except TimeoutError as err:
             self.error(f"Timeout error: {err}")
+        except ProviderError as err:
+            self.error(f"ProviderError error: {err}")
+        except Exception as err:
+            self.error(f"Unknown error: {err}")
 
     async def _test_query(self, key: str, **kwargs) -> bool:
         """
