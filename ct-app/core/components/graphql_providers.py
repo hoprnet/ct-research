@@ -7,6 +7,11 @@ from graphql.language.ast import DocumentNode
 
 from .baseclass import Base
 
+
+class ProviderError(Exception):
+    pass
+
+
 class GraphQLProvider(Base):
     def __init__(self, url: str):
         transport = AIOHTTPTransport(url=url)
@@ -34,7 +39,7 @@ class GraphQLProvider(Base):
                 query, variable_values=variable_values
             )
         except TransportQueryError as err:
-            self.error(f"TransportQueryError error: {err}")
+            raise ProviderError(f"TransportQueryError error: {err}")
         except TimeoutError as err:
             self.error(f"Timeout error: {err}")
         except Exception as err:
@@ -113,7 +118,11 @@ class GraphQLProvider(Base):
             )
             return False
 
-        result = await self._test_query(self._default_key, **kwargs)
+        try:
+            result = await self._test_query(self._default_key, **kwargs)
+        except ProviderError as err:
+            self.error(f"ProviderError error: {err}")
+            result = None
 
         if result is None:
             return False
