@@ -40,9 +40,11 @@ class GraphQLProvider(Base):
                 query, variable_values=variable_values
             )
         except TransportQueryError as err:
-            raise ProviderError(err.errors[0]["message"])
+            raise ProviderError(f"TransportQueryError error: {err}")
         except TimeoutError as err:
             self.error(f"Timeout error: {err}")
+        except Exception as err:
+            self.error(f"Unknown error: {err}")
 
     async def _test_query(self, key: str, **kwargs) -> bool:
         """
@@ -126,7 +128,11 @@ class GraphQLProvider(Base):
             )
             return False
 
-        result = await self._test_query(self._default_key, **kwargs)
+        try:
+            result = await self._test_query(self._default_key, **kwargs)
+        except ProviderError as err:
+            self.error(f"ProviderError error: {err}")
+            result = None
 
         if result is None:
             return False
