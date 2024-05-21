@@ -1,6 +1,8 @@
 import asyncio
+from copy import deepcopy
 
 from celery import Celery
+from core.model.economic_model_sigmoid import EconomicModelSigmoid
 from prometheus_client import Gauge
 
 from .components.baseclass import Base
@@ -17,7 +19,8 @@ from .components.lockedvar import LockedVar
 from .components.parameters import Parameters
 from .components.utils import Utils
 from .model.address import Address
-from .model.economic_model import EconomicModel
+from .model.economic_model_legacy import EconomicModelLegacy
+from .model.budget import Budget
 from .model.peer import Peer
 from .model.subgraph_entry import SubgraphEntry
 from .model.subgraph_type import SubgraphType
@@ -53,6 +56,10 @@ class Core(Base):
 
         self.nodes = list[Node]()
 
+        self.budget: Budget = None
+        self.legacy_model: EconomicModelSigmoid = None
+        self.sigmoid_model: EconomicModelSigmoid = None
+
         self.tasks = set[asyncio.Task]()
 
         self.connected = LockedVar("connected", False)
@@ -82,6 +89,14 @@ class Core(Base):
 
         for node in self.nodes:
             node.params = params
+
+        self.budget = Budget.fromParameters(self.params.economicModel.budget)
+
+        self.legacy_model = EconomicModelLegacy.fromParameters(self.params.economicModel.legacy)
+        self.sigmoid_model = EconomicModelSigmoid.fromParameters(self.params.economicModel.sigmoid)
+
+        self.legacy_model.budget = deepcopy(self.budget)
+        self.sigmoid_model.budget = deepcopy(self.budget)
 
         self._safe_subgraph_url = SubgraphURL(
             self.params.subgraph.deployerKey, self.params.subgraph.safesBalance
@@ -320,34 +335,33 @@ class Core(Base):
                 f"Excluded non-nft-holders with stake < {threshold} ({len(excluded)} entries)."
             )
 
-        model = EconomicModel.fromParameters(self.params.economicModel)
+        low_stake_addresses = [
+            peer.address
+            for peer in eligibles
+            if peer.split_stake < self.model.coefficients.l
+        ]
+        excluded = Utils.excludeElements(eligibles, low_stake_addresses)
+        self.debug(f"Excluded nodes with low stake ({len(excluded)} entries).")
 
         redeemed_rewards = await self.peer_rewards.get()
         for peer in eligibles:
-            peer.economic_model = model
+            peer.economic_model = deepcopy(self.model)
             peer.economic_model.coefficients.c += redeemed_rewards.get(peer.address.address,0.0)
-            peer.max_apr = self.params.economicModel.maxAPRPercentage
 
-        self.debug("Assigned economic model to eligible nodes.")
+        self.info(f"Assigned economic model to eligible nodes. ({len(eligibles)} entries).")
 
-        excluded = Utils.rewardProbability(eligibles)
-        self.debug(f"Excluded nodes with low stakes ({len(excluded)} entries).")
-
-        self.info(f"Eligible nodes ({len(eligibles)} entries).")
-
-        self.debug(f"final eligible list {[el.address.id for el in eligibles]}")
+        self.debug(f"Final eligible list {[el.address.id for el in eligibles]}")
 
         await self.eligible_list.set(eligibles)
 
         # set prometheus metrics
-        DISTRIBUTION_DELAY.set(model.delay_between_distributions)
+        DISTRIBUTION_DELAY.set(self.model.delay_between_distributions)
         NEXT_DISTRIBUTION_EPOCH.set(
-            Utils.nextEpoch(model.delay_between_distributions).timestamp()
+            Utils.nextEpoch(self.model.delay_between_distributions).timestamp()
         )
         ELIGIBLE_PEERS_COUNTER.set(len(eligibles))
 
         for peer in eligibles:
-            APR_PER_PEER.labels(peer.address.id).set(peer.apr_percentage)
             JOBS_PER_PEER.labels(peer.address.id).set(peer.message_count_for_reward)
             PEER_SPLIT_STAKE.labels(peer.address.id).set(peer.split_stake)
             PEER_SAFE_COUNT.labels(peer.address.id).set(peer.safe_address_count)
@@ -357,13 +371,8 @@ class Core(Base):
     @flagguard
     @formalin("Distributing rewards")
     async def distribute_rewards(self):
-        model = EconomicModel.fromGCPFile(
-            self.params.gcp.bucket, self.params.economicModel.filename
-        )
-
-        delay = Utils.nextDelayInSeconds(model.delay_between_distributions)
+        delay = Utils.nextDelayInSeconds(self.budget.delay_between_distributions)
         self.debug(f"Waiting {delay} seconds for next distribution.")
-
         await asyncio.sleep(delay)
 
         min_peers = self.params.distribution.minEligiblePeers
@@ -392,11 +401,14 @@ class Core(Base):
         app.autodiscover_tasks(force=True)
 
         for peer in peers:
+            legacy_count = self.legacy_model.message_count_for_reward(peer.split_stake)
+            sigmoid_count = self.sigmoid_model.message_count_for_reward(peer.split_stake)
+
             Utils.taskSendMessage(
                 app,
                 peer.address.id,
-                peer.message_count_for_reward,
-                peer.economic_model.budget.ticket_price,
+                legacy_count + sigmoid_count,
+                self.budget.ticket_price,
                 task_name=self.params.rabbitmq.taskName,
             )
         self.info(f"Distributed rewards to {len(peers)} peers.")
