@@ -28,8 +28,8 @@ spec:
       serviceAccountName: {{ include "ctdapp.serviceAccountName" . }}
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.ctdapp.image.core.repository }}:{{ .Values.ctdapp.image.core.tag }}"
-          imagePullPolicy: {{ .Values.ctdapp.image.core.pullPolicy }}
+          image: "{{ .Values.ctdapp.core.repository }}:{{ .Values.ctdapp.core.tag }}"
+          imagePullPolicy: {{ .Values.ctdapp.core.pullPolicy }}
           ports:
             - name: http
               containerPort: {{ .Values.ctdapp.service.port }}

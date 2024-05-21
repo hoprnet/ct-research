@@ -1,0 +1,55 @@
+---
+{{- if .Values.backup.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ctdapp-backup
+spec:
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  schedule: "{{ .Values.backup.schedule }}"
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      ttlSecondsAfterFinished: 3600
+      template:
+        spec:
+          initContainers:
+          - name: dump
+            image: postgres:15-bookworm
+            command:
+              - /bin/bash
+              - -c
+              - |
+                set -e
+                TIMESTAMP=$(date +%Y%m%d%H%M%S)
+                echo Starting full backup of database ${PGDATABASE} at $(date)
+                pg_dump --no-privileges --no-owner --format=custom --compress=9 --file=/backup/ctdapp-${TIMESTAMP}.dump
+                echo Backup finished at $(date)
+            envFrom:
+            - secretRef:
+                name: postgres
+            volumeMounts:
+            - name: backup
+              mountPath: /backup
+          containers:
+          - name: backup
+            image: gcr.io/google.com/cloudsdktool/google-cloud-cli:475.0.0
+            command:
+              - /bin/bash
+              - -c
+              - |              
+                echo Copying the backup to the bucket
+                gsutil cp /backup/*.dump gs://hoprnet-backup-{{ .Values.environmentName }}/postgres/ctdapp/
+                echo Keep only the 7 most recent backups
+                gsutil ls gs://hoprnet-backup-{{ .Values.environmentName }}/postgres/ctdapp | sort -r | tail -n +8 | xargs -I {} gsutil rm {}
+            volumeMounts:
+            - name: backup
+              mountPath: /backup
+          volumes:
+          - name: backup
+            emptyDir: {}
+          restartPolicy: OnFailure
+          serviceAccount: sa-backup
+{{- end }}
