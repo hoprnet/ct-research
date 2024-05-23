@@ -11,8 +11,8 @@ backup:
 
 ctdapp:
   core:
-    replicas: 0
-    tag: ba586d0
+    replicas: 1
+    tag: 40cafdf
     extraEnvVars:
       GCP_BUCKET: hoprnet-ctdapp-staging
 
@@ -22,5 +22,5 @@ ctdapp:
       CHANNEL_FUNDING_AMOUNT: "0.2"
       CHANNEL_MAX_AGE_SECONDS: "172800"
   postman:
-    replicas: 0
-    tag: ba586d0
+    replicas: 1
+    tag: 40cafdf
