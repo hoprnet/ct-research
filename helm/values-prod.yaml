@@ -30,3 +30,10 @@ ctdapp:
   postman:
     replicas: 1
     tag: v2.1.10
+  nodes:
+    NODE_ADDRESS_1: http://hoprd-ctdapp-1:3001
+    NODE_ADDRESS_2: http://hoprd-ctdapp-2:3001
+    NODE_ADDRESS_3: http://hoprd-ctdapp-3:3001
+    NODE_ADDRESS_4: http://hoprd-ctdapp-4:3001
+    NODE_ADDRESS_5: http://hoprd-ctdapp-5:3001
+    # NODE_ADDRESS_X: http://hoprd-ctdapp-5:3001
