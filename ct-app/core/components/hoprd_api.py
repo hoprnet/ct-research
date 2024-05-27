@@ -143,7 +143,7 @@ class HoprdAPI(Base):
         body = OpenChannelBodyRequest(amount, peer_address)
 
         is_ok, response = await self.__call_api(
-            ChannelsApi, "channels_open_channel", body=body
+            ChannelsApi, "open_channel", body=body
         )
 
         return response.channel_id if is_ok else None
@@ -157,7 +157,7 @@ class HoprdAPI(Base):
         """
         body = FundBodyRequest(amount=f"{amount:.0f}")
         is_ok, _ = await self.__call_api(
-            ChannelsApi, "fund_channel", channelid=channel_id, body=body
+            ChannelsApi, "fund_channel", channel_id=channel_id, body=body
         )
 
         return is_ok
@@ -169,7 +169,7 @@ class HoprdAPI(Base):
         :return: bool
         """
         is_ok, _ = await self.__call_api(
-            ChannelsApi, "close_channel", channelid=channel_id
+            ChannelsApi, "close_channel", channel_id=channel_id
         )
         return is_ok
 
