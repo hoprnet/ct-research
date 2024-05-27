@@ -93,8 +93,8 @@ class Utils(Base):
             safe = next(filter(lambda s: s.node_address == address, safes), None)
 
             ## TEMP SOLUTION TO ENFORCE DISTRIBUTION TO PEERS NOT LISTED BY THE SUBGRAPH ON STAGING
-            if safe is None:
-                safe = SubgraphEntry(address, "0.000015", "0x0", "10000")
+            # if safe is None:
+            #     safe = SubgraphEntry(address, "0.000015", "0x0", "10000")
 
             if peer is None or topo is None or safe is None:
                 continue
