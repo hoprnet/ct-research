@@ -12,7 +12,7 @@ backup:
 ctdapp:
   core:
     replicas: 1
-    tag: v2.1.10
+    tag: v2.2.0
     extraEnvVars:
       FLAG_CORE_DISTRIBUTE_REWARDS: "1"
 
@@ -29,7 +29,7 @@ ctdapp:
       CHANNEL_MAX_AGE_SECONDS: "172800"
   postman:
     replicas: 1
-    tag: v2.1.10
+    tag: v2.2.0
   nodes:
     NODE_ADDRESS_1: http://hoprd-ctdapp-1:3001
     NODE_ADDRESS_2: http://hoprd-ctdapp-2:3001
