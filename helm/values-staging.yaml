@@ -12,7 +12,7 @@ backup:
 ctdapp:
   core:
     replicas: 1
-    tag: 40cafdf
+    tag: f9ce6c9
     extraEnvVars:
       GCP_BUCKET: hoprnet-ctdapp-staging
 
@@ -23,7 +23,7 @@ ctdapp:
       CHANNEL_MAX_AGE_SECONDS: "172800"
   postman:
     replicas: 1
-    tag: 40cafdf
+    tag: f9ce6c9
   nodes:
     NODE_ADDRESS_1: http://ctdapp-blue-node-1.ctdapp.svc:3001
     NODE_ADDRESS_2: http://ctdapp-blue-node-2.ctdapp.svc:3001
