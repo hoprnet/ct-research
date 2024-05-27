@@ -1,6 +1,6 @@
 replicas: 5
 network: dufour
-version: saint-louis-latest
+version: "2.1.0"
 
 config: |
   hopr:
