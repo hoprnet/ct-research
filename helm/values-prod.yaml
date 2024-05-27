@@ -36,4 +36,4 @@ ctdapp:
     NODE_ADDRESS_3: http://hoprd-ctdapp-3:3001
     NODE_ADDRESS_4: http://hoprd-ctdapp-4:3001
     NODE_ADDRESS_5: http://hoprd-ctdapp-5:3001
-    # NODE_ADDRESS_X: http://hoprd-ctdapp-5:3001
+    NODE_ADDRESS_X: http://hoprd-ctdapp-5:3001
