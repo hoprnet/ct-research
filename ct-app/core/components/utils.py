@@ -80,44 +80,31 @@ class Utils(Base):
     @classmethod
     def mergeDataSources(
         cls,
-        topology_list: list[TopologyEntry],
-        peers_list: list[Peer],
-        subgraph_list: list[SubgraphEntry],
+        topology: list[TopologyEntry],
+        peers: list[Peer],
+        safes: list[SubgraphEntry],
     ):
-        """
-        Merge metrics and subgraph data with the unique peer IDs, addresses,
-        balance links.
-        :param: topology_dict: A dict mapping peer IDs to node addresses.
-        :param: peers_list: A dict containing metrics with peer ID as the key.
-        :param: subgraph_dict: A dict containing subgraph data with safe address as key.
-        :returns: A dict with peer ID as the key and the merged information.
-        """
         merged_result: list[Peer] = []
+        addresses = [item.node_address for item in topology]
 
-        network_addresses = [p.address for p in peers_list]
-        peer_versions = {p.address: p.version for p in peers_list}
+        for address in addresses:
+            peer = next(filter(lambda p: p.address.address == address, peers), None)
+            topo = next(filter(lambda t: t.node_address == address, topology), None)
+            safe = next(filter(lambda s: s.node_address == address, safes), None)
 
-        # Merge based on peer ID with the channel topology as the baseline
-        for topology_entry in topology_list:
-            peer = topology_entry.to_peer()
+            ## TEMP SOLUTION TO ENFORCE DISTRIBUTION TO PEERS NOT LISTED BY THE SUBGRAPH ON STAGING
+            # if safe is None:
+            #     safe = SubgraphEntry(address, "0.000015", "0x0", "10000")
 
-            entries = [e for e in subgraph_list if e.has_address(peer.address.address)]
-            if len(entries) > 0:
-                subgraph_entry: SubgraphEntry = entries[0]
-            else:
-                subgraph_entry = SubgraphEntry(None, None, None, None)
+            if peer is None or topo is None or safe is None:
+                continue
 
-            peer.safe_address = subgraph_entry.safe_address
-            peer.safe_balance = subgraph_entry.wxHoprBalance
+            peer.safe_address = safe.safe_address
+            peer.safe_balance = safe.wxHoprBalance
+            peer.safe_allowance = float(safe.safe_allowance)
+            peer.channel_balance = topo.channels_balance
 
-            if subgraph_entry.safe_allowance is not None:
-                peer.safe_allowance = float(subgraph_entry.safe_allowance)
-            else:
-                peer.safe_allowance = None
-
-            if peer.complete and peer.address in network_addresses:
-                peer.version = peer_versions[peer.address]
-                merged_result.append(peer)
+            merged_result.append(peer)
 
         return merged_result
 
@@ -140,9 +127,7 @@ class Utils(Base):
             peer.safe_address_count = safe_counts[peer.safe_address]
 
     @classmethod
-    def excludeElements(
-        cls, source_data: list[Peer], blacklist: list[Address]
-    ) -> list[Peer]:
+    def exclude(cls, source_data: list[Peer], blacklist: list[Address]) -> list[Peer]:
         """
         Removes elements from a dictionary based on a blacklist.
         :param: source_data (dict): The dictionary to be updated.
@@ -150,12 +135,8 @@ class Utils(Base):
         :returns: nothing.
         """
 
-        peer_addresses = [peer.address for peer in source_data]
-        indexes = [
-            peer_addresses.index(address)
-            for address in blacklist
-            if address in peer_addresses
-        ]
+        addresses = [peer.address for peer in source_data]
+        indexes = [addresses.index(item) for item in blacklist if item in addresses]
 
         # Remove elements from the list
         excluded = []

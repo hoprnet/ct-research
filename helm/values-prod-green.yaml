@@ -1,6 +1,6 @@
 replicas: 5
 network: dufour
-version: 2.1.0-rc.3
+version: "2.1.0"
 
 config: |
   hopr:
