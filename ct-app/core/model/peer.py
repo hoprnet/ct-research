@@ -49,7 +49,7 @@ class Peer:
         if not isinstance(value, Version):
             try:
                 value = Version(value)
-            except:
+            except Exception:
                 value = Version("0.0.0")
 
         self._version = value
