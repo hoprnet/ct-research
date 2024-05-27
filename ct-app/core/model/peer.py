@@ -46,8 +46,11 @@ class Peer:
 
     @version.setter
     def version(self, value: str or Version):
-        if isinstance(value, str):
-            value = Version(value)
+        if not isinstance(value, Version):
+            try:
+                value = Version(value)
+            except:
+                value = Version("0.0.0")
 
         self._version = value
 
