@@ -16,7 +16,7 @@ ctdapp:
     extraEnvVars:
       FLAG_CORE_DISTRIBUTE_REWARDS: "1"
 
-      DISTRIBUTION_MIN_ELIGIBLE_PEERS: "5"
+      DISTRIBUTION_MIN_ELIGIBLE_PEERS: "100"
       DISTRIBUTION_MAX_APR_PERCENTAGE: "15.0"
       
       GCP_BUCKET: hoprnet-ctdapp-prod
