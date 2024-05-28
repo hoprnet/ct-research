@@ -425,10 +425,10 @@ class Node(Base):
             self.warning("Funding info not found")
             return
 
-        funds = results[self.address.id].get("channels_balance", 0)
+        funds = results[node_address.id].get("channels_balance", 0)
 
         self.debug(f"Channels funds: {funds}")
-        TOTAL_CHANNEL_FUNDS.labels(self.address.id).set(funds)
+        TOTAL_CHANNEL_FUNDS.labels(node_address.id).set(funds)
 
         return funds
 
@@ -441,7 +441,9 @@ class Node(Base):
     ):
         await asyncio.sleep(sleep)
 
-        return await self.api.send_message(self.address.id, message, [relayer], tag)
+        if node_address := await self.address.get():
+            return await self.api.send_message(node_address.id, message, [relayer], tag)
+        return False
 
     async def distribute_rewards(
         self, peer_group: dict[str, dict[str, int]]
@@ -458,7 +460,11 @@ class Node(Base):
         # }
 
         issued_count = {peer_id: 0 for peer_id in peer_group.keys()}
+        node_address = await self.address.get()
 
+        if node_address is None:
+            return issued_count
+        
         for relayer, data in peer_group.items():
             remaining = data.get("remaining", 0)
             tag = data.get("tag", None)
@@ -473,7 +479,7 @@ class Node(Base):
                 )  # should never happen
                 continue
 
-            channel_balance = await self.api.channel_balance(self.address.id, relayer)
+            channel_balance = await self.api.channel_balance(node_address.id, relayer)
             max_possible = int(min(remaining, channel_balance // ticket_price))
 
             if max_possible == 0:

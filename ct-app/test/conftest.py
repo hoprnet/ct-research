@@ -1,3 +1,4 @@
+from copy import deepcopy
 from itertools import repeat
 from random import choice, choices, randint
 from test.decorators_patches import patches
@@ -177,8 +178,6 @@ async def core(
     core = Core()
     core.nodes = nodes
 
-    mocker.patch.object(DBUtils, "peerIDToInt", return_value=0)
-
     for idx, node in enumerate(core.nodes):
         mocker.patch.object(node.peers, "get", return_value=peers)
         mocker.patch.object(node.api, "get_address", return_value=addresses[idx])
@@ -197,39 +196,48 @@ async def core(
         setattr(node.params, "distribution", Parameters())
         setattr(node.params.distribution, "delay_between_two_messages", 0.001)
 
-        await node._retrieve_address()
+
+    mocker.patch.object(DBUtils, "peerIDToInt", return_value=0)
 
     mocker.patch.object(core.api, "healthyz", return_value=True)
     mocker.patch.object(core.api, "startedz", return_value=True)
     mocker.patch.object(core.api, "ticket_price", return_value=0.01)
 
-    setattr(core.params, "subgraph", Parameters())
-    setattr(core.params.subgraph, "safes_balance_query", "safes query")
-    setattr(core.params.subgraph, "safes_balance_url", "safes default url")
-    setattr(core.params.subgraph, "safes_balance_url_backup", "safes backup url")
-    setattr(core.params.subgraph, "pagination_size", 100)
-    setattr(core.params.subgraph, "from_address", "0x0000")
-    setattr(core.params.subgraph, "wxhopr_txs_query", "txs query")
-    setattr(core.params.subgraph, "wxhopr_txs_url", "txs url")
+    params = Parameters()
+    setattr(params, "subgraph", Parameters())
 
-    setattr(core.params, "peer", Parameters())
-    setattr(core.params.peer, "min_version", "0.0.0")
+    setattr(params.subgraph, "safes_balance_url", "safes default url")
+    setattr(params.subgraph, "safes_balance_url_backup", "safes backup url")    
+    setattr(params.subgraph, "staking_url", "staking default url")
+    setattr(params.subgraph, "staking_url_backup", "staking backup url")
+    setattr(params.subgraph, "wxhopr_txs_url", "wxhopr default url")
+    setattr(params.subgraph, "wxhopr_txs_url_backup", "wxhopr backup url")
 
-    setattr(core.params, "economic_model", Parameters())
-    setattr(core.params.economic_model, "min_safe_allowance", 0.000001)
-    setattr(core.params.economic_model, "filename", "file")
+    setattr(params, "peer", Parameters())
+    setattr(params.peer, "min_version", "0.0.0")
 
-    setattr(core.params, "gcp", Parameters())
-    setattr(core.params.gcp, "bucket", "ctdapp-bucket")
-    setattr(core.params.gcp, "file_prefix", "prefix")
-    setattr(core.params.gcp, "folder", "ctdapp-folder")
+    setattr(params, "economic_model", Parameters())
+    setattr(params.economic_model, "min_safe_allowance", 0.000001)
+    setattr(params.economic_model, "filename", "file")
 
-    setattr(core.params, "distribution", Parameters())
-    setattr(core.params.distribution, "message_delivery_delay", 1)
+    setattr(params, "gcp", Parameters())
+    setattr(params.gcp, "bucket", "ctdapp-bucket")
+    setattr(params.gcp, "file_prefix", "prefix")
+    setattr(params.gcp, "folder", "ctdapp-folder")
+
+    setattr(params, "distribution", Parameters())
+    setattr(params.distribution, "message_delivery_delay", 1)
+    setattr(params.distribution, "delay_between_two_messages", 0.01)
+
+
+    core.post_init(nodes, params)
+
+    for idx, node in enumerate(core.nodes):
+        await node._retrieve_address()
 
     await core.healthcheck()
     await core._retrieve_address()
-
+    
     return core
 
 

@@ -108,7 +108,7 @@ class Utils(Base):
             # if safe is None:
             #     safe = SubgraphEntry(address, "0.000015", "0x0", "10000")
 
-            if peer is None or topo is None or safe is None:
+            if peer is None or topo is None or safe is None or safe.wxHoprBalance is None:
                 continue
 
             peer.safe_address = safe.safe_address

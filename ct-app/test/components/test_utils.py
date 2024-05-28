@@ -93,7 +93,7 @@ def test_httpPOST():
     pytest.skip("Not implemented")
 
 
-def test_mergeTopoPeersSafes():
+def test_mergeDataSources():
     topology_list = [
         TopologyEntry(None, None, 1),
         TopologyEntry("peer_id_2", "address_2", 2),
@@ -111,7 +111,9 @@ def test_mergeTopoPeersSafes():
         SubgraphEntry("address_3", None, "safe_address_3", "3"),
     ]
 
-    merged = Utils.mergeTopoPeersSafes(topology_list, peers_list, subgraph_list)
+    merged = Utils.mergeDataSources(topology_list, peers_list, subgraph_list)
+
+    print(merged)
     assert len(merged) == 1
 
 

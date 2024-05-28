@@ -13,7 +13,7 @@ from .conftest import Node, Peer
 async def test__retrieve_address(node: Node, addresses: dict):
     await node._retrieve_address()
 
-    assert node.address == Address(addresses[0]["hopr"], addresses[0]["native"])
+    assert await node.address.get() == Address(addresses[0]["hopr"], addresses[0]["native"])
 
 
 @pytest.mark.asyncio
@@ -79,7 +79,7 @@ async def test_retrieve_outgoing_channels(node: Node, channels: NodeChannelsResp
 
     outgoings_from_node = await node.outgoings.get()
     outgoings_from_fixture = [
-        c for c in channels.all if c.source_peer_id == node.address.id
+        c for c in channels.all if c.source_peer_id == (await node.address.get()).id
     ]
 
     assert [c.channel_id for c in outgoings_from_node] == [
@@ -95,7 +95,7 @@ async def test_retrieve_incoming_channels(node: Node, channels: NodeChannelsResp
 
     incomings_from_node = await node.incomings.get()
     incomings_from_fixture = [
-        c for c in channels.all if c.destination_peer_id == node.address.id
+        c for c in channels.all if c.destination_peer_id == (await node.address.get()).id
     ]
 
     assert [c.channel_id for c in incomings_from_node] == [
@@ -109,7 +109,7 @@ async def test_get_total_channel_funds(node: Node, channels: NodeChannelsRespons
 
     total_funds_from_node = await node.get_total_channel_funds()
     total_funds_from_fixture = sum(
-        [int(c.balance) for c in channels.all if c.source_peer_id == node.address.id]
+        [int(c.balance) for c in channels.all if c.source_peer_id == (await node.address.get()).id]
     )
 
     assert total_funds_from_fixture / 1e18 == total_funds_from_node

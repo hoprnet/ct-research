@@ -6,10 +6,10 @@ from core.model.subgraph_type import SubgraphType
 from .conftest import Core
 
 
-def test_subgraph_safes_balance_url(core: Core):
-    assert core.subgraph_safes_balance_url(SubgraphType.DEFAULT) == "safes default url"
-    assert core.subgraph_safes_balance_url(SubgraphType.BACKUP) == "safes backup url"
-    assert core.subgraph_safes_balance_url("random") is None
+def test__safe_subgraph_url(core: Core):
+    assert core._safe_subgraph_url(SubgraphType.DEFAULT) == "safes default url"
+    assert core._safe_subgraph_url(SubgraphType.BACKUP) == "safes backup url"
+    assert core._safe_subgraph_url("random") is None
 
 
 @pytest.mark.asyncio
