@@ -588,7 +588,7 @@ class Core(Base):
         self.tasks.add(asyncio.create_task(self.get_topology_data()))
 
         self.tasks.add(asyncio.create_task(self.apply_economic_model()))
-        self.tasks.add(asyncio.create_task(self.prepare_distribution()))
+        self.tasks.add(asyncio.create_task(self.distribute_rewards()))
 
         await asyncio.gather(*self.tasks)
 
