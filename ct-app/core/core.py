@@ -357,8 +357,6 @@ class Core(Base):
         self.info(f"Eligible nodes ({len(eligibles)} entries).")
         self.debug(f"Final eligible list {[el.address.id for el in eligibles]}")
 
-        self.debug(f"Eligible nodes ({len(eligibles)} entries).")
-
         await self.eligible_list.set(eligibles)
 
         # set prometheus metrics
@@ -375,7 +373,7 @@ class Core(Base):
             PEER_SAFE_COUNT.labels(peer.address.id).set(peer.safe_address_count)
             PEER_TF_STAKE.labels(peer.address.id).set(peer.transformed_stake)
             PEER_VERSION.labels(peer.address.id, str(peer.version)).set(1)
-
+            
     @flagguard
     @formalin("Distributing rewards")
     @connectguard
