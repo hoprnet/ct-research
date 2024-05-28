@@ -2,7 +2,7 @@ import logging
 
 logging.basicConfig()
 logging.getLogger("asyncio").setLevel(logging.WARNING)
-formatter = logging.Formatter("%(levelname)s:%(message)s")
+formatter = logging.Formatter("%(asctime)s %(levelname)s:%(message)s")
 
 
 class Base:
@@ -18,18 +18,17 @@ class Base:
     logger.setLevel(logging.DEBUG)
     logger.propagate = False
 
+    @property
     def print_prefix(self) -> str:
         cls = self.__class__
-        raise NotImplementedError(
-            f"print_prefix not implemented for class '{cls.__name__}'"
-        )
+        raise NotImplementedError(f"print_prefix not implemented for class '{cls.__name__}'")
 
     @classmethod
     def class_prefix(cls) -> str:
         return f"{cls.__name__.upper()}_"
 
     def __format(self, message: str, color: str = "\033[0m"):
-        return f"{self.print_prefix()} {message}"
+        return f"{self.print_prefix} {message}"
 
     def callback(self, type: str):
         return getattr(self.logger, type)

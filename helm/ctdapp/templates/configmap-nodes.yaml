@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  name: hoprd-nodes
+data:
+{{- range $key, $value := .Values.ctdapp.nodes }}
+  {{ $key }}: {{ $value }}
+{{- end }}

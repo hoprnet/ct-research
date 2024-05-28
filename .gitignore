@@ -3,11 +3,15 @@ __pycache__/
 .pytest_cache/
 
 # envs
+.venv*/
 env*/
+
+.direnv/
 simulation.env
 .vscode/
-*.env
-*.yaml
+*.*env
+*.log
+*_rules.yaml
 
 # logs
 net_viz-*.png
@@ -24,4 +28,3 @@ foo*/
 run_*.sh
 
 .DS_Store
-*/test_endurance_rules.yaml

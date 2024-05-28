@@ -2,7 +2,7 @@ import asyncio
 import random
 
 from core.components.hoprd_api import HoprdAPI
-from core.components.utils import EnvironmentUtils
+from core.components.utils import Utils
 
 from . import EnduranceTest, Metric
 
@@ -12,9 +12,7 @@ class SendMessages(EnduranceTest):
         self.results = []
         self.tag = random.randint(0, 2**16 - 1)
 
-        self.api = HoprdAPI(
-            EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY")
-        )
+        self.api = HoprdAPI(Utils.envvar("API_URL"), Utils.envvar("API_KEY"))
         self.recipient = await self.api.get_address("hopr")
 
         channels = await self.api.all_channels(False)
@@ -27,17 +25,16 @@ class SendMessages(EnduranceTest):
         if len(open_channels) == 0:
             raise Exception("No open channels found")
 
-        self.relayer = EnvironmentUtils.envvar("RELAYER_PEER_ID", None)
-        if self.relayer is None:
-            channel = random.choice(open_channels)
-            self.relayer = channel.destination_peer_id
+        selected_peer_id = Utils.envvar("RELAYER_PEER_ID")
+
+        if selected_peer_id is not None:
+            channel = [
+                c for c in open_channels if c.destination_peer_id == selected_peer_id
+            ][0]
         else:
-            channel = next(
-                (c for c in open_channels if c.destination_peer_id == self.relayer),
-                None,
-            )
-            if channel is None:
-                raise Exception("Channel not found")
+            channel = random.choice(open_channels)
+
+        self.relayer = channel.destination_peer_id
 
         self.info(f"Connected to node {self.recipient}")
         self.info(f"relayer: {self.relayer}", prefix="\t")
@@ -46,17 +43,20 @@ class SendMessages(EnduranceTest):
         self.info(f"balance: {channel.balance}HOPR", prefix="\t")
         self.info(f"tag    : {self.tag}", prefix="\t")
 
-        await self.api.messages_pop_all(self.tag)
+        await self.api.messages_pop_all(Utils.envvar("MESSAGE_TAG", type=int))
 
     async def task(self) -> bool:
         success = await self.api.send_message(
-            self.recipient, "Load testing", [self.relayer], self.tag
+            self.recipient,
+            "Load testing",
+            [self.relayer],
+            Utils.envvar("MESSAGE_TAG", type=int),
         )
 
         self.results.append(success)
 
     async def on_end(self):
-        sleep_time = EnvironmentUtils.envvar("DELAY_BEFORE_INBOX_CHECK", type=float)
+        sleep_time = Utils.envvar("DELAY_BEFORE_INBOX_CHECK", type=float)
 
         if sum(self.results) > 0:
             self.info(f"Waiting {sleep_time}s for messages to be relayed")
@@ -64,14 +64,11 @@ class SendMessages(EnduranceTest):
         else:
             self.warning("No messages were relayed, skipping wait")
 
-        inbox = await self.api.messages_pop_all(self.tag)
+        inbox = await self.api.messages_pop_all(Utils.envvar("MESSAGE_TAG", type=int))
         self.inbox_size = len(inbox)
 
     def success_flag(self) -> bool:
-        return (
-            abs(1 - self.execution_time.v / self.duration) <= 0.1,
-            f"Execution time differs from expected duration by more than 10% ({self.execution_time.v:.2f} !~ {self.duration:.2f})",
-        )
+        return sum(self.results) / len(self.results) >= 0.9
 
     def metrics(self):
         # Messages counts

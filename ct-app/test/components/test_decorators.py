@@ -9,6 +9,7 @@ from core.components.lockedvar import LockedVar
 
 
 class FooClass(Base):
+    @property
     def print_prefix(self):
         return "FooClass"
 

@@ -46,8 +46,11 @@ class Peer:
 
     @version.setter
     def version(self, value: str or Version):
-        if isinstance(value, str):
-            value = Version(value)
+        if not isinstance(value, Version):
+            try:
+                value = Version(value)
+            except Exception:
+                value = Version("0.0.0")
 
         self._version = value
 
@@ -153,7 +156,7 @@ class Peer:
         budget = self.economic_model.budget
         denominator = budget.ticket_price * budget.winning_probability
 
-        return round(self.protocol_reward_per_distribution / denominator)
+        return  round(self.protocol_reward_per_distribution / denominator)
 
     @property
     def apr_percentage(self):

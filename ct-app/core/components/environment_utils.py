@@ -6,6 +6,7 @@ from .baseclass import Base
 
 
 class EnvironmentUtils(Base):
+    @property
     def print_prefix(self) -> str:
         return "EnvUtils"
 

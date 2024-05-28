@@ -20,22 +20,25 @@ def main():
         "PEER_",
     )
 
-    test_lines = [["header"], ["value"]]
-    filename = Utils.generateFilename("", "startup", "csv")
-    Utils.stringArrayToGCP(params.gcp.bucket, filename, test_lines)
+    Utils.stringArrayToGCP(
+        params.gcp.bucket,
+        Utils.generateFilename("", "startup", "csv"),
+        [["header"], ["value"]],
+    )
 
+    # create the core and nodes instances
     instance = Core()
-
-    instance.nodes = Node.fromAddressAndKeyLists(
+    nodes = Node.fromAddressAndKeyLists(
         *Utils.nodesAddresses("NODE_ADDRESS_", "NODE_KEY_")
     )
 
-    instance.params = params
-    for node in instance.nodes:
-        node.params = params
+    instance.post_init(nodes, params)
 
     # start the prometheus client
-    start_http_server(8080)
+    try:
+        start_http_server(8080)
+    except OSError:
+        instance.error("Address already in use, prometheus client not started")
 
     loop = asyncio.new_event_loop()
     loop.add_signal_handler(SIGINT, instance.stop)

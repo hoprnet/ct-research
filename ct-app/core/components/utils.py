@@ -1,14 +1,14 @@
 import csv
 import json
-import os
+from os import environ
 import random
 import time
 from datetime import datetime, timedelta
 from typing import Any
 
-import aiohttp
 from aiohttp import ClientSession
 from google.cloud import storage
+from scripts.list_required_parameters import list_parameters
 
 from core.model.address import Address
 from core.model.peer import Peer
@@ -21,6 +21,35 @@ from .environment_utils import EnvironmentUtils
 
 
 class Utils(Base):
+    @classmethod
+    def envvar(cls, var_name: str, default: Any = None, type: type = str):
+        if var_name in environ:
+            return type(environ[var_name])
+        else:
+            return default
+
+    @classmethod
+    def envvarWithPrefix(cls, prefix: str, type=str) -> dict[str, Any]:
+        var_dict = {
+            key: type(v) for key, v in environ.items() if key.startswith(prefix)
+        }
+
+        return dict(sorted(var_dict.items()))
+
+    @classmethod
+    def envvarExists(cls, var_name: str) -> bool:
+        return var_name in environ
+
+    @classmethod
+    def checkRequiredEnvVar(cls, folder: str):
+        all_set_flag = True
+        for param in list_parameters(folder):
+            exists = Utils.envvarExists(param)
+            cls().info(f"{'✅' if exists else '❌'} {param}")
+            all_set_flag *= exists
+
+        return all_set_flag
+
     @classmethod
     def nodesAddresses(
         cls, address_prefix: str, keyenv: str
@@ -37,30 +66,31 @@ class Utils(Base):
         return list(addresses), list(keys)
 
     @classmethod
-    async def httpPOST(cls, url: str, data: dict) -> tuple[int, dict]:
+    async def httpPOST(
+        cls, url: str, data: dict, timeout: int = 60
+    ) -> tuple[int, dict]:
         """
         Performs an HTTP POST request.
         :param url: The URL to send the request to.
         :param data: The data to be sent.
         :returns: A tuple containing the status code and the response.
         """
-
-        async def _post(session: ClientSession, url: str, data: dict):
-            async with session.post(url, json=data) as response:
+        async def post(session: ClientSession, url: str, data: dict, timeout: int):
+            async with session.post(url, json=data, timeout=timeout) as response:
                 status = response.status
                 response = await response.json()
                 return status, response
 
-        async with aiohttp.ClientSession() as session:
+        async with ClientSession() as session:
             try:
-                status, response = await _post(session, url, data)
+                status, response = await post(session, url, data, timeout)
             except Exception:
                 return None, None
             else:
                 return status, response
 
     @classmethod
-    def mergeTopoPeersSafes(
+    def mergeDataSources(
         cls,
         topology: list[TopologyEntry],
         peers: list[Peer],
@@ -74,12 +104,11 @@ class Utils(Base):
             topo = next(filter(lambda t: t.node_address == address, topology), None)
             safe = next(filter(lambda s: s.node_address == address, safes), None)
 
-            if (
-                peer is None
-                or topo is None
-                or safe is None
-                or safe.wxHoprBalance is None
-            ):
+            ## TEMP SOLUTION TO ENFORCE DISTRIBUTION TO PEERS NOT LISTED BY THE SUBGRAPH ON STAGING
+            # if safe is None:
+            #     safe = SubgraphEntry(address, "0.000015", "0x0", "10000")
+
+            if peer is None or topo is None or safe is None:
                 continue
 
             peer.safe_address = safe.safe_address

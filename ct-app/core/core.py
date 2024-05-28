@@ -9,6 +9,12 @@ from prometheus_client import Gauge
 
 from .components.baseclass import Base
 from .components.decorators import connectguard, flagguard, formalin
+from .components.graphql_providers import (
+    ProviderError,
+    SafesProvider,
+    StakingProvider,
+    wxHOPRTransactionProvider,
+)
 from .components.hoprd_api import HoprdAPI
 from .components.lockedvar import LockedVar
 from .components.parameters import Parameters
@@ -18,6 +24,7 @@ from .model.economic_model import EconomicModel
 from .model.peer import Peer
 from .model.subgraph_entry import SubgraphEntry
 from .model.subgraph_type import SubgraphType
+from .model.subgraph_url import SubgraphURL
 from .model.topology_entry import TopologyEntry
 from .node import Node
 
@@ -27,6 +34,7 @@ SUBGRAPH_IN_USE = Gauge("subgraph_in_use", "Subgraph in use")
 SUBGRAPH_CALLS = Gauge("subgraph_calls", "# of subgraph calls", ["type"])
 SUBGRAPH_SIZE = Gauge("subgraph_size", "Size of the subgraph")
 TOPOLOGY_SIZE = Gauge("topology_size", "Size of the topology")
+NFT_HOLDERS = Gauge("nft_holders", "Number of nr-nft holders")
 EXECUTIONS_COUNTER = Gauge("executions", "# of execution of the economic model")
 ELIGIBLE_PEERS_COUNTER = Gauge("eligible_peers", "# of eligible peers for rewards")
 APR_PER_PEER = Gauge("apr_per_peer", "APR per peer", ["peer_id"])
@@ -55,21 +63,46 @@ class Core(Base):
         self.tasks = set[asyncio.Task]()
 
         self.connected = LockedVar("connected", False)
+        self.address = None
 
         self.all_peers = LockedVar("all_peers", set[Peer]())
         self.topology_list = LockedVar("topology_list", list[TopologyEntry]())
-        self.subgraph_list = LockedVar("subgraph_list", list[SubgraphEntry]())
+        self.registered_nodes = LockedVar("subgraph_list", list[SubgraphEntry]())
+        self.nft_holders = LockedVar("nft_holders", list[str]())
         self.eligible_list = LockedVar("eligible_list", list[Peer]())
         self.ticket_price = LockedVar("ticket_price", 1.0)
 
-        self._safes_balance_subgraph_type = (
-            SubgraphType.NONE
-        )  # trick to have the subgraph in use displayed in the terminal
+        # subgraphs
+        self._safe_subgraph_url = None
+        self._staking_subgraph_url = None
+        self._wxhopr_txs_subgraph_url = None
+        # trick to have the subgraph in use displayed in the terminal
+        self._subgraph_type = SubgraphType.NONE
+        self.subgraph_type = SubgraphType.DEFAULT
 
-        self.safes_balance_subgraph_type = SubgraphType.DEFAULT
-        self.address = None
         self.started = False
 
+    def post_init(self, nodes: list[Node], params: Parameters):
+        self.params = params
+        self.nodes = nodes
+
+        for node in self.nodes:
+            node.params = params
+
+        self._safe_subgraph_url = SubgraphURL(
+            self.params.subgraph.safes_balance_url,
+            self.params.subgraph.safes_balance_url_backup,
+        )
+        self._staking_subgraph_url = SubgraphURL(
+            self.params.subgraph.staking_url,
+            self.params.subgraph.staking_url_backup,
+        )
+        self._wxhopr_txs_subgraph_url = SubgraphURL(
+            self.params.subgraph.wxhopr_txs_url,
+            self.params.subgraph.wxhopr_txs_url_backup,
+        )
+
+    @property
     def print_prefix(self) -> str:
         return "ct-core"
 
@@ -82,32 +115,34 @@ class Core(Base):
         return self.nodes[:-1]
 
     @property
-    def network_nodes_addresses(self) -> list[Address]:
-        return [node.address for node in self.network_nodes]
+    async def network_nodes_addresses(self) -> list[Address]:
+        return await asyncio.gather(
+            *[node.address.get() for node in self.network_nodes]
+        )
 
     @property
-    def safes_balance_subgraph_type(self) -> SubgraphType:
-        return self._safes_balance_subgraph_type
+    def subgraph_type(self) -> SubgraphType:
+        return self._subgraph_type
 
-    @safes_balance_subgraph_type.setter
-    def safes_balance_subgraph_type(self, value: SubgraphType):
-        if value != self.safes_balance_subgraph_type:
+    @property
+    def safe_subgraph_url(self) -> str:
+        return self._safe_subgraph_url(self.subgraph_type)
+
+    @property
+    def staking_subgraph_url(self) -> str:
+        return self._staking_subgraph_url(self.subgraph_type)
+
+    @property
+    def wxhopr_txs_subgraph_url(self) -> str:
+        return self._wxhopr_txs_subgraph_url(self.subgraph_type)
+
+    @subgraph_type.setter
+    def subgraph_type(self, value: SubgraphType):
+        if value != self.subgraph_type:
             self.warning(f"Now using '{value.value}' subgraph.")
 
         SUBGRAPH_IN_USE.set(value.toInt())
-        self._safes_balance_subgraph_type = value
-
-    def subgraph_safes_balance_url(self, subgraph: SubgraphType) -> str:
-        """
-        Returns the subgraph URL for the specified subgraph type.
-        """
-        if subgraph == SubgraphType.DEFAULT:
-            return self.params.subgraph.safes_balance_url
-
-        if subgraph == SubgraphType.BACKUP:
-            return self.params.subgraph.safes_balance_url_backup
-
-        return None
+        self._subgraph_type = value
 
     async def _retrieve_address(self):
         """
@@ -140,23 +175,18 @@ class Core(Base):
         """
         Checks the subgraph URLs and sets the subgraph type in use (default, backup or none)
         """
-        query: str = self.params.subgraph.safes_balance_query
-        query = query.replace("valfirst", "10")
-        query = query.replace("valskip", "0")
+        for type in SubgraphType.callables():
+            self.subgraph_type = type
+            provider = SafesProvider(self.safe_subgraph_url)
 
-        for subgraph in SubgraphType.callables():
-            _, response = await Utils.httpPOST(
-                self.subgraph_safes_balance_url(subgraph), {"query": query}
-            )
-
-            if not response or response.get("data", {}).get("safes", None) is None:
+            if not await provider.test():
                 continue
-
-            SUBGRAPH_CALLS.labels(subgraph.value).inc()
-            self.safes_balance_subgraph_type = subgraph
-            break
+            else:
+                break
         else:
-            self.safes_balance_subgraph_type = SubgraphType.NONE
+            self.subgraph_type = SubgraphType.NONE
+
+        SUBGRAPH_CALLS.labels(type.value).inc()
 
     @flagguard
     @formalin("Aggregating peers")
@@ -175,57 +205,55 @@ class Core(Base):
         UNIQUE_PEERS.set(len(results))
 
     @flagguard
-    @formalin("Getting subgraph data")
-    async def get_subgraph_data(self):
+    @formalin("Getting registered nodes")
+    async def get_registered_nodes(self):
         """
         Gets the subgraph data and sets the subgraph_list LockedVar.
         """
-        if self.safes_balance_subgraph_type == SubgraphType.NONE:
+        if self.subgraph_type == SubgraphType.NONE:
             self.warning("No subgraph URL available.")
             return
 
-        safes = []
-        skip = 0
-
-        while True:
-            query = self.params.subgraph.safes_balance_query
-            query = query.replace("valfirst", f"{self.params.subgraph.pagination_size}")
-            query = query.replace("valskip", f"{skip}")
-
-            _, response = await Utils.httpPOST(
-                self.subgraph_safes_balance_url(self.safes_balance_subgraph_type),
-                {"query": query},
-            )
-            SUBGRAPH_CALLS.labels(self.safes_balance_subgraph_type.value).inc()
-
-            if not response:
-                self.warning("No response from subgraph.")
-                break
-
-            if "data" not in response:
-                self.warning("No data in response from subgraph.")
-                break
-
-            safes.extend(response["data"]["safes"])
-
-            if len(response["data"]["safes"]) >= self.params.subgraph.pagination_size:
-                skip += self.params.subgraph.pagination_size
-            else:
-                break
-
+        provider = SafesProvider(self.safe_subgraph_url)
         results = list[SubgraphEntry]()
-        for safe in safes:
-            results.extend(
-                [
+        try:
+            for safe in await provider.get():
+                entries = [
                     SubgraphEntry.fromSubgraphResult(node)
                     for node in safe["registeredNodesInNetworkRegistry"]
                 ]
-            )
+                results.extend(entries)
 
-        await self.subgraph_list.set(results)
+        except ProviderError as err:
+            self.error(f"get_registered_nodes: {err}")
+
+        await self.registered_nodes.set(results)
 
         SUBGRAPH_SIZE.set(len(results))
         self.debug(f"Fetched subgraph data ({len(results)} entries).")
+
+    @flagguard
+    @formalin("Getting NFT holders")
+    async def get_nft_holders(self):
+        if self.subgraph_type == SubgraphType.NONE:
+            self.warning("No subgraph URL available.")
+            return
+
+        provider = StakingProvider(self.staking_subgraph_url)
+
+        results = list[str]()
+        try:
+            for nft in await provider.get():
+                if owner := nft.get("owner", {}).get("id", None):
+                    results.append(owner)
+
+        except ProviderError as err:
+            self.error(f"get_nft_holders: {err}")
+
+        await self.nft_holders.set(results)
+
+        NFT_HOLDERS.set(len(results))
+        self.debug(f"Fetched NFT holders ({len(results)} entries).")
 
     @flagguard
     @formalin("Getting topology data")
@@ -258,18 +286,22 @@ class Core(Base):
 
         while not ready:
             topology = await self.topology_list.get()
-            subgraph = await self.subgraph_list.get()
+            registered_nodes = await self.registered_nodes.get()
             peers = await self.all_peers.get()
+            nft_holders = await self.nft_holders.get()
 
             self.debug(f"Topology size: {len(topology)}")
-            self.debug(f"Subgraph size: {len(subgraph)}")
+            self.debug(f"Subgraph size: {len(registered_nodes)}")
             self.debug(f"Network size: {len(peers)}")
+            self.debug(f"NFT holders: {len(nft_holders)}")
 
-            ready = len(topology) and len(subgraph) and len(peers)
+            ready = len(topology) and len(registered_nodes) and len(peers)
             await asyncio.sleep(2)
 
-        eligibles = Utils.mergeTopoPeersSafes(topology, peers, subgraph)
+        eligibles = Utils.mergeDataSources(topology, peers, registered_nodes)
         self.debug(f"Merged topology and subgraph data ({len(eligibles)} entries).")
+
+        self.debug(f"after merge: {[el.address.id for el in eligibles]}")
 
         old_peer_addresses = [
             peer.address
@@ -280,6 +312,7 @@ class Core(Base):
         self.debug(
             f"Excluded peers running on old version (< {self.params.peer.min_version}) ({len(excluded)} entries)."
         )
+        self.debug(f"peers on wrong version: {[el.address.id for el in excluded]}")
 
         Utils.allowManyNodePerSafe(eligibles)
         self.debug(f"Allowed many nodes per safe ({len(eligibles)} entries).")
@@ -291,9 +324,22 @@ class Core(Base):
         ]
         excluded = Utils.exclude(eligibles, low_allowance_addresses)
         self.debug(f"Excluded nodes with low safe allowance ({len(excluded)} entries).")
+        self.debug(f"peers with low allowance {[el.address.id for el in excluded]}")
 
-        excluded = Utils.exclude(eligibles, self.network_nodes_addresses)
+        excluded = Utils.exclude(eligibles, await self.network_nodes_addresses)
         self.debug(f"Excluded network nodes ({len(excluded)} entries).")
+        
+        if threshold := self.params.economic_model.nft_threshold:
+            low_stake_non_nft_holders = [
+                peer.address
+                for peer in eligibles
+                if peer.safe_address not in nft_holders
+                and peer.split_stake < threshold
+            ]
+            excluded = Utils.exclude(eligibles, low_stake_non_nft_holders)
+            self.debug(
+                f"Excluded non-nft-holders with stake < {threshold} ({len(excluded)} entries)."
+            )
 
         model = EconomicModel.fromGCPFile(
             self.params.gcp.bucket, self.params.economic_model.filename
@@ -308,6 +354,8 @@ class Core(Base):
 
         excluded = Utils.rewardProbability(eligibles)
         self.debug(f"Excluded nodes with low stakes ({len(excluded)} entries).")
+        self.info(f"Eligible nodes ({len(eligibles)} entries).")
+        self.debug(f"Final eligible list {[el.address.id for el in eligibles]}")
 
         self.debug(f"Eligible nodes ({len(eligibles)} entries).")
 
@@ -415,34 +463,21 @@ class Core(Base):
         """
         Gets the amount of funds all managed nodes have received from a specified address.
         """
-        from_address = self.params.subgraph.from_address
         ct_safe_addresses = {
-            getattr(await node.api.node_info(), "node_safe", None)
+            getattr(await node.api.node_info(), "hopr_node_safe", None)
             for node in self.network_nodes
         }
 
-        transactions = []
+        provider = wxHOPRTransactionProvider(self.wxhopr_txs_subgraph_url)
+
+        transactions = list[dict]()
         for to_address in ct_safe_addresses:
-            if to_address is None:
-                continue
+            try:
+                for transaction in await provider.get(to=to_address):
+                    transactions.append(transaction)
 
-            query: str = self.params.subgraph.wxhopr_txs_query
-            query = query.replace("valfrom", f'"{from_address}"')
-            query = query.replace("valto", f'"{to_address}"')
-
-            _, response = await Utils.httpPOST(
-                self.params.subgraph.wxhopr_txs_url, {"query": query}
-            )
-
-            if not response:
-                self.warning("No response from subgraph.")
-                break
-
-            if "data" not in response:
-                self.warning("No data in response from subgraph.")
-                break
-
-            transactions.extend(response["data"]["transactions"])
+            except ProviderError as err:
+                self.error(f"get_fundings: {err}")
 
         total_funding = sum([float(tx["amount"]) for tx in transactions])
         self.debug(f"Total funding: {total_funding}")
@@ -548,9 +583,10 @@ class Core(Base):
         self.tasks.add(asyncio.create_task(self.check_subgraph_urls()))
         self.tasks.add(asyncio.create_task(self.get_fundings()))
         self.tasks.add(asyncio.create_task(self.get_ticket_price()))
+        self.tasks.add(asyncio.create_task(self.get_nft_holders()))
 
         self.tasks.add(asyncio.create_task(self.aggregate_peers()))
-        self.tasks.add(asyncio.create_task(self.get_subgraph_data()))
+        self.tasks.add(asyncio.create_task(self.get_registered_nodes()))
         self.tasks.add(asyncio.create_task(self.get_topology_data()))
 
         self.tasks.add(asyncio.create_task(self.apply_economic_model()))
