@@ -1,4 +1,3 @@
-from copy import deepcopy
 from itertools import repeat
 from random import choice, choices, randint
 from test.decorators_patches import patches
