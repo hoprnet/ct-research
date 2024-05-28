@@ -1,6 +1,6 @@
 import csv
 import json
-from os import environ
+from os import environ, path
 import random
 import time
 from datetime import datetime, timedelta
@@ -233,7 +233,7 @@ class Utils(Base):
             extension = extension[1:]
 
         filename = f"{prefix}_{timestamp}.{extension}"
-        return os.path.join(foldername, filename)
+        return path.join(foldername, filename)
 
     @classmethod
     def nextEpoch(cls, seconds: int) -> datetime:
