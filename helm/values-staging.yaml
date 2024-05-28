@@ -11,8 +11,8 @@ backup:
 
 ctdapp:
   core:
-    replicas: 0
-    tag: ba586d0
+    replicas: 1
+    tag: v2.2.0
     extraEnvVars:
       GCP_BUCKET: hoprnet-ctdapp-staging
 
@@ -22,5 +22,12 @@ ctdapp:
       CHANNEL_FUNDING_AMOUNT: "0.2"
       CHANNEL_MAX_AGE_SECONDS: "172800"
   postman:
-    replicas: 0
-    tag: ba586d0
+    replicas: 1
+    tag: v2.2.0
+  nodes:
+    NODE_ADDRESS_1: http://ctdapp-blue-node-1.ctdapp.svc:3001
+    NODE_ADDRESS_2: http://ctdapp-blue-node-2.ctdapp.svc:3001
+    NODE_ADDRESS_3: http://ctdapp-blue-node-3.ctdapp.svc:3001
+    NODE_ADDRESS_4: http://ctdapp-blue-node-4.ctdapp.svc:3001
+    NODE_ADDRESS_5: http://ctdapp-blue-node-5.ctdapp.svc:3001
+    NODE_ADDRESS_X: http://ctdapp-blue-node-5.ctdapp.svc:3001

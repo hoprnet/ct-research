@@ -6,6 +6,9 @@ formatter = logging.Formatter("%(asctime)s %(levelname)s:%(message)s")
 
 
 class Base:
+    """
+    Base class for logging and printing messages with different colors.
+    """
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
 

@@ -46,6 +46,10 @@ TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
 
 
 class Core(Base):
+    """
+    The Core class represents the main class of the application. It is responsible for managing the nodes, the economic model and the distribution of rewards.
+    """
+
     def __init__(self):
         super().__init__()
 
@@ -64,6 +68,7 @@ class Core(Base):
         self.nft_holders = LockedVar("nft_holders", list[str]())
         self.eligible_list = LockedVar("eligible_list", list[Peer]())
         self.peer_rewards = LockedVar("peer_rewards", dict[str, float]())
+        self.ticket_price = LockedVar("ticket_price", 1.0)
 
         # subgraphs
         self._safe_subgraph_url = None
@@ -144,6 +149,9 @@ class Core(Base):
         self._subgraph_type = value
 
     async def _retrieve_address(self):
+        """
+        Retrieves the address from the node.
+        """
         addresses = await self.api.get_address("all")
         if not addresses:
             self.warning("No address retrieved from node.")
@@ -156,15 +164,21 @@ class Core(Base):
     @flagguard
     @formalin(None)
     async def healthcheck(self) -> dict:
-        await self._retrieve_address()
-        await self.connected.set(self.address is not None)
+        """
+        Checks the health of the node. Sets the connected status (LockedVar) and the Prometheus metric accordingly.
+        """
+        health = await self.api.healthyz()
+        await self.connected.set(health)
 
-        self.debug(f"Connection state: {await self.connected.get()}")
-        HEALTH.set(int(await self.connected.get()))
+        self.debug(f"Connection state: {health}")
+        HEALTH.set(int(health))
 
     @flagguard
     @formalin("Checking subgraph URLs")
     async def check_subgraph_urls(self):
+        """
+        Checks the subgraph URLs and sets the subgraph type in use (default, backup or none)
+        """
         for type in SubgraphType.callables():
             self.subgraph_type = type
             provider = SafesProvider(self.safe_subgraph_url)
@@ -181,6 +195,9 @@ class Core(Base):
     @flagguard
     @formalin("Aggregating peers")
     async def aggregate_peers(self):
+        """
+        Aggregates the peers from all nodes and sets the all_peers LockedVar.
+        """
         results = set[Peer]()
 
         for node in self.nodes:
@@ -194,6 +211,9 @@ class Core(Base):
     @flagguard
     @formalin("Getting registered nodes")
     async def get_registered_nodes(self):
+        """
+        Gets the subgraph data and sets the subgraph_list LockedVar.
+        """
         if self.subgraph_type == SubgraphType.NONE:
             self.warning("No subgraph URL available.")
             return
@@ -263,6 +283,9 @@ class Core(Base):
     @flagguard
     @formalin("Applying economic model")
     async def apply_economic_model(self):
+        """
+        Applies the economic model to the eligible peers (after multiple filtering layers) and sets the eligible_list LockedVar.
+        """
         topology = await self.topology_list.get()
         registered_nodes = await self.registered_nodes.get()
         peers = await self.all_peers.get()
@@ -288,7 +311,7 @@ class Core(Base):
             for peer in eligibles
             if peer.version_is_old(self.params.peer.minVersion)
         ]
-        excluded = Utils.excludeElements(eligibles, old_peer_addresses)
+        excluded = Utils.exclude(eligibles, old_peer_addresses)
         self.debug(
             f"Excluded peers running on old version (< {self.params.peer.minVersion}) ({len(excluded)} entries)."
         )
@@ -302,11 +325,11 @@ class Core(Base):
             for peer in eligibles
             if peer.safe_allowance < self.params.economicModel.minSafeAllowance
         ]
-        excluded = Utils.excludeElements(eligibles, low_allowance_addresses)
+        excluded = Utils.exclude(eligibles, low_allowance_addresses)
         self.debug(f"Excluded nodes with low safe allowance ({len(excluded)} entries).")
         self.debug(f"peers with low allowance {[el.address.id for el in excluded]}")
 
-        excluded = Utils.excludeElements(eligibles, await self.network_nodes_addresses)
+        excluded = Utils.exclude(eligibles, await self.network_nodes_addresses)
         self.debug(f"Excluded network nodes ({len(excluded)} entries).")
 
         if threshold := self.params.economicModel.NFTThreshold:
@@ -315,7 +338,7 @@ class Core(Base):
                 for peer in eligibles
                 if peer.safe_address not in nft_holders and peer.split_stake < threshold
             ]
-            excluded = Utils.excludeElements(eligibles, low_stake_non_nft_holders)
+            excluded = Utils.exclude(eligibles, low_stake_non_nft_holders)
             self.debug(
                 f"Excluded non-nft-holders with stake < {threshold} ({len(excluded)} entries)."
             )
@@ -323,6 +346,7 @@ class Core(Base):
         model = EconomicModel.fromParameters(self.params.economicModel)
 
         redeemed_rewards = await self.peer_rewards.get()
+
         for peer in eligibles:
             peer.economic_model = model
             peer.economic_model.coefficients.c += redeemed_rewards.get(peer.address.address,0.0)
@@ -332,10 +356,8 @@ class Core(Base):
 
         excluded = Utils.rewardProbability(eligibles)
         self.debug(f"Excluded nodes with low stakes ({len(excluded)} entries).")
-
         self.info(f"Eligible nodes ({len(eligibles)} entries).")
-
-        self.debug(f"final eligible list {[el.address.id for el in eligibles]}")
+        self.debug(f"Final eligible list {[el.address.id for el in eligibles]}")
 
         await self.eligible_list.set(eligibles)
 
@@ -356,10 +378,16 @@ class Core(Base):
 
     @flagguard
     @formalin("Distributing rewards")
+    @connectguard
     async def distribute_rewards(self):
+        """
+        Distributes the rewards to the eligible peers, based on the economic model.
+        """
+
         model = EconomicModel.fromGCPFile(
             self.params.gcp.bucket, self.params.economicModel.filename
         )
+        model.budget.ticket_price = await self.ticket_price.get()
 
         delay = Utils.nextDelayInSeconds(model.delay_between_distributions)
         self.debug(f"Waiting {delay} seconds for next distribution.")
@@ -407,8 +435,11 @@ class Core(Base):
     @formalin("Getting funding data")
     @connectguard
     async def get_fundings(self):
+        """
+        Gets the amount of funds all managed nodes have received from a specified address.
+        """
         ct_safe_addresses = {
-            getattr(await node.api.node_info(), "node_safe", None)
+            getattr(await node.api.node_info(), "hopr_node_safe", None)
             for node in self.network_nodes
         }
 
@@ -448,6 +479,17 @@ class Core(Base):
 
         self.debug(f"Fetched peers rewards amounts ({len(results)} entries).")
 
+    @formalin("Getting ticket price")
+    @connectguard
+    async def get_ticket_price(self):
+        """
+        Gets the ticket price from the api and sets the ticket_price LockedVar. The ticket price is used in the economic model to calculate the number of messages to send to a peer.
+        """
+        price = await self.api.ticket_price()
+
+        await self.ticket_price.set(price)
+        self.debug(f"Ticket price: {price}")
+
     async def start(self):
         """
         Start the node.
@@ -472,11 +514,12 @@ class Core(Base):
         self.tasks.add(asyncio.create_task(self.check_subgraph_urls()))
         self.tasks.add(asyncio.create_task(self.get_fundings()))
         self.tasks.add(asyncio.create_task(self.get_peers_rewards()))
+        self.tasks.add(asyncio.create_task(self.get_ticket_price()))
+        self.tasks.add(asyncio.create_task(self.get_nft_holders()))
 
         self.tasks.add(asyncio.create_task(self.aggregate_peers()))
         self.tasks.add(asyncio.create_task(self.get_registered_nodes()))
         self.tasks.add(asyncio.create_task(self.get_topology_data()))
-        self.tasks.add(asyncio.create_task(self.get_nft_holders()))
 
         self.tasks.add(asyncio.create_task(self.apply_economic_model()))
         self.tasks.add(asyncio.create_task(self.distribute_rewards()))
