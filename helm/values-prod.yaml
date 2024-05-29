@@ -1,5 +1,3 @@
-legacy-nodes:
-  enabled: true
 blue-nodes:
   enabled: true
 green-nodes:
