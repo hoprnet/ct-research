@@ -32,19 +32,6 @@ releases:
     - environmentName: {{ .Environment.Name }}
   secrets:
     - secrets-{{ .Environment.Name }}.sops.yaml
-- name: hoprd-ctdapp
-  namespace: ctdapp
-  chart: hoprassociation/cluster-hoprd
-  condition: legacy-nodes.enabled
-  version: 0.3.1
-  wait: true
-  timeout: 5
-  values:
-    - values-common.yaml
-    - values-prod.yaml
-    - values-prod-legacy.yaml
-  secrets:
-    - secrets-{{ .Environment.Name }}.sops.yaml
 - name: ctdapp-blue-node
   namespace: ctdapp
   chart: hoprassociation/cluster-hoprd
