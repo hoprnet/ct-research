@@ -5,12 +5,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "1"
   name: postman-config
 data:
-  PARAM_BATCH_SIZE: "200"
-  PARAM_DELAY_BETWEEN_TWO_MESSAGES: "0.2"
-  PARAM_MESSAGE_DELIVERY_TIMEOUT: "15"
-  PARAM_MAX_ATTEMPTS: "6"
-  RABBITMQ_PROJECT_NAME: ct-app
-  CONFIG_FILE_PATH: ./scripts/core_production_config.yaml
+  CONFIG_FILE_PATH: ./scripts/core_{{ .Values.environmentName }}_config.yaml
   {{- if .Values.ctdapp.postman.extraEnvVars -}}
   {{ .Values.ctdapp.postman.extraEnvVars | toYaml | nindent 2 }}
   {{- end }}

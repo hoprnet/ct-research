@@ -11,20 +11,6 @@ ctdapp:
   core:
     replicas: 1
     tag: v2.2.0
-    extraEnvVars:
-      FLAG_CORE_DISTRIBUTE_REWARDS: "1"
-
-      DISTRIBUTION_MIN_ELIGIBLE_PEERS: "100"
-      DISTRIBUTION_MAX_APR_PERCENTAGE: "15.0"
-      
-      GCP_BUCKET: hoprnet-ctdapp-prod
-
-      ECONOMIC_MODEL_FILENAME: parameters-production.json
-
-
-      CHANNEL_MIN_BALANCE: "15"
-      CHANNEL_FUNDING_AMOUNT: "50"
-      CHANNEL_MAX_AGE_SECONDS: "172800"
   postman:
     replicas: 1
     tag: v2.2.0
