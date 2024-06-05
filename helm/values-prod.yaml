@@ -34,4 +34,3 @@ ctdapp:
     NODE_ADDRESS_3: http://ctdapp-blue-node-3:3001
     NODE_ADDRESS_4: http://ctdapp-blue-node-4:3001
     NODE_ADDRESS_5: http://ctdapp-blue-node-5:3001
-    NODE_ADDRESS_X: http://ctdapp-blue-node-5:3001

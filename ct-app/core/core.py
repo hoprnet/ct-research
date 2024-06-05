@@ -1,4 +1,5 @@
 import asyncio
+import random
 
 from celery import Celery
 from prometheus_client import Gauge
@@ -108,16 +109,12 @@ class Core(Base):
 
     @property
     def api(self) -> HoprdAPI:
-        return self.nodes[-1].api
-
-    @property
-    def network_nodes(self) -> list[Node]:
-        return self.nodes[:-1]
+        return random.choice(self.nodes).api
 
     @property
     async def network_nodes_addresses(self) -> list[Address]:
         return await asyncio.gather(
-            *[node.address.get() for node in self.network_nodes]
+            *[node.address.get() for node in self.nodes]
         )
 
     @property
@@ -440,7 +437,7 @@ class Core(Base):
         """
         ct_safe_addresses = {
             getattr(await node.api.node_info(), "hopr_node_safe", None)
-            for node in self.network_nodes
+            for node in self.nodes
         }
 
         provider = wxHOPRTransactionProvider(self.wxhopr_txs_subgraph_url)
@@ -494,16 +491,16 @@ class Core(Base):
         """
         Start the node.
         """
-        self.info(f"CTCore started with {len(self.network_nodes)} nodes.")
+        self.info(f"CTCore started with {len(self.nodes)} nodes.")
 
-        if len(self.network_nodes) == 0:
+        if len(self.nodes) == 0:
             self.error("No nodes available, exiting.")
             return
 
         if self.tasks:
             return
 
-        for node in self.network_nodes:
+        for node in self.nodes:
             node.started = True
             await node._retrieve_address()
             self.tasks.update(node.tasks())
@@ -532,7 +529,7 @@ class Core(Base):
         """
         self.started = False
 
-        for node in self.network_nodes:
+        for node in self.nodes:
             node.started = False
 
         for task in self.tasks:
