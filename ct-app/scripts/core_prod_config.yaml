@@ -76,7 +76,7 @@ distribution:
 # =============================================================================
 gcp:
   filePrefix: expected_reward
-  folder: refactored_app
+  folder: expected_rewards
   bucket: hoprnet-ctdapp-prod
 
 # =============================================================================
