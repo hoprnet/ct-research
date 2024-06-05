@@ -49,5 +49,7 @@ spec:
             - python
             - '-m'
             - core
+            - '--configfile'
+            - './scripts/core_staging_config.yaml'
           resources:
             {{- toYaml .Values.ctdapp.core.resources | nindent 12 }}
