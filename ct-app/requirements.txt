@@ -20,3 +20,4 @@ dune-client==1.7.0
 openpyxl==3.1.2
 dataclasses-json==0.6.4
 gql==3.5.0
+pyyaml==6.0.1
