@@ -59,7 +59,9 @@ economicModel:
     proportion: 0.1
     maxAPRPercentage: 15.0
     offset: 10
-    
+    networkCapacity: 50
+    totalTokenSupply: 1000000000
+
     buckets:
       economicSecurity:
         flatness: 1.65

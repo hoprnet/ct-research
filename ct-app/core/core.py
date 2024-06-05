@@ -57,7 +57,7 @@ class Core(Base):
         self.nodes = list[Node]()
 
         self.budget: Budget = None
-        self.legacy_model: EconomicModelSigmoid = None
+        self.legacy_model: EconomicModelLegacy = None
         self.sigmoid_model: EconomicModelSigmoid = None
 
         self.tasks = set[asyncio.Task]()
@@ -375,14 +375,12 @@ class Core(Base):
         self.debug(f"Waiting {delay} seconds for next distribution.")
         await asyncio.sleep(delay)
 
-        min_peers = self.params.distribution.minEligiblePeers
-
         peers = list[Peer]()
 
-        while len(peers) < min_peers:
+        while len(peers) < self.params.distribution.minEligiblePeers:
             peers = await self.eligible_list.get()
             self.warning(
-                f"Min. {min_peers} peers required to distribute rewards (having {len(peers)})."
+                f"Min. {self.params.distribution.minEligiblePeers} peers required to distribute rewards (having {len(peers)})."
             )
             await asyncio.sleep(2)
 
@@ -399,10 +397,14 @@ class Core(Base):
             broker=f"amqp://{self.params.rabbitmq.username}:{self.params.rabbitmq.password}@{self.params.rabbitmq.host}/{self.params.rabbitmq.virtualhost}",
         )
         app.autodiscover_tasks(force=True)
+        
+        economic_security = sum([peer.split_stake for peer in peers]) / self.params.economicModel.sigmoid.totalTokenSupply
+        network_capacity = len(peers) / self.params.economicModel.sigmoid.networkCapacity
+        sigmoid_model_input = [economic_security, network_capacity]
 
-        for peer in peers:
+        for peer in peers:    
             legacy_count = self.legacy_model.message_count_for_reward(peer.split_stake)
-            sigmoid_count = self.sigmoid_model.message_count_for_reward(peer.split_stake)
+            sigmoid_count = self.sigmoid_model.message_count_for_reward(peer.split_stake, sigmoid_model_input) 
 
             Utils.taskSendMessage(
                 app,
