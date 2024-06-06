@@ -1,16 +1,18 @@
 from itertools import repeat
 from random import choice, choices, randint
 from test.decorators_patches import patches
-
+import yaml
 import pytest
+
 from core.components.parameters import Parameters
 from core.model.economic_model import (
-    BudgetParameters,
+    Budget,
     EconomicModel,
     Equation,
     Equations,
 )
-from core.model.economic_model import Parameters as EMParameters
+
+from core.model.economic_model import Coefficients as Coefficients
 from core.model.peer import Peer
 from database import Utils as DBUtils
 from hoprd_sdk.models import ChannelInfoResponse, NodeChannelsResponse
@@ -78,8 +80,8 @@ def economic_model() -> EconomicModel:
         Equation("a * x", "l <= x <= c"),
         Equation("a * c + (x - c) ** (1 / b)", "x > c"),
     )
-    parameters = EMParameters(1, 1, 3, 0)
-    budget = BudgetParameters(100, 15, 0.25, 2, 1)
+    parameters = Coefficients(1, 1, 3, 0)
+    budget = Budget(100, 15, 0.25, 2, 1)
     return EconomicModel(equations, parameters, budget)
 
 
@@ -203,38 +205,15 @@ async def core(
     mocker.patch.object(core.api, "ticket_price", return_value=0.01)
 
     params = Parameters()
-    setattr(params, "subgraph", Parameters())
-
-    setattr(params.subgraph, "safes_balance_url", "safes default url")
-    setattr(params.subgraph, "safes_balance_url_backup", "safes backup url")    
-    setattr(params.subgraph, "staking_url", "staking default url")
-    setattr(params.subgraph, "staking_url_backup", "staking backup url")
-    setattr(params.subgraph, "wxhopr_txs_url", "wxhopr default url")
-    setattr(params.subgraph, "wxhopr_txs_url_backup", "wxhopr backup url")
-
-    setattr(params, "peer", Parameters())
-    setattr(params.peer, "min_version", "0.0.0")
-
-    setattr(params, "economic_model", Parameters())
-    setattr(params.economic_model, "min_safe_allowance", 0.000001)
-    setattr(params.economic_model, "filename", "file")
-
-    setattr(params, "gcp", Parameters())
-    setattr(params.gcp, "bucket", "ctdapp-bucket")
-    setattr(params.gcp, "file_prefix", "prefix")
-    setattr(params.gcp, "folder", "ctdapp-folder")
-
-    setattr(params, "distribution", Parameters())
-    setattr(params.distribution, "message_delivery_delay", 1)
-    setattr(params.distribution, "delay_between_two_messages", 0.01)
-
+    with open("./test/test_config.yaml", "r") as file:
+        params.parse(yaml.safe_load(file))
+    setattr(params.subgraph, "deployerKey", "foo_deployer_key")
 
     core.post_init(nodes, params)
 
     for idx, node in enumerate(core.nodes):
         await node._retrieve_address()
 
-    await core.healthcheck()
     await core._retrieve_address()
     
     return core
@@ -258,10 +237,14 @@ async def node(
     )
     mocker.patch.object(node.api, "send_message", return_value=1)
     mocker.patch.object(node.api, "healthyz", return_value=True)
-    mocker.patch.object(node.api, "startedz", side_effect=True)
+    mocker.patch.object(node.api, "startedz", return_value=True)
 
-    setattr(node.params, "distribution", Parameters())
-    setattr(node.params.distribution, "delay_between_two_messages", 0.2)
+    params = Parameters()
+    with open("./test/test_config.yaml", "r") as file:
+        params.parse(yaml.safe_load(file))
+    setattr(params.subgraph, "deployerKey", "foo_deployer_key")
+
+    node.params = params
 
     await node.healthcheck()
     await node._retrieve_address()

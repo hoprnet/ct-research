@@ -1,5 +1,5 @@
-import pytest
 from core.model.address import Address
+import pytest
 from core.model.peer import Peer
 from core.model.subgraph_type import SubgraphType
 
@@ -7,8 +7,8 @@ from .conftest import Core
 
 
 def test__safe_subgraph_url(core: Core):
-    assert core._safe_subgraph_url(SubgraphType.DEFAULT) == "safes default url"
-    assert core._safe_subgraph_url(SubgraphType.BACKUP) == "safes backup url"
+    assert "query-id-safes" in core._safe_subgraph_url(SubgraphType.DEFAULT)
+    assert core._safe_subgraph_url(SubgraphType.BACKUP) == "safes_backup_url"
     assert core._safe_subgraph_url("random") is None
 
 
@@ -16,7 +16,7 @@ def test__safe_subgraph_url(core: Core):
 async def test__retrieve_address(core: Core, addresses: list[dict]):
     await core._retrieve_address()
 
-    assert core.address == Address(addresses[-1]["hopr"], addresses[-1]["native"])
+    assert core.address in [Address(addr["hopr"], addr["native"]) for addr in addresses ] 
 
 
 @pytest.mark.asyncio
@@ -52,6 +52,7 @@ async def test_get_subgraph_data(core: Core):
 
 @pytest.mark.asyncio
 async def test_get_topology_data(core: Core, peers: list[Peer]):
+    await core.connected.set(True)
     await core.get_topology_data()
 
     assert len(await core.topology_list.get()) == len(peers)

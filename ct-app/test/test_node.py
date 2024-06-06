@@ -13,7 +13,7 @@ from .conftest import Node, Peer
 async def test__retrieve_address(node: Node, addresses: dict):
     await node._retrieve_address()
 
-    assert await node.address.get() == Address(addresses[0]["hopr"], addresses[0]["native"])
+    assert (await node.address.get()) == Address(addresses[0]["hopr"], addresses[0]["native"])
 
 
 @pytest.mark.asyncio

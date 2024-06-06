@@ -9,7 +9,6 @@ class Base:
     """
     Base class for logging and printing messages with different colors.
     """
-
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
 
@@ -25,25 +24,22 @@ class Base:
 
     @classmethod
     def class_prefix(cls) -> str:
-        return f"{cls.__name__.upper()}_"
+        return cls.__name__.lower()
 
-    def __format(self, message: str, color: str = "\033[0m"):
-        return f"{self.print_prefix} {message}"
+    def __format(self, message: str):
+        return f"{self.print_prefix} | {message}"
 
-    def callback(self, type: str):
-        return getattr(self.logger, type)
+    def debug(self, message: str):
+        self.logger.debug(self.__format(message))
 
-    def debug(self, message: str, color: str = "\033[0;32m"):
-        self.callback("debug")(self.__format(message, color))
+    def info(self, message: str):
+        self.logger.info(self.__format(message))
 
-    def info(self, message: str, color: str = "\033[0;34m"):
-        self.callback("info")(self.__format(message, color))
+    def warning(self, message: str):
+        self.logger.warning(self.__format(message))
 
-    def warning(self, message: str, color: str = "\033[0;33m"):
-        self.callback("warning")(self.__format(message, color))
+    def error(self, message: str):
+        self.logger.error(self.__format(message))
 
-    def error(self, message: str, color: str = "\033[0;31m"):
-        self.callback("error")(self.__format(message, color))
-
-    def feature(self, message: str, color: str = "\033[0;35m"):
-        self.callback("warning")(self.__format(message, color))
+    def feature(self, message: str):
+        self.logger.info(self.__format(message))

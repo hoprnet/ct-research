@@ -1,5 +1,4 @@
 import csv
-import json
 from os import environ, path
 import random
 import time
@@ -8,7 +7,6 @@ from typing import Any
 
 from aiohttp import ClientSession
 from google.cloud import storage
-from scripts.list_required_parameters import list_parameters
 
 from core.model.address import Address
 from core.model.peer import Peer
@@ -35,20 +33,6 @@ class Utils(Base):
         }
 
         return dict(sorted(var_dict.items()))
-
-    @classmethod
-    def envvarExists(cls, var_name: str) -> bool:
-        return var_name in environ
-
-    @classmethod
-    def checkRequiredEnvVar(cls, folder: str):
-        all_set_flag = True
-        for param in list_parameters(folder):
-            exists = Utils.envvarExists(param)
-            cls().info(f"{'✅' if exists else '❌'} {param}")
-            all_set_flag *= exists
-
-        return all_set_flag
 
     @classmethod
     def nodesAddresses(
@@ -182,24 +166,6 @@ class Utils(Base):
             peer.reward_probability = peer.transformed_stake / total_tf_stake
 
         return excluded
-
-    @classmethod
-    def jsonFromGCP(cls, bucket_name: str, blob_name: str):
-        """
-        Reads a JSON file and validates its contents using a schema.
-        :param bucket_name: The name of the bucket
-        :param blob_name: The name of the blob
-        :returns: The contents of the JSON file.
-        """
-
-        storage_client = storage.Client()
-        bucket = storage_client.bucket(bucket_name)
-        blob = bucket.blob(blob_name)
-
-        with blob.open("r") as f:
-            contents = json.load(f)
-
-        return contents
 
     @classmethod
     def stringArrayToGCP(cls, bucket_name: str, blob_name: str, data: list[str]):

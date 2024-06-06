@@ -103,7 +103,7 @@ class Peer:
         if self.economic_model is None:
             raise ValueError("Economic model not set")
 
-        return self.split_stake < self.economic_model.parameters.l
+        return self.split_stake < self.economic_model.coefficients.l
 
     @property
     def max_expected_reward(self):
@@ -112,7 +112,7 @@ class Peer:
         if self.reward_probability is None:
             raise ValueError("Reward probability not set")
 
-        return self.reward_probability * self.economic_model.budget.budget
+        return self.reward_probability * self.economic_model.budget.amount
 
     @property
     def expected_reward(self):
@@ -146,7 +146,7 @@ class Peer:
         if self.economic_model is None:
             raise ValueError("Economic model not set")
 
-        return self.protocol_reward / self.economic_model.budget.distribution_frequency
+        return self.protocol_reward / self.economic_model.budget.distribution_per_period
 
     @property
     def message_count_for_reward(self):

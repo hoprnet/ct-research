@@ -1,6 +1,8 @@
 import asyncio
 import time
 from typing import Any
+from copy import deepcopy
+import random
 
 from database import Utils as DBUtils
 from database.database_connection import DatabaseConnection
@@ -14,6 +16,7 @@ from .components.graphql_providers import (
     SafesProvider,
     StakingProvider,
     wxHOPRTransactionProvider,
+    RewardsProvider
 )
 from .components.hoprd_api import HoprdAPI
 from .components.lockedvar import LockedVar
@@ -70,12 +73,14 @@ class Core(Base):
         self.registered_nodes = LockedVar("subgraph_list", list[SubgraphEntry]())
         self.nft_holders = LockedVar("nft_holders", list[str]())
         self.eligible_list = LockedVar("eligible_list", list[Peer]())
+        self.peer_rewards = LockedVar("peer_rewards", dict[str, float]())
         self.ticket_price = LockedVar("ticket_price", 1.0)
 
         # subgraphs
         self._safe_subgraph_url = None
         self._staking_subgraph_url = None
         self._wxhopr_txs_subgraph_url = None
+
         # trick to have the subgraph in use displayed in the terminal
         self._subgraph_type = SubgraphType.NONE
         self.subgraph_type = SubgraphType.DEFAULT
@@ -90,16 +95,17 @@ class Core(Base):
             node.params = params
 
         self._safe_subgraph_url = SubgraphURL(
-            self.params.subgraph.safes_balance_url,
-            self.params.subgraph.safes_balance_url_backup,
+            self.params.subgraph.deployerKey, self.params.subgraph.safesBalance
         )
         self._staking_subgraph_url = SubgraphURL(
-            self.params.subgraph.staking_url,
-            self.params.subgraph.staking_url_backup,
+            self.params.subgraph.deployerKey, self.params.subgraph.staking
         )
         self._wxhopr_txs_subgraph_url = SubgraphURL(
-            self.params.subgraph.wxhopr_txs_url,
-            self.params.subgraph.wxhopr_txs_url_backup,
+            self.params.subgraph.deployerKey, self.params.subgraph.wxHOPRTxs
+        )
+
+        self._rewards_subgraph_url = SubgraphURL(
+            self.params.subgraph.deployerKey, self.params.subgraph.rewards
         )
 
     @property
@@ -108,16 +114,12 @@ class Core(Base):
 
     @property
     def api(self) -> HoprdAPI:
-        return self.nodes[-1].api
-
-    @property
-    def network_nodes(self) -> list[Node]:
-        return self.nodes[:-1]
+        return random.choice(self.nodes).api
 
     @property
     async def network_nodes_addresses(self) -> list[Address]:
         return await asyncio.gather(
-            *[node.address.get() for node in self.network_nodes]
+            *[node.address.get() for node in self.nodes]
         )
 
     @property
@@ -136,6 +138,10 @@ class Core(Base):
     def wxhopr_txs_subgraph_url(self) -> str:
         return self._wxhopr_txs_subgraph_url(self.subgraph_type)
 
+    @property
+    def rewards_subgraph_url(self) -> str:
+        return self._rewards_subgraph_url(self.subgraph_type)
+    
     @subgraph_type.setter
     def subgraph_type(self, value: SubgraphType):
         if value != self.subgraph_type:
@@ -264,8 +270,9 @@ class Core(Base):
         including the aggregated balance of "Open" outgoing payment channels.
         """
         channels = await self.api.all_channels(False)
+
         if channels is None:
-            self.warning("Topology data not available.")
+            self.warning("Topology data not available")
             return
 
         results = await Utils.aggregatePeerBalanceInChannels(channels.all)
@@ -282,22 +289,21 @@ class Core(Base):
         """
         Applies the economic model to the eligible peers (after multiple filtering layers) and sets the eligible_list LockedVar.
         """
-        ready: bool = False
+        topology = await self.topology_list.get()
+        registered_nodes = await self.registered_nodes.get()
+        peers = await self.all_peers.get()
+        nft_holders = await self.nft_holders.get()
 
-        while not ready:
-            topology = await self.topology_list.get()
-            registered_nodes = await self.registered_nodes.get()
-            peers = await self.all_peers.get()
-            nft_holders = await self.nft_holders.get()
+        self.debug(f"Topology size: {len(topology)}")
+        self.debug(f"Subgraph size: {len(registered_nodes)}")
+        self.debug(f"Network size: {len(peers)}")
+        self.debug(f"NFT holders: {len(nft_holders)}")
 
-            self.debug(f"Topology size: {len(topology)}")
-            self.debug(f"Subgraph size: {len(registered_nodes)}")
-            self.debug(f"Network size: {len(peers)}")
-            self.debug(f"NFT holders: {len(nft_holders)}")
-
-            ready = len(topology) and len(registered_nodes) and len(peers)
-            await asyncio.sleep(2)
-
+        ready = len(topology) and len(registered_nodes) and len(peers)
+        if not ready:
+            self.warning("Not enough data to apply economic model.")
+            return
+        
         eligibles = Utils.mergeDataSources(topology, peers, registered_nodes)
         self.debug(f"Merged topology and subgraph data ({len(eligibles)} entries).")
 
@@ -306,11 +312,11 @@ class Core(Base):
         old_peer_addresses = [
             peer.address
             for peer in eligibles
-            if peer.version_is_old(self.params.peer.min_version)
+            if peer.version_is_old(self.params.peer.minVersion)
         ]
         excluded = Utils.exclude(eligibles, old_peer_addresses)
         self.debug(
-            f"Excluded peers running on old version (< {self.params.peer.min_version}) ({len(excluded)} entries)."
+            f"Excluded peers running on old version (< {self.params.peer.minVersion}) ({len(excluded)} entries)."
         )
         self.debug(f"peers on wrong version: {[el.address.id for el in excluded]}")
 
@@ -320,7 +326,7 @@ class Core(Base):
         low_allowance_addresses = [
             peer.address
             for peer in eligibles
-            if peer.safe_allowance < self.params.economic_model.min_safe_allowance
+            if peer.safe_allowance < self.params.economicModel.minSafeAllowance
         ]
         excluded = Utils.exclude(eligibles, low_allowance_addresses)
         self.debug(f"Excluded nodes with low safe allowance ({len(excluded)} entries).")
@@ -328,27 +334,27 @@ class Core(Base):
 
         excluded = Utils.exclude(eligibles, await self.network_nodes_addresses)
         self.debug(f"Excluded network nodes ({len(excluded)} entries).")
-        
-        if threshold := self.params.economic_model.nft_threshold:
+
+        if threshold := self.params.economicModel.NFTThreshold:
             low_stake_non_nft_holders = [
                 peer.address
                 for peer in eligibles
-                if peer.safe_address not in nft_holders
-                and peer.split_stake < threshold
+                if peer.safe_address not in nft_holders and peer.split_stake < threshold
             ]
             excluded = Utils.exclude(eligibles, low_stake_non_nft_holders)
             self.debug(
                 f"Excluded non-nft-holders with stake < {threshold} ({len(excluded)} entries)."
             )
 
-        model = EconomicModel.fromGCPFile(
-            self.params.gcp.bucket, self.params.economic_model.filename
-        )
+        model = EconomicModel.fromParameters(self.params.economicModel)
         model.budget.ticket_price = await self.ticket_price.get()
 
+        redeemed_rewards = await self.peer_rewards.get()
+
         for peer in eligibles:
-            peer.economic_model = model
-            peer.max_apr = self.params.distribution.max_apr_percentage
+            peer.economic_model = deepcopy(model)
+            peer.economic_model.coefficients.c += redeemed_rewards.get(peer.address.address,0.0)
+            peer.max_apr = self.params.economicModel.maxAPRPercentage
 
         self.debug("Assigned economic model to eligible nodes.")
 
@@ -382,9 +388,7 @@ class Core(Base):
         Distributes the rewards to the eligible peers, based on the economic model.
         """
 
-        model = EconomicModel.fromGCPFile(
-            self.params.gcp.bucket, self.params.economic_model.filename
-        )
+        model = EconomicModel.fromParameters(self.params.economicModel)
         model.budget.ticket_price = await self.ticket_price.get()
 
         delay = Utils.nextDelayInSeconds(model.delay_between_distributions)
@@ -392,7 +396,7 @@ class Core(Base):
 
         await asyncio.sleep(delay)
 
-        min_peers = self.params.distribution.min_eligible_peers
+        min_peers = self.params.distribution.minEligiblePeers
 
         peers = list[Peer]()
 
@@ -405,7 +409,7 @@ class Core(Base):
 
         # convert to csv and store on GCP
         filename = Utils.generateFilename(
-            self.params.gcp.file_prefix, self.params.gcp.folder
+            self.params.gcp.filePrefix, self.params.gcp.folder
         )
         lines = Peer.toCSV(peers)
         Utils.stringArrayToGCP(self.params.gcp.bucket, filename, lines)
@@ -415,9 +419,9 @@ class Core(Base):
         self.info("Initiating distribution.")
 
         t: tuple[dict[str, dict[str, Any]], int] = await self.multiple_attempts_sending(
-            peers, self.params.distribution.max_iterations
+            peers, self.params.distribution.maxIterations
         )
-        rewards, iterations = t
+        rewards, iterations = t # trick for typehinting tuple unpacking
         self.info("Distribution completed.")
 
         self.debug(rewards)
@@ -463,7 +467,7 @@ class Core(Base):
         """
         ct_safe_addresses = {
             getattr(await node.api.node_info(), "hopr_node_safe", None)
-            for node in self.network_nodes
+            for node in self.nodes
         }
 
         provider = wxHOPRTransactionProvider(self.wxhopr_txs_subgraph_url)
@@ -512,20 +516,20 @@ class Core(Base):
             # send rewards to peers
             self.debug("Sending rewards to peers")
             tasks = set[asyncio.Task]()
-            for node, peers_group in zip(self.network_nodes, peers_groups):
+            for node, peers_group in zip(self.nodes, peers_groups):
                 tasks.add(asyncio.create_task(node.distribute_rewards(peers_group)))
             issued_counts: list[dict] = await asyncio.gather(*tasks)
 
             # wait for message delivery (if needed)
             self.debug(
-                f"Waiting {self.params.distribution.message_delivery_delay} for message delivery"
+                f"Waiting {self.params.distribution.messageDeliveryDelay} for message delivery"
             )
-            await asyncio.sleep(self.params.distribution.message_delivery_delay)
+            await asyncio.sleep(self.params.distribution.messageDeliveryDelay)
 
             # check inboxes for relayed messages
             self.debug("Checking inboxes")
             tasks = set[asyncio.Task]()
-            for node, peers_group in zip(self.network_nodes, peers_groups):
+            for node, peers_group in zip(self.nodes, peers_groups):
                 tasks.add(asyncio.create_task(node.check_inbox(peers_group)))
             relayed_counts: list[dict] = await asyncio.gather(*tasks)
 
@@ -546,6 +550,26 @@ class Core(Base):
         return reward_per_peer, iteration
 
     @flagguard
+    @formalin("Getting peers rewards amounts")
+    async def get_peers_rewards(self):
+        if self.subgraph_type == SubgraphType.NONE:
+            self.warning("No subgraph URL available.")
+            return
+
+        provider = RewardsProvider(self.rewards_subgraph_url)
+
+        results = dict()
+        try:
+            for account in await provider.get():
+                results[account["id"]] = float(account["redeemedValue"])
+
+        except ProviderError as err:
+            self.error(f"get_peers_rewards: {err}")
+
+        await self.peer_rewards.set(results)
+
+        self.debug(f"Fetched peers rewards amounts ({len(results)} entries).")
+
     @formalin("Getting ticket price")
     @connectguard
     async def get_ticket_price(self):
@@ -561,16 +585,16 @@ class Core(Base):
         """
         Start the node.
         """
-        self.info(f"CTCore started with {len(self.network_nodes)} nodes.")
+        self.info(f"CTCore started with {len(self.nodes)} nodes.")
 
-        if len(self.network_nodes) == 0:
+        if len(self.nodes) == 0:
             self.error("No nodes available, exiting.")
             return
 
         if self.tasks:
             return
 
-        for node in self.network_nodes:
+        for node in self.nodes:
             node.started = True
             await node._retrieve_address()
             self.tasks.update(node.tasks())
@@ -580,6 +604,7 @@ class Core(Base):
         self.tasks.add(asyncio.create_task(self.healthcheck()))
         self.tasks.add(asyncio.create_task(self.check_subgraph_urls()))
         self.tasks.add(asyncio.create_task(self.get_fundings()))
+        self.tasks.add(asyncio.create_task(self.get_peers_rewards()))
         self.tasks.add(asyncio.create_task(self.get_ticket_price()))
         self.tasks.add(asyncio.create_task(self.get_nft_holders()))
 
@@ -598,7 +623,7 @@ class Core(Base):
         """
         self.started = False
 
-        for node in self.network_nodes:
+        for node in self.nodes:
             node.started = False
 
         for task in self.tasks:

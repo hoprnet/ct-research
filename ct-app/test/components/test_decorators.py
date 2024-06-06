@@ -1,12 +1,19 @@
 import asyncio
-from test.components.utils import handle_envvars
 
 import pytest
 from core.components.baseclass import Base
 from core.components.decorators import connectguard, flagguard, formalin
-from core.components.flags import Flags
 from core.components.lockedvar import LockedVar
+from core.components.parameters import Parameters
 
+flag_dictionary = {
+    "flags": {
+        "fooclass": {
+            "fooFlagguardFunc": 1,
+            "fooFormalinFunc": 1
+        }
+    }
+}
 
 class FooClass(Base):
     @property
@@ -18,6 +25,8 @@ class FooClass(Base):
         self.connected = LockedVar("connected", False)
         self.started = False
         self.counter = 0
+        self.params = Parameters()
+        self.params.parse(flag_dictionary)
 
     @connectguard
     async def foo_connectguard_func(self):
@@ -34,7 +43,6 @@ class FooClass(Base):
     async def foo_formalin_func(self):
         self.counter += 1
         await asyncio.sleep(0.1)
-
 
 @pytest.fixture
 def foo_class():
@@ -54,45 +62,44 @@ async def test_connectguard(foo_class: FooClass):
 
 @pytest.mark.asyncio
 async def test_flagguard(foo_class: FooClass):
-    res = await foo_class.foo_flagguard_func()
-    assert res is None
+    foo_class.params.flags.fooclass.fooFlagguardFunc = None
+    assert await foo_class.foo_flagguard_func() is None
 
-    # delete flag cache so that new flags are retrieved from env
-    Flags._cache_flags = None
-
-    with handle_envvars(FLAG_FOOCLASS_FOO_FLAGGUARD_FUNC="1"):
-        res = await foo_class.foo_flagguard_func()
-        assert res is True
+    foo_class.params.flags.fooclass.fooFlagguardFunc = 1
+    assert await foo_class.foo_flagguard_func() is True
 
 
 @pytest.mark.asyncio
 async def test_formalin(foo_class: FooClass):
-    # reset flag cache and instance counter
-    Flags._cache_flags = None
+    # reset instance counter
     foo_class.counter = 0
     # # # # # # # # # # # # # # # # # # # #
 
     # should run only once
-    with handle_envvars(FLAG_FOOCLASS_FOO_FORMALIN_FUNC="0"):
-        foo_class.started = True
-        asyncio.create_task(foo_class.foo_formalin_func())
-        await asyncio.sleep(1)
-        foo_class.started = False
-        await asyncio.sleep(0.5)
+    foo_class.params.flags.fooclass.foo_formalin_func = 0
 
-        assert foo_class.counter == 1  # counter increased only once
+    foo_class.started = True
+    asyncio.create_task(foo_class.foo_formalin_func())
+    await asyncio.sleep(1)
+    foo_class.started = False
+    await asyncio.sleep(0.5)
+
+
+    assert foo_class.counter == 1  # counter increased only once
 
     # reset flag cache and instance counter
-    Flags._cache_flags = None
     foo_class.counter = 0
     # # # # # # # # # # # # # # # # # # # #
 
     # should run twice (every 0.5s in 1.1s)
-    with handle_envvars(FLAG_FOOCLASS_FOO_FORMALIN_FUNC="0.5"):
-        foo_class.started = True
-        asyncio.create_task(foo_class.foo_formalin_func())
-        await asyncio.sleep(1.1)
-        foo_class.started = False
-        await asyncio.sleep(0.5)
+    foo_class.params.flags.fooclass.foo_formalin_func = 0.5
 
-        assert foo_class.counter == 2  # counter increased twice
+    foo_class.started = True
+    asyncio.create_task(foo_class.foo_formalin_func())
+    await asyncio.sleep(1.3)
+    foo_class.started = False
+    await asyncio.sleep(0.5)
+
+    assert foo_class.counter == 2  # counter increased twice
+
+

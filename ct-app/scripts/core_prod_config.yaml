@@ -1,0 +1,121 @@
+---
+# =============================================================================
+# 
+# =============================================================================
+flags:
+  core: 
+    healthcheck: 60
+    checkSubgraphURLs: 300
+    getFundings: 900
+    getTicketPrice: 900
+    aggregatePeers: 300
+    getTopologyData: 300
+    getSubgraphData: 300
+    getRegisteredNodes: 300
+    getNFTHolders: 300
+    getPeersRewards: 300
+    applyEconomicModel: 120
+    distributeRewards: 1
+
+    
+  node:
+    healthcheck: 60
+    retrievePeers: 300
+    retrieveIncomingChannels: 600
+    retrieveOutgoingChannels: 600
+    retrieveBalances: 900
+    openChannels: 300
+    closeOldChannels: 300
+    closePendingChannels: 1800
+    fundChannels: 300
+    closeIncomingChannels: ~
+    getTotalChannelFunds: 900
+    
+# =============================================================================
+# 
+# =============================================================================
+economicModel:
+  minSafeAllowance: -1
+  maxAPRPercentage: 15.0
+  NFTThreshold: ~
+
+  coefficients:
+    a: 1
+    b: 1.4
+    c: 75000
+    l: 10000
+  
+  equations: 
+    fx: 
+      formula: "a * x"
+      condition: "l <= x <= c"
+    gx:
+      formula: "a * c + (x - c) ** (1 / b)"
+      condition: "x > c"
+  
+  budget:
+    amount: 190000
+    period: 2628000 # in seconds
+    s: 1
+    countsInPeriod: 1460
+    winningProbability: 1
+
+# =============================================================================
+# 
+# =============================================================================
+distribution:
+  minEligiblePeers: 100
+  messageDeliveryDelay: 10.0
+  delayBetweenTwoMessages: 0.1
+  batchSize: 200
+  maxIterations: 4
+
+# =============================================================================
+# 
+# =============================================================================
+gcp:
+  filePrefix: expected_reward
+  folder: expected_rewards
+  bucket: hoprnet-ctdapp-prod
+
+# =============================================================================
+# 
+# =============================================================================
+peer:
+  minVersion: '2.0.7'
+
+# =============================================================================
+# 
+# =============================================================================
+channel:
+  minBalance: 15
+  fundingAmount: 35
+  maxAgeSeconds: 172800
+
+# =============================================================================
+# 
+# =============================================================================
+rabbitmq:
+  taskName: send_1_hop_message
+  projectName: ct-app
+
+# =============================================================================
+# 
+# =============================================================================
+subgraph:
+  safesBalance:
+    queryID: FEQcaX9qfh31YL2K7rxRN5a3sr9rjMWkguJnby7StNRo
+    URLBackup: https://api.studio.thegraph.com/query/40439/hopr-nodes-dufour/version/latest
+
+  staking:
+    queryID: DrkbaCvNGVcNH1RghepLRy6NSHFi8Dmwp4T2LN3LqcjY
+    URLBackup: https://api.studio.thegraph.com/query/40439/hopr-stake-all-seasons/v0.0.10
+  
+  wxHOPRTxs:
+    queryID: ~
+    URLBackup: https://api.studio.thegraph.com/query/58438/wxhoprtransactions/v0.0.6
+  
+  rewards:
+    queryID: ~ #Feg6Jero3aQzesVYuqk253NNLyNAZZppbDPKFYEGJ1Hj
+    URLBackup: https://api.studio.thegraph.com/query/40439/hopr-channels/version/latest
+...

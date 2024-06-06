@@ -161,10 +161,6 @@ def test_rewardProbability():
     pytest.skip("Not implemented")
 
 
-def test_jsonFromGCP():
-    pytest.skip("Not implemented")
-
-
 def test_stringArrayToGCP():
     pytest.skip("Not implemented")
 

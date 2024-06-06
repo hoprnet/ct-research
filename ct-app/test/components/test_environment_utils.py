@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from test.components.utils import handle_envvars
 
@@ -32,19 +33,3 @@ def test_envvarWithPrefix():
             "TEST_ENVVAR_2": 2,
             "TEST_ENVVAR_3": 3,
         }
-
-
-def test_checkRequiredEnvVar():
-    pytest.skip("Test fails in the CI")
-    test_folder = Path(__file__).parent.joinpath("test_code_for_environment/")
-
-    assert not EnvironmentUtils.checkRequiredEnvVar(test_folder)
-
-    with handle_envvars(
-        group1_var1="val11",
-        group1_var2="val12",
-        group2_var1="val21",
-        var1="val1",
-        var2="val2",
-    ):
-        assert EnvironmentUtils.checkRequiredEnvVar(test_folder)

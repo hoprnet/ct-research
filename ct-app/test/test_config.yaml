@@ -1,0 +1,120 @@
+---
+# =============================================================================
+# 
+# =============================================================================
+flags:
+  core: 
+    healthcheck: 10
+    checkSubgraphURLs: 30
+    getFundings: 30
+    getTicketPrice: 30
+    aggregatePeers: 30
+    getTopologyData: 30
+    getSubgraphData: 30
+    getRegisteredNodes: 30
+    getNFTHolders: 30
+    getPeersRewards: 30
+    applyEconomicModel: 30
+    distributeRewards: ~
+    
+  node:
+    healthcheck: 10
+    retrievePeers: 30
+    retrieveIncomingChannels: 30
+    retrieveOutgoingChannels: 30
+    retrieveBalances: 30
+    openChannels: ~
+    closeOldChannels: ~
+    closePendingChannels: ~
+    fundChannels: ~
+    closeIncomingChannels: ~
+    getTotalChannelFunds: ~
+    
+# =============================================================================
+# 
+# =============================================================================
+economicModel:
+  minSafeAllowance: -1
+  maxAPRPercentage: 15.0
+  NFTThreshold: ~
+
+  coefficients:
+    a: 1
+    b: 1
+    c: 3
+    l: 0
+  
+  equations: 
+    fx: 
+      formula: "a * x"
+      condition: "l <= x <= c"
+    gx:
+      formula: "a * c + (x - c) ** (1 / b)"
+      condition: "x > c"
+  
+  budget:
+    amount: 400
+    period: 1200
+    s: 1
+    countsInPeriod: 1
+    ticketPrice: 0.5 # deprecated
+    winningProbability: 1
+
+# =============================================================================
+# 
+# =============================================================================
+distribution:
+  minEligiblePeers: 500
+  messageDeliveryDelay: 0.2
+  delayBetweenTwoMessages: 0.01
+  maxIterations: 4
+
+# =============================================================================
+# 
+# =============================================================================
+gcp:
+  filePrefix: expected_reward
+  folder: expected_rewards
+  bucket: hoprnet-ctdapp-staging
+
+# =============================================================================
+# 
+# =============================================================================
+peer:
+  minVersion: '2.0.7'
+
+# =============================================================================
+# 
+# =============================================================================
+channel:
+  minBalance: 0.05
+  fundingAmount: 0.2
+  maxAgeSeconds: 60
+
+# =============================================================================
+# 
+# =============================================================================
+rabbitmq:
+  taskName: fake_task
+  projectName: ct-app
+
+# =============================================================================
+# 
+# =============================================================================
+subgraph:
+  safesBalance:
+    queryID: query-id-safes
+    URLBackup: safes_backup_url
+
+  staking:
+    queryID: query-id-staking
+    URLBackup: staking_backp_url
+  
+  wxHOPRTxs:
+    queryID: ~
+    URLBackup: wxHOPRTxs_backp_url
+  
+  rewards:
+    queryID: ~
+    URLBackup: URLBackup_backp_url
+...
