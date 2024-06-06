@@ -11,9 +11,6 @@ ctdapp:
   core:
     replicas: 1
     tag: v2.2.1
-  postman:
-    replicas: 1
-    tag: v2.2.1
   nodes:
     NODE_ADDRESS_1: http://ctdapp-blue-node-1:3001
     NODE_ADDRESS_2: http://ctdapp-blue-node-2:3001
