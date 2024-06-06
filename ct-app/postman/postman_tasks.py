@@ -62,7 +62,7 @@ def send_1_hop_message(
 
     attempts += 1  # send_status in [TaskStatus.SPLITTED, TaskStatus.SUCCESS]
 
-    if attempts >= params.maxIterations:
+    if attempts >= params.distribution.maxIterations:
         send_status = TaskStatus.TIMEOUT
 
     if send_status in [TaskStatus.RETRIED, TaskStatus.SPLIT]:
@@ -72,7 +72,7 @@ def send_1_hop_message(
 
     # store results in database
     if send_status != TaskStatus.RETRIED:
-        with DatabaseConnection() as session:
+        with DatabaseConnection(params.pg) as session:
             entry = Reward(
                 peer_id=peer,
                 node_address=node_peer_id,
@@ -138,9 +138,7 @@ async def async_send_1_hop_message(
         max_possible,
         node_peer_id,
         timestamp,
-        params.distribution.batchSize,
-        params.distribution.delayBetweenTwoMessages,
-        params.distribution.messageDeliveryDelay,
+        params,
     )
 
     status = TaskStatus.SPLIT if relayed < expected_count else TaskStatus.SUCCESS
