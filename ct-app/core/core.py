@@ -341,6 +341,7 @@ class Core(Base):
             )
 
         model = EconomicModel.fromParameters(self.params.economicModel)
+        model.budget.ticket_price = await self.ticket_price.get()
 
         redeemed_rewards = await self.peer_rewards.get()
 

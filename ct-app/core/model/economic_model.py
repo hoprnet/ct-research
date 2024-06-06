@@ -54,15 +54,14 @@ class Budget:
         period: float,
         s: float,
         distribution_per_period: float,
-        ticket_price: float,
         winning_probability: float,
     ):
         self.amount = amount
         self.period = period
         self.s = s
         self.distribution_per_period = distribution_per_period
-        self.ticket_price = ticket_price
         self.winning_probability = winning_probability
+        self.ticket_price = None
 
     @property
     def amount(self):
@@ -102,7 +101,8 @@ class Budget:
     @ticket_price.setter
     def ticket_price(self, value):
         self._ticket_price = value
-        TICKET_PRICE.set(value)
+        if value is not None:
+            TICKET_PRICE.set(value)
 
     @winning_probability.setter
     def winning_probability(self, value):
@@ -116,7 +116,6 @@ class Budget:
             parameters.period,
             parameters.s,
             parameters.countsInPeriod,
-            parameters.ticketPrice,
             parameters.winningProbability,
         )
 
