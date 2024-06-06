@@ -466,7 +466,7 @@ class Core(Base):
         results = dict()
         try:
             for account in await provider.get():
-                results[account["id"]] = account["redeemedValue"]
+                results[account["id"]] = float(account["redeemedValue"])
 
         except ProviderError as err:
             self.error(f"get_peers_rewards: {err}")
