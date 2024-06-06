@@ -15,7 +15,7 @@ flags:
     getNFTHolders: 900
     getPeersRewards: 900
     applyEconomicModel: 600
-    distributeRewards: ~
+    distributeRewards: 1
 
     
   node:
