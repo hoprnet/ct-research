@@ -54,9 +54,9 @@ class Utils:
         params: Parameters,
     ):
         
-        batch_size = params.distribution.batchSize,
-        delay_between_two_messages = params.distribution.delayBetweenTwoMessages,
-        message_delivery_timeout = params.distribution.messageDeliveryDelay,
+        batch_size = params.distribution.batchSize
+        delay_between_two_messages = params.distribution.delayBetweenTwoMessages
+        message_delivery_timeout = params.distribution.messageDeliveryDelay
 
         relayed_count = 0
         issued_count = 0
