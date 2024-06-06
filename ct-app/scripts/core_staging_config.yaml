@@ -115,6 +115,6 @@ subgraph:
     URLBackup: https://api.studio.thegraph.com/query/58438/wxhoprtransactions/v0.0.6
   
   rewards:
-    queryID: Feg6Jero3aQzesVYuqk253NNLyNAZZppbDPKFYEGJ1Hj
+    queryID: ~ #Feg6Jero3aQzesVYuqk253NNLyNAZZppbDPKFYEGJ1Hj
     URLBackup: https://api.studio.thegraph.com/query/40439/hopr-channels/version/latest
 ...
