@@ -15,7 +15,7 @@ class DatabaseConnection:
     Database connection class.
     """
 
-    def __init__(self, params):
+    def __init__(self, params: Parameters):
         """
         Create a new DatabaseConnection based on environment variables setting user, password, host, port, database, sslmode, sslrootcert, sslcert and sslkey.
         """
