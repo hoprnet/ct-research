@@ -174,3 +174,15 @@ class wxHOPRTransactionProvider(GraphQLProvider):
     @property
     def print_prefix(self) -> str:
         return "transaction-provider"
+
+class RewardsProvider(GraphQLProvider):
+    def __init__(self, url: str):
+        super().__init__(url)
+        self._default_key = "accounts"
+        self._sku_query = self._load_query(
+            "core/subgraph_queries/rewards.graphql"
+        )
+
+    @property
+    def print_prefix(self) -> str:
+        return "rewards-provider"

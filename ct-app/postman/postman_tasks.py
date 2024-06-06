@@ -12,17 +12,22 @@ from database import DatabaseConnection, Reward
 
 from .task_status import TaskStatus
 from .utils import Utils as PMUtils
+import yaml
 
 log = logging.getLogger()
 log.setLevel(logging.INFO)
 
-params = Parameters()("PARAM_", "RABBITMQ_")
 
-if not Utils.checkRequiredEnvVar("postman"):
-    exit(1)
+with open(Utils.envvar("CONFIG_FILE_PATH", type= str), "r") as file:
+    config = yaml.safe_load(file)
+
+params = Parameters()
+params.parse(config)
+params.from_env("PG", "RABBITMQ_")
+params.overrides("OVERRIDE_")
 
 app = Celery(
-    name=params.rabbitmq.project_name,
+    name=params.rabbitmq.projectName,
     broker=f"amqp://{params.rabbitmq.username}:{params.rabbitmq.password}@{params.rabbitmq.host}/{params.rabbitmq.virtualhost}",
 )
 app.autodiscover_tasks(force=True)
@@ -57,7 +62,7 @@ def send_1_hop_message(
 
     attempts += 1  # send_status in [TaskStatus.SPLITTED, TaskStatus.SUCCESS]
 
-    if attempts >= params.param.max_attempts:
+    if attempts >= params.maxIterations:
         send_status = TaskStatus.TIMEOUT
 
     if send_status in [TaskStatus.RETRIED, TaskStatus.SPLIT]:
@@ -133,9 +138,9 @@ async def async_send_1_hop_message(
         max_possible,
         node_peer_id,
         timestamp,
-        params.param.batch_size,
-        params.param.delay_between_two_messages,
-        params.param.message_delivery_timeout,
+        params.distribution.batchSize,
+        params.distribution.delayBetweenTwoMessages,
+        params.distribution.messageDeliveryDelay,
     )
 
     status = TaskStatus.SPLIT if relayed < expected_count else TaskStatus.SUCCESS

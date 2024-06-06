@@ -60,7 +60,7 @@ def test_httpPOST():
     pytest.skip("Not implemented")
 
 
-def test_mergeTopologyPeersSubgraph():
+def test_mergeDataSources():
     pytest.skip("Not implemented")
 
 
@@ -108,10 +108,6 @@ def test_rewardProbability():
     pass
 
 
-def test_jsonFromGCP():
-    pytest.skip("Not implemented")
-
-
 def test_stringArrayToGCP():
     pytest.skip("Not implemented")
 
@@ -150,8 +146,4 @@ def test_aggregatePeerBalanceInChannels():
 
 
 def test_taskSendMessage():
-    pytest.skip("Not implemented")
-
-
-def test_taskStoreFeedback():
     pytest.skip("Not implemented")
