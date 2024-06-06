@@ -381,9 +381,7 @@ class Core(Base):
         Distributes the rewards to the eligible peers, based on the economic model.
         """
 
-        model = EconomicModel.fromGCPFile(
-            self.params.gcp.bucket, self.params.economicModel.filename
-        )
+        model = EconomicModel.fromParameters(self.params.economicModel)
         model.budget.ticket_price = await self.ticket_price.get()
 
         delay = Utils.nextDelayInSeconds(model.delay_between_distributions)
