@@ -103,7 +103,7 @@ class Peer:
         if self.economic_model is None:
             raise ValueError("Economic model not set")
 
-        return self.split_stake < self.economic_model.parameters.l
+        return self.split_stake < self.economic_model.coefficients.l
 
     @property
     def max_expected_reward(self):
