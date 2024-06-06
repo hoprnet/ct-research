@@ -12,9 +12,9 @@ flags:
     getTopologyData: 300
     getSubgraphData: 300
     getRegisteredNodes: 300
-    getNFTHolders: 900
-    getPeersRewards: 900
-    applyEconomicModel: 600
+    getNFTHolders: 300
+    getPeersRewards: 300
+    applyEconomicModel: 120
     distributeRewards: 1
 
     
@@ -57,7 +57,7 @@ economicModel:
     amount: 190000
     period: 2628000 # in seconds
     s: 1
-    countsInPeriod: 730
+    countsInPeriod: 1460
     winningProbability: 1
 
 # =============================================================================
