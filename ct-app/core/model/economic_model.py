@@ -101,7 +101,7 @@ class Budget:
     @ticket_price.setter
     def ticket_price(self, value):
         self._ticket_price = value
-        if value != None:
+        if value is not None:
             TICKET_PRICE.set(value)
 
     @winning_probability.setter
