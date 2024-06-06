@@ -1,4 +1,5 @@
 import asyncio
+from copy import deepcopy
 import random
 
 from celery import Celery
@@ -346,7 +347,7 @@ class Core(Base):
         redeemed_rewards = await self.peer_rewards.get()
 
         for peer in eligibles:
-            peer.economic_model = model
+            peer.economic_model = deepcopy(model)
             peer.economic_model.coefficients.c += redeemed_rewards.get(peer.address.address,0.0)
             peer.max_apr = self.params.economicModel.maxAPRPercentage
 
