@@ -4,32 +4,32 @@
 # =============================================================================
 flags:
   core: 
-    healthcheck: 10
-    checkSubgraphURLs: 30
-    getFundings: 30
-    getTicketPrice: 30
-    aggregatePeers: 30
-    getTopologyData: 30
-    getSubgraphData: 30
-    getRegisteredNodes: 30
-    getNFTHolders: 30
-    getPeersRewards: 30
-    applyEconomicModel: 30
+    healthcheck: 60
+    checkSubgraphURLs: 300
+    getFundings: 900
+    getTicketPrice: 900
+    aggregatePeers: 300
+    getTopologyData: 300
+    getSubgraphData: 300
+    getRegisteredNodes: 300
+    getNFTHolders: 900
+    getPeersRewards: 900
+    applyEconomicModel: 600
     distributeRewards: ~
 
     
   node:
-    healthcheck: 10
-    retrievePeers: 30
-    retrieveIncomingChannels: 30
-    retrieveOutgoingChannels: 30
-    retrieveBalances: 30
-    openChannels: ~
-    closeOldChannels: ~
-    closePendingChannels: ~
-    fundChannels: ~
+    healthcheck: 60
+    retrievePeers: 300
+    retrieveIncomingChannels: 600
+    retrieveOutgoingChannels: 600
+    retrieveBalances: 900
+    openChannels: 300
+    closeOldChannels: 300
+    closePendingChannels: 1800
+    fundChannels: 300
     closeIncomingChannels: ~
-    getTotalChannelFunds: ~
+    getTotalChannelFunds: 900
     
 # =============================================================================
 # 
@@ -41,9 +41,9 @@ economicModel:
 
   coefficients:
     a: 1
-    b: 1
-    c: 3
-    l: 0
+    b: 1.4
+    c: 75000
+    l: 10000
   
   equations: 
     fx: 
@@ -54,22 +54,21 @@ economicModel:
       condition: "x > c"
   
   budget:
-    amount: 400
-    period: 1200
-    s: 0.25
-    countsInPeriod: 1
-    ticketPrice: 0.5 # deprecated
+    amount: 190000
+    period: 2628000 # in seconds
+    s: 1
+    countsInPeriod: 730
     winningProbability: 1
 
 # =============================================================================
 # 
 # =============================================================================
 distribution:
-  minEligiblePeers: 500
+  minEligiblePeers: 100
   messageDeliveryDelay: 10.0
-  delayBetweenTwoMessages: 0.2
-  batchSize: 100
-  maxIterations: 6
+  delayBetweenTwoMessages: 0.1
+  batchSize: 200
+  maxIterations: 4
 
 # =============================================================================
 # 
@@ -89,15 +88,15 @@ peer:
 # 
 # =============================================================================
 channel:
-  minBalance: 0.05
-  fundingAmount: 0.2
-  maxAgeSeconds: 60
+  minBalance: 15
+  fundingAmount: 35
+  maxAgeSeconds: 172800
 
 # =============================================================================
 # 
 # =============================================================================
 rabbitmq:
-  taskName: fake_task
+  taskName: send_1_hop_message
   projectName: ct-app
 
 # =============================================================================
