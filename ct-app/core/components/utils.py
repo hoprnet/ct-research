@@ -8,12 +8,11 @@ from typing import Any
 import aiohttp
 from aiohttp import ClientSession
 from celery import Celery
-from google.cloud import storage
-
 from core.model.address import Address
 from core.model.peer import Peer
 from core.model.subgraph_entry import SubgraphEntry
 from core.model.topology_entry import TopologyEntry
+from google.cloud import storage
 
 from .baseclass import Base
 

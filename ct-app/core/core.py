@@ -1,27 +1,27 @@
 import asyncio
-from copy import deepcopy
 import random
+from copy import deepcopy
 
 from celery import Celery
-from core.model.economic_model_sigmoid import EconomicModelSigmoid
 from prometheus_client import Gauge
 
 from .components.baseclass import Base
 from .components.decorators import connectguard, flagguard, formalin
 from .components.graphql_providers import (
     ProviderError,
+    RewardsProvider,
     SafesProvider,
     StakingProvider,
     wxHOPRTransactionProvider,
-    RewardsProvider
 )
 from .components.hoprd_api import HoprdAPI
 from .components.lockedvar import LockedVar
 from .components.parameters import Parameters
 from .components.utils import Utils
 from .model.address import Address
-from .model.economic_model_legacy import EconomicModelLegacy
 from .model.budget import Budget
+from .model.economic_model_legacy import EconomicModelLegacy
+from .model.economic_model_sigmoid import EconomicModelSigmoid
 from .model.peer import Peer
 from .model.subgraph_entry import SubgraphEntry
 from .model.subgraph_type import SubgraphType
@@ -98,8 +98,12 @@ class Core(Base):
 
         self.budget = Budget.fromParameters(self.params.economicModel.budget)
 
-        self.legacy_model = EconomicModelLegacy.fromParameters(self.params.economicModel.legacy)
-        self.sigmoid_model = EconomicModelSigmoid.fromParameters(self.params.economicModel.sigmoid)
+        self.legacy_model = EconomicModelLegacy.fromParameters(
+            self.params.economicModel.legacy
+        )
+        self.sigmoid_model = EconomicModelSigmoid.fromParameters(
+            self.params.economicModel.sigmoid
+        )
 
         self.legacy_model.budget = deepcopy(self.budget)
         self.sigmoid_model.budget = deepcopy(self.budget)
@@ -128,9 +132,7 @@ class Core(Base):
 
     @property
     async def network_nodes_addresses(self) -> list[Address]:
-        return await asyncio.gather(
-            *[node.address.get() for node in self.nodes]
-        )
+        return await asyncio.gather(*[node.address.get() for node in self.nodes])
 
     @property
     def subgraph_type(self) -> SubgraphType:
@@ -151,7 +153,7 @@ class Core(Base):
     @property
     def rewards_subgraph_url(self) -> str:
         return self._rewards_subgraph_url(self.subgraph_type)
-    
+
     @subgraph_type.setter
     def subgraph_type(self, value: SubgraphType):
         if value != self.subgraph_type:
@@ -312,7 +314,7 @@ class Core(Base):
         if not ready:
             self.warning("Not enough data to apply economic model.")
             return
-        
+
         eligibles = Utils.mergeDataSources(topology, peers, registered_nodes)
         self.debug(f"Merged topology and subgraph data ({len(eligibles)} entries).")
 
@@ -366,9 +368,13 @@ class Core(Base):
         redeemed_rewards = await self.peer_rewards.get()
         for peer in eligibles:
             peer.economic_model = deepcopy(self.model)
-            peer.economic_model.coefficients.c += redeemed_rewards.get(peer.address.address,0.0)
+            peer.economic_model.coefficients.c += redeemed_rewards.get(
+                peer.address.address, 0.0
+            )
 
-        self.info(f"Assigned economic model to eligible nodes. ({len(eligibles)} entries).")
+        self.info(
+            f"Assigned economic model to eligible nodes. ({len(eligibles)} entries)."
+        )
 
         excluded = Utils.rewardProbability(eligibles)
         self.debug(f"Excluded nodes with low stakes ({len(excluded)} entries).")
@@ -421,14 +427,21 @@ class Core(Base):
             broker=f"amqp://{self.params.rabbitmq.username}:{self.params.rabbitmq.password}@{self.params.rabbitmq.host}/{self.params.rabbitmq.virtualhost}",
         )
         app.autodiscover_tasks(force=True)
-        
-        economic_security = sum([peer.split_stake for peer in peers]) / self.params.economicModel.sigmoid.totalTokenSupply
-        network_capacity = len(peers) / self.params.economicModel.sigmoid.networkCapacity
+
+        economic_security = (
+            sum([peer.split_stake for peer in peers])
+            / self.params.economicModel.sigmoid.totalTokenSupply
+        )
+        network_capacity = (
+            len(peers) / self.params.economicModel.sigmoid.networkCapacity
+        )
         sigmoid_model_input = [economic_security, network_capacity]
 
-        for peer in peers:    
+        for peer in peers:
             legacy_count = self.legacy_model.message_count_for_reward(peer.split_stake)
-            sigmoid_count = self.sigmoid_model.message_count_for_reward(peer.split_stake, sigmoid_model_input) 
+            sigmoid_count = self.sigmoid_model.message_count_for_reward(
+                peer.split_stake, sigmoid_model_input
+            )
 
             Utils.taskSendMessage(
                 app,

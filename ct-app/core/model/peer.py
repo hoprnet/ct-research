@@ -78,7 +78,7 @@ class Peer:
         return float(self.safe_balance) / float(self.safe_address_count) + float(
             self.channel_balance
         )
-    
+
     @property
     def complete(self) -> bool:
         # check that none of the attributes are None

@@ -6,6 +6,7 @@ DISTRIBUTIONS_PER_PERIOD = Gauge("dist_freq", "Number of expected distributions"
 TICKET_PRICE = Gauge("ticket_price", "Ticket price")
 TICKET_WINNING_PROB = Gauge("ticket_winning_prob", "Ticket winning probability")
 
+
 class Budget:
     def __init__(
         self,
@@ -26,7 +27,7 @@ class Budget:
     @property
     def distribution_per_period(self):
         return self._distribution_per_period
-    
+
     @property
     def ticket_price(self):
         return self._ticket_price
@@ -54,7 +55,7 @@ class Budget:
     def winning_probability(self, value):
         self._winning_probability = value
         TICKET_WINNING_PROB.set(value)
-    
+
     @classmethod
     def fromParameters(cls, parameters: Parameters):
         return cls(

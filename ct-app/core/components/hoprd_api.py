@@ -10,13 +10,7 @@ from hoprd_sdk import (
     SendMessageBodyRequest,
     TagQueryRequest,
 )
-from hoprd_sdk.api import (
-    AccountApi,
-    ChannelsApi,
-    MessagesApi,
-    NetworkApi,
-    NodeApi,
-)
+from hoprd_sdk.api import AccountApi, ChannelsApi, MessagesApi, NetworkApi, NodeApi
 from hoprd_sdk.rest import ApiException
 from requests import Response
 from urllib3.exceptions import MaxRetryError
@@ -142,9 +136,7 @@ class HoprdAPI(Base):
         """
         body = OpenChannelBodyRequest(amount, peer_address)
 
-        is_ok, response = await self.__call_api(
-            ChannelsApi, "open_channel", body=body
-        )
+        is_ok, response = await self.__call_api(ChannelsApi, "open_channel", body=body)
 
         return response.channel_id if is_ok else None
 
@@ -335,7 +327,7 @@ class HoprdAPI(Base):
         """
         body = TagQueryRequest(tag=tag)
         _, response = await self.__call_api(MessagesApi, "pop", body=body)
-    
+
         return response
 
     async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
@@ -350,7 +342,7 @@ class HoprdAPI(Base):
 
     async def node_info(self):
         _, response = await self.__call_api(NodeApi, "info")
-        
+
         return response
 
     async def ticket_price(self) -> int:

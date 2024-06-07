@@ -1,17 +1,13 @@
 import os
 
-from core.components.parameters import Parameters
 import pytest
+from core.components.parameters import Parameters
 
 params_from_yaml = {
-        "parent1": "value1",
-        "parent2": {
-            "child1": "value2",
-            "child2": {
-                "grandchild1": "value3"
-            }
-        }
-    }
+    "parent1": "value1",
+    "parent2": {"child1": "value2", "child2": {"grandchild1": "value3"}},
+}
+
 
 def test_parse():
     params = Parameters()
@@ -20,6 +16,7 @@ def test_parse():
     assert params.parent1 == "value1"
     assert params.parent2.child1 == "value2"
     assert params.parent2.child2.grandchild1 == "value3"
+
 
 def test_overrides():
     os.environ["OVERRIDES_PARENT1"] = "value1-override"
@@ -38,15 +35,17 @@ def test_overrides():
     del os.environ["OVERRIDES_PARENT2_CHILD1"]
     del os.environ["OVERRIDES_PARENT2_CHILD2_GRANDCHILD1"]
 
+
 def test_overrides_raises():
     os.environ["OVERRIDES_PARENT3"] = "value1-override"
     params = Parameters()
     params.parse(params_from_yaml)
-    
+
     with pytest.raises(KeyError):
         params.overrides("OVERRIDES_")
 
     del os.environ["OVERRIDES_PARENT3"]
+
 
 def test_from_env():
     os.environ["ENVPREFIX_STRING"] = "random-string"
@@ -71,6 +70,7 @@ def test_from_env():
     del os.environ["ENVPREFIX_VALUE"]
     del os.environ["ENVPREFIX_DECIMAL"]
     del os.environ["ENVPREFIX_URL"]
+
 
 def test__convert():
     params = Parameters()

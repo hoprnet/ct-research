@@ -1,6 +1,9 @@
-from core.components.parameters import Parameters
-from .budget import Budget
 from math import log, pow
+
+from core.components.parameters import Parameters
+
+from .budget import Budget
+
 
 class Bucket:
     def __init__(self, name: str, flatness: float, skewness: float, upperbound: float):
@@ -21,7 +24,7 @@ class Bucket:
             raise ValueError(e)
         except OverflowError as e:
             raise ValueError(e)
-    
+
     @classmethod
     def fromParameters(cls, name: str, parameters: Parameters):
         return cls(
@@ -31,8 +34,11 @@ class Bucket:
             parameters.upperbound,
         )
 
+
 class EconomicModelSigmoid:
-    def __init__(self, offset: float, buckets: list[Bucket], max_apr: float, proportion: float):
+    def __init__(
+        self, offset: float, buckets: list[Bucket], max_apr: float, proportion: float
+    ):
         """
         Initialisation of the class.
         """
@@ -50,7 +56,7 @@ class EconomicModelSigmoid:
 
         if max_apr is not None:
             apr = min(apr, max_apr)
-            
+
         return apr
 
     def message_count_for_reward(self, stake: float, xs: list[float]):
@@ -67,13 +73,16 @@ class EconomicModelSigmoid:
     @classmethod
     def fromParameters(cls, parameters: Parameters):
         bucket_names = vars(parameters.buckets)
-        
+
         return cls(
             parameters.offset,
-            [Bucket.fromParameters(name, getattr(parameters.buckets, name)) for name in bucket_names],
+            [
+                Bucket.fromParameters(name, getattr(parameters.buckets, name))
+                for name in bucket_names
+            ],
             parameters.maxAPRPercentage,
             parameters.proportion,
         )
-    
+
     def __repr__(self):
         return f"EconomicModel({self.offset}, {self.buckets}, {self.budget})"

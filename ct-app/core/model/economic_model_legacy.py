@@ -1,5 +1,7 @@
 from core.components.parameters import Parameters
+
 from .budget import Budget
+
 
 class Equation:
     def __init__(self, formula: str, condition: str):
@@ -9,6 +11,7 @@ class Equation:
     @classmethod
     def fromParameters(cls, parameters: Parameters):
         return cls(parameters.formula, parameters.condition)
+
 
 class Equations:
     def __init__(self, f_x: Equation, g_x: Equation):
@@ -42,7 +45,11 @@ class Coefficients:
 
 class EconomicModelLegacy:
     def __init__(
-        self, equations: Equations, coefficients: Coefficients, proportion: float, apr: float
+        self,
+        equations: Equations,
+        coefficients: Coefficients,
+        proportion: float,
+        apr: float,
     ):
         """
         Initialisation of the class.
@@ -64,7 +71,7 @@ class EconomicModelLegacy:
             func = self.equations.g_x
 
         return eval(func.formula, kwargs)
-    
+
     def message_count_for_reward(self, stake: float):
         """
         Calculate the message count for the reward.
@@ -72,16 +79,18 @@ class EconomicModelLegacy:
         rewards = self.apr / 12 * self.transformed_stake(stake)
         denominator = self.budget.ticket_price * self.budget.winning_probability
 
-        return round(rewards / denominator * self.economic_model.proportion) 
-    
+        return round(rewards / denominator * self.economic_model.proportion)
+
     @classmethod
     def fromParameters(cls, parameters: Parameters):
         return cls(
-            Equations.fromParameters(parameters.equations), 
-            Coefficients.fromParameters(parameters.coefficients), 
+            Equations.fromParameters(parameters.equations),
+            Coefficients.fromParameters(parameters.coefficients),
             parameters.proportion,
-            parameters.apr
+            parameters.apr,
         )
-    
+
     def __repr__(self):
-        return f"EconomicModelLegacy({self.equations}, {self.coefficients}, {self.budget})"
+        return (
+            f"EconomicModelLegacy({self.equations}, {self.coefficients}, {self.budget})"
+        )

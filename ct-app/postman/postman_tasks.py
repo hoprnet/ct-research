@@ -3,6 +3,7 @@ import logging
 import time
 from datetime import datetime
 
+import yaml
 from billiard import current_process
 from celery import Celery
 from core.components.hoprd_api import HoprdAPI
@@ -12,13 +13,12 @@ from database import DatabaseConnection, Reward
 
 from .task_status import TaskStatus
 from .utils import Utils as PMUtils
-import yaml
 
 log = logging.getLogger()
 log.setLevel(logging.INFO)
 
 
-with open(Utils.envvar("CONFIG_FILE_PATH", type= str), "r") as file:
+with open(Utils.envvar("CONFIG_FILE_PATH", type=str), "r") as file:
     config = yaml.safe_load(file)
 
 params = Parameters()

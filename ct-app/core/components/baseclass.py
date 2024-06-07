@@ -9,6 +9,7 @@ class Base:
     """
     Base class for logging and printing messages with different colors.
     """
+
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
 
