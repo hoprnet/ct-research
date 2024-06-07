@@ -15,18 +15,18 @@ class DatabaseConnection:
     Database connection class.
     """
 
-    def __init__(self):
-        self.params = Parameters()("PG")
-
-        self._assert_parameters()
+    def __init__(self, params: Parameters):
+        """
+        Create a new DatabaseConnection based on environment variables setting user, password, host, port, database, sslmode, sslrootcert, sslcert and sslkey.
+        """
 
         url = URL(
             drivername="postgresql+psycopg2",
-            username=self.params.pg.user,
-            password=self.params.pg.password,
-            host=self.params.pg.host,
-            port=self.params.pg.port,
-            database=self.params.pg.database,
+            username=params.user,
+            password=params.password,
+            host=params.host,
+            port=params.port,
+            database=params.database,
             query={}
         )
 
@@ -36,36 +36,16 @@ class DatabaseConnection:
 
         log.info("Database connection established.")
 
-    def _assert_parameters(self):
-        for group, values in self.required_parameters().items():
-            assert len(getattr(self.params, group).__dict__), (
-                f"Missing all '{group.upper()}' environment variables. "
-                + "The following ones are required: "
-                + f"{', '.join([(group+'(_)'+v).upper() for v in values])}"
-            )
-
-            for value in values:
-                assert hasattr(self.params.pg, value), (
-                    "Environment variable "
-                    + f"'{group.upper()}(_){value.upper()}' missing"
-                )
-
-    @classmethod
-    def required_parameters(cls):
-        return {
-            "pg": [
-                "user",
-                "password",
-                "host",
-                "port",
-                "database"
-            ]
-        }
-
     def __enter__(self):
+        """
+        Return the session (used by context manager)
+        """
         return self.session
 
     def __exit__(self, exc_type, exc_value, traceback):
+        """
+        Close the session and the engine (used by context manager)
+        """
         self.session.close()
         self.engine.dispose()
         log.info("Database connection closed.")

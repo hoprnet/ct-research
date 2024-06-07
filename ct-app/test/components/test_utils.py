@@ -86,7 +86,7 @@ def test_allowManyNodePerSafe():
     assert peer_3.safe_address_count == 1
 
 
-def test_excludeElements():
+def test_exclude():
     source_data = [
         Peer("id_1", "address_1", "v1.0.0"),
         Peer("id_2", "address_2", "v1.1.0"),
@@ -96,7 +96,7 @@ def test_excludeElements():
     ]
     blacklist = [Address("id_2", "address_2"), Address("id_4", "address_4")]
 
-    excluded = Utils.excludeElements(source_data, blacklist)
+    excluded = Utils.exclude(source_data, blacklist)
 
     assert len(source_data) == 3
     assert len(excluded) == 2

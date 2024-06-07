@@ -4,88 +4,71 @@
 # =============================================================================
 flags:
   core: 
-    healthcheck: 10
-    checkSubgraphURLs: 30
-    getFundings: 30
-    getTicketPrice: 30
-    aggregatePeers: 30
-    getTopologyData: 30
-    getSubgraphData: 30
-    getRegisteredNodes: 30
-    getNFTHolders: 30
-    getPeersRewards: 30
-    applyEconomicModel: 30
-    distributeRewards: ~
+    healthcheck: 60
+    checkSubgraphURLs: 300
+    getFundings: 900
+    getTicketPrice: 900
+    aggregatePeers: 300
+    getTopologyData: 300
+    getSubgraphData: 300
+    getRegisteredNodes: 300
+    getNFTHolders: 300
+    getPeersRewards: 300
+    applyEconomicModel: 120
+    distributeRewards: 1
+
     
   node:
-    healthcheck: 10
-    retrievePeers: 30
-    retrieveIncomingChannels: 30
-    retrieveOutgoingChannels: 30
-    retrieveBalances: 30
-    openChannels: ~
-    closeOldChannels: ~
-    closePendingChannels: ~
-    fundChannels: ~
+    healthcheck: 60
+    retrievePeers: 300
+    retrieveIncomingChannels: 600
+    retrieveOutgoingChannels: 600
+    retrieveBalances: 900
+    openChannels: 300
+    closeOldChannels: 300
+    closePendingChannels: 1800
+    fundChannels: 300
     closeIncomingChannels: ~
-    getTotalChannelFunds: ~
+    getTotalChannelFunds: 900
     
 # =============================================================================
 # 
 # =============================================================================
 economicModel:
   minSafeAllowance: -1
+  maxAPRPercentage: 15.0
   NFTThreshold: ~
 
-  legacy:
-    proportion: 0.9
-    apr: 12.0
-
-    coefficients:
-      a: 1
-      b: 1
-      c: 3
-      l: 0
-    
-    equations: 
-      fx: 
-        formula: "a * x"
-        condition: "l <= x <= c"
-      gx:
-        formula: "a * c + (x - c) ** (1 / b)"
-        condition: "x > c"
-
-  sigmoid:
-    proportion: 0.1
-    maxAPRPercentage: 15.0
-    offset: 10
-    networkCapacity: 50
-    totalTokenSupply: 1000000000
-
-    buckets:
-      economicSecurity:
-        flatness: 1.65
-        skewness: 1.50
-        upperbound: 0.5
-      networkCapacity:
-        flatness: 10.0
-        skewness: 2.75
-        upperbound: 1.0
-
+  coefficients:
+    a: 1
+    b: 1.4
+    c: 75000
+    l: 10000
+  
+  equations: 
+    fx: 
+      formula: "a * x"
+      condition: "l <= x <= c"
+    gx:
+      formula: "a * c + (x - c) ** (1 / b)"
+      condition: "x > c"
+  
   budget:
-    period: 1200
-    countsInPeriod: 1
-    ticketPrice: 0.5 # deprecated
+    amount: 190000
+    period: 2628000 # in seconds
+    s: 1
+    countsInPeriod: 1460
     winningProbability: 1
 
 # =============================================================================
 # 
 # =============================================================================
 distribution:
-  minEligiblePeers: 500
+  minEligiblePeers: 100
   messageDeliveryDelay: 10.0
-  delayBetweenTwoMessages: 0.2
-  maxIterations: 6
+  delayBetweenTwoMessages: 0.1
+  batchSize: 200
+  maxIterations: 4
 
 # =============================================================================
 # 
@@ -93,7 +76,7 @@ distribution:
 gcp:
   filePrefix: expected_reward
   folder: expected_rewards
-  bucket: hoprnet-ctdapp-staging
+  bucket: hoprnet-ctdapp-prod
 
 # =============================================================================
 # 
@@ -105,15 +88,15 @@ peer:
 # 
 # =============================================================================
 channel:
-  minBalance: 0.05
-  fundingAmount: 0.2
-  maxAgeSeconds: 60
+  minBalance: 15
+  fundingAmount: 35
+  maxAgeSeconds: 172800
 
 # =============================================================================
 # 
 # =============================================================================
 rabbitmq:
-  taskName: fake_task
+  taskName: send_1_hop_message
   projectName: ct-app
 
 # =============================================================================
@@ -121,8 +104,8 @@ rabbitmq:
 # =============================================================================
 subgraph:
   safesBalance:
-    queryID: FcyLT3XGc2nEtaKjfB2SqigXsrEaGGBYsDfhEmsQ26dA
-    URLBackup: https://api.studio.thegraph.com/query/40439/hopr-nodes-rotsee/version/latest
+    queryID: FEQcaX9qfh31YL2K7rxRN5a3sr9rjMWkguJnby7StNRo
+    URLBackup: https://api.studio.thegraph.com/query/40439/hopr-nodes-dufour/version/latest
 
   staking:
     queryID: DrkbaCvNGVcNH1RghepLRy6NSHFi8Dmwp4T2LN3LqcjY

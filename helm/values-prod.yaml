@@ -1,5 +1,3 @@
-legacy-nodes:
-  enabled: true
 blue-nodes:
   enabled: true
 green-nodes:
@@ -12,21 +10,13 @@ backup:
 ctdapp:
   core:
     replicas: 1
-    tag: v2.1.10
-    extraEnvVars:
-      FLAG_CORE_DISTRIBUTE_REWARDS: "1"
-
-      DISTRIBUTION_MIN_ELIGIBLE_PEERS: "5"
-      DISTRIBUTION_MAX_APR_PERCENTAGE: "15.0"
-      
-      GCP_BUCKET: hoprnet-ctdapp-prod
-
-      ECONOMIC_MODEL_FILENAME: parameters-production.json
-
-
-      CHANNEL_MIN_BALANCE: "15"
-      CHANNEL_FUNDING_AMOUNT: "50"
-      CHANNEL_MAX_AGE_SECONDS: "172800"
+    tag: v2.2.1
   postman:
     replicas: 1
-    tag: v2.1.10
+    tag: v2.2.1
+  nodes:
+    NODE_ADDRESS_1: http://ctdapp-blue-node-1:3001
+    NODE_ADDRESS_2: http://ctdapp-blue-node-2:3001
+    NODE_ADDRESS_3: http://ctdapp-blue-node-3:3001
+    NODE_ADDRESS_4: http://ctdapp-blue-node-4:3001
+    NODE_ADDRESS_5: http://ctdapp-blue-node-5:3001

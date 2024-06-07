@@ -139,6 +139,7 @@ Parameter | Recommanded value (staging) | Description
 `GCP_FILE_PREFIX` | `expected_reward` | File prefix for GCP distribution list storage
 `GCP_FOLDER` | `staging` | Folder on GCP where to store distribution list
 `PEER_MIN_VERSION` | `2.0.0` | Minimum node version to be eligible
+
 `RABBITMQ_HOST` | (check Bitwarden) | 
 `RABBITMQ_PASSWORD` | (check Bitwarden) | 
 `RABBITMQ_PROJECT_NAME` | `ct-app` | Name of the RabbitMQ project
@@ -179,7 +180,6 @@ Flag | Recommanded value (staging)
 `FLAG_NODE_CLOSE_INCOMING_CHANNELS` (Not available) |--
 `FLAG_NODE_GET_TOTAL_CHANNEL_FUNDS` |--
 
-
 Those flags turn on the corresponding feature if the variable exist. Also, the value associated to the flag defines the delay between two executions of the methods.
 
 #### postman
@@ -187,13 +187,19 @@ This module handles message distribution. It relies on a bunch of parameters:
 
 Parameter | Recommanded value (staging) | Description
 --|--|--
-`PARAM_BATCH_SIZE` | `50` | 
+`PARAM_BATCH_SIZE` | `50` | Number of messages to send before checking the inbox
 `PARAM_DELAY_BETWEEN_TWO_MESSAGES` | `0.25` | Delay between two messages
-`PARAM_MESSAGE_DELIVERY_TIMEOUT` | `10` | Delay between two batches
 `PARAM_MAX_ATTEMPTS` | `4` | Maximum number of retries before timing out
-`RABBITMQ_PROJECT_NAME` | `ct-app` | Name of the RabbitMQ project
+`PARAM_MESSAGE_DELIVERY_TIMEOUT` | `10` | Delay between two batches
+
+#### Common parameters
+In addition to the above-mentioned parameters, there's a bunch of parameters that are required to be able to communicate with databases, RabbitMQ brokers, and nodes.
+Parameter | Recommanded value (staging) | Description
+--|--|--
 `RABBITMQ_HOST` | (check Bitwarden) | 
 `RABBITMQ_PASSWORD` | (check Bitwarden) | 
+`RABBITMQ_PROJECT_NAME` | `ct-app` | Name of the RabbitMQ project
+`RABBITMQ_TASK_NAME` | `fake_task` | Task to create when distributing rewards
 `RABBITMQ_USERNAME` | (check Bitwarden) | 
 `RABBITMQ_VIRTUALHOST` | (check Bitwarden) | 
 `PGHOST` | (from gcloud) |
@@ -205,8 +211,9 @@ Parameter | Recommanded value (staging) | Description
 `PGSSLKEY` |  | Path to the SSL user key
 `PGSSLROOTCERT` |  | Path to the SSL root certificate
 `PGSSLMODE` | `verify-ca` | 
-`NODE_ADDRESS_X` (multiple, min. 2) | (check Bitwarden) |
-`NODE_KEY` | (check Bitwarden) | 
+`NODE_ADDRESS_X` (multiple, min. 2) | (check Bitwarden) | Node endpoints in the format `http://ip:port`
+`NODE_KEY_X` (multiple, min. 2) | (check Bitwarden) | Node API token
+
 
 This program logs to STDOUT. The log level is set to INFO by default.
 

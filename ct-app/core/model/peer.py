@@ -4,7 +4,17 @@ from .address import Address
 
 
 class Peer:
+    """
+    Representation of a peer in the network. A peer is a node that is part of the network and not hosted by HOPR.
+    """
+
     def __init__(self, id: str, address: str, version: str):
+        """
+        Create a new Peer with the specified id, address and version. The id refers to the peerId, the address refers to the native address of a node.
+        :param id: The peer's peerId
+        :param address: The peer's native address
+        :param version: The reported peer's version
+        """
         self.address = Address(id, address)
         self.version = version
         self.channel_balance = None
@@ -18,6 +28,10 @@ class Peer:
         # self.economic_model = None
 
     def version_is_old(self, min_version: str or Version) -> bool:
+        """
+        Check if the peer's version is older than the specified version.
+        :param min_version: The minimum version to check against.
+        """
         if isinstance(min_version, str):
             min_version = Version(min_version)
 
@@ -29,8 +43,11 @@ class Peer:
 
     @version.setter
     def version(self, value: str or Version):
-        if isinstance(value, str):
-            value = Version(value)
+        if not isinstance(value, Version):
+            try:
+                value = Version(value)
+            except Exception:
+                value = Version("0.0.0")
 
         self._version = value
 

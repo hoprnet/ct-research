@@ -3,6 +3,9 @@ from .utils import Utils
 
 
 class Parameters(Base):
+    """
+    Class that represents a set of parameters that can be accessed and modified. The parameters are stored in a dictionary and can be accessed and modified using the dot notation. The parameters can be loaded from environment variables with a specified prefix.
+    """
     def __init__(self):
         super().__init__()
 
@@ -68,7 +71,6 @@ class Parameters(Base):
                     integer = int(value)
                     if integer == value:
                         value = integer
-
                 except ValueError:
                     pass
 

@@ -1,6 +1,7 @@
 import asyncio
 
 from core.components.hoprd_api import MESSAGE_TAG, HoprdAPI
+from core.components.parameters import Parameters
 from database import DatabaseConnection, Peer
 
 
@@ -16,8 +17,8 @@ class Utils:
         return [batch_size] * full_batches + [remainder] * bool(remainder)
 
     @classmethod
-    def peerIDToInt(cls, peer_id: str) -> int:
-        with DatabaseConnection() as session:
+    def peerIDToInt(cls, peer_id: str, parameters: Parameters) -> int:
+        with DatabaseConnection(parameters) as session:
             existing_peer = session.query(Peer).filter_by(peer_id=peer_id).first()
 
             if existing_peer:
@@ -50,14 +51,17 @@ class Utils:
         expected_count: int,
         recipient: str,
         timestamp: float,
-        batch_size: int,
-        delay_between_two_messages: float,
-        message_delivery_timeout: float,
+        params: Parameters,
     ):
+        
+        batch_size = params.distribution.batchSize
+        delay_between_two_messages = params.distribution.delayBetweenTwoMessages
+        message_delivery_timeout = params.distribution.messageDeliveryDelay
+
         relayed_count = 0
         issued_count = 0
 
-        tag = MESSAGE_TAG + cls.peerIDToInt(relayer)
+        tag = MESSAGE_TAG + cls.peerIDToInt(relayer, params.pg)
 
         batches = cls.createBatches(expected_count, batch_size)
 
