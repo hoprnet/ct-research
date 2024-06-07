@@ -65,9 +65,9 @@ economicModel:
 # =============================================================================
 distribution:
   minEligiblePeers: 5
-  messageDeliveryDelay: 4.0
+  messageDeliveryDelay: 5.0
   delayBetweenTwoMessages: 0.01
-  maxIterations: 4
+  maxIterations: 3
 
 # =============================================================================
 # 
