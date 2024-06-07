@@ -1,8 +1,8 @@
 import asyncio
-import time
-from typing import Any
-from copy import deepcopy
 import random
+import time
+from copy import deepcopy
+from typing import Any
 
 from database import Utils as DBUtils
 from database.database_connection import DatabaseConnection
@@ -13,10 +13,10 @@ from .components.baseclass import Base
 from .components.decorators import connectguard, flagguard, formalin
 from .components.graphql_providers import (
     ProviderError,
+    RewardsProvider,
     SafesProvider,
     StakingProvider,
     wxHOPRTransactionProvider,
-    RewardsProvider
 )
 from .components.hoprd_api import HoprdAPI
 from .components.lockedvar import LockedVar
@@ -118,9 +118,7 @@ class Core(Base):
 
     @property
     async def network_nodes_addresses(self) -> list[Address]:
-        return await asyncio.gather(
-            *[node.address.get() for node in self.nodes]
-        )
+        return await asyncio.gather(*[node.address.get() for node in self.nodes])
 
     @property
     def subgraph_type(self) -> SubgraphType:
@@ -141,7 +139,7 @@ class Core(Base):
     @property
     def rewards_subgraph_url(self) -> str:
         return self._rewards_subgraph_url(self.subgraph_type)
-    
+
     @subgraph_type.setter
     def subgraph_type(self, value: SubgraphType):
         if value != self.subgraph_type:
@@ -303,7 +301,7 @@ class Core(Base):
         if not ready:
             self.warning("Not enough data to apply economic model.")
             return
-        
+
         eligibles = Utils.mergeDataSources(topology, peers, registered_nodes)
         self.debug(f"Merged topology and subgraph data ({len(eligibles)} entries).")
 
@@ -353,7 +351,9 @@ class Core(Base):
 
         for peer in eligibles:
             peer.economic_model = deepcopy(model)
-            peer.economic_model.coefficients.c += redeemed_rewards.get(peer.address.address,0.0)
+            peer.economic_model.coefficients.c += redeemed_rewards.get(
+                peer.address.address, 0.0
+            )
             peer.max_apr = self.params.economicModel.maxAPRPercentage
 
         self.debug("Assigned economic model to eligible nodes.")
@@ -379,7 +379,7 @@ class Core(Base):
             PEER_SAFE_COUNT.labels(peer.address.id).set(peer.safe_address_count)
             PEER_TF_STAKE.labels(peer.address.id).set(peer.transformed_stake)
             PEER_VERSION.labels(peer.address.id, str(peer.version)).set(1)
-            
+
     @flagguard
     @formalin("Distributing rewards")
     @connectguard
@@ -421,7 +421,7 @@ class Core(Base):
         t: tuple[dict[str, dict[str, Any]], int] = await self.multiple_attempts_sending(
             peers, self.params.distribution.maxIterations
         )
-        rewards, iterations = t # trick for typehinting tuple unpacking
+        rewards, iterations = t  # trick for typehinting tuple unpacking
         self.info("Distribution completed.")
 
         self.debug(rewards)

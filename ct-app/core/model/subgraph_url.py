@@ -1,4 +1,5 @@
 from core.components.parameters import Parameters
+
 from .subgraph_type import SubgraphType
 
 

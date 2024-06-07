@@ -156,7 +156,7 @@ class Peer:
         budget = self.economic_model.budget
         denominator = budget.ticket_price * budget.winning_probability
 
-        return  round(self.protocol_reward_per_distribution / denominator)
+        return round(self.protocol_reward_per_distribution / denominator)
 
     @property
     def apr_percentage(self):

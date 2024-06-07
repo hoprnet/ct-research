@@ -6,14 +6,8 @@ from core.components.decorators import connectguard, flagguard, formalin
 from core.components.lockedvar import LockedVar
 from core.components.parameters import Parameters
 
-flag_dictionary = {
-    "flags": {
-        "fooclass": {
-            "fooFlagguardFunc": 1,
-            "fooFormalinFunc": 1
-        }
-    }
-}
+flag_dictionary = {"flags": {"fooclass": {"fooFlagguardFunc": 1, "fooFormalinFunc": 1}}}
+
 
 class FooClass(Base):
     @property
@@ -43,6 +37,7 @@ class FooClass(Base):
     async def foo_formalin_func(self):
         self.counter += 1
         await asyncio.sleep(0.1)
+
 
 @pytest.fixture
 def foo_class():

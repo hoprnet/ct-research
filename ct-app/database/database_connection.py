@@ -27,7 +27,7 @@ class DatabaseConnection:
             host=params.host,
             port=params.port,
             database=params.database,
-            query={}
+            query={},
         )
 
         self.engine = create_engine(url)

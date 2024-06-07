@@ -1,5 +1,4 @@
 import pytest
-
 from core.model.address import Address
 from core.model.peer import Peer
 from core.model.subgraph_type import SubgraphType
@@ -17,7 +16,7 @@ def test__safe_subgraph_url(core: Core):
 async def test__retrieve_address(core: Core, addresses: list[dict]):
     await core._retrieve_address()
 
-    assert core.address in [Address(addr["hopr"], addr["native"]) for addr in addresses ] 
+    assert core.address in [Address(addr["hopr"], addr["native"]) for addr in addresses]
 
 
 @pytest.mark.asyncio

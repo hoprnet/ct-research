@@ -6,6 +6,7 @@ class Parameters(Base):
     """
     Class that represents a set of parameters that can be accessed and modified. The parameters are stored in a dictionary and can be accessed and modified using the dot notation. The parameters can be loaded from environment variables with a specified prefix.
     """
+
     def __init__(self):
         super().__init__()
 
@@ -40,7 +41,6 @@ class Parameters(Base):
                         setattr(parent, param_name, self._convert(value))
                 else:
                     raise KeyError(f"Key {key} not found in parameters")
-
 
     def from_env(self, *prefixes: list[str]):
         for prefix in prefixes:

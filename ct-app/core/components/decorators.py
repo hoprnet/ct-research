@@ -31,10 +31,10 @@ def flagguard(func):
         if not hasattr(self.params, "flags"):
             self.error("No flags available")
             return
-        
+
         if not hasattr(self.params.flags, self.class_prefix()):
             raise AttributeError(f"Feature `{func.__name__}` not in config file")
-        
+
         class_flags = getattr(self.params.flags, self.class_prefix())
 
         params_raw = dir(class_flags)
@@ -71,7 +71,7 @@ def formalin(message: Optional[str] = None):
             if func_name_clean not in params_clean:
                 self.error(f"Feature `{func.__name__}` not regonized")
                 return
-            
+
             index = params_clean.index(func_name_clean)
             delay = getattr(class_flags, params_raw[index])
 
@@ -85,10 +85,9 @@ def formalin(message: Optional[str] = None):
 
                 if delay == 0:
                     break
-                
+
                 if delay is not None:
                     await asyncio.sleep(delay)
-
 
         return wrapper
 

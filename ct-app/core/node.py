@@ -371,8 +371,7 @@ class Node(Base):
             outgoings = [
                 c
                 for c in channels.all
-                if c.source_peer_id == addr.id
-                and not ChannelStatus.isClosed(c.status)
+                if c.source_peer_id == addr.id and not ChannelStatus.isClosed(c.status)
             ]
 
             await self.outgoings.set(outgoings)
@@ -417,7 +416,7 @@ class Node(Base):
 
         if node_address is None:
             return
-        
+
         results = await Utils.aggregatePeerBalanceInChannels(channels)
 
         self.debug(f"Results of channels balance aggregation: {results}")
@@ -465,7 +464,7 @@ class Node(Base):
 
         if node_address is None:
             return issued_count
-        
+
         for relayer, data in peer_group.items():
             remaining = data.get("remaining", 0)
             tag = data.get("tag", None)

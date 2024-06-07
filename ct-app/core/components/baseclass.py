@@ -9,6 +9,7 @@ class Base:
     """
     Base class for logging and printing messages with different colors.
     """
+
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
 
@@ -20,7 +21,9 @@ class Base:
     @property
     def print_prefix(self) -> str:
         cls = self.__class__
-        raise NotImplementedError(f"print_prefix not implemented for class '{cls.__name__}'")
+        raise NotImplementedError(
+            f"print_prefix not implemented for class '{cls.__name__}'"
+        )
 
     @classmethod
     def class_prefix(cls) -> str:

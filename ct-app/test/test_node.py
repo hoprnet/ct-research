@@ -1,6 +1,7 @@
 import asyncio
 import time
 from random import randint, random
+
 import pytest
 from hoprd_sdk.models import NodeChannelsResponse
 
@@ -12,7 +13,7 @@ async def test__retrieve_address(node: Node, addresses: dict):
     await node._retrieve_address()
     address = await node.address.get()
 
-    assert address.address in [addr["native"] for addr in  addresses] 
+    assert address.address in [addr["native"] for addr in addresses]
     assert address.id in [addr["hopr"] for addr in addresses]
 
 
@@ -94,7 +95,9 @@ async def test_retrieve_incoming_channels(node: Node, channels: NodeChannelsResp
 
     incomings_from_node = await node.incomings.get()
     incomings_from_fixture = [
-        c for c in channels.all if c.destination_peer_id == (await node.address.get()).id
+        c
+        for c in channels.all
+        if c.destination_peer_id == (await node.address.get()).id
     ]
 
     assert [c.channel_id for c in incomings_from_node] == [
@@ -108,7 +111,11 @@ async def test_get_total_channel_funds(node: Node, channels: NodeChannelsRespons
 
     total_funds_from_node = await node.get_total_channel_funds()
     total_funds_from_fixture = sum(
-        [int(c.balance) for c in channels.all if c.source_peer_id == (await node.address.get()).id]
+        [
+            int(c.balance)
+            for c in channels.all
+            if c.source_peer_id == (await node.address.get()).id
+        ]
     )
 
     assert total_funds_from_fixture / 1e18 == total_funds_from_node

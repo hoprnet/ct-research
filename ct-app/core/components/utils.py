@@ -1,17 +1,16 @@
 import csv
-from os import path
 import random
 import time
 from datetime import datetime, timedelta
+from os import path
 from typing import Any
 
 from aiohttp import ClientSession
-from google.cloud import storage
-
 from core.model.address import Address
 from core.model.peer import Peer
 from core.model.subgraph_entry import SubgraphEntry
 from core.model.topology_entry import TopologyEntry
+from google.cloud import storage
 
 from .baseclass import Base
 from .channelstatus import ChannelStatus
@@ -44,6 +43,7 @@ class Utils(Base):
         :param data: The data to be sent.
         :returns: A tuple containing the status code and the response.
         """
+
         async def post(session: ClientSession, url: str, data: dict, timeout: int):
             async with session.post(url, json=data, timeout=timeout) as response:
                 status = response.status
@@ -77,7 +77,12 @@ class Utils(Base):
             # if safe is None:
             #     safe = SubgraphEntry(address, "0.000015", "0x0", "10000")
 
-            if peer is None or topo is None or safe is None or safe.wxHoprBalance is None:
+            if (
+                peer is None
+                or topo is None
+                or safe is None
+                or safe.wxHoprBalance is None
+            ):
                 continue
 
             peer.safe_address = safe.safe_address

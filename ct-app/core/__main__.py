@@ -23,12 +23,11 @@ def main(configfile: str = None):
     params.from_env("SUBGRAPH_", "PG", "RABBITMQ_")
     params.overrides("OVERRIDE_")
 
-
-    # Utils.stringArrayToGCP(
-    #     params.gcp.bucket,
-    #     Utils.generateFilename("", "startup", "csv"),
-    #     [["header"], ["value"]],
-    # )
+    Utils.stringArrayToGCP(
+        params.gcp.bucket,
+        Utils.generateFilename("", "startup", "csv"),
+        [["header"], ["value"]],
+    )
 
     # create the core and nodes instances
     instance = Core()
