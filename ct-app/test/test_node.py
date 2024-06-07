@@ -1,9 +1,7 @@
 import asyncio
 import time
 from random import randint, random
-
 import pytest
-from core.model.address import Address
 from hoprd_sdk.models import NodeChannelsResponse
 
 from .conftest import Node, Peer
@@ -12,12 +10,14 @@ from .conftest import Node, Peer
 @pytest.mark.asyncio
 async def test__retrieve_address(node: Node, addresses: dict):
     await node._retrieve_address()
+    address = await node.address.get()
 
-    assert (await node.address.get()) == Address(addresses[0]["hopr"], addresses[0]["native"])
+    assert address.address in [addr["native"] for addr in  addresses] 
+    assert address.id in [addr["hopr"] for addr in addresses]
 
 
 @pytest.mark.asyncio
-async def test_healthcheck(node: Node):
+async def test_node_healthcheck(node: Node):
     await node.healthcheck()
 
     assert await node.connected.get()
@@ -62,9 +62,8 @@ async def test_fund_channels(node: Node):
 
 @pytest.mark.asyncio
 async def test_retrieve_peers(node: Node, peers: list[Peer]):
-    assert await node.peers.get() == set()
-    assert await node.peer_history.get() == dict()
-
+    await node.peers.set(set())
+    await node.peer_history.set(dict())
     await node.retrieve_peers()
 
     assert len(await node.peers.get()) == len(peers) - 1

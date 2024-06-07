@@ -1,5 +1,6 @@
-from core.model.address import Address
 import pytest
+
+from core.model.address import Address
 from core.model.peer import Peer
 from core.model.subgraph_type import SubgraphType
 
@@ -20,7 +21,7 @@ async def test__retrieve_address(core: Core, addresses: list[dict]):
 
 
 @pytest.mark.asyncio
-async def test_healthcheck(core: Core):
+async def test_core_healthcheck(core: Core):
     await core.healthcheck()
 
     assert await core.connected.get()
@@ -60,11 +61,6 @@ async def test_get_topology_data(core: Core, peers: list[Peer]):
 
 @pytest.mark.asyncio
 async def test_apply_economic_model(core: Core):
-    pytest.skip("Not implemented")
-
-
-@pytest.mark.asyncio
-async def test_prepare_distribution(core: Core):
     pytest.skip("Not implemented")
 
 

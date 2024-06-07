@@ -91,11 +91,7 @@ def peers_raw() -> list[dict]:
         {"peer_id": "id_0", "peer_address": "address_0", "reported_version": "2.0.0"},
         {"peer_id": "id_1", "peer_address": "address_1", "reported_version": "1.7.0"},
         {"peer_id": "id_2", "peer_address": "address_2", "reported_version": "1.0.3"},
-        {
-            "peer_id": "id_3",
-            "peer_address": "address_3",
-            "reported_version": "1.0.0-rc.3",
-        },
+        {"peer_id": "id_3", "peer_address": "address_3", "reported_version": "1.0.0-rc.3"},
         {"peer_id": "id_4", "peer_address": "address_4", "reported_version": "1.0.0"},
     ]
 
@@ -128,15 +124,46 @@ def addresses() -> list[dict]:
 
 
 @pytest.fixture
-def nodes() -> list[Node]:
-    return [
+async def nodes(mocker: MockerFixture,
+    peers: list[Peer],
+    addresses: list[dict],
+    peers_raw: list[dict],
+    channels: NodeChannelsResponse,
+) -> list[Node]:
+    nodes = [
         Node("localhost:9000", "random_key"),
         Node("localhost:9001", "random_key"),
         Node("localhost:9002", "random_key"),
         Node("localhost:9003", "random_key"),
         Node("localhost:9004", "random_key"),
     ]
+    for idx, node in enumerate(nodes):
+        mocker.patch.object(node.peers, "get", return_value=peers[:idx] + peers[idx+1:])
+        mocker.patch.object(node.api, "get_address", return_value=addresses[idx])
+        mocker.patch.object(node.api, "all_channels", return_value=channels)
+        mocker.patch.object(
+            node.api, "channel_balance", side_effect=SideEffect().channel_balance
+        )
 
+        mocker.patch.object(
+            node.api, "send_message", side_effect=SideEffect().send_message_success
+        )
+        mocker.patch.object(
+            node.api, "messages_pop_all", side_effect=SideEffect().inbox_messages
+        )
+        mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
+        mocker.patch.object(node.api, "peers", return_value=peers_raw[:idx] + peers_raw[idx+1:])
+
+        mocker.patch.object(node.api, "healthyz", return_value=True)
+        mocker.patch.object(node.api, "startedz", return_value=True)
+        mocker.patch.object(node.api, "ticket_price", return_value=0.01)
+
+        setattr(node.params, "distribution", Parameters())
+        setattr(node.params.distribution, "delay_between_two_messages", 0.001)
+
+        await node._retrieve_address()
+
+    return nodes
 
 @pytest.fixture
 def channels(peers: list[Peer]) -> NodeChannelsResponse:
@@ -169,40 +196,10 @@ def channels(peers: list[Peer]) -> NodeChannelsResponse:
 
 
 @pytest.fixture
-async def core(
-    mocker: MockerFixture,
-    nodes: list[Node],
-    peers: list[Peer],
-    addresses: list[dict],
-    channels: NodeChannelsResponse,
-) -> Core:
+async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
     core = Core()
-    core.nodes = nodes
-
-    for idx, node in enumerate(core.nodes):
-        mocker.patch.object(node.peers, "get", return_value=peers)
-        mocker.patch.object(node.api, "get_address", return_value=addresses[idx])
-        mocker.patch.object(node.api, "all_channels", return_value=channels)
-        mocker.patch.object(
-            node.api, "channel_balance", side_effect=SideEffect().channel_balance
-        )
-
-        mocker.patch.object(
-            node.api, "send_message", side_effect=SideEffect().send_message_success
-        )
-        mocker.patch.object(
-            node.api, "messages_pop_all", side_effect=SideEffect().inbox_messages
-        )
-
-        setattr(node.params, "distribution", Parameters())
-        setattr(node.params.distribution, "delay_between_two_messages", 0.001)
-
 
     mocker.patch.object(DBUtils, "peerIDToInt", return_value=0)
-
-    mocker.patch.object(core.api, "healthyz", return_value=True)
-    mocker.patch.object(core.api, "startedz", return_value=True)
-    mocker.patch.object(core.api, "ticket_price", return_value=0.01)
 
     params = Parameters()
     with open("./test/test_config.yaml", "r") as file:
@@ -211,9 +208,6 @@ async def core(
 
     core.post_init(nodes, params)
 
-    for idx, node in enumerate(core.nodes):
-        await node._retrieve_address()
-
     await core._retrieve_address()
     
     return core
@@ -221,6 +215,7 @@ async def core(
 
 @pytest.fixture
 async def node(
+    nodes: list[Node],
     mocker: MockerFixture,
     peers_raw: list[dict],
     channels: NodeChannelsResponse,

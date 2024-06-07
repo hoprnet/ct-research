@@ -157,8 +157,12 @@ def test_exclude():
         assert item.address in blacklist
 
 
-def test_rewardProbability():
-    pytest.skip("Not implemented")
+def test_rewardProbability(peers: list[Peer]):
+    Utils.rewardProbability(peers)
+
+    splits = [peer.reward_probability for peer in peers]
+    assert sum(splits) == pytest.approx(1.0)
+    assert all(splits)
 
 
 def test_stringArrayToGCP():

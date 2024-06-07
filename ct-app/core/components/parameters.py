@@ -55,28 +55,19 @@ class Parameters(Base):
             else:
                 subparams = type(self)()
 
-            for key, value in EnvironmentUtils.envvarWithPrefix(prefix).items():
-                k = key.replace(prefix, "").lower()
-
-                # convert snake case to camel case
-                k = k.replace("_", " ").title().replace(" ", "")
-                k = k[0].lower() + k[1:]
-
-                try:
-                    value = float(value)
-                except ValueError:
-                    pass
-
-                try:
-                    integer = int(value)
-                    if integer == value:
-                        value = integer
-                except ValueError:
-                    pass
-
-                setattr(subparams, k, value)
+            self._parse_env_vars(prefix, subparams)
 
             setattr(self, subparams_name, subparams)
+
+    def _parse_env_vars(self, prefix, subparams):
+        for key, value in EnvironmentUtils.envvarWithPrefix(prefix).items():
+            k = self._format_key(key, prefix)
+            value = self._convert(value)
+            setattr(subparams, k, value)
+
+    def _format_key(self, key, prefix):
+        k = key.replace(prefix, "").lower()
+        return k.replace("_", " ").title().replace(" ", "").lower()
 
     def _convert(self, value: str):
         try:

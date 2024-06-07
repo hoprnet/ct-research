@@ -337,6 +337,7 @@ class Node(Base):
             params=["peer_id", "peer_address", "reported_version"], quality=0.5
         )
 
+        print("Results: ", results)
         peers = {
             Peer(item["peer_id"], item["peer_address"], item["reported_version"])
             for item in results

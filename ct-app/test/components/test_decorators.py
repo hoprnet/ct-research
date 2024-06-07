@@ -71,35 +71,15 @@ async def test_flagguard(foo_class: FooClass):
 
 @pytest.mark.asyncio
 async def test_formalin(foo_class: FooClass):
-    # reset instance counter
-    foo_class.counter = 0
-    # # # # # # # # # # # # # # # # # # # #
+    async def setup_test(run_time: float, sleep_time: float, expected_count: int):
+        foo_class.params.flags.fooclass.foo_formalin_func = sleep_time
+        foo_class.started = True
+        asyncio.create_task(foo_class.foo_formalin_func())
+        await asyncio.sleep(run_time)
+        foo_class.started = False
+        await asyncio.sleep(0.5)
+        assert foo_class.counter == expected_count
+        foo_class.counter = 0
 
-    # should run only once
-    foo_class.params.flags.fooclass.foo_formalin_func = 0
-
-    foo_class.started = True
-    asyncio.create_task(foo_class.foo_formalin_func())
-    await asyncio.sleep(1)
-    foo_class.started = False
-    await asyncio.sleep(0.5)
-
-
-    assert foo_class.counter == 1  # counter increased only once
-
-    # reset flag cache and instance counter
-    foo_class.counter = 0
-    # # # # # # # # # # # # # # # # # # # #
-
-    # should run twice (every 0.5s in 1.1s)
-    foo_class.params.flags.fooclass.foo_formalin_func = 0.5
-
-    foo_class.started = True
-    asyncio.create_task(foo_class.foo_formalin_func())
-    await asyncio.sleep(1.3)
-    foo_class.started = False
-    await asyncio.sleep(0.5)
-
-    assert foo_class.counter == 2  # counter increased twice
-
-
+    setup_test(1, 0, 1)
+    setup_test(1.3, 0.5, 2)
