@@ -76,7 +76,6 @@ economicModel:
   budget:
     period: 2628000
     countsInPeriod: 365
-    ticketPrice: 0.03 # deprecated
     winningProbability: 1
 
 # =============================================================================

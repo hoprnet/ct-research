@@ -105,7 +105,8 @@ def test_economic_model_message_count_for_reward():
     model = EconomicModelSigmoid(
         10.0, [Bucket("bucket_1", 1, 1, 1), Bucket("bucket_2", 1, 1, 0.5)], 20.0, 1
     )
-    model.budget = Budget(60, 1, 1, 1)
+    model.budget = Budget(60, 1, 1)
+    model.budget.ticket_price = 1
 
     assert model.apr([0.5, 0.25]) == 10
     assert model.message_count_for_reward(stake, [0.5, 0.25]) == round(

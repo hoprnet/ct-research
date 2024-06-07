@@ -79,7 +79,10 @@ class EconomicModelLegacy:
         rewards = self.apr / 12 * self.transformed_stake(stake)
         denominator = self.budget.ticket_price * self.budget.winning_probability
 
-        return round(rewards / denominator * self.economic_model.proportion)
+        if denominator != 0:
+            return round(rewards / denominator * self.economic_model.proportion)
+        else:
+            return 0
 
     @classmethod
     def fromParameters(cls, parameters: Parameters):

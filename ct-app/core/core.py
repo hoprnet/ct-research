@@ -513,6 +513,9 @@ class Core(Base):
         await self.ticket_price.set(price)
         self.debug(f"Ticket price: {price}")
 
+        self.legacy_model.budget.ticket_price = price
+        self.sigmoid_model.budget.ticket_price = price
+
     async def start(self):
         """
         Start the node.

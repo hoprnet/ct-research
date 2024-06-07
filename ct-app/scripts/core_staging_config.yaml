@@ -75,7 +75,6 @@ economicModel:
   budget:
     period: 1200
     countsInPeriod: 1
-    ticketPrice: 0.5 # deprecated
     winningProbability: 1
 
 # =============================================================================
