@@ -2,6 +2,7 @@ import asyncio
 import random
 import time
 from copy import deepcopy
+from datetime import datetime
 from typing import Any
 
 from database import Utils as DBUtils
@@ -443,7 +444,7 @@ class Core(Base):
                     expected_count=expected,
                     effective_count=effective,
                     status=status,
-                    timestamp=time.time(),
+                    timestamp=datetime.fromtimestamp(time.time()),
                     issued_count=issued,
                 )
 
