@@ -159,7 +159,7 @@ class Node(Base):
         all_addresses = {
             p.address.address
             for p in await self.peers.get()
-            if not p.version_is_old(self.params.peer.min_version)
+            if not p.version_is_old(self.params.peer.minVersion)
         }
         addresses_without_channels = all_addresses - addresses_with_channels
 
