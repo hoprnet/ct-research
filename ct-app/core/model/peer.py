@@ -25,8 +25,6 @@ class Peer:
 
         self._safe_address_count = None
 
-        # self.economic_model = None
-
     def version_is_old(self, min_version: str or Version) -> bool:
         """
         Check if the peer's version is older than the specified version.
@@ -77,19 +75,6 @@ class Peer:
 
         return float(self.safe_balance) / float(self.safe_address_count) + float(
             self.channel_balance
-        )
-
-    @property
-    def complete(self) -> bool:
-        # check that none of the attributes are None
-        return all(
-            [
-                self.address is not None,
-                self.channel_balance is not None,
-                self.safe_address is not None,
-                self.safe_balance is not None,
-                self.safe_allowance is not None,
-            ]
         )
 
     @classmethod
