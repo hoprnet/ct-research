@@ -15,7 +15,7 @@ flags:
     getNFTHolders: 30
     getPeersRewards: 30
     applyEconomicModel: 30
-    distributeRewards: ~
+    distributeRewards: 1
     
   node:
     healthcheck: 10
@@ -40,7 +40,7 @@ economicModel:
 
   coefficients:
     a: 1
-    b: 1
+    b: 2
     c: 3
     l: 0
   
@@ -53,21 +53,21 @@ economicModel:
       condition: "x > c"
   
   budget:
-    amount: 400
-    period: 1200
-    s: 0.25
-    countsInPeriod: 1
-    ticketPrice: 0.5 # deprecated
+    # one distribution every 60s
+    amount: 0.000000001
+    period: 86400
+    s: 1
+    countsInPeriod: 1440
     winningProbability: 1
 
 # =============================================================================
 # 
 # =============================================================================
 distribution:
-  minEligiblePeers: 500
-  messageDeliveryDelay: 10.0
-  delayBetweenTwoMessages: 0.2
-  maxIterations: 6
+  minEligiblePeers: 5
+  messageDeliveryDelay: 4.0
+  delayBetweenTwoMessages: 0.05
+  maxIterations: 2
 
 # =============================================================================
 # 

@@ -1,11 +1,13 @@
+from core.components.parameters import Parameters
+
 from .database_connection import DatabaseConnection
 from .models import Peer
 
 
 class Utils:
     @classmethod
-    def peerIDToInt(cls, peer_id: str) -> int:
-        with DatabaseConnection() as session:
+    def peerIDToInt(cls, peer_id: str, db_params: Parameters) -> int:
+        with DatabaseConnection(db_params) as session:
             existing_peer = session.query(Peer).filter_by(peer_id=peer_id).first()
 
             if existing_peer:
