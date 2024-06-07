@@ -61,14 +61,15 @@ class EconomicModelLegacy:
         self.budget: Budget = None
 
     def transformed_stake(self, stake: float):
-        func = self.equations.f_x
-
         # convert parameters attribute to dictionary
         kwargs = vars(self.coefficients)
         kwargs.update({"x": stake})
 
-        if not eval(func.condition, kwargs):
-            func = self.equations.g_x
+        for func in vars(self.equations).values():
+            if eval(func.condition, kwargs):
+                break
+        else:
+            return 0
 
         return eval(func.formula, kwargs)
 
@@ -80,7 +81,7 @@ class EconomicModelLegacy:
         denominator = self.budget.ticket_price * self.budget.winning_probability
 
         if denominator != 0:
-            return round(rewards / denominator * self.economic_model.proportion)
+            return round(rewards / denominator * self.proportion)
         else:
             return 0
 

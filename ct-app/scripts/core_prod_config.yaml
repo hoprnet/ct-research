@@ -56,7 +56,6 @@ economicModel:
   budget:
     amount: 190000
     period: 2628000 # in seconds
-    s: 1
     countsInPeriod: 1460
     winningProbability: 1
 
