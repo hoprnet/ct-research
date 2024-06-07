@@ -427,7 +427,7 @@ class Core(Base):
         self.debug(rewards)
         self.debug(iterations)
 
-        with DatabaseConnection(self.params.db) as session:
+        with DatabaseConnection(self.params.pg) as session:
             entries = set[Reward]()
 
             for peer, values in rewards.items():
@@ -499,7 +499,7 @@ class Core(Base):
                 "expected": peer.message_count_for_reward,
                 "remaining": peer.message_count_for_reward,
                 "issued": 0,
-                "tag": DBUtils.peerIDToInt(peer.address.id, self.params.db),
+                "tag": DBUtils.peerIDToInt(peer.address.id, self.params.pg),
                 "ticket-price": peer.economic_model.budget.ticket_price,
             }  # will be retrieved from the API once the endpoint is available in 2.1
             for peer in peers

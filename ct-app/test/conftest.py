@@ -211,12 +211,12 @@ async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
         params.parse(yaml.safe_load(file))
     setattr(params.subgraph, "deployerKey", "foo_deployer_key")
 
-    setattr(params, "db", Parameters())
-    setattr(params.db, "user", "user")
-    setattr(params.db, "password", "password")
-    setattr(params.db, "host", "host")
-    setattr(params.db, "port", "port")
-    setattr(params.db, "database", "database")
+    setattr(params, "pg", Parameters())
+    setattr(params.pg, "user", "user")
+    setattr(params.pg, "password", "password")
+    setattr(params.pg, "host", "host")
+    setattr(params.pg, "port", "port")
+    setattr(params.pg, "database", "database")
 
     core.post_init(nodes, params)
 
