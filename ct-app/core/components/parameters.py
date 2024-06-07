@@ -67,7 +67,9 @@ class Parameters(Base):
 
     def _format_key(self, key, prefix):
         k = key.replace(prefix, "").lower()
-        return k.replace("_", " ").title().replace(" ", "").lower()
+        k = k.replace("_", " ").title().replace(" ", "")
+        k = k[0].lower() + k[1:]
+        return k
 
     def _convert(self, value: str):
         try:
