@@ -23,12 +23,12 @@ flags:
     retrieveIncomingChannels: 30
     retrieveOutgoingChannels: 30
     retrieveBalances: 30
-    openChannels: ~
+    openChannels: 300
     closeOldChannels: ~
     closePendingChannels: ~
-    fundChannels: ~
+    fundChannels: 300
     closeIncomingChannels: ~
-    getTotalChannelFunds: ~
+    getTotalChannelFunds: 300
     
 # =============================================================================
 # 
@@ -66,8 +66,8 @@ economicModel:
 distribution:
   minEligiblePeers: 5
   messageDeliveryDelay: 4.0
-  delayBetweenTwoMessages: 0.05
-  maxIterations: 2
+  delayBetweenTwoMessages: 0.01
+  maxIterations: 4
 
 # =============================================================================
 # 
@@ -89,7 +89,7 @@ peer:
 channel:
   minBalance: 0.05
   fundingAmount: 0.2
-  maxAgeSeconds: 60
+  maxAgeSeconds: 86400
 
 # =============================================================================
 # 
