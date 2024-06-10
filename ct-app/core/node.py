@@ -518,10 +518,17 @@ class Node(Base):
         relayed_count = {peer_id: 0 for peer_id in peer_group.keys()}
 
         messages = await self.api.messages_pop_all()
+        self.debug(f"{messages}")
+
         received_messages_tags = [int(message.tag) for message in messages]
+        self.debug(f"{received_messages_tags}")
+
         message_counts = {tag: 0 for tag in set(received_messages_tags)}
+
         for tag in received_messages_tags:
             message_counts[tag] += 1
+
+        self.debug(f"{message_counts}")
 
         for relayer, data in peer_group.items():
             count = message_counts.get(data.get("tag", None), 0)
