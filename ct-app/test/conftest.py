@@ -9,7 +9,6 @@ from core.model.economic_model import Budget
 from core.model.economic_model import Coefficients as Coefficients
 from core.model.economic_model import EconomicModel, Equation, Equations
 from core.model.peer import Peer
-from database import Utils as DBUtils
 from hoprd_sdk.models import ChannelInfoResponse, NodeChannelsResponse
 from pytest_mock import MockerFixture
 
@@ -203,8 +202,6 @@ def channels(peers: list[Peer]) -> NodeChannelsResponse:
 @pytest.fixture
 async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
     core = Core()
-
-    mocker.patch.object(DBUtils, "peerIDToInt", return_value=0)
 
     params = Parameters()
     with open("./test/test_config.yaml", "r") as file:

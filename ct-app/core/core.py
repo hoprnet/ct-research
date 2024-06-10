@@ -5,7 +5,6 @@ from copy import deepcopy
 from datetime import datetime
 from typing import Any
 
-from database import Utils as DBUtils
 from database.database_connection import DatabaseConnection
 from database.models import Reward
 from prometheus_client import Gauge
@@ -500,10 +499,10 @@ class Core(Base):
                 "expected": peer.message_count_for_reward,
                 "remaining": peer.message_count_for_reward,
                 "issued": 0,
-                "tag": DBUtils.peerIDToInt(peer.address.id, self.params.pg),
+                "tag": idx,
                 "ticket-price": peer.economic_model.budget.ticket_price,
-            }  # will be retrieved from the API once the endpoint is available in 2.1
-            for peer in peers
+            }
+            for idx, peer in enumerate(peers)
         }
 
         self.debug(f"Distribution summary: {reward_per_peer}")
@@ -512,7 +511,7 @@ class Core(Base):
             iteration < max_iterations and _total_messages_to_send(reward_per_peer) > 0
         ):
             self.debug("Splitting peers into groups")
-            peers_groups = Utils.splitDict(reward_per_peer, len(reward_per_peer))
+            peers_groups = Utils.splitDict(reward_per_peer, len(self.nodes))
 
             # send rewards to peers
             self.debug("Sending rewards to peers")
