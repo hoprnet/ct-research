@@ -500,10 +500,10 @@ class Core(Base):
                 "expected": peer.message_count_for_reward,
                 "remaining": peer.message_count_for_reward,
                 "issued": 0,
-                "tag": DBUtils.peerIDToInt(peer.address.id, self.params.pg),
+                "tag": idx,
                 "ticket-price": peer.economic_model.budget.ticket_price,
-            }  # will be retrieved from the API once the endpoint is available in 2.1
-            for peer in peers
+            }
+            for idx, peer in enumerate(peers)
         }
 
         self.debug(f"Distribution summary: {reward_per_peer}")

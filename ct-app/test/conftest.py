@@ -204,8 +204,6 @@ def channels(peers: list[Peer]) -> NodeChannelsResponse:
 async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
     core = Core()
 
-    mocker.patch.object(DBUtils, "peerIDToInt", return_value=0)
-
     params = Parameters()
     with open("./test/test_config.yaml", "r") as file:
         params.parse(yaml.safe_load(file))
