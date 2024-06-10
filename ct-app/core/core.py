@@ -511,7 +511,7 @@ class Core(Base):
             iteration < max_iterations and _total_messages_to_send(reward_per_peer) > 0
         ):
             self.debug("Splitting peers into groups")
-            peers_groups = Utils.splitDict(reward_per_peer, len(reward_per_peer))
+            peers_groups = Utils.splitDict(reward_per_peer, len(self.nodes))
 
             # send rewards to peers
             self.debug("Sending rewards to peers")
