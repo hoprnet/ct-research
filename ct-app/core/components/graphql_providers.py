@@ -58,7 +58,9 @@ class GraphQLProvider(Base):
 
         # call `self._execute(self._sku_query, vars)` with a timeout
         try:
-            response = await asyncio.wait_for(self._execute(self._sku_query, vars), timeout=30)
+            response = await asyncio.wait_for(
+                self._execute(self._sku_query, vars), timeout=30
+            )
         except asyncio.TimeoutError:
             self.error("Query timeout occurred")
             return False
@@ -81,10 +83,12 @@ class GraphQLProvider(Base):
             vars.update(kwargs)
 
             try:
-                response = await asyncio.wait_for(self._execute(self._sku_query, vars), timeout=30)
+                response = await asyncio.wait_for(
+                    self._execute(self._sku_query, vars), timeout=30
+                )
             except asyncio.TimeoutError:
                 self.error("Timeout error while fetching data from subgraph.")
-                break            
+                break
             if response is None:
                 break
 
@@ -136,8 +140,9 @@ class GraphQLProvider(Base):
 
         if result is None:
             return False
-        
+
         return result
+
 
 class SafesProvider(GraphQLProvider):
     def __init__(self, url: str):
@@ -175,13 +180,12 @@ class wxHOPRTransactionProvider(GraphQLProvider):
     def print_prefix(self) -> str:
         return "transaction-provider"
 
+
 class RewardsProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
         self._default_key = "accounts"
-        self._sku_query = self._load_query(
-            "core/subgraph_queries/rewards.graphql"
-        )
+        self._sku_query = self._load_query("core/subgraph_queries/rewards.graphql")
 
     @property
     def print_prefix(self) -> str:

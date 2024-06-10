@@ -1,59 +1,92 @@
 import datetime
-import os
+import random
+from test.components.utils import handle_envvars
 
 import pytest
 from core.components.utils import Utils
 from core.model.address import Address
 from core.model.peer import Peer
+from core.model.subgraph_entry import SubgraphEntry
+from core.model.topology_entry import TopologyEntry
+from hoprd_sdk.models import ChannelInfoResponse
 
 
-def test_envvar():
-    os.environ["STRING_ENVVAR"] = "string-envvar"
-    os.environ["INT_ENVVAR"] = "1"
-    os.environ["FLOAT_ENVVAR"] = "1.0"
-
-    assert Utils.envvar("FAKE_STRING_ENVVAR", "default") == "default"
-    assert Utils.envvar("STRING_ENVVAR", type=str) == "string-envvar"
-    assert Utils.envvar("INT_ENVVAR", type=int) == 1
-    assert Utils.envvar("FLOAT_ENVVAR", type=float) == 1.0
-
-    del os.environ["STRING_ENVVAR"]
-    del os.environ["INT_ENVVAR"]
-    del os.environ["FLOAT_ENVVAR"]
-
-
-def test_envvarWithPrefix():
-    os.environ["TEST_ENVVAR_2"] = "2"
-    os.environ["TEST_ENVVAR_1"] = "1"
-    os.environ["TEST_ENVVAR_3"] = "3"
-    os.environ["TEST_ENVVOR_4"] = "3"
-
-    assert Utils.envvarWithPrefix("TEST_ENVVAR_", type=int) == {
-        "TEST_ENVVAR_1": 1,
-        "TEST_ENVVAR_2": 2,
-        "TEST_ENVVAR_3": 3,
-    }
-
-    del os.environ["TEST_ENVVAR_1"]
-    del os.environ["TEST_ENVVAR_2"]
-    del os.environ["TEST_ENVVAR_3"]
-    del os.environ["TEST_ENVVOR_4"]
+@pytest.fixture
+def channel_topology():
+    return [
+        ChannelInfoResponse(
+            f"{1*1e18:.0f}",
+            1,
+            "channel_1",
+            5,
+            "dst_addr_1",
+            "dst_1",
+            "src_addr_1",
+            "src_1",
+            "Open",
+            0,
+        ),
+        ChannelInfoResponse(
+            f"{2*1e18:.0f}",
+            1,
+            "channel_2",
+            5,
+            "dst_addr_2",
+            "dst_2",
+            "src_addr_1",
+            "src_1",
+            "Open",
+            0,
+        ),
+        ChannelInfoResponse(
+            f"{3*1e18:.0f}",
+            1,
+            "channel_3",
+            5,
+            "dst_addr_3",
+            "dst_3",
+            "src_addr_1",
+            "src_1",
+            "Closed",
+            0,
+        ),
+        ChannelInfoResponse(
+            f"{4*1e18:.0f}",
+            1,
+            "channel_4",
+            5,
+            "dst_addr_1",
+            "dst_1",
+            "src_addr_2",
+            "src_2",
+            "Open",
+            0,
+        ),
+        ChannelInfoResponse(
+            f"{1*1e18:.0f}",
+            1,
+            "channel_5",
+            5,
+            "dst_addr_2",
+            "dst_2",
+            "src_addr_2",
+            "src_2",
+            "Open",
+            0,
+        ),
+    ]
 
 
 def test_nodeAddresses():
-    os.environ["NODE_ADDRESS_1"] = "address_1"
-    os.environ["NODE_ADDRESS_2"] = "address_2"
-    os.environ["NODE_KEY_1"] = "address_1_key"
-    os.environ["NODE_KEY_2"] = "address_2_key"
-
-    addresses, keys = Utils.nodesAddresses("NODE_ADDRESS_", "NODE_KEY_")
-    assert addresses == ["address_1", "address_2"]
-    assert keys == ["address_1_key", "address_2_key"]
-
-    del os.environ["NODE_ADDRESS_1"]
-    del os.environ["NODE_ADDRESS_2"]
-    del os.environ["NODE_KEY_1"]
-    del os.environ["NODE_KEY_2"]
+    with handle_envvars(
+        node_address_1="address_1",
+        node_address_2="address_2",
+        node_key_1="address_1_key",
+        node_key_2="address_2_key",
+    ):
+        addresses, keys = Utils.nodesAddresses("NODE_ADDRESS_", "NODE_KEY_")
+        assert addresses == ["address_1", "address_2"]
+        assert keys == ["address_1_key", "address_2_key"]
 
 
 def test_httpPOST():
@@ -61,7 +94,27 @@ def test_httpPOST():
 
 
 def test_mergeDataSources():
-    pytest.skip("Not implemented")
+    topology_list = [
+        TopologyEntry(None, None, 1),
+        TopologyEntry("peer_id_2", "address_2", 2),
+        TopologyEntry("peer_id_3", "address_3", 3),
+        TopologyEntry("peer_id_4", "address_4", 4),
+    ]
+    peers_list = [
+        Peer("peer_id_1", "address_1", "1.0.0"),
+        Peer("peer_id_2", "address_2", "1.1.0"),
+        Peer("peer_id_3", "address_3", "1.0.2"),
+    ]
+    subgraph_list = [
+        SubgraphEntry("address_1", "10", "safe_address_1", "1"),
+        SubgraphEntry("address_2", "10", "safe_address_2", "2"),
+        SubgraphEntry("address_3", None, "safe_address_3", "3"),
+    ]
+
+    merged = Utils.mergeDataSources(topology_list, peers_list, subgraph_list)
+
+    print(merged)
+    assert len(merged) == 1
 
 
 def test_allowManyNodePerSafe():
@@ -104,8 +157,12 @@ def test_exclude():
         assert item.address in blacklist
 
 
-def test_rewardProbability():
-    pass
+def test_rewardProbability(peers: list[Peer]):
+    Utils.rewardProbability(peers)
+
+    splits = [peer.reward_probability for peer in peers]
+    assert sum(splits) == pytest.approx(1.0)
+    assert all(splits)
 
 
 def test_stringArrayToGCP():
@@ -141,9 +198,22 @@ def test_nextDelayInSeconds():
     assert delay == 1
 
 
-def test_aggregatePeerBalanceInChannels():
-    pytest.skip("Not implemented")
+@pytest.mark.asyncio
+async def test_aggregatePeerBalanceInChannels(channel_topology):
+    results = await Utils.aggregatePeerBalanceInChannels(channel_topology)
+
+    assert len(results) == 2
+    assert results["src_1"]["channels_balance"] == 3
+    assert results["src_2"]["channels_balance"] == 5
 
 
-def test_taskSendMessage():
-    pytest.skip("Not implemented")
+def test_splitDict():
+    bins = random.randint(2, 10)
+    num_elements = random.randint(50, 100)
+    source_dict = {f"key_{i}": f"value_{i}" for i in range(num_elements)}
+
+    result = Utils.splitDict(source_dict, bins)
+    key_counts = [len(item.keys()) for item in result]
+
+    assert len(result) == bins
+    assert max(key_counts) - min(key_counts) <= 1

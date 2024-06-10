@@ -1,4 +1,5 @@
 import asyncio
+import time
 from datetime import datetime
 
 from prometheus_client import Gauge
@@ -6,13 +7,12 @@ from prometheus_client import Gauge
 from .components.baseclass import Base
 from .components.channelstatus import ChannelStatus
 from .components.decorators import connectguard, flagguard, formalin
-from .components.hoprd_api import HoprdAPI
+from .components.hoprd_api import MESSAGE_TAG, HoprdAPI
 from .components.lockedvar import LockedVar
 from .components.parameters import Parameters
 from .components.utils import Utils
 from .model.address import Address
 from .model.peer import Peer
-from .model.topology_entry import TopologyEntry
 
 BALANCE = Gauge("balance", "Node balance", ["peer_id", "token"])
 PEERS_COUNT = Gauge("peers_count", "Node peers", ["peer_id"])
@@ -138,6 +138,8 @@ class Node(Base):
             for token, balance in balances.items():
                 BALANCE.labels(addr.id, token).set(balance)
 
+        return balances
+
     @flagguard
     @formalin("Opening channels")
     @connectguard
@@ -154,7 +156,11 @@ class Node(Base):
         ]
 
         addresses_with_channels = {c.destination_address for c in out_opens}
-        all_addresses = {p.address.address for p in await self.peers.get()}
+        all_addresses = {
+            p.address.address
+            for p in await self.peers.get()
+            if not p.version_is_old(self.params.peer.minVersion)
+        }
         addresses_without_channels = all_addresses - addresses_with_channels
 
         self.debug(f"Addresses without channels: {len(addresses_without_channels)}")
@@ -209,7 +215,6 @@ class Node(Base):
         """
         Close channels in PendingToClose state.
         """
-
         node_address = await self.address.get()
         out_pendings = [
             c for c in await self.outgoings.get() if ChannelStatus.isPending(c.status)
@@ -331,6 +336,7 @@ class Node(Base):
         results = await self.api.peers(
             params=["peer_id", "peer_address", "reported_version"], quality=0.5
         )
+
         peers = {
             Peer(item["peer_id"], item["peer_address"], item["reported_version"])
             for item in results
@@ -364,8 +370,7 @@ class Node(Base):
             outgoings = [
                 c
                 for c in channels.all
-                if c.source_peer_id == addr.id
-                and not ChannelStatus.isClosed(c.status)
+                if c.source_peer_id == addr.id and not ChannelStatus.isClosed(c.status)
             ]
 
             await self.outgoings.set(outgoings)
@@ -410,7 +415,7 @@ class Node(Base):
 
         if node_address is None:
             return
-        
+
         results = await Utils.aggregatePeerBalanceInChannels(channels)
 
         self.debug(f"Results of channels balance aggregation: {results}")
@@ -419,10 +424,125 @@ class Node(Base):
             self.warning("Funding info not found")
             return
 
-        entry = TopologyEntry.fromDict(node_address.id, results[node_address.id])
+        funds = results[node_address.id].get("channels_balance", 0)
 
-        self.debug(f"Channels funds: { entry.channels_balance}")
-        TOTAL_CHANNEL_FUNDS.labels(node_address.id).set(entry.channels_balance)
+        self.debug(f"Channels funds: {funds}")
+        TOTAL_CHANNEL_FUNDS.labels(node_address.id).set(funds)
+
+        return funds
+
+    async def _delay_message(
+        self,
+        relayer: str,
+        message: str,
+        tag: int,
+        sleep: float,
+    ):
+        await asyncio.sleep(sleep)
+
+        if node_address := await self.address.get():
+            return await self.api.send_message(node_address.id, message, [relayer], tag)
+        return False
+
+    async def distribute_rewards(
+        self, peer_group: dict[str, dict[str, int]]
+    ) -> dict[str, int]:
+        # format of peer group is:
+        #  {
+        #     "0x1212": {
+        #         "remaining": 10,
+        #         "tag": 49,
+        #         "ticket-price": 0.1,
+        #         ...
+        #     },
+        #     ...
+        # }
+
+        issued_count = {peer_id: 0 for peer_id in peer_group.keys()}
+        node_address = await self.address.get()
+
+        if node_address is None:
+            return issued_count
+
+        for relayer, data in peer_group.items():
+            remaining = data.get("remaining", 0)
+            tag = data.get("tag", None)
+            ticket_price = data.get("ticket-price", None)
+
+            if remaining == 0:
+                continue
+
+            if tag is None or ticket_price is None:
+                self.error(
+                    "Invalid peer in group when sending messages (missing data)"
+                )  # should never happen
+                continue
+
+            channel_balance = await self.api.channel_balance(node_address.id, relayer)
+            max_possible = int(min(remaining, channel_balance // ticket_price))
+
+            if max_possible == 0:
+                self.warning(
+                    f"Channel balance to {relayer} doesn't allow to send any message"
+                )
+                continue
+
+            tasks = set[asyncio.Task]()
+
+            for it in range(max_possible):
+                sleep = it * self.params.distribution.delayBetweenTwoMessages
+                message = f"{relayer}//{time.time()}-{it + 1}/{max_possible}"
+
+                task = asyncio.create_task(
+                    self._delay_message(
+                        relayer,
+                        message,
+                        MESSAGE_TAG + tag,
+                        sleep,
+                    )
+                )
+                tasks.add(task)
+
+            issued = await asyncio.gather(*tasks)
+            issued_count[relayer] = sum(issued)
+
+            self.debug(f"Sent {issued_count[relayer]} messages through {relayer}")
+
+        return issued_count
+
+    async def check_inbox(
+        self, peer_group: dict[str, dict[str, int]]
+    ) -> dict[str, int]:
+        # format of peer group is:
+        #  {
+        #     "0x1212": {
+        #         "remaining": 10,
+        #         "tag": 49,
+        #         "ticket-price": 0.1,
+        #         ...
+        #     },
+        #     ...
+        # }
+        relayed_count = {peer_id: 0 for peer_id in peer_group.keys()}
+
+        for relayer, data in peer_group.items():
+            tag = data.get("tag", None)
+            if tag is None:
+                self.error(
+                    "Invalid peer in group when querying inbox (missing tag)"
+                )  # should never happen
+                continue
+            if not isinstance(tag, int):
+                self.error(
+                    f"Invalid peer in group when querying inbox (invalid tag: '{tag}')"
+                )
+                continue
+
+            messages = await self.api.messages_pop_all(MESSAGE_TAG + tag)
+            relayed_count[relayer] = len(messages)
+            self.debug(f"{relayed_count[relayer]} messages relayed by {relayer}")
+
+        return relayed_count
 
     def tasks(self):
         self.info("Starting node")

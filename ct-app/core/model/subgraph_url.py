@@ -1,4 +1,5 @@
 from core.components.parameters import Parameters
+
 from .subgraph_type import SubgraphType
 
 
@@ -24,4 +25,4 @@ class SubgraphURL:
         return self.param_set.URLBackup
 
     def __call__(self, type: SubgraphType) -> str:
-        return self._urls[type]
+        return self._urls.get(type, None)

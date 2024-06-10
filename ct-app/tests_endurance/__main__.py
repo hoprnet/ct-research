@@ -1,7 +1,7 @@
-import yaml
 import os
 
 import click
+import yaml
 
 from . import *  # noqa: F403
 from . import EnduranceTest
@@ -65,12 +65,12 @@ def main(configfile: str):
                 success = eval(value.get("executor"))(**stage)()
             except Exception as e:
                 EnduranceTest.error(f"{e.__class__.__name__}: {e}", prefix="\t")
-                success = False
+                success = False, "Exception raised"
 
             stage_results.append(success)
             display_success(success)
 
-        successful_stages = sum(stage_results)
+        successful_stages = sum([result[0] for result in stage_results])
         scenarios_results.append(successful_stages == num_stages)
 
         display_results(successful_stages, num_stages, "test")
@@ -85,11 +85,12 @@ def main(configfile: str):
     del_envvars(global_env.keys())
 
 
-def display_success(success: bool):
+def display_success(result: tuple[bool, str]):
+    success, message = result
     if success:
         EnduranceTest.success("Test successful", prefix="\t", end="\n" * 2)
     else:
-        EnduranceTest.error("Test failed", prefix="\t", end="\n" * 2)
+        EnduranceTest.error(f"Test failed: {message}", prefix="\t", end="\n" * 2)
 
 
 def display_results(hit: int, total: int, element: str):

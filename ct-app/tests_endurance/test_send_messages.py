@@ -10,6 +10,7 @@ from . import EnduranceTest, Metric
 class SendMessages(EnduranceTest):
     async def on_start(self):
         self.results = []
+        self.tag = random.randint(0, 2**16 - 1)
 
         self.api = HoprdAPI(Utils.envvar("API_URL"), Utils.envvar("API_KEY"))
         self.recipient = await self.api.get_address("hopr")
@@ -40,6 +41,7 @@ class SendMessages(EnduranceTest):
         self.info(f"channel: {channel.channel_id}", prefix="\t")
         self.info(f"status : {channel.status}", prefix="\t")
         self.info(f"balance: {channel.balance}HOPR", prefix="\t")
+        self.info(f"tag    : {self.tag}", prefix="\t")
 
         await self.api.messages_pop_all(Utils.envvar("MESSAGE_TAG", type=int))
 

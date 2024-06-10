@@ -1,7 +1,6 @@
 import asyncio
 
 import pytest
-
 from core.components.lockedvar import LockedVar
 
 
@@ -37,6 +36,7 @@ async def test_locker_var_infer_type():
     await locked_var.set("string")
     assert await locked_var.get() == "string"
 
+
 @pytest.mark.asyncio
 async def test_locked_var_inc_with_infer_type():
     locked_var = LockedVar("test_var", 0, infer_type=True)
@@ -44,6 +44,7 @@ async def test_locked_var_inc_with_infer_type():
     await locked_var.inc(1.0)
 
     assert await locked_var.get() == 1.0
+
 
 @pytest.mark.asyncio
 async def test_locked_var_update_with_infer_type():

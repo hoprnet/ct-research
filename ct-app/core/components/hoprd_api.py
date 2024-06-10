@@ -10,13 +10,7 @@ from hoprd_sdk import (
     SendMessageBodyRequest,
     TagQueryRequest,
 )
-from hoprd_sdk.api import (
-    AccountApi,
-    ChannelsApi,
-    MessagesApi,
-    NetworkApi,
-    NodeApi,
-)
+from hoprd_sdk.api import AccountApi, ChannelsApi, MessagesApi, NetworkApi, NodeApi
 from hoprd_sdk.rest import ApiException
 from requests import Response
 from urllib3.exceptions import MaxRetryError
@@ -40,7 +34,7 @@ class HoprdAPI(Base):
         self.configuration.refresh_api_key_hook = _refresh_token_hook
 
     @property
-    def print_prefix(self) -> str:
+    def print_prefix(cls) -> str:
         return "api"
 
     async def __call_api(
@@ -120,7 +114,7 @@ class HoprdAPI(Base):
         is_ok, response = await self.__call_api(AccountApi, "balances")
 
         if not is_ok:
-            return None
+            return {}
 
         return_dict = {}
 
@@ -142,9 +136,7 @@ class HoprdAPI(Base):
         """
         body = OpenChannelBodyRequest(amount, peer_address)
 
-        is_ok, response = await self.__call_api(
-            ChannelsApi, "open_channel", body=body
-        )
+        is_ok, response = await self.__call_api(ChannelsApi, "open_channel", body=body)
 
         return response.channel_id if is_ok else None
 
@@ -212,7 +204,6 @@ class HoprdAPI(Base):
             full_topology=False,
             including_closed=False,
         )
-
         if is_ok:
             if not hasattr(response, "outgoing"):
                 self.warning("Response does not contain 'outgoing'")
@@ -241,6 +232,7 @@ class HoprdAPI(Base):
             full_topology="true",
             including_closed="true" if include_closed else "false",
         )
+
         return response if is_ok else []
 
     async def peers(
@@ -248,7 +240,7 @@ class HoprdAPI(Base):
         params: Union[list, str] = "peer_id",
         status: str = "connected",
         quality: float = 0.5,
-    ):
+    ) -> list[dict]:
         """
         Returns a list of peers.
         :param: param: list or str = "peer_id"
@@ -335,7 +327,7 @@ class HoprdAPI(Base):
         """
         body = TagQueryRequest(tag=tag)
         _, response = await self.__call_api(MessagesApi, "pop", body=body)
-    
+
         return response
 
     async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
@@ -350,7 +342,7 @@ class HoprdAPI(Base):
 
     async def node_info(self):
         _, response = await self.__call_api(NodeApi, "info")
-        
+
         return response
 
     async def ticket_price(self) -> int:

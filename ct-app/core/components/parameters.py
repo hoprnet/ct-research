@@ -1,11 +1,12 @@
 from .baseclass import Base
-from .utils import Utils
+from .environment_utils import EnvironmentUtils
 
 
 class Parameters(Base):
     """
     Class that represents a set of parameters that can be accessed and modified. The parameters are stored in a dictionary and can be accessed and modified using the dot notation. The parameters can be loaded from environment variables with a specified prefix.
     """
+
     def __init__(self):
         super().__init__()
 
@@ -21,7 +22,7 @@ class Parameters(Base):
                 setattr(self, key, value)
 
     def overrides(self, prefix: str):
-        for key, value in Utils.envvarWithPrefix(prefix).items():
+        for key, value in EnvironmentUtils.envvarWithPrefix(prefix).items():
             path = key.replace(prefix, "").lower().split("_")
 
             parent = self
@@ -41,7 +42,6 @@ class Parameters(Base):
                 else:
                     raise KeyError(f"Key {key} not found in parameters")
 
-
     def from_env(self, *prefixes: list[str]):
         for prefix in prefixes:
             subparams_name = prefix.lower()
@@ -55,28 +55,21 @@ class Parameters(Base):
             else:
                 subparams = type(self)()
 
-            for key, value in Utils.envvarWithPrefix(prefix).items():
-                k = key.replace(prefix, "").lower()
-
-                # convert snake case to camel case
-                k = k.replace("_", " ").title().replace(" ", "")
-                k = k[0].lower() + k[1:]
-
-                try:
-                    value = float(value)
-                except ValueError:
-                    pass
-
-                try:
-                    integer = int(value)
-                    if integer == value:
-                        value = integer
-                except ValueError:
-                    pass
-
-                setattr(subparams, k, value)
+            self._parse_env_vars(prefix, subparams)
 
             setattr(self, subparams_name, subparams)
+
+    def _parse_env_vars(self, prefix, subparams):
+        for key, value in EnvironmentUtils.envvarWithPrefix(prefix).items():
+            k = self._format_key(key, prefix)
+            value = self._convert(value)
+            setattr(subparams, k, value)
+
+    def _format_key(self, key, prefix):
+        k = key.replace(prefix, "").lower()
+        k = k.replace("_", " ").title().replace(" ", "")
+        k = k[0].lower() + k[1:]
+        return k
 
     def _convert(self, value: str):
         try:

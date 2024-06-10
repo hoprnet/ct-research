@@ -17,6 +17,7 @@ class Equation:
     def fromParameters(cls, parameters: Parameters):
         return cls(parameters.formula, parameters.condition)
 
+
 class Equations:
     def __init__(self, f_x: Equation, g_x: Equation):
         self.f_x = f_x
@@ -74,7 +75,7 @@ class Budget:
     @property
     def distribution_per_period(self):
         return self._distribution_per_period
-    
+
     @property
     def ticket_price(self):
         return self._ticket_price
@@ -108,7 +109,7 @@ class Budget:
     def winning_probability(self, value):
         self._winning_probability = value
         TICKET_WINNING_PROB.set(value)
-    
+
     @classmethod
     def fromParameters(cls, parameters: Parameters):
         return cls(
@@ -154,10 +155,10 @@ class EconomicModel:
     @classmethod
     def fromParameters(cls, parameters: Parameters):
         return EconomicModel(
-            Equations.fromParameters(parameters.equations), 
-            Coefficients.fromParameters(parameters.coefficients), 
+            Equations.fromParameters(parameters.equations),
+            Coefficients.fromParameters(parameters.coefficients),
             Budget.fromParameters(parameters.budget),
         )
-    
+
     def __repr__(self):
         return f"EconomicModel({self.equations}, {self.coefficients}, {self.budget})"

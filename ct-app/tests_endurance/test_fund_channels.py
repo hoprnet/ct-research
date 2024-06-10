@@ -4,7 +4,6 @@ import random
 from core.components.hoprd_api import HoprdAPI
 from core.components.utils import Utils
 
-# tools import HoprdAPIHelper, envvar
 from . import EnduranceTest, Metric
 
 
