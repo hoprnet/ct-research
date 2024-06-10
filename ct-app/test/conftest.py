@@ -5,9 +5,9 @@ from test.decorators_patches import patches
 import pytest
 import yaml
 from core.components.parameters import Parameters
-from core.model.economic_model import Budget
-from core.model.economic_model import Coefficients as Coefficients
-from core.model.economic_model import EconomicModel, Equation, Equations
+from core.model.budget import Budget
+from core.model.economic_model_legacy import Coefficients as Coefficients
+from core.model.economic_model_legacy import EconomicModelLegacy, Equation, Equations
 from core.model.peer import Peer
 from hoprd_sdk.models import ChannelInfoResponse, NodeChannelsResponse
 from pytest_mock import MockerFixture
@@ -69,14 +69,18 @@ class SideEffect:
 
 
 @pytest.fixture
-def economic_model() -> EconomicModel:
+def economic_model() -> EconomicModelLegacy:
     equations = Equations(
         Equation("a * x", "l <= x <= c"),
         Equation("a * c + (x - c) ** (1 / b)", "x > c"),
     )
     parameters = Coefficients(1, 1, 3, 0)
-    budget = Budget(100, 15, 0.25, 2, 1)
-    return EconomicModel(equations, parameters, budget)
+
+    model = EconomicModelLegacy(equations, parameters, 1, 15)
+    budget = Budget(100, 2, 1)
+
+    model.budget = budget
+    return model
 
 
 @pytest.fixture
@@ -95,7 +99,7 @@ def peers_raw() -> list[dict]:
 
 
 @pytest.fixture
-def peers(peers_raw: list[dict], economic_model: EconomicModel) -> list[Peer]:
+def peers(peers_raw: list[dict], economic_model: EconomicModelLegacy) -> list[Peer]:
     peers = [
         Peer(peer["peer_id"], peer["peer_address"], peer["reported_version"])
         for peer in peers_raw

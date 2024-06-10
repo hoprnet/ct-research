@@ -85,4 +85,4 @@ class EconomicModelSigmoid:
         )
 
     def __repr__(self):
-        return f"EconomicModel({self.offset}, {self.buckets}, {self.budget})"
+        return f"EconomicModelSigmoid({self.offset}, {self.buckets}, {self.budget})"

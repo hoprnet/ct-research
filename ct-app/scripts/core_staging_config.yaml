@@ -43,9 +43,9 @@ economicModel:
 
     coefficients:
       a: 1
-      b: 1
+      b: 2
       c: 3
-      l: 0
+      l: 0.000001
     
     equations: 
       fx: 

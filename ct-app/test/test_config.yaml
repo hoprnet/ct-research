@@ -35,29 +35,46 @@ flags:
 # =============================================================================
 economicModel:
   minSafeAllowance: -1
-  maxAPRPercentage: 15.0
   NFTThreshold: ~
 
-  coefficients:
-    a: 1
-    b: 1
-    c: 3
-    l: 0
-  
-  equations: 
-    fx: 
-      formula: "a * x"
-      condition: "l <= x <= c"
-    gx:
-      formula: "a * c + (x - c) ** (1 / b)"
-      condition: "x > c"
-  
+  legacy:
+    proportion: 0.9
+    apr: 12.0
+
+    coefficients:
+      a: 1
+      b: 2
+      c: 3
+      l: 0.000001
+    
+    equations: 
+      fx: 
+        formula: "a * x"
+        condition: "l <= x <= c"
+      gx:
+        formula: "a * c + (x - c) ** (1 / b)"
+        condition: "x > c"
+
+  sigmoid:
+    proportion: 0.1
+    maxAPRPercentage: 15.0
+    offset: 10
+    networkCapacity: 50
+    totalTokenSupply: 1000000000
+
+    buckets:
+      economicSecurity:
+        flatness: 1.65
+        skewness: 1.50
+        upperbound: 0.5
+      networkCapacity:
+        flatness: 10.0
+        skewness: 2.75
+        upperbound: 1.0
+
   budget:
-    amount: 400
     period: 1200
-    s: 1
     countsInPeriod: 1
-    ticketPrice: 0.5 # deprecated
     winningProbability: 1
 
 # =============================================================================
