@@ -9,7 +9,6 @@ from core.model.economic_model import Budget
 from core.model.economic_model import Coefficients as Coefficients
 from core.model.economic_model import EconomicModel, Equation, Equations
 from core.model.peer import Peer
-from database import Utils as DBUtils
 from hoprd_sdk.models import ChannelInfoResponse, NodeChannelsResponse
 from pytest_mock import MockerFixture
 

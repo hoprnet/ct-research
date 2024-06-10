@@ -5,7 +5,6 @@ from copy import deepcopy
 from datetime import datetime
 from typing import Any
 
-from database import Utils as DBUtils
 from database.database_connection import DatabaseConnection
 from database.models import Reward
 from prometheus_client import Gauge
