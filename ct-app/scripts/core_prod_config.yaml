@@ -16,7 +16,6 @@ flags:
     getPeersRewards: 300
     applyEconomicModel: 120
     distributeRewards: 1
-
     
   node:
     healthcheck: 60
@@ -37,7 +36,7 @@ flags:
 economicModel:
   minSafeAllowance: -1
   maxAPRPercentage: 15.0
-  NFTThreshold: ~
+  NFTThreshold: 30000
 
   coefficients:
     a: 1
@@ -54,6 +53,7 @@ economicModel:
       condition: "x > c"
   
   budget:
+    # one distribution every 30min
     amount: 190000
     period: 2628000 # in seconds
     countsInPeriod: 1460
@@ -64,10 +64,9 @@ economicModel:
 # =============================================================================
 distribution:
   minEligiblePeers: 100
-  messageDeliveryDelay: 10.0
-  delayBetweenTwoMessages: 0.1
-  batchSize: 200
-  maxIterations: 4
+  messageDeliveryDelay: 5.0
+  delayBetweenTwoMessages: 0.0005
+  maxIterations: 3
 
 # =============================================================================
 # 
@@ -90,13 +89,6 @@ channel:
   minBalance: 15
   fundingAmount: 35
   maxAgeSeconds: 172800
-
-# =============================================================================
-# 
-# =============================================================================
-rabbitmq:
-  taskName: send_1_hop_message
-  projectName: ct-app
 
 # =============================================================================
 # 

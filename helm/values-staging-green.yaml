@@ -11,6 +11,8 @@ config: |
       on_fail_continue: true
       allow_recursive: false
       strategies: []
+  inbox:
+    capacity: 2048
 
 identityPool:
   funding:

@@ -44,7 +44,7 @@ spec:
             - secretRef:
                 name: subgraph
             - secretRef:
-                name: rabbitmq-ctdapp
+                name: postgres
           args:
             - python
             - '-m'

@@ -139,7 +139,6 @@ Parameter | Recommanded value (staging) | Description
 `GCP_FILE_PREFIX` | `expected_reward` | File prefix for GCP distribution list storage
 `GCP_FOLDER` | `staging` | Folder on GCP where to store distribution list
 `PEER_MIN_VERSION` | `2.0.0` | Minimum node version to be eligible
-
 `RABBITMQ_HOST` | (check Bitwarden) | 
 `RABBITMQ_PASSWORD` | (check Bitwarden) | 
 `RABBITMQ_PROJECT_NAME` | `ct-app` | Name of the RabbitMQ project
@@ -155,6 +154,8 @@ Parameter | Recommanded value (staging) | Description
 `NODE_ADDRESS_X` (multiple, min. 2) | (check Bitwarden) |
 `NODE_KEY_X` | (check Bitwarden) | 
 
+Then there's a bunch of optional flags to enable features of the app (the name of the feature should be explicit enough).
+The following enables `Core` features:
 
 Then there's a bunch of optional flags to enable features of the app
 Flag | Recommanded value (staging)
