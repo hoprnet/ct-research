@@ -336,10 +336,7 @@ class HoprdAPI(Base):
         :param: tag = 0x0320
         :return: list
         """
-        if tag is None:
-            body = TagQueryRequest()
-        else:
-            body = TagQueryRequest(tag=tag)
+        body = TagQueryRequest() if tag is None else TagQueryRequest(tag=tag)
         _, response = await self.__call_api(MessagesApi, "pop_all", body=body)
         return response.messages if hasattr(response, "messages") else []
 
