@@ -407,13 +407,6 @@ class Core(Base):
             )
             await asyncio.sleep(2)
 
-        # convert to csv and store on GCP
-        filename = Utils.generateFilename(
-            self.params.gcp.filePrefix, self.params.gcp.folder
-        )
-        lines = Peer.toCSV(peers)
-        Utils.stringArrayToGCP(self.params.gcp.bucket, filename, lines)
-
         # distribute rewards
         # randomly split peers into groups, one group per node
         self.info("Initiating distribution.")
@@ -424,8 +417,7 @@ class Core(Base):
         rewards, iterations = t  # trick for typehinting tuple unpacking
         self.info("Distribution completed.")
 
-        self.debug(rewards)
-        self.debug(iterations)
+        self.debug(f"Rewards distributed in {iterations} iterations: {rewards}")
 
         with DatabaseConnection(self.params.pg) as session:
             entries = set[Reward]()

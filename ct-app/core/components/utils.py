@@ -1,8 +1,5 @@
-import csv
 import random
-import time
 from datetime import datetime, timedelta
-from os import path
 from typing import Any
 
 from aiohttp import ClientSession
@@ -10,7 +7,6 @@ from core.model.address import Address
 from core.model.peer import Peer
 from core.model.subgraph_entry import SubgraphEntry
 from core.model.topology_entry import TopologyEntry
-from google.cloud import storage
 
 from .baseclass import Base
 from .channelstatus import ChannelStatus
@@ -156,40 +152,6 @@ class Utils(Base):
             peer.reward_probability = peer.transformed_stake / total_tf_stake
 
         return excluded
-
-    @classmethod
-    def stringArrayToGCP(cls, bucket_name: str, blob_name: str, data: list[str]):
-        """
-        Write a blob from GCS using file-like IO
-        :param bucket_name: The name of the bucket
-        :param blob_name: The name of the blob
-        :param data: The data to write
-        """
-        storage_client = storage.Client()
-        bucket = storage_client.bucket(bucket_name)
-        blob = bucket.blob(blob_name)
-
-        with blob.open("w") as f:
-            writer = csv.writer(f)
-            writer.writerows(data)
-
-    @classmethod
-    def generateFilename(cls, prefix: str, foldername: str, extension: str = "csv"):
-        """
-        Generates a filename with the following format:
-        <prefix>_<timestamp>.<extension>
-        :param prefix: The prefix of the filename
-        :param foldername: The folder where the file will be stored
-        :param extension: The extension of the file
-        :returns: The filename
-        """
-        timestamp = time.strftime("%Y%m%d%H%M%S")
-
-        if extension.startswith("."):
-            extension = extension[1:]
-
-        filename = f"{prefix}_{timestamp}.{extension}"
-        return path.join(foldername, filename)
 
     @classmethod
     def nextEpoch(cls, seconds: int) -> datetime:
