@@ -304,8 +304,7 @@ class Core(Base):
 
         eligibles = Utils.mergeDataSources(topology, peers, registered_nodes)
         self.debug(f"Merged topology and subgraph data ({len(eligibles)} entries).")
-
-        self.debug(f"after merge: {[el.address.id for el in eligibles]}")
+        self.debug(f"After merge: {[el.address.id for el in eligibles]}")
 
         old_peer_addresses = [
             peer.address
@@ -316,7 +315,7 @@ class Core(Base):
         self.debug(
             f"Excluded peers running on old version (< {self.params.peer.minVersion}) ({len(excluded)} entries)."
         )
-        self.debug(f"peers on wrong version: {[el.address.id for el in excluded]}")
+        self.debug(f"Peers on wrong version: {[el.address.id for el in excluded]}")
 
         Utils.allowManyNodePerSafe(eligibles)
         self.debug(f"Allowed many nodes per safe ({len(eligibles)} entries).")
@@ -328,7 +327,7 @@ class Core(Base):
         ]
         excluded = Utils.exclude(eligibles, low_allowance_addresses)
         self.debug(f"Excluded nodes with low safe allowance ({len(excluded)} entries).")
-        self.debug(f"peers with low allowance {[el.address.id for el in excluded]}")
+        self.debug(f"Peers with low allowance {[el.address.id for el in excluded]}")
 
         excluded = Utils.exclude(eligibles, await self.network_nodes_addresses)
         self.debug(f"Excluded network nodes ({len(excluded)} entries).")
