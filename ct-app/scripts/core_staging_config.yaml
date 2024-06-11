@@ -67,7 +67,7 @@ distribution:
   minEligiblePeers: 5
   messageDeliveryDelay: 5.0
   delayBetweenTwoMessages: 0.0005
-  maxIterations: 3
+  maxIterations: 2
 
 # =============================================================================
 # 
