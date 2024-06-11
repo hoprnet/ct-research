@@ -498,7 +498,8 @@ class Node(Base):
             issued_count[relayer] = sum(issued)
 
         for relayer, count in issued_count.items():
-            self.debug(f"Sent {count} messages through {relayer}")
+            if count != 0:
+                self.debug(f"Sent {count} messages through {relayer}")
 
         return issued_count
 
@@ -527,7 +528,9 @@ class Node(Base):
         for relayer, data in peer_group.items():
             count = message_counts.get(MESSAGE_TAG + data.get("tag", None), 0)
             relayed_count[relayer] = count
-            self.debug(f"{count} messages relayed by {relayer}")
+
+            if count != 0:
+                self.debug(f"{count} messages relayed by {relayer}")
 
         return relayed_count
 
