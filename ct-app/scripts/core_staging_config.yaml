@@ -6,7 +6,6 @@ flags:
   core: 
     healthcheck: 10
     checkSubgraphURLs: 30
-    getFundings: 30
     getTicketPrice: 30
     aggregatePeers: 30
     getTopologyData: 30
