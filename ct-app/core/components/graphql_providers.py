@@ -168,19 +168,6 @@ class StakingProvider(GraphQLProvider):
         return "staking-provider"
 
 
-class wxHOPRTransactionProvider(GraphQLProvider):
-    def __init__(self, url: str):
-        super().__init__(url)
-        self._default_key = "transactions"
-        self._sku_query = self._load_query(
-            "core/subgraph_queries/wxhopr_transactions.graphql"
-        )
-
-    @property
-    def print_prefix(self) -> str:
-        return "transaction-provider"
-
-
 class RewardsProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)

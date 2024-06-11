@@ -103,10 +103,6 @@ subgraph:
     queryID: DrkbaCvNGVcNH1RghepLRy6NSHFi8Dmwp4T2LN3LqcjY
     URLBackup: https://api.studio.thegraph.com/query/40439/hopr-stake-all-seasons/v0.0.10
   
-  wxHOPRTxs:
-    queryID: ~
-    URLBackup: https://api.studio.thegraph.com/query/58438/wxhoprtransactions/v0.0.6
-  
   rewards:
     queryID: ~ #Feg6Jero3aQzesVYuqk253NNLyNAZZppbDPKFYEGJ1Hj
     URLBackup: https://api.studio.thegraph.com/query/40439/hopr-channels/version/latest
