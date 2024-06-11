@@ -478,20 +478,11 @@ class Node(Base):
                 )  # should never happen
                 continue
 
-            channel_balance = await self.api.channel_balance(node_address.id, relayer)
-            max_possible = int(min(remaining, channel_balance // ticket_price))
-
-            if max_possible == 0:
-                self.warning(
-                    f"Channel balance to {relayer} doesn't allow to send any message"
-                )
-                continue
-
             tasks = set[asyncio.Task]()
 
-            for it in range(max_possible):
+            for it in range(remaining):
                 sleep = it * self.params.distribution.delayBetweenTwoMessages
-                message = f"{relayer}//{time.time()}-{it + 1}/{max_possible}"
+                message = f"{relayer}//{time.time()}-{it + 1}/{remaining}"
 
                 task = asyncio.create_task(
                     self._delay_message(
@@ -506,7 +497,8 @@ class Node(Base):
             issued = await asyncio.gather(*tasks)
             issued_count[relayer] = sum(issued)
 
-            self.debug(f"Sent {issued_count[relayer]} messages through {relayer}")
+        for relayer, count in issued_count.items():
+            self.debug(f"Sent {count} messages through {relayer}")
 
         return issued_count
 
@@ -525,22 +517,23 @@ class Node(Base):
         # }
         relayed_count = {peer_id: 0 for peer_id in peer_group.keys()}
 
-        for relayer, data in peer_group.items():
-            tag = data.get("tag", None)
-            if tag is None:
-                self.error(
-                    "Invalid peer in group when querying inbox (missing tag)"
-                )  # should never happen
-                continue
-            if not isinstance(tag, int):
-                self.error(
-                    f"Invalid peer in group when querying inbox (invalid tag: '{tag}')"
-                )
-                continue
+        messages = await self.api.messages_pop_all()
+        self.debug(f"{messages}")
 
-            messages = await self.api.messages_pop_all(MESSAGE_TAG + tag)
-            relayed_count[relayer] = len(messages)
-            self.debug(f"{relayed_count[relayer]} messages relayed by {relayer}")
+        received_messages_tags = [int(message.tag) for message in messages]
+        self.debug(f"{received_messages_tags}")
+
+        message_counts = {tag: 0 for tag in set(received_messages_tags)}
+
+        for tag in received_messages_tags:
+            message_counts[tag] += 1
+
+        self.debug(f"{message_counts}")
+
+        for relayer, data in peer_group.items():
+            count = message_counts.get(MESSAGE_TAG + data.get("tag", None), 0)
+            relayed_count[relayer] = count
+            self.debug(f"{count} messages relayed by {relayer}")
 
         return relayed_count
 
