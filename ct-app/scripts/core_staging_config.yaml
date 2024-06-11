@@ -67,15 +67,7 @@ distribution:
   minEligiblePeers: 5
   messageDeliveryDelay: 5.0
   delayBetweenTwoMessages: 0.0005
-  maxIterations: 3
-
-# =============================================================================
-# 
-# =============================================================================
-gcp:
-  filePrefix: expected_reward
-  folder: expected_rewards
-  bucket: hoprnet-ctdapp-staging
+  maxIterations: 2
 
 # =============================================================================
 # 

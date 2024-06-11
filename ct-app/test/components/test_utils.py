@@ -113,7 +113,6 @@ def test_mergeDataSources():
 
     merged = Utils.mergeDataSources(topology_list, peers_list, subgraph_list)
 
-    print(merged)
     assert len(merged) == 1
 
 
@@ -163,20 +162,6 @@ def test_rewardProbability(peers: list[Peer]):
     splits = [peer.reward_probability for peer in peers]
     assert sum(splits) == pytest.approx(1.0)
     assert all(splits)
-
-
-def test_stringArrayToGCP():
-    pytest.skip("Not implemented")
-
-
-def test_generateFilename():
-    prefix = "file_prefix"
-    folder = "folder"
-    ext = "ext"
-    filename = Utils.generateFilename(prefix, folder, ext)
-
-    assert filename.startswith(folder)
-    assert filename.index(folder) < filename.index(prefix) < filename.index(ext)
 
 
 def test_nextEpoch():
