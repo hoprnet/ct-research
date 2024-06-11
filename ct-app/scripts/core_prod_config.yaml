@@ -52,11 +52,11 @@ economicModel:
       condition: "x > c"
   
   budget:
-    # one distribution every 30min
+    # one distribution every 5min
     amount: 190000
     period: 2628000 # in seconds
     s: 1
-    countsInPeriod: 1460
+    countsInPeriod: 8760
     winningProbability: 1
 
 # =============================================================================
@@ -66,15 +66,7 @@ distribution:
   minEligiblePeers: 100
   messageDeliveryDelay: 5.0
   delayBetweenTwoMessages: 0.0005
-  maxIterations: 3
-
-# =============================================================================
-# 
-# =============================================================================
-gcp:
-  filePrefix: expected_reward
-  folder: expected_rewards
-  bucket: hoprnet-ctdapp-prod
+  maxIterations: 2
 
 # =============================================================================
 # 
