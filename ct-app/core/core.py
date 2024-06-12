@@ -124,9 +124,9 @@ class Core(Base):
 
     @budget.setter
     def budget(self, value: Budget):
-        self._budget = deepcopy(value)
-        self.legacy_model.budget = deepcopy(value)
-        self.sigmoid_model.budget = deepcopy(value)
+        self._budget = value
+        self.legacy_model.budget = value
+        self.sigmoid_model.budget = value
 
     @property
     def print_prefix(self) -> str:
