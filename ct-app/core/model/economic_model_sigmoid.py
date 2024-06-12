@@ -21,7 +21,11 @@ class Bucket:
         except ValueError as e:
             raise e
         except ZeroDivisionError as e:
-            raise ValueError(e)
+        except ZeroDivisionError as e:
+            raise ValueError("Zero division error in APR calculation") from e
+
+        except OverflowError as e:
+            raise ValueError("Overflow error in APR calculation") from e
         except OverflowError as e:
             raise ValueError(e)
 
