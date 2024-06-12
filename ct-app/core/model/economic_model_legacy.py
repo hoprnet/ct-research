@@ -78,12 +78,9 @@ class EconomicModelLegacy:
         Calculate the message count for the reward.
         """
         rewards = self.apr / 12 * self.transformed_stake(stake)
-        denominator = self.budget.ticket_price * self.budget.winning_probability
+        under = self.budget.ticket_price * self.budget.winning_probability
 
-        if denominator != 0:
-            return round(rewards / denominator * self.proportion)
-        else:
-            return 0
+        return round(rewards / under * self.proportion) if under != 0 else 0
 
     @classmethod
     def fromParameters(cls, parameters: Parameters):

@@ -77,6 +77,20 @@ class Peer:
             self.channel_balance
         )
 
+    @property
+    def has_low_stake(self) -> bool:
+        if self.economic_model is None:
+            raise ValueError("Economic model not set")
+
+        return self.split_stake < self.economic_model.coefficients.l
+
+    @property
+    def transformed_stake(self) -> float:
+        if self.economic_model is None:
+            raise ValueError("Economic model not set")
+
+        return self.economic_model.transformed_stake(self.split_stake)
+
     @classmethod
     def attributesToExport(cls):
         return [

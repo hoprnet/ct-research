@@ -64,9 +64,9 @@ class Core(Base):
 
         self.nodes = list[Node]()
 
-        self.budget: Budget = None
         self.legacy_model: EconomicModelLegacy = None
         self.sigmoid_model: EconomicModelSigmoid = None
+        self._budget: Budget = None
 
         self.tasks = set[asyncio.Task]()
 
@@ -99,28 +99,34 @@ class Core(Base):
         for node in self.nodes:
             node.params = params
 
-        self.budget = Budget.fromParameters(self.params.economicModel.budget)
-
         self.legacy_model = EconomicModelLegacy.fromParameters(
             self.params.economicModel.legacy
         )
         self.sigmoid_model = EconomicModelSigmoid.fromParameters(
             self.params.economicModel.sigmoid
         )
-
-        self.legacy_model.budget = deepcopy(self.budget)
-        self.sigmoid_model.budget = deepcopy(self.budget)
+        self.budget = Budget.fromParameters(self.params.economicModel.budget)
 
         self._safe_subgraph_url = SubgraphURL(
-            self.params.subgraph.deployerKey, self.params.subgraph.safesBalance
+            self.params.subgraph.apiKey, self.params.subgraph.safesBalance
         )
         self._staking_subgraph_url = SubgraphURL(
-            self.params.subgraph.deployerKey, self.params.subgraph.staking
+            self.params.subgraph.apiKey, self.params.subgraph.staking
         )
 
         self._rewards_subgraph_url = SubgraphURL(
-            self.params.subgraph.deployerKey, self.params.subgraph.rewards
+            self.params.subgraph.apiKey, self.params.subgraph.rewards
         )
+
+    @property
+    def budget(self):
+        return self._budget
+
+    @budget.setter
+    def budget(self, value: Budget):
+        self._budget = deepcopy(value)
+        self.legacy_model.budget = deepcopy(value)
+        self.sigmoid_model.budget = deepcopy(value)
 
     @property
     def print_prefix(self) -> str:
@@ -376,8 +382,6 @@ class Core(Base):
             f"Assigned economic model to eligible nodes. ({len(eligibles)} entries)."
         )
 
-        excluded = Utils.rewardProbability(eligibles)
-        self.debug(f"Excluded nodes with low stakes ({len(excluded)} entries).")
         self.info(f"Eligible nodes ({len(eligibles)} entries).")
         self.debug(f"Final eligible list {[el.address.id for el in eligibles]}")
 
@@ -391,7 +395,7 @@ class Core(Base):
         ELIGIBLE_PEERS_COUNTER.set(len(eligibles))
 
         for peer in eligibles:
-            JOBS_PER_PEER.labels(peer.address.id).set(peer.message_count_for_reward)
+            # JOBS_PER_PEER.labels(peer.address.id).set(peer.message_count_for_reward)
             PEER_SPLIT_STAKE.labels(peer.address.id).set(peer.split_stake)
             PEER_SAFE_COUNT.labels(peer.address.id).set(peer.safe_address_count)
             PEER_TF_STAKE.labels(peer.address.id).set(peer.transformed_stake)
@@ -468,17 +472,33 @@ class Core(Base):
                 [max(value.get("remaining", 0), 0) for value in rewards.values()]
             )
 
+        economic_security = (
+            sum([peer.split_stake for peer in peers])
+            / self.params.economicModel.sigmoid.totalTokenSupply
+        )
+        network_capacity = (
+            len(peers) / self.params.economicModel.sigmoid.networkCapacity
+        )
+        sigmoid_model_input = [economic_security, network_capacity]
+
         iteration: int = 0
-        reward_per_peer = {
-            peer.address.id: {
-                "expected": peer.message_count_for_reward,
-                "remaining": peer.message_count_for_reward,
+
+        reward_per_peer = {peer.address.id: {} for peer in peers}
+        for idx, peer in enumerate(peers):
+            legacy_message_count = self.legacy_model.message_count_for_reward(
+                peer.split_stake
+            )
+            sigmoid_message_count = self.sigmoid_model.message_count_for_reward(
+                peer.split_stake, sigmoid_model_input
+            )
+
+            reward_per_peer[peer.address.id] = {
+                "expected": legacy_message_count + sigmoid_message_count,
+                "remaining": legacy_message_count + sigmoid_message_count,
                 "issued": 0,
                 "tag": idx,
-                "ticket-price": peer.economic_model.budget.ticket_price,
+                "ticket-price": self.budget.ticket_price,
             }
-            for idx, peer in enumerate(peers)
-        }
 
         self.debug(f"Distribution summary: {reward_per_peer}")
 

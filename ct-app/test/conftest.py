@@ -78,6 +78,8 @@ def economic_model() -> EconomicModelLegacy:
 
     model = EconomicModelLegacy(equations, parameters, 1, 15)
     budget = Budget(100, 2, 1)
+    budget.ticket_price = 0.1
+    budget.winning_probability = 1
 
     model.budget = budget
     return model
@@ -99,17 +101,14 @@ def peers_raw() -> list[dict]:
 
 
 @pytest.fixture
-def peers(peers_raw: list[dict], economic_model: EconomicModelLegacy) -> list[Peer]:
+def peers(peers_raw: list[dict]) -> list[Peer]:
     peers = [
         Peer(peer["peer_id"], peer["peer_address"], peer["reported_version"])
         for peer in peers_raw
     ]
     for peer in peers:
-        peer.economic_model = economic_model
-        peer.reward_probability = 0.02
         peer.safe_balance = randint(100, 200)
         peer.channel_balance = randint(10, 50)
-        peer.economic_model.budget.ticket_price = 0.01
 
     return peers
 
@@ -204,13 +203,13 @@ def channels(peers: list[Peer]) -> NodeChannelsResponse:
 
 
 @pytest.fixture
-async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
+async def core(mocker: MockerFixture, nodes: list[Node], economic_model) -> Core:
     core = Core()
 
     params = Parameters()
     with open("./test/test_config.yaml", "r") as file:
         params.parse(yaml.safe_load(file))
-    setattr(params.subgraph, "deployerKey", "foo_deployer_key")
+    setattr(params.subgraph, "apiKey", "foo_deployer_key")
 
     setattr(params, "pg", Parameters())
     setattr(params.pg, "user", "user")
@@ -220,6 +219,9 @@ async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
     setattr(params.pg, "database", "database")
 
     core.post_init(nodes, params)
+    core.budget.ticket_price = 0.1
+    core.legacy_model.budget.ticket_price = 0.1
+    core.sigmoid_model.budget.ticket_price = 0.1
 
     await core._retrieve_address()
 
@@ -250,7 +252,7 @@ async def node(
     params = Parameters()
     with open("./test/test_config.yaml", "r") as file:
         params.parse(yaml.safe_load(file))
-    setattr(params.subgraph, "deployerKey", "foo_deployer_key")
+    setattr(params.subgraph, "apiKey", "foo_deployer_key")
 
     node.params = params
 
