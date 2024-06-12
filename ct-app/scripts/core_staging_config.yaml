@@ -95,6 +95,6 @@ subgraph:
     URLBackup: https://api.studio.thegraph.com/query/78696/hopr-stake-all-seasons/version/latest
 
   rewards:
-    queryID: ~ #GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk will be set back once "latest" will point to "v0.1.0" in prod
+    queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
     URLBackup: https://api.studio.thegraph.com/query/78696/hopr-channels/version/latest
 ...
