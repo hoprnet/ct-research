@@ -87,14 +87,14 @@ channel:
 # =============================================================================
 subgraph:
   safesBalance:
-    queryID: FEQcaX9qfh31YL2K7rxRN5a3sr9rjMWkguJnby7StNRo
-    URLBackup: https://api.studio.thegraph.com/query/40439/hopr-nodes-dufour/version/latest
+    queryID: GP2abJCarirMJCanuk4SBmnadiobEWH9ME2MNRAHbBTp
+    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-nodes-dufour/version/latest
 
   staking:
-    queryID: DrkbaCvNGVcNH1RghepLRy6NSHFi8Dmwp4T2LN3LqcjY
-    URLBackup: https://api.studio.thegraph.com/query/40439/hopr-stake-all-seasons/v0.0.10
+    queryID: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
+    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-stake-all-seasons/version/latest
   
   rewards:
-    queryID: ~ #Feg6Jero3aQzesVYuqk253NNLyNAZZppbDPKFYEGJ1Hj
-    URLBackup: https://api.studio.thegraph.com/query/40439/hopr-channels/version/latest
+    queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
+    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-channels/version/latest
 ...
