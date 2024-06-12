@@ -78,7 +78,7 @@ class Core(Base):
         # subgraphs
         self._safe_subgraph_url = None
         self._staking_subgraph_url = None
-        self._wxhopr_txs_subgraph_url = None
+        self._rewards_subgraph_url = None
 
         # trick to have the subgraph in use displayed in the terminal
         self._subgraph_type = SubgraphType.NONE
@@ -98,9 +98,6 @@ class Core(Base):
         )
         self._staking_subgraph_url = SubgraphURL(
             self.params.subgraph.deployerKey, self.params.subgraph.staking
-        )
-        self._wxhopr_txs_subgraph_url = SubgraphURL(
-            self.params.subgraph.deployerKey, self.params.subgraph.wxHOPRTxs
         )
 
         self._rewards_subgraph_url = SubgraphURL(

@@ -93,13 +93,9 @@ subgraph:
 
   staking:
     queryID: query-id-staking
-    URLBackup: staking_backp_url
-  
-  wxHOPRTxs:
-    queryID: ~
-    URLBackup: wxHOPRTxs_backp_url
+    URLBackup: staking_backup_url
   
   rewards:
     queryID: ~
-    URLBackup: URLBackup_backp_url
+    URLBackup: URLBackup_backup_url
 ...
