@@ -9,7 +9,7 @@ from core.model.economic_model_legacy import (
 
 
 @pytest.fixture
-def model():
+def model(budget: Budget):
     model = EconomicModelLegacy(
         Equations(
             Equation("a * x", "l <= x <= c"),
@@ -19,8 +19,7 @@ def model():
         1,
         20.0,
     )
-    model.budget = Budget(1200, 1, 1)
-    model.budget.ticket_price = 0.1
+    model.budget = budget
 
     return model
 
@@ -43,5 +42,5 @@ def test_message_count_for_reward(model: EconomicModelLegacy):
         model.coefficients.c * model.apr / model.budget.ticket_price / 12
     ), "Linear result if stake is at threshold"
     assert model.message_count_for_reward(model.coefficients.c * 2) < round(
-        (model.coefficients.c + 2) * model.apr / model.budget.ticket_price / 12
+        (model.coefficients.c * 2) * model.apr / model.budget.ticket_price / 12
     ), "Non-linear result if stake is above threshold"

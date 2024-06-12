@@ -80,7 +80,7 @@ class EconomicModelSigmoid:
                 Bucket.fromParameters(name, getattr(parameters.buckets, name))
                 for name in bucket_names
             ],
-            parameters.maxAPRPercentage,
+            parameters.maxAPR,
             parameters.proportion,
         )
 

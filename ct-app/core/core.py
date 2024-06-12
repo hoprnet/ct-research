@@ -105,7 +105,7 @@ class Core(Base):
         self.sigmoid_model = EconomicModelSigmoid.fromParameters(
             self.params.economicModel.sigmoid
         )
-        self.budget = Budget.fromParameters(self.params.economicModel.budget)
+        self.budget = Budget(self.params.economicModel.intervals)
 
         self._safe_subgraph_url = SubgraphURL(
             self.params.subgraph.apiKey, self.params.subgraph.safesBalance
@@ -366,14 +366,14 @@ class Core(Base):
         low_stake_addresses = [
             peer.address
             for peer in eligibles
-            if peer.split_stake < self.model.coefficients.l
+            if peer.split_stake < self.legacy_model.coefficients.l
         ]
-        excluded = Utils.excludeElements(eligibles, low_stake_addresses)
+        excluded = Utils.exclude(eligibles, low_stake_addresses)
         self.debug(f"Excluded nodes with low stake ({len(excluded)} entries).")
 
         redeemed_rewards = await self.peer_rewards.get()
         for peer in eligibles:
-            peer.economic_model = deepcopy(self.model)
+            peer.economic_model = deepcopy(self.legacy_model)
             peer.economic_model.coefficients.c += redeemed_rewards.get(
                 peer.address.address, 0.0
             )
@@ -388,9 +388,8 @@ class Core(Base):
         await self.eligible_list.set(eligibles)
 
         # set prometheus metrics
-        DISTRIBUTION_DELAY.set(self.model.delay_between_distributions)
         NEXT_DISTRIBUTION_EPOCH.set(
-            Utils.nextEpoch(self.model.delay_between_distributions).timestamp()
+            Utils.nextEpoch(self.params.economicModel.intervals).timestamp()
         )
         ELIGIBLE_PEERS_COUNTER.set(len(eligibles))
 
@@ -405,7 +404,7 @@ class Core(Base):
     @formalin("Distributing rewards")
     @connectguard
     async def distribute_rewards(self):
-        delay = Utils.nextDelayInSeconds(self.budget.delay_between_distributions)
+        delay = Utils.nextDelayInSeconds(self.params.economicModel.intervals)
         self.debug(f"Waiting {delay} seconds for next distribution.")
         await asyncio.sleep(delay)
 
@@ -603,7 +602,6 @@ class Core(Base):
         self.tasks.add(asyncio.create_task(self.check_subgraph_urls()))
         self.tasks.add(asyncio.create_task(self.get_peers_rewards()))
         self.tasks.add(asyncio.create_task(self.get_ticket_price()))
-        self.tasks.add(asyncio.create_task(self.get_nft_holders()))
 
         self.tasks.add(asyncio.create_task(self.aggregate_peers()))
         self.tasks.add(asyncio.create_task(self.get_registered_nodes()))
@@ -625,5 +623,7 @@ class Core(Base):
             node.started = False
 
         for task in self.tasks:
+            task.add_done_callback(self.tasks.discard)
+            task.cancel()
             task.add_done_callback(self.tasks.discard)
             task.cancel()

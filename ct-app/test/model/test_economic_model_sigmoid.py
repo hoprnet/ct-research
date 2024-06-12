@@ -8,7 +8,7 @@ def test_init_class():
     config = {
         "sigmoid": {
             "proportion": 0.1,
-            "maxAPRPercentage": 15.0,
+            "maxAPR": 15.0,
             "offset": 10.0,
             "buckets": {
                 "bucket_1": {
@@ -100,13 +100,12 @@ def test_bucket_apr():
         bucket.apr(0.5)
 
 
-def test_economic_model_message_count_for_reward():
+def test_economic_model_message_count_for_reward(budget: Budget):
     stake = 100
     model = EconomicModelSigmoid(
         10.0, [Bucket("bucket_1", 1, 1, 1), Bucket("bucket_2", 1, 1, 0.5)], 20.0, 1
     )
-    model.budget = Budget(60, 1, 1)
-    model.budget.ticket_price = 1
+    model.budget = budget
 
     assert model.apr([0.5, 0.25]) == 10
     assert model.message_count_for_reward(stake, [0.5, 0.25]) == round(

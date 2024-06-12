@@ -69,7 +69,15 @@ class SideEffect:
 
 
 @pytest.fixture
-def economic_model() -> EconomicModelLegacy:
+def budget() -> Budget:
+    budget = Budget(120)
+    budget.ticket_price = 1
+    budget.winning_probability = 1
+    return budget
+
+
+@pytest.fixture
+def economic_model(budget: Budget) -> EconomicModelLegacy:
     equations = Equations(
         Equation("a * x", "l <= x <= c"),
         Equation("a * c + (x - c) ** (1 / b)", "x > c"),
@@ -77,10 +85,6 @@ def economic_model() -> EconomicModelLegacy:
     parameters = Coefficients(1, 1, 3, 0)
 
     model = EconomicModelLegacy(equations, parameters, 1, 15)
-    budget = Budget(100, 2, 1)
-    budget.ticket_price = 0.1
-    budget.winning_probability = 1
-
     model.budget = budget
     return model
 

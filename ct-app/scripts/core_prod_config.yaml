@@ -34,8 +34,10 @@ flags:
 # =============================================================================
 economicModel:
   minSafeAllowance: -1
-  maxAPRPercentage: 15.0
+  maxAPR: 15.0
   NFTThreshold: 30000
+  intervals: 300 # in seconds
+  winningProbability: 1
 
   coefficients:
     a: 1
@@ -50,13 +52,6 @@ economicModel:
     gx:
       formula: "a * c + (x - c) ** (1 / b)"
       condition: "x > c"
-  
-  budget:
-    # one distribution every 5min
-    amount: 190000
-    period: 2628000 # in seconds
-    countsInPeriod: 8760
-    winningProbability: 1
 
 # =============================================================================
 # 
