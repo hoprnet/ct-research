@@ -319,24 +319,24 @@ class HoprdAPI(Base):
 
         return is_ok
 
-    async def messages_pop(self, tag: int = MESSAGE_TAG) -> bool:
+    async def messages_pop(self, tag: int = None) -> bool:
         """
         Pop next message from the inbox
         :param: tag = 0x0320
         :return: dict
         """
-        body = TagQueryRequest(tag=tag)
+        body = TagQueryRequest() if tag is None else TagQueryRequest(tag=tag)
         _, response = await self.__call_api(MessagesApi, "pop", body=body)
 
         return response
 
-    async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
+    async def messages_pop_all(self, tag: int = None) -> list:
         """
         Pop all messages from the inbox
         :param: tag = 0x0320
         :return: list
         """
-        body = TagQueryRequest(tag=tag)
+        body = TagQueryRequest() if tag is None else TagQueryRequest(tag=tag)
         _, response = await self.__call_api(MessagesApi, "pop_all", body=body)
         return response.messages if hasattr(response, "messages") else []
 

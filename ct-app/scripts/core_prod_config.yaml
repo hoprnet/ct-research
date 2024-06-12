@@ -6,8 +6,7 @@ flags:
   core: 
     healthcheck: 60
     checkSubgraphURLs: 300
-    getFundings: 900
-    getTicketPrice: 900
+    getTicketPrice: 120
     aggregatePeers: 300
     getTopologyData: 300
     getSubgraphData: 300
@@ -53,10 +52,10 @@ economicModel:
       condition: "x > c"
   
   budget:
-    # one distribution every 30min
+    # one distribution every 5min
     amount: 190000
     period: 2628000 # in seconds
-    countsInPeriod: 1460
+    countsInPeriod: 8760
     winningProbability: 1
 
 # =============================================================================
@@ -65,16 +64,8 @@ economicModel:
 distribution:
   minEligiblePeers: 100
   messageDeliveryDelay: 5.0
-  delayBetweenTwoMessages: 0.0005
-  maxIterations: 3
-
-# =============================================================================
-# 
-# =============================================================================
-gcp:
-  filePrefix: expected_reward
-  folder: expected_rewards
-  bucket: hoprnet-ctdapp-prod
+  delayBetweenTwoMessages: 0.0001
+  maxIterations: 2
 
 # =============================================================================
 # 
@@ -95,18 +86,14 @@ channel:
 # =============================================================================
 subgraph:
   safesBalance:
-    queryID: FEQcaX9qfh31YL2K7rxRN5a3sr9rjMWkguJnby7StNRo
-    URLBackup: https://api.studio.thegraph.com/query/40439/hopr-nodes-dufour/version/latest
+    queryID: GP2abJCarirMJCanuk4SBmnadiobEWH9ME2MNRAHbBTp
+    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-nodes-dufour/version/latest
 
   staking:
-    queryID: DrkbaCvNGVcNH1RghepLRy6NSHFi8Dmwp4T2LN3LqcjY
-    URLBackup: https://api.studio.thegraph.com/query/40439/hopr-stake-all-seasons/v0.0.10
-  
-  wxHOPRTxs:
-    queryID: ~
-    URLBackup: https://api.studio.thegraph.com/query/58438/wxhoprtransactions/v0.0.6
+    queryID: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
+    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-stake-all-seasons/version/latest
   
   rewards:
-    queryID: ~ #Feg6Jero3aQzesVYuqk253NNLyNAZZppbDPKFYEGJ1Hj
-    URLBackup: https://api.studio.thegraph.com/query/40439/hopr-channels/version/latest
+    queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
+    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-channels/version/latest
 ...

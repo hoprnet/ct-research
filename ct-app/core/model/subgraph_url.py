@@ -19,7 +19,7 @@ class SubgraphURL:
         if not self.param_set.queryID:
             return self._construct_backup()
 
-        return f"https://gateway.thegraph.com/api/{self.deployer_key}/subgraphs/id/{self.param_set.queryID}"
+        return f"https://gateway-arbitrum.network.thegraph.com/api/{self.deployer_key}/subgraphs/id/{self.param_set.queryID}"
 
     def _construct_backup(self):
         return self.param_set.URLBackup

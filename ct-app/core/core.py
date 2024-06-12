@@ -16,7 +16,6 @@ from .components.graphql_providers import (
     RewardsProvider,
     SafesProvider,
     StakingProvider,
-    wxHOPRTransactionProvider,
 )
 from .components.hoprd_api import HoprdAPI
 from .components.lockedvar import LockedVar
@@ -85,7 +84,7 @@ class Core(Base):
         # subgraphs
         self._safe_subgraph_url = None
         self._staking_subgraph_url = None
-        self._wxhopr_txs_subgraph_url = None
+        self._rewards_subgraph_url = None
 
         # trick to have the subgraph in use displayed in the terminal
         self._subgraph_type = SubgraphType.NONE
@@ -117,9 +116,6 @@ class Core(Base):
         )
         self._staking_subgraph_url = SubgraphURL(
             self.params.subgraph.deployerKey, self.params.subgraph.staking
-        )
-        self._wxhopr_txs_subgraph_url = SubgraphURL(
-            self.params.subgraph.deployerKey, self.params.subgraph.wxHOPRTxs
         )
 
         self._rewards_subgraph_url = SubgraphURL(
@@ -322,8 +318,7 @@ class Core(Base):
 
         eligibles = Utils.mergeDataSources(topology, peers, registered_nodes)
         self.debug(f"Merged topology and subgraph data ({len(eligibles)} entries).")
-
-        self.debug(f"after merge: {[el.address.id for el in eligibles]}")
+        self.debug(f"After merge: {[el.address.id for el in eligibles]}")
 
         old_peer_addresses = [
             peer.address
@@ -334,7 +329,7 @@ class Core(Base):
         self.debug(
             f"Excluded peers running on old version (< {self.params.peer.minVersion}) ({len(excluded)} entries)."
         )
-        self.debug(f"peers on wrong version: {[el.address.id for el in excluded]}")
+        self.debug(f"Peers on wrong version: {[el.address.id for el in excluded]}")
 
         Utils.allowManyNodePerSafe(eligibles)
         self.debug(f"Allowed many nodes per safe ({len(eligibles)} entries).")
@@ -346,7 +341,7 @@ class Core(Base):
         ]
         excluded = Utils.exclude(eligibles, low_allowance_addresses)
         self.debug(f"Excluded nodes with low safe allowance ({len(excluded)} entries).")
-        self.debug(f"peers with low allowance {[el.address.id for el in excluded]}")
+        self.debug(f"Peers with low allowance {[el.address.id for el in excluded]}")
 
         excluded = Utils.exclude(eligibles, await self.network_nodes_addresses)
         self.debug(f"Excluded network nodes ({len(excluded)} entries).")
@@ -419,13 +414,6 @@ class Core(Base):
             )
             await asyncio.sleep(2)
 
-        # convert to csv and store on GCP
-        filename = Utils.generateFilename(
-            self.params.gcp.filePrefix, self.params.gcp.folder
-        )
-        lines = Peer.toCSV(peers)
-        Utils.stringArrayToGCP(self.params.gcp.bucket, filename, lines)
-
         # distribute rewards
         # randomly split peers into groups, one group per node
         self.info("Initiating distribution.")
@@ -436,66 +424,41 @@ class Core(Base):
         rewards, iterations = t  # trick for typehinting tuple unpacking
         self.info("Distribution completed.")
 
-        self.debug(rewards)
-        self.debug(iterations)
+        self.debug(f"Rewards distributed in {iterations} iterations: {rewards}")
 
-        with DatabaseConnection(self.params.pg) as session:
-            entries = set[Reward]()
+        try:
+            with DatabaseConnection(self.params.pg) as session:
+                entries = set[Reward]()
 
-            for peer, values in rewards.items():
-                expected = values.get("expected", 0)
-                remaining = values.get("remaining", 0)
-                issued = values.get("issued", 0)
-                effective = expected - remaining
-                status = "SUCCESS" if remaining < 1 else "TIMEOUT"
+                for peer, values in rewards.items():
+                    expected = values.get("expected", 0)
+                    remaining = values.get("remaining", 0)
+                    issued = values.get("issued", 0)
+                    effective = expected - remaining
+                    status = "SUCCESS" if remaining < 1 else "TIMEOUT"
 
-                entry = Reward(
-                    peer_id=peer,
-                    node_address="",
-                    expected_count=expected,
-                    effective_count=effective,
-                    status=status,
-                    timestamp=datetime.fromtimestamp(time.time()),
-                    issued_count=issued,
-                )
+                    entry = Reward(
+                        peer_id=peer,
+                        node_address="",
+                        expected_count=expected,
+                        effective_count=effective,
+                        status=status,
+                        timestamp=datetime.fromtimestamp(time.time()),
+                        issued_count=issued,
+                    )
 
-                entries.add(entry)
+                    entries.add(entry)
 
-            session.add_all(entries)
-            session.commit()
+                session.add_all(entries)
+                session.commit()
 
-            self.debug(f"Stored {len(entries)} reward entries in database: {entry}")
+                self.debug(f"Stored {len(entries)} reward entries in database: {entry}")
+        except Exception as err:
+            self.error(f"Database error while storing distribution results: {err}")
 
         self.info(f"Distributed rewards to {len(peers)} peers.")
 
         EXECUTIONS_COUNTER.inc()
-
-    @flagguard
-    @formalin("Getting funding data")
-    @connectguard
-    async def get_fundings(self):
-        """
-        Gets the amount of funds all managed nodes have received from a specified address.
-        """
-        ct_safe_addresses = {
-            getattr(await node.api.node_info(), "hopr_node_safe", None)
-            for node in self.nodes
-        }
-
-        provider = wxHOPRTransactionProvider(self.wxhopr_txs_subgraph_url)
-
-        transactions = list[dict]()
-        for to_address in ct_safe_addresses:
-            try:
-                for transaction in await provider.get(to=to_address):
-                    transactions.append(transaction)
-
-            except ProviderError as err:
-                self.error(f"get_fundings: {err}")
-
-        total_funding = sum([float(tx["amount"]) for tx in transactions])
-        self.debug(f"Total funding: {total_funding}")
-        TOTAL_FUNDING.set(total_funding)
 
     async def multiple_attempts_sending(
         self, peers: list[Peer], max_iterations: int = 4
@@ -618,7 +581,6 @@ class Core(Base):
 
         self.tasks.add(asyncio.create_task(self.healthcheck()))
         self.tasks.add(asyncio.create_task(self.check_subgraph_urls()))
-        self.tasks.add(asyncio.create_task(self.get_fundings()))
         self.tasks.add(asyncio.create_task(self.get_peers_rewards()))
         self.tasks.add(asyncio.create_task(self.get_ticket_price()))
         self.tasks.add(asyncio.create_task(self.get_nft_holders()))

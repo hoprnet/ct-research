@@ -6,7 +6,6 @@ flags:
   core: 
     healthcheck: 10
     checkSubgraphURLs: 30
-    getFundings: 30
     getTicketPrice: 30
     aggregatePeers: 30
     getTopologyData: 30
@@ -83,16 +82,8 @@ economicModel:
 distribution:
   minEligiblePeers: 5
   messageDeliveryDelay: 5.0
-  delayBetweenTwoMessages: 0.0005
-  maxIterations: 3
-
-# =============================================================================
-# 
-# =============================================================================
-gcp:
-  filePrefix: expected_reward
-  folder: expected_rewards
-  bucket: hoprnet-ctdapp-staging
+  delayBetweenTwoMessages: 0.0001
+  maxIterations: 2
 
 # =============================================================================
 # 
@@ -113,18 +104,14 @@ channel:
 # =============================================================================
 subgraph:
   safesBalance:
-    queryID: FcyLT3XGc2nEtaKjfB2SqigXsrEaGGBYsDfhEmsQ26dA
-    URLBackup: https://api.studio.thegraph.com/query/40439/hopr-nodes-rotsee/version/latest
+    queryID: GmbJTpa1o4baeStDT48TfQu4ditJmQwwXYPG1DvEiufB
+    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-nodes-rotsee/version/latest
 
   staking:
-    queryID: DrkbaCvNGVcNH1RghepLRy6NSHFi8Dmwp4T2LN3LqcjY
-    URLBackup: https://api.studio.thegraph.com/query/40439/hopr-stake-all-seasons/v0.0.10
-  
-  wxHOPRTxs:
-    queryID: ~
-    URLBackup: https://api.studio.thegraph.com/query/58438/wxhoprtransactions/v0.0.6
-  
+    queryID: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
+    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-stake-all-seasons/version/latest
+
   rewards:
-    queryID: ~ #Feg6Jero3aQzesVYuqk253NNLyNAZZppbDPKFYEGJ1Hj
-    URLBackup: https://api.studio.thegraph.com/query/40439/hopr-channels/version/latest
+    queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
+    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-channels/version/latest
 ...
