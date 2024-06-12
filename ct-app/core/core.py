@@ -417,32 +417,35 @@ class Core(Base):
 
         self.debug(f"Rewards distributed in {iterations} iterations: {rewards}")
 
-        with DatabaseConnection(self.params.pg) as session:
-            entries = set[Reward]()
+        try:
+            with DatabaseConnection(self.params.pg) as session:
+                entries = set[Reward]()
 
-            for peer, values in rewards.items():
-                expected = values.get("expected", 0)
-                remaining = values.get("remaining", 0)
-                issued = values.get("issued", 0)
-                effective = expected - remaining
-                status = "SUCCESS" if remaining < 1 else "TIMEOUT"
+                for peer, values in rewards.items():
+                    expected = values.get("expected", 0)
+                    remaining = values.get("remaining", 0)
+                    issued = values.get("issued", 0)
+                    effective = expected - remaining
+                    status = "SUCCESS" if remaining < 1 else "TIMEOUT"
 
-                entry = Reward(
-                    peer_id=peer,
-                    node_address="",
-                    expected_count=expected,
-                    effective_count=effective,
-                    status=status,
-                    timestamp=datetime.fromtimestamp(time.time()),
-                    issued_count=issued,
-                )
+                    entry = Reward(
+                        peer_id=peer,
+                        node_address="",
+                        expected_count=expected,
+                        effective_count=effective,
+                        status=status,
+                        timestamp=datetime.fromtimestamp(time.time()),
+                        issued_count=issued,
+                    )
 
-                entries.add(entry)
+                    entries.add(entry)
 
-            session.add_all(entries)
-            session.commit()
+                session.add_all(entries)
+                session.commit()
 
-            self.debug(f"Stored {len(entries)} reward entries in database: {entry}")
+                self.debug(f"Stored {len(entries)} reward entries in database: {entry}")
+        except Exception as err:
+            self.error(f"Database error while storing distribution results: {err}")
 
         self.info(f"Distributed rewards to {len(peers)} peers.")
 
