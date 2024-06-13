@@ -40,7 +40,7 @@ economicModel:
 
   legacy:
     proportion: 0.9
-    apr: .0000000000015
+    apr: .000000000001
 
     coefficients:
       a: 1
@@ -58,7 +58,7 @@ economicModel:
 
   sigmoid:
     proportion: 0.1
-    maxAPR: .0000000000015
+    maxAPR: .000000000001
     offset: 10
     networkCapacity: 100
     totalTokenSupply: 200
