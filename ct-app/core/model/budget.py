@@ -37,7 +37,7 @@ class Budget:
             self._winning_probability = value
             TICKET_WINNING_PROB.set(value)
         else:
-            self.winning_probability = 1
+            self._winning_probability = 1
 
     @classmethod
     def fromParameters(cls, parameters: Parameters):
