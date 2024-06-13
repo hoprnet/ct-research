@@ -25,6 +25,8 @@ class Peer:
 
         self._safe_address_count = None
 
+        self._message_count = 0
+
     def version_is_old(self, min_version: str or Version) -> bool:
         """
         Check if the peer's version is older than the specified version.
@@ -90,6 +92,14 @@ class Peer:
             raise ValueError("Economic model not set")
 
         return self.economic_model.transformed_stake(self.split_stake)
+
+    @property
+    def message_count(self) -> float:
+        return self._message_count
+
+    @message_count.setter
+    def message_count(self, value: float):
+        self._message_count = value
 
     @classmethod
     def attributesToExport(cls):

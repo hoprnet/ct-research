@@ -42,7 +42,7 @@ NFT_HOLDERS = Gauge("nft_holders", "Number of nr-nft holders")
 EXECUTIONS_COUNTER = Gauge("executions", "# of execution of the economic model")
 ELIGIBLE_PEERS_COUNTER = Gauge("eligible_peers", "# of eligible peers for rewards")
 APR_PER_PEER = Gauge("apr_per_peer", "APR per peer", ["peer_id"])
-JOBS_PER_PEER = Gauge("jobs_per_peer", "Jobs per peer", ["peer_id"])
+JOBS_PER_PEER = Gauge("jobs_per_peer", "Jobs per peer", ["peer_id", "model"])
 PEER_SPLIT_STAKE = Gauge("peer_split_stake", "Splitted stake", ["peer_id"])
 PEER_TF_STAKE = Gauge("peer_tf_stake", "Transformed stake", ["peer_id"])
 PEER_SAFE_COUNT = Gauge("peer_safe_count", "Number of safes", ["peer_id"])
@@ -378,6 +378,27 @@ class Core(Base):
                 peer.address.address, 0.0
             )
 
+        economic_security = (
+            sum([peer.split_stake for peer in peers])
+            / self.params.economicModel.sigmoid.totalTokenSupply
+        )
+        network_capacity = (
+            len(peers) / self.params.economicModel.sigmoid.networkCapacity
+        )
+        sigmoid_model_input = [economic_security, network_capacity]
+
+        for peer in eligibles:
+            legacy_message_count = self.legacy_model.message_count_for_reward(
+                peer.split_stake
+            )
+            sigmoid_message_count = self.sigmoid_model.message_count_for_reward(
+                peer.split_stake, sigmoid_model_input
+            )
+
+            peer.message_count = legacy_message_count + sigmoid_message_count
+            JOBS_PER_PEER.labels(peer.address.id, "legacy").set(legacy_message_count)
+            JOBS_PER_PEER.labels(peer.address.id, "sigmoid").set(sigmoid_message_count)
+
         self.info(
             f"Assigned economic model to eligible nodes. ({len(eligibles)} entries)."
         )
@@ -394,7 +415,6 @@ class Core(Base):
         ELIGIBLE_PEERS_COUNTER.set(len(eligibles))
 
         for peer in eligibles:
-            # JOBS_PER_PEER.labels(peer.address.id).set(peer.message_count_for_reward)
             PEER_SPLIT_STAKE.labels(peer.address.id).set(peer.split_stake)
             PEER_SAFE_COUNT.labels(peer.address.id).set(peer.safe_address_count)
             PEER_TF_STAKE.labels(peer.address.id).set(peer.transformed_stake)
@@ -471,33 +491,18 @@ class Core(Base):
                 [max(value.get("remaining", 0), 0) for value in rewards.values()]
             )
 
-        economic_security = (
-            sum([peer.split_stake for peer in peers])
-            / self.params.economicModel.sigmoid.totalTokenSupply
-        )
-        network_capacity = (
-            len(peers) / self.params.economicModel.sigmoid.networkCapacity
-        )
-        sigmoid_model_input = [economic_security, network_capacity]
-
         iteration: int = 0
 
-        reward_per_peer = {peer.address.id: {} for peer in peers}
-        for idx, peer in enumerate(peers):
-            legacy_message_count = self.legacy_model.message_count_for_reward(
-                peer.split_stake
-            )
-            sigmoid_message_count = self.sigmoid_model.message_count_for_reward(
-                peer.split_stake, sigmoid_model_input
-            )
-
-            reward_per_peer[peer.address.id] = {
-                "expected": legacy_message_count + sigmoid_message_count,
-                "remaining": legacy_message_count + sigmoid_message_count,
+        reward_per_peer = {
+            peer.address.id: {
+                "expected": peer.message_count,
+                "remaining": peer.message_count,
                 "issued": 0,
                 "tag": idx,
                 "ticket-price": self.budget.ticket_price,
             }
+            for idx, peer in enumerate(peers)
+        }
 
         self.debug(f"Distribution summary: {reward_per_peer}")
 
