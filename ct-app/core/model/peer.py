@@ -101,28 +101,6 @@ class Peer:
     def message_count(self, value: float):
         self._message_count = value
 
-    @classmethod
-    def attributesToExport(cls):
-        return [
-            "node_address",
-            "channel_balance",
-            "safe_address",
-            "safe_balance",
-            "safe_address_count",
-            "split_stake",
-        ]
-
-    @classmethod
-    def toCSV(cls, peers: list) -> list[list[str]]:
-        attributes = Peer.attributesToExport()
-        lines = [["peer_id"] + attributes]
-
-        for peer in peers:
-            line = [peer.address.id] + [getattr(peer, attr) for attr in attributes]
-            lines.append(line)
-
-        return lines
-
     def __repr__(self):
         return f"Peer(address: {self.address})"
 

@@ -363,14 +363,6 @@ class Core(Base):
                 f"Excluded non-nft-holders with stake < {threshold} ({len(excluded)} entries)."
             )
 
-        low_stake_addresses = [
-            peer.address
-            for peer in eligibles
-            if peer.split_stake < self.legacy_model.coefficients.l
-        ]
-        excluded = Utils.exclude(eligibles, low_stake_addresses)
-        self.debug(f"Excluded nodes with low stake ({len(excluded)} entries).")
-
         redeemed_rewards = await self.peer_rewards.get()
         for peer in eligibles:
             peer.economic_model = deepcopy(self.legacy_model)
@@ -378,12 +370,15 @@ class Core(Base):
                 peer.address.address, 0.0
             )
 
+        low_stake_addresses = [peer.address for peer in eligibles if peer.has_low_stake]
+        excluded = Utils.exclude(eligibles, low_stake_addresses)
+        self.debug(f"Excluded nodes with low stake ({len(excluded)} entries).")
         economic_security = (
-            sum([peer.split_stake for peer in peers])
+            sum([peer.split_stake for peer in eligibles])
             / self.params.economicModel.sigmoid.totalTokenSupply
         )
         network_capacity = (
-            len(peers) / self.params.economicModel.sigmoid.networkCapacity
+            len(eligibles) / self.params.economicModel.sigmoid.networkCapacity
         )
         sigmoid_model_input = [economic_security, network_capacity]
 
