@@ -52,11 +52,11 @@ economicModel:
       condition: "x > c"
   
   budget:
-    # one distribution every 5min
+    # one distribution every 30min
     amount: 190000
     period: 2628000 # in seconds
     s: 1
-    countsInPeriod: 8760
+    countsInPeriod: 1460
     winningProbability: 1
 
 # =============================================================================
