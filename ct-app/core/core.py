@@ -572,6 +572,10 @@ class Core(Base):
         """
         price = await self.api.ticket_price()
 
+        if price is None:
+            self.warning("Ticket price not available.")
+            return
+        
         await self.ticket_price.set(price)
         self.debug(f"Ticket price: {price}")
 
