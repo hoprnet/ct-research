@@ -86,6 +86,8 @@ channel:
 # 
 # =============================================================================
 subgraph:
+  type: auto # auto | default | backup
+  
   safesBalance:
     queryID: GmbJTpa1o4baeStDT48TfQu4ditJmQwwXYPG1DvEiufB
     URLBackup: https://api.studio.thegraph.com/query/78696/hopr-nodes-rotsee/version/latest

@@ -86,6 +86,8 @@ channel:
 # 
 # =============================================================================
 subgraph:
+  type: auto # auto | default | backup
+
   safesBalance:
     queryID: GP2abJCarirMJCanuk4SBmnadiobEWH9ME2MNRAHbBTp
     URLBackup: https://api.studio.thegraph.com/query/78696/hopr-nodes-dufour/version/latest

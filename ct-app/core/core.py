@@ -122,7 +122,13 @@ class Core(Base):
 
     @property
     def safe_subgraph_url(self) -> str:
-        return self._safe_subgraph_url(self.subgraph_type)
+        _type = self.params.subgraph.type
+        if _type == "default":
+            return self._safe_subgraph_url(SubgraphType.DEFAULT)
+        if _type == "backup":
+            return self._safe_subgraph_url(SubgraphType.BACKUP)
+        else:
+            return self._safe_subgraph_url(self.subgraph_type)
 
     @property
     def staking_subgraph_url(self) -> str:
