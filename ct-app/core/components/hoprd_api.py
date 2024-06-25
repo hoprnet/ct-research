@@ -183,7 +183,7 @@ class HoprdAPI(Base):
                 return []
 
             if len(response.incoming) == 0:
-                self.info("No incoming channels")
+                self.warning("No incoming channels")
                 return []
 
             if only_id:
@@ -210,7 +210,7 @@ class HoprdAPI(Base):
                 return []
 
             if len(response.outgoing) == 0:
-                self.info("No outgoing channels")
+                self.warning("No outgoing channels")
                 return []
 
             if only_id:
@@ -258,7 +258,7 @@ class HoprdAPI(Base):
             return []
 
         if len(getattr(response, status)) == 0:
-            self.info(f"No peer with state '{status}'")
+            self.warning(f"No peer with state '{status}'")
             return []
 
         params = [params] if isinstance(params, str) else params

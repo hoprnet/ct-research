@@ -139,7 +139,7 @@ class Core(Base):
     @subgraph_type.setter
     def subgraph_type(self, value: SubgraphType):
         if value != self.subgraph_type:
-            self.warning(f"Now using '{value.value}' subgraph.")
+            self.info(f"Now using '{value.value}' subgraph.")
 
         SUBGRAPH_IN_USE.set(value.toInt())
         self._subgraph_type = value
@@ -288,10 +288,10 @@ class Core(Base):
         peers = await self.all_peers.get()
         nft_holders = await self.nft_holders.get()
 
-        self.debug(f"Topology size: {len(topology)}")
-        self.debug(f"Subgraph size: {len(registered_nodes)}")
-        self.debug(f"Network size: {len(peers)}")
-        self.debug(f"NFT holders: {len(nft_holders)}")
+        self.info(f"Topology size: {len(topology)}")
+        self.info(f"Subgraph size: {len(registered_nodes)}")
+        self.info(f"Network size: {len(peers)}")
+        self.info(f"NFT holders: {len(nft_holders)}")
 
         ready = len(topology) and len(registered_nodes) and len(peers)
         if not ready:
@@ -299,8 +299,7 @@ class Core(Base):
             return
 
         eligibles = Utils.mergeDataSources(topology, peers, registered_nodes)
-        self.debug(f"Merged topology and subgraph data ({len(eligibles)} entries).")
-        self.debug(f"After merge: {[el.address.id for el in eligibles]}")
+        self.info(f"Merged topology and subgraph data ({len(eligibles)} entries).")
 
         old_peer_addresses = [
             peer.address
@@ -308,7 +307,7 @@ class Core(Base):
             if peer.version_is_old(self.params.peer.minVersion)
         ]
         excluded = Utils.exclude(eligibles, old_peer_addresses)
-        self.debug(
+        self.info(
             f"Excluded peers running on old version (< {self.params.peer.minVersion}) ({len(excluded)} entries)."
         )
         self.debug(f"Peers on wrong version: {[el.address.id for el in excluded]}")
@@ -322,7 +321,7 @@ class Core(Base):
             if peer.safe_allowance < self.params.economicModel.minSafeAllowance
         ]
         excluded = Utils.exclude(eligibles, low_allowance_addresses)
-        self.debug(f"Excluded nodes with low safe allowance ({len(excluded)} entries).")
+        self.info(f"Excluded nodes with low safe allowance ({len(excluded)} entries).")
         self.debug(f"Peers with low allowance {[el.address.id for el in excluded]}")
 
         excluded = Utils.exclude(eligibles, await self.network_nodes_addresses)
@@ -335,7 +334,7 @@ class Core(Base):
                 if peer.safe_address not in nft_holders and peer.split_stake < threshold
             ]
             excluded = Utils.exclude(eligibles, low_stake_non_nft_holders)
-            self.debug(
+            self.info(
                 f"Excluded non-nft-holders with stake < {threshold} ({len(excluded)} entries)."
             )
 
@@ -351,12 +350,9 @@ class Core(Base):
             )
             peer.max_apr = self.params.economicModel.maxAPRPercentage
 
-        self.debug("Assigned economic model to eligible nodes.")
-
         excluded = Utils.rewardProbability(eligibles)
-        self.debug(f"Excluded nodes with low stakes ({len(excluded)} entries).")
-        self.info(f"Eligible nodes ({len(eligibles)} entries).")
-        self.debug(f"Final eligible list {[el.address.id for el in eligibles]}")
+        self.info(f"Excluded nodes with low stakes ({len(excluded)} entries).")
+        self.debug(f"Eligible nodes ({len(eligibles)} entries).")
 
         await self.eligible_list.set(eligibles)
 
@@ -468,16 +464,12 @@ class Core(Base):
             for idx, peer in enumerate(peers)
         }
 
-        self.debug(f"Distribution summary: {reward_per_peer}")
-
         while (
             iteration < max_iterations and _total_messages_to_send(reward_per_peer) > 0
         ):
-            self.debug("Splitting peers into groups")
             peers_groups = Utils.splitDict(reward_per_peer, len(self.nodes))
 
             # send rewards to peers
-            self.debug("Sending rewards to peers")
             tasks = set[asyncio.Task]()
             for node, peers_group in zip(self.nodes, peers_groups):
                 tasks.add(asyncio.create_task(node.distribute_rewards(peers_group)))
@@ -497,7 +489,6 @@ class Core(Base):
             relayed_counts: list[dict] = await asyncio.gather(*tasks)
 
             # for every peer, substract the relayed count from the total count
-            self.debug("Updating remaining counts")
             for peer in reward_per_peer:
                 reward_per_peer[peer]["remaining"] -= sum(
                     [res.get(peer, 0) for res in relayed_counts]

@@ -112,7 +112,6 @@ class Node(Base):
         """
         health = await self.api.healthyz()
         await self.connected.set(health)
-        self.debug(f"Connection state: {health}")
 
         if addr := await self._retrieve_address():
             self.debug(f"Connection state: {health}")
@@ -163,7 +162,7 @@ class Node(Base):
         }
         addresses_without_channels = all_addresses - addresses_with_channels
 
-        self.debug(f"Addresses without channels: {len(addresses_without_channels)}")
+        self.info(f"Addresses without channels: {len(addresses_without_channels)}")
 
         for address in addresses_without_channels:
             self.debug(f"Opening channel to {address}")
@@ -172,7 +171,7 @@ class Node(Base):
                 f"{int(self.params.channel.fundingAmount*1e18):d}",
             )
             if ok:
-                self.debug(f"Opened channel to {address}")
+                self.info(f"Opened channel to {address}")
                 if addr := node_address:
                     CHANNELS_OPENED.labels(addr.id).inc()
             else:
@@ -200,7 +199,7 @@ class Node(Base):
             self.debug(f"Closing incoming channel {channel.channel_id}")
             ok = await self.api.close_channel(channel.channel_id)
             if ok:
-                self.debug(f"Closed channel {channel.channel_id}")
+                self.info(f"Closed channel {channel.channel_id}")
                 if addr := node_address:
                     INCOMING_CHANNELS_CLOSED.labels(addr.id).inc()
             else:
@@ -220,13 +219,13 @@ class Node(Base):
             c for c in await self.outgoings.get() if ChannelStatus.isPending(c.status)
         ]
 
-        self.debug(f"Pending channels: {len(out_pendings)}")
+        self.info(f"Pending channels: {len(out_pendings)}")
 
         for channel in out_pendings:
             self.debug(f"Closing pending channel {channel.channel_id}")
             ok = await self.api.close_channel(channel.channel_id)
             if ok:
-                self.debug(f"Closed pending channel {channel.channel_id}")
+                self.info(f"Closed pending channel {channel.channel_id}")
                 if addr := node_address:
                     PENDING_CHANNELS_CLOSED.labels(addr.id).inc()
             else:
@@ -277,7 +276,7 @@ class Node(Base):
             ok = await self.api.close_channel(channel)
 
             if ok:
-                self.debug(f"Channel {channel} closed")
+                self.info(f"Channel {channel} closed")
                 if addr := node_address:
                     OLD_CHANNELS_CLOSED.labels(addr.id).inc()
             else:
@@ -305,7 +304,7 @@ class Node(Base):
             if int(c.balance) / 1e18 <= self.params.channel.minBalance
         ]
 
-        self.debug(f"Low balance channels: {len(low_balances)}")
+        self.info(f"Low balance channels: {len(low_balances)}")
 
         peer_ids = [p.address.id for p in await self.peers.get()]
 
@@ -316,7 +315,7 @@ class Node(Base):
                     channel.channel_id, self.params.channel.fundingAmount * 1e18
                 )
                 if ok:
-                    self.debug(f"Funded channel {channel.channel_id}")
+                    self.info(f"Funded channel {channel.channel_id}")
                     if addr := node_address:
                         FUNDED_CHANNELS.labels(addr.id).inc()
                 else:
@@ -347,7 +346,7 @@ class Node(Base):
         await self.peers.set(peers)
         await self.peer_history.update(addresses_w_timestamp)
 
-        self.debug(f"Peers: {len(peers)}")
+        self.info(f"Peers: {len(peers)}")
 
         if addr := node_address:
             PEERS_COUNT.labels(addr.id).set(len(peers))
@@ -374,7 +373,7 @@ class Node(Base):
             ]
 
             await self.outgoings.set(outgoings)
-            self.debug(f"Outgoing channels: {len(outgoings)}")
+            self.info(f"Outgoing channels: {len(outgoings)}")
             OUTGOING_CHANNELS.labels(addr.id).set(len(outgoings))
 
     @flagguard
@@ -400,7 +399,7 @@ class Node(Base):
             ]
 
             await self.incomings.set(incomings)
-            self.debug(f"Incoming channels: {len(incomings)}")
+            self.info(f"Incoming channels: {len(incomings)}")
             INCOMING_CHANNELS.labels(addr.id).set(len(incomings))
 
     @flagguard
@@ -418,15 +417,13 @@ class Node(Base):
 
         results = await Utils.aggregatePeerBalanceInChannels(channels)
 
-        self.debug(f"Results of channels balance aggregation: {results}")
-
         if node_address.id not in results:
             self.warning("Funding info not found")
             return
 
         funds = results[node_address.id].get("channels_balance", 0)
 
-        self.debug(f"Channels funds: {funds}")
+        self.info(f"Channels funds: {funds}")
         TOTAL_CHANNEL_FUNDS.labels(node_address.id).set(funds)
 
         return funds
@@ -497,10 +494,6 @@ class Node(Base):
             issued = await asyncio.gather(*tasks)
             issued_count[relayer] = sum(issued)
 
-        for relayer, count in issued_count.items():
-            if count != 0:
-                self.debug(f"Sent {count} messages through {relayer}")
-
         return issued_count
 
     async def check_inbox(
@@ -528,9 +521,6 @@ class Node(Base):
         for relayer, data in peer_group.items():
             count = message_counts.get(MESSAGE_TAG + data.get("tag", None), 0)
             relayed_count[relayer] = count
-
-            if count != 0:
-                self.debug(f"{count} messages relayed by {relayer}")
 
         return relayed_count
 
