@@ -44,10 +44,6 @@ class HoprdAPI(Base):
         *args,
         **kwargs,
     ) -> tuple[bool, Optional[object]]:
-        self.debug(
-            f"Calling {obj.__name__}.{method} with kwargs: {kwargs}, args: {args}"
-        )
-
         async def __call(
             obj: Callable[..., object],
             method: str,
