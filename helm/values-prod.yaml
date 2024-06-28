@@ -1,7 +1,7 @@
 blue-nodes:
   enabled: true
 green-nodes:
-  enabled: false
+  enabled: true
 
 backup:
   enabled: true
@@ -12,8 +12,8 @@ ctdapp:
     replicas: 1
     tag: v3.0.3
   nodes:
-    NODE_ADDRESS_1: http://ctdapp-blue-node-1:3001
-    NODE_ADDRESS_2: http://ctdapp-blue-node-2:3001
-    NODE_ADDRESS_3: http://ctdapp-blue-node-3:3001
-    NODE_ADDRESS_4: http://ctdapp-blue-node-4:3001
-    NODE_ADDRESS_5: http://ctdapp-blue-node-5:3001
+    NODE_ADDRESS_1: http://ctdapp-green-node-1:3001
+    NODE_ADDRESS_2: http://ctdapp-green-node-2:3001
+    NODE_ADDRESS_3: http://ctdapp-green-node-3:3001
+    NODE_ADDRESS_4: http://ctdapp-green-node-4:3001
+    NODE_ADDRESS_5: http://ctdapp-green-node-5:3001

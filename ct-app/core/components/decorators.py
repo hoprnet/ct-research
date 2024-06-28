@@ -76,7 +76,7 @@ def formalin(message: Optional[str] = None):
             delay = getattr(class_flags, params_raw[index])
 
             if delay is not None:
-                self.debug(f"Running `{params_raw[index]}` every {delay} seconds")
+                self.info(f"Running `{params_raw[index]}` every {delay} seconds")
 
             while self.started:
                 if message:
