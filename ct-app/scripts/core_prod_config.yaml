@@ -32,7 +32,8 @@ flags:
 # =============================================================================
 # 
 # =============================================================================
-economicModel:
+economicModel: # TODO: update economic model once going on prod.
+
   minSafeAllowance: -1
   maxAPR: 15.0
   NFTThreshold: 30000
@@ -52,6 +53,7 @@ economicModel:
     gx:
       formula: "a * c + (x - c) ** (1 / b)"
       condition: "x > c"
+
 
 # =============================================================================
 # 

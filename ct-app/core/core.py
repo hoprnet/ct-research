@@ -334,7 +334,6 @@ class Core(Base):
         self.info(
             f"Excluded peers running on old version (< {self.params.peer.minVersion}) ({len(excluded)} entries)."
         )
-        self.debug(f"Peers on wrong version: {[el.address.id for el in excluded]}")
 
         Utils.allowManyNodePerSafe(eligibles)
         self.debug(f"Allowed many nodes per safe ({len(eligibles)} entries).")
@@ -568,7 +567,7 @@ class Core(Base):
         if price is None:
             self.warning("Ticket price not available.")
             return
-        
+
         await self.ticket_price.set(price)
         self.debug(f"Ticket price: {price}")
 
