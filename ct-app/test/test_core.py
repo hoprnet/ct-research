@@ -1,3 +1,4 @@
+import inspect
 import os
 
 import pytest
@@ -30,7 +31,7 @@ async def test_core_healthcheck(core: Core):
 
 @pytest.mark.asyncio
 async def test_check_subgraph_urls(core: Core):
-    pytest.skip("Not implemented")
+    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
 
 
 @pytest.mark.asyncio
@@ -49,7 +50,7 @@ async def test_aggregate_peers(core: Core, peers: list[Peer]):
 
 @pytest.mark.asyncio
 async def test_get_subgraph_data(core: Core):
-    pytest.skip("Not implemented")
+    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
 
 
 @pytest.mark.asyncio
@@ -62,12 +63,12 @@ async def test_get_topology_data(core: Core, peers: list[Peer]):
 
 @pytest.mark.asyncio
 async def test_apply_economic_model(core: Core):
-    pytest.skip("Not implemented")
+    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
 
 
 @pytest.mark.asyncio
 async def test_get_fundings(core: Core):
-    pytest.skip("Not implemented")
+    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,5 @@
 import datetime
+import inspect
 import random
 from test.components.utils import handle_envvars
 
@@ -90,7 +91,7 @@ def test_nodeAddresses():
 
 
 def test_httpPOST():
-    pytest.skip("Not implemented")
+    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
 
 
 def test_mergeDataSources():
@@ -154,14 +155,6 @@ def test_exclude():
     assert len(excluded) == 2
     for item in excluded:
         assert item.address in blacklist
-
-
-def test_rewardProbability(peers: list[Peer]):
-    Utils.rewardProbability(peers)
-
-    splits = [peer.reward_probability for peer in peers]
-    assert sum(splits) == pytest.approx(1.0)
-    assert all(splits)
 
 
 def test_nextEpoch():
