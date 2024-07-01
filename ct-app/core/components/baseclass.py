@@ -30,7 +30,7 @@ class Base:
         return cls.__name__.lower()
 
     def __format(self, message: str):
-        return f"{self.print_prefix} | {message}"
+        return f"{self.print_prefix} | {message}".replace("\n", "")
 
     def debug(self, message: str):
         self.logger.debug(self.__format(message))
