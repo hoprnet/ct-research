@@ -101,7 +101,7 @@ def test_bucket_apr():
 
 
 def test_economic_model_message_count_for_reward(budget: Budget):
-    stake = 100
+    stake = 75000
     model = EconomicModelSigmoid(
         10.0, [Bucket("bucket_1", 1, 1, 1), Bucket("bucket_2", 1, 1, 0.5)], 20.0, 1
     )
@@ -110,9 +110,8 @@ def test_economic_model_message_count_for_reward(budget: Budget):
     assert model.apr([0.5, 0.25]) == 10
     assert model.message_count_for_reward(stake, [0.5, 0.25]) == round(
         model.apr([0.5, 0.25])
-        / 100.0
-        / 12
-        / budget.ticket_price
-        / budget.winning_probability
         * stake
+        / 100.0
+        / (86400 * 365 / model.budget.intervals)
+        / (budget.ticket_price * budget.winning_probability)
     )
