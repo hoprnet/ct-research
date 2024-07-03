@@ -392,6 +392,10 @@ class Core(Base):
             JOBS_PER_PEER.labels(peer.address.id, "legacy").set(legacy_message_count)
             JOBS_PER_PEER.labels(peer.address.id, "sigmoid").set(sigmoid_message_count)
 
+            self.info(
+                f"{peer.address.id}: legacy={legacy_message_count}, sigmoid={sigmoid_message_count}"
+            )
+
         self.info(
             f"Assigned economic model to eligible nodes. ({len(eligibles)} entries)."
         )

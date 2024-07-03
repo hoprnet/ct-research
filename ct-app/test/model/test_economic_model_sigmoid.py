@@ -109,5 +109,10 @@ def test_economic_model_message_count_for_reward(budget: Budget):
 
     assert model.apr([0.5, 0.25]) == 10
     assert model.message_count_for_reward(stake, [0.5, 0.25]) == round(
-        model.apr([0.5, 0.25]) / 100.0 / 12 * stake
+        model.apr([0.5, 0.25])
+        / 100.0
+        / 12
+        / budget.ticket_price
+        / budget.winning_probability
+        * stake
     )

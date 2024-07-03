@@ -70,8 +70,8 @@ class SideEffect:
 
 @pytest.fixture
 def budget() -> Budget:
-    budget = Budget(120)
-    budget.ticket_price = 1
+    budget = Budget(1800)
+    budget.ticket_price = 0.0001
     budget.winning_probability = 1
     return budget
 
@@ -166,7 +166,7 @@ async def nodes(
 
         mocker.patch.object(node.api, "healthyz", return_value=True)
         mocker.patch.object(node.api, "startedz", return_value=True)
-        mocker.patch.object(node.api, "ticket_price", return_value=0.01)
+        mocker.patch.object(node.api, "ticket_price", return_value=0.0001)
 
         setattr(node.params, "distribution", Parameters())
         setattr(node.params.distribution, "delay_between_two_messages", 0.001)

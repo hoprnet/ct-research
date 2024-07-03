@@ -65,7 +65,9 @@ class EconomicModelSigmoid:
         """
         apr = self.apr(xs, self.max_apr)
 
-        rewards = apr / 100.0 / 12.0 * stake
+        yearly_rewards = apr * stake / 100.0
+        rewards = yearly_rewards / (365 * 86400 / self.budget.intervals)
+
         under = self.budget.ticket_price * self.budget.winning_probability
 
         return round(rewards / under * self.proportion) if under != 0 else 0

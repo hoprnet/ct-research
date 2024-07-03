@@ -75,6 +75,10 @@ async def test_get_fundings(core: Core):
 @pytest.mark.skipif(os.environ.get("CI") == "true", reason="Not running in CI")
 async def test_multiple_attempts_sending_stops_by_reward(core: Core, peers: list[Peer]):
     max_iter = 20
+
+    for peer in peers:
+        peer.message_count = 100
+
     rewards, iter = await core.multiple_attempts_sending(peers[:-1], max_iter)
 
     assert iter < max_iter
@@ -90,6 +94,10 @@ async def test_multiple_attempts_sending_stops_by_max_iter(
 ):
     max_iter = 2
     await core.get_ticket_price()
+
+    for peer in peers:
+        peer.message_count = 100
+
     rewards, iter = await core.multiple_attempts_sending(peers[:-1], max_iter)
 
     assert iter == max_iter

@@ -77,7 +77,9 @@ class EconomicModelLegacy:
         """
         Calculate the message count for the reward.
         """
-        rewards = self.apr / 12 * self.transformed_stake(stake)
+        yearly_rewards = self.apr * self.transformed_stake(stake) / 100
+        rewards = yearly_rewards / (365 * 86400 / self.budget.intervals)
+
         under = self.budget.ticket_price * self.budget.winning_probability
 
         return round(rewards / under * self.proportion) if under != 0 else 0

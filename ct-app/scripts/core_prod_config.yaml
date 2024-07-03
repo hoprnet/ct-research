@@ -32,28 +32,46 @@ flags:
 # =============================================================================
 # 
 # =============================================================================
-economicModel: # TODO: update economic model once going on prod.
-
+economicModel:
   minSafeAllowance: -1
-  maxAPR: 15.0
   NFTThreshold: 30000
-  intervals: 300 # in seconds
+  intervals: 1800 # in seconds
   winningProbability: 1
 
-  coefficients:
-    a: 1
-    b: 1.4
-    c: 75000
-    l: 10000
-  
-  equations: 
-    fx: 
-      formula: "a * x"
-      condition: "l <= x <= c"
-    gx:
-      formula: "a * c + (x - c) ** (1 / b)"
-      condition: "x > c"
+  legacy:
+    proportion: 0.9
+    apr: 12.5
 
+    coefficients:
+      a: 1
+      b: 1.4
+      c: 75000
+      l: 10000
+    
+    equations: 
+      fx: 
+        formula: "a * x"
+        condition: "l <= x <= c"
+      gx:
+        formula: "a * c + (x - c) ** (1 / b)"
+        condition: "x > c"
+
+  sigmoid:
+    proportion: 0.1
+    maxAPR: 15
+    offset: 10
+    networkCapacity: 2000
+    totalTokenSupply: 70000000
+
+    buckets:
+      economicSecurity:
+        flatness: 1.65
+        skewness: 1.50
+        upperbound: 0.5
+      networkCapacity:
+        flatness: 10.0
+        skewness: 2.75
+        upperbound: 1.0
 
 # =============================================================================
 # 
