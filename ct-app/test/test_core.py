@@ -7,10 +7,15 @@ from core.model.subgraph_type import SubgraphType
 from .conftest import Core
 
 
-def test__safe_subgraph_url(core: Core):
-    assert "query-id-safes" in core._safe_subgraph_url(SubgraphType.DEFAULT)
-    assert core._safe_subgraph_url(SubgraphType.BACKUP) == "safes_backup_url"
-    assert core._safe_subgraph_url("random") is None
+def test_safe_subgraph_url(core: Core):
+    core.subgraph_type = SubgraphType.DEFAULT
+    assert "query-id-safes" in core.safe_subgraph_url
+
+    core.subgraph_type = SubgraphType.BACKUP
+    assert core.safe_subgraph_url == "safes_backup_url"
+
+    core.subgraph_type = SubgraphType.NONE
+    assert core.safe_subgraph_url is None
 
 
 @pytest.mark.asyncio

@@ -66,21 +66,7 @@ class Core(Base):
         self.nft_holders = LockedVar("nft_holders", list[str]())
         self.peer_rewards = LockedVar("peer_rewards", dict[str, float]())
 
-        ######################### THIS NEEDS BETTER HANDLING #########################
-        # subgraphs
-        self._safe_subgraph_url = SubgraphURL(
-            self.params.subgraph.apiKey, self.params.subgraph.safesBalance
-        )
-        self._staking_subgraph_url = SubgraphURL(
-            self.params.subgraph.apiKey, self.params.subgraph.staking
-        )
-
-        self._rewards_subgraph_url = SubgraphURL(
-            self.params.subgraph.apiKey, self.params.subgraph.rewards
-        )
-
-        self._subgraph_type = SubgraphType.DEFAULT
-        ##############################################################################
+        self.subgraph_type = SubgraphType.DEFAULT
 
         self.started = False
 
@@ -96,36 +82,24 @@ class Core(Base):
     async def ct_nodes_addresses(self) -> list[Address]:
         return await asyncio.gather(*[node.address.get() for node in self.nodes])
 
-    ########################### THIS NEEDS BETTER HANDLING ###########################
-    @property
-    def safe_subgraph_url(self) -> str:
-        return self._safe_subgraph_url(self.subgraph_type)
-
-    @property
-    def staking_subgraph_url(self) -> str:
-        return self._staking_subgraph_url(self.subgraph_type)
-
-    @property
-    def wxhopr_txs_subgraph_url(self) -> str:
-        return self._wxhopr_txs_subgraph_url(self.subgraph_type)
-
-    @property
-    def rewards_subgraph_url(self) -> str:
-        return self._rewards_subgraph_url(self.subgraph_type)
-
     @property
     def subgraph_type(self) -> SubgraphType:
         return self._subgraph_type
 
     @subgraph_type.setter
     def subgraph_type(self, value: SubgraphType):
-        if value != self.subgraph_type:
+        if not hasattr(self, "_subgraph_type") or value != self._subgraph_type:
             self.info(f"Now using '{value.value}' subgraph.")
+
+        subgraph_params = self.params.subgraph
+        key = subgraph_params.apiKey
+
+        self.safe_subgraph_url = SubgraphURL(key, subgraph_params.safesBalance)(value)
+        self.staking_subgraph_url = SubgraphURL(key, subgraph_params.staking)(value)
+        self.rewards_subgraph_url = SubgraphURL(key, subgraph_params.rewards)(value)
 
         SUBGRAPH_IN_USE.set(value.toInt())
         self._subgraph_type = value
-
-    ##################################################################################
 
     @flagguard
     @formalin(None)
