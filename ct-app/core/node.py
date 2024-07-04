@@ -1,5 +1,4 @@
 import asyncio
-import time
 from datetime import datetime
 
 from prometheus_client import Gauge
@@ -7,7 +6,7 @@ from prometheus_client import Gauge
 from .components.baseclass import Base
 from .components.channelstatus import ChannelStatus
 from .components.decorators import connectguard, flagguard, formalin
-from .components.hoprd_api import MESSAGE_TAG, HoprdAPI
+from .components.hoprd_api import HoprdAPI
 from .components.lockedvar import LockedVar
 from .components.parameters import Parameters
 from .components.utils import Utils

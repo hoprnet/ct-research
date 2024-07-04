@@ -1,8 +1,6 @@
 import inspect
-import os
 
 import pytest
-from core.model.address import Address
 from core.model.peer import Peer
 from core.model.subgraph_type import SubgraphType
 

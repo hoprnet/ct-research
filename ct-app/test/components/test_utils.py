@@ -1,6 +1,5 @@
 import datetime
 import inspect
-import random
 from test.components.utils import handle_envvars
 
 import pytest

@@ -1,6 +1,4 @@
-import random
 from datetime import datetime, timedelta
-from typing import Any
 
 from aiohttp import ClientSession
 from core.model.address import Address
