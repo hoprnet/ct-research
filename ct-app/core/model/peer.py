@@ -1,6 +1,16 @@
+from typing import Union
+
+from core.components.hoprd_api import HoprdAPI
+from core.components.lockedvar import LockedVar
 from packaging.version import Version
+from prometheus_client import Gauge
 
 from .address import Address
+
+PEER_SPLIT_STAKE = Gauge("peer_split_stake", "Splitted stake", ["peer_id"])
+PEER_TF_STAKE = Gauge("peer_tf_stake", "Transformed stake", ["peer_id"])
+PEER_SAFE_COUNT = Gauge("peer_safe_count", "Number of safes", ["peer_id"])
+PEER_VERSION = Gauge("peer_version", "Peer version", ["peer_id", "version"])
 
 
 class Peer:
@@ -20,14 +30,15 @@ class Peer:
         self.channel_balance = None
 
         self.safe_address = None
-        self.safe_balance = None
-        self.safe_allowance = None
+        self.safe_balance = 0
+        self.safe_allowance = 0
 
         self._safe_address_count = None
 
-        self._message_count = 0
+        self.message_count = LockedVar("message_count", 0, False)
+        self._eligible = False
 
-    def version_is_old(self, min_version: str or Version) -> bool:
+    def is_old(self, min_version: Union[str, Version]):
         """
         Check if the peer's version is older than the specified version.
         :param min_version: The minimum version to check against.
@@ -42,7 +53,7 @@ class Peer:
         return self._version
 
     @version.setter
-    def version(self, value: str or Version):
+    def version(self, value: Union[str, Version]):
         if not isinstance(value, Version):
             try:
                 value = Version(value)
@@ -50,6 +61,7 @@ class Peer:
                 value = Version("0.0.0")
 
         self._version = value
+        PEER_VERSION.labels(self.address.id, str(value)).set(1)
 
     @property
     def node_address(self) -> str:
@@ -66,6 +78,8 @@ class Peer:
     def safe_address_count(self, value: int):
         self._safe_address_count = value
 
+        PEER_SAFE_COUNT.labels(self.address.id).set(value)
+
     @property
     def split_stake(self) -> float:
         if self.safe_balance is None:
@@ -74,32 +88,41 @@ class Peer:
             raise ValueError("Channel balance not set")
         if self.safe_address_count is None:
             raise ValueError("Safe address count not set")
+        if self.message_count is None:
+            return 0
 
-        return float(self.safe_balance) / float(self.safe_address_count) + float(
+        split_stake = float(self.safe_balance) / float(self.safe_address_count) + float(
             self.channel_balance
         )
+        PEER_SPLIT_STAKE.labels(self.address.id).set(split_stake)
+
+        return split_stake
 
     @property
-    def has_low_stake(self) -> bool:
-        if self.economic_model is None:
-            raise ValueError("Economic model not set")
+    async def message_delay(self) -> float:
+        return (365 * 24 * 60 * 60) / (await self.message_count.get())
 
-        return self.split_stake < self.economic_model.coefficients.l
+    def is_eligible(
+        self,
+        min_allowance: float,
+        min_stake: float,
+        ct_nodes: list[Address],
+        nft_holders: list[str],
+        nft_threshold: float,
+    ) -> bool:
+        conditions: list[bool] = []
 
-    @property
-    def transformed_stake(self) -> float:
-        if self.economic_model is None:
-            raise ValueError("Economic model not set")
+        conditions.append(self.safe_allowance < min_allowance)
+        conditions.append(self.address in ct_nodes)
+        conditions.append(
+            self.safe_address in nft_holders and self.split_stake < nft_threshold
+        )
+        conditions.append(self.split_stake < min_stake)
 
-        return self.economic_model.transformed_stake(self.split_stake)
+        return all(conditions)
 
-    @property
-    def message_count(self) -> float:
-        return self._message_count
-
-    @message_count.setter
-    def message_count(self, value: float):
-        self._message_count = value
+    async def send_message(self, api: HoprdAPI, sender: str, tag: str):
+        await api.send_message(sender, "CT", [self.address.id], tag=tag)
 
     def __repr__(self):
         return f"Peer(address: {self.address})"

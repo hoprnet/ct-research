@@ -58,7 +58,7 @@ class EconomicModelLegacy:
         self.coefficients = coefficients
         self.proportion = proportion
         self.apr = apr
-        self.budget: Budget = None
+        self.budget: Budget = Budget()
 
     def transformed_stake(self, stake: float):
         # convert parameters attribute to dictionary
@@ -73,12 +73,13 @@ class EconomicModelLegacy:
 
         return eval(func.formula, kwargs)
 
-    def message_count_for_reward(self, stake: float):
+    def message_count_for_reward(self, stake: float, redeemed_rewards: float = 0):
         """
-        Calculate the message count for the reward.
+        Calculate the yearly message count for the reward.
         """
-        yearly_rewards = self.apr * self.transformed_stake(stake) / 100
-        rewards = yearly_rewards / (365 * 86400 / self.budget.intervals)
+        self.coefficients.l += redeemed_rewards
+        rewards = self.apr * self.transformed_stake(stake) / 100
+        self.coefficients.l -= redeemed_rewards
 
         under = self.budget.ticket_price * self.budget.winning_probability
 

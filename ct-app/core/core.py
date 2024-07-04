@@ -1,12 +1,6 @@
 import asyncio
 import random
-import time
-from copy import deepcopy
-from datetime import datetime
-from typing import Any
 
-from database.database_connection import DatabaseConnection
-from database.models import Reward
 from prometheus_client import Gauge
 
 from .components.baseclass import Base
@@ -22,7 +16,6 @@ from .components.lockedvar import LockedVar
 from .components.parameters import Parameters
 from .components.utils import Utils
 from .model.address import Address
-from .model.budget import Budget
 from .model.economic_model_legacy import EconomicModelLegacy
 from .model.economic_model_sigmoid import EconomicModelSigmoid
 from .model.peer import Peer
@@ -39,16 +32,7 @@ SUBGRAPH_CALLS = Gauge("subgraph_calls", "# of subgraph calls", ["type"])
 SUBGRAPH_SIZE = Gauge("subgraph_size", "Size of the subgraph")
 TOPOLOGY_SIZE = Gauge("topology_size", "Size of the topology")
 NFT_HOLDERS = Gauge("nft_holders", "Number of nr-nft holders")
-EXECUTIONS_COUNTER = Gauge("executions", "# of execution of the economic model")
 ELIGIBLE_PEERS_COUNTER = Gauge("eligible_peers", "# of eligible peers for rewards")
-APR_PER_PEER = Gauge("apr_per_peer", "APR per peer", ["peer_id"])
-JOBS_PER_PEER = Gauge("jobs_per_peer", "Jobs per peer", ["peer_id", "model"])
-PEER_SPLIT_STAKE = Gauge("peer_split_stake", "Splitted stake", ["peer_id"])
-PEER_TF_STAKE = Gauge("peer_tf_stake", "Transformed stake", ["peer_id"])
-PEER_SAFE_COUNT = Gauge("peer_safe_count", "Number of safes", ["peer_id"])
-PEER_VERSION = Gauge("peer_version", "Peer version", ["peer_id", "version"])
-DISTRIBUTION_DELAY = Gauge("distribution_delay", "Delay between two distributions")
-NEXT_DISTRIBUTION_EPOCH = Gauge("next_distribution_epoch", "Next distribution (epoch)")
 TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
 
 
@@ -57,45 +41,11 @@ class Core(Base):
     The Core class represents the main class of the application. It is responsible for managing the nodes, the economic model and the distribution of rewards.
     """
 
-    def __init__(self):
+    def __init__(self, nodes: list[Node], params: Parameters):
         super().__init__()
 
-        self.params = Parameters()
-
-        self.nodes = list[Node]()
-
-        self.legacy_model: EconomicModelLegacy = None
-        self.sigmoid_model: EconomicModelSigmoid = None
-        self._budget: Budget = None
-
-        self.tasks = set[asyncio.Task]()
-
-        self.connected = LockedVar("connected", False)
-        self.address = None
-
-        self.all_peers = LockedVar("all_peers", set[Peer]())
-        self.topology_list = LockedVar("topology_list", list[TopologyEntry]())
-        self.registered_nodes = LockedVar("subgraph_list", list[SubgraphEntry]())
-        self.nft_holders = LockedVar("nft_holders", list[str]())
-        self.eligible_list = LockedVar("eligible_list", list[Peer]())
-        self.peer_rewards = LockedVar("peer_rewards", dict[str, float]())
-        self.ticket_price = LockedVar("ticket_price", 1.0)
-
-        # subgraphs
-        self._safe_subgraph_url = None
-        self._staking_subgraph_url = None
-        self._rewards_subgraph_url = None
-
-        # trick to have the subgraph in use displayed in the terminal
-        self._subgraph_type = SubgraphType.NONE
-        self.subgraph_type = SubgraphType.DEFAULT
-
-        self.started = False
-
-    def post_init(self, nodes: list[Node], params: Parameters):
         self.params = params
         self.nodes = nodes
-
         for node in self.nodes:
             node.params = params
 
@@ -105,8 +55,19 @@ class Core(Base):
         self.sigmoid_model = EconomicModelSigmoid.fromParameters(
             self.params.economicModel.sigmoid
         )
-        self.budget = Budget(self.params.economicModel.intervals)
 
+        self.tasks = set[asyncio.Task]()
+
+        self.connected = LockedVar("connected", False)
+
+        self.all_peers = LockedVar("all_peers", set[Peer]())
+        self.topology_list = LockedVar("topology_list", list[TopologyEntry]())
+        self.registered_nodes = LockedVar("subgraph_list", list[SubgraphEntry]())
+        self.nft_holders = LockedVar("nft_holders", list[str]())
+        self.peer_rewards = LockedVar("peer_rewards", dict[str, float]())
+
+        ######################### THIS NEEDS BETTER HANDLING #########################
+        # subgraphs
         self._safe_subgraph_url = SubgraphURL(
             self.params.subgraph.apiKey, self.params.subgraph.safesBalance
         )
@@ -118,15 +79,10 @@ class Core(Base):
             self.params.subgraph.apiKey, self.params.subgraph.rewards
         )
 
-    @property
-    def budget(self):
-        return self._budget
+        self._subgraph_type = SubgraphType.DEFAULT
+        ##############################################################################
 
-    @budget.setter
-    def budget(self, value: Budget):
-        self._budget = value
-        self.legacy_model.budget = value
-        self.sigmoid_model.budget = value
+        self.started = False
 
     @property
     def print_prefix(self) -> str:
@@ -137,13 +93,10 @@ class Core(Base):
         return random.choice(self.nodes).api
 
     @property
-    async def network_nodes_addresses(self) -> list[Address]:
+    async def ct_nodes_addresses(self) -> list[Address]:
         return await asyncio.gather(*[node.address.get() for node in self.nodes])
 
-    @property
-    def subgraph_type(self) -> SubgraphType:
-        return self._subgraph_type
-
+    ########################### THIS NEEDS BETTER HANDLING ###########################
     @property
     def safe_subgraph_url(self) -> str:
         return self._safe_subgraph_url(self.subgraph_type)
@@ -160,6 +113,10 @@ class Core(Base):
     def rewards_subgraph_url(self) -> str:
         return self._rewards_subgraph_url(self.subgraph_type)
 
+    @property
+    def subgraph_type(self) -> SubgraphType:
+        return self._subgraph_type
+
     @subgraph_type.setter
     def subgraph_type(self, value: SubgraphType):
         if value != self.subgraph_type:
@@ -168,18 +125,7 @@ class Core(Base):
         SUBGRAPH_IN_USE.set(value.toInt())
         self._subgraph_type = value
 
-    async def _retrieve_address(self):
-        """
-        Retrieves the address from the node.
-        """
-        addresses = await self.api.get_address("all")
-        if not addresses:
-            self.warning("No address retrieved from node.")
-            return
-        if "hopr" not in addresses or "native" not in addresses:
-            self.warning("Invalid address retrieved from node.")
-            return
-        self.address = Address(addresses["hopr"], addresses["native"])
+    ##################################################################################
 
     @flagguard
     @formalin(None)
@@ -218,15 +164,26 @@ class Core(Base):
         """
         Aggregates the peers from all nodes and sets the all_peers LockedVar.
         """
-        results = set[Peer]()
+        visible_peers = set[Peer]()
+        previous_peers: set[Peer] = await self.all_peers.get()
 
         for node in self.nodes:
-            results.update(await node.peers.get())
+            visible_peers.update(await node.peers.get())
 
-        await self.all_peers.set(results)
+        for peer in previous_peers:
+            if peer in visible_peers:
+                continue
+            await peer.message_count.set(None)
 
-        self.debug(f"Aggregated peers ({len(results)} entries).")
-        UNIQUE_PEERS.set(len(results))
+        for peer in visible_peers:
+            if peer in previous_peers:
+                continue
+            previous_peers.add(peer)
+
+        await self.all_peers.set(previous_peers)
+
+        self.debug(f"Aggregated peers ({len(previous_peers)} entries).")
+        UNIQUE_PEERS.set(len(previous_peers))
 
     @flagguard
     @formalin("Getting registered nodes")
@@ -305,235 +262,67 @@ class Core(Base):
     @formalin("Applying economic model")
     async def apply_economic_model(self):
         """
-        Applies the economic model to the eligible peers (after multiple filtering layers) and sets the eligible_list LockedVar.
+        Applies the economic model to the eligible peers (after multiple filtering layers).
         """
-        topology = await self.topology_list.get()
         registered_nodes = await self.registered_nodes.get()
-        peers = await self.all_peers.get()
         nft_holders = await self.nft_holders.get()
+        topology = await self.topology_list.get()
+        peers = await self.all_peers.get()
 
-        self.info(f"Topology size: {len(topology)}")
-        self.info(f"Subgraph size: {len(registered_nodes)}")
-        self.info(f"Network size: {len(peers)}")
-        self.info(f"NFT holders: {len(nft_holders)}")
-
-        ready = len(topology) and len(registered_nodes) and len(peers)
-        if not ready:
+        if not all(
+            [len(topology), len(registered_nodes), len(peers), len(nft_holders)]
+        ):
             self.warning("Not enough data to apply economic model.")
             return
 
-        eligibles = Utils.mergeDataSources(topology, peers, registered_nodes)
-        self.info(f"Merged topology and subgraph data ({len(eligibles)} entries).")
+        peers = await Utils.mergeDataSources(topology, peers, registered_nodes)
 
-        old_peer_addresses = [
-            peer.address
-            for peer in eligibles
-            if peer.version_is_old(self.params.peer.minVersion)
-        ]
-        excluded = Utils.exclude(eligibles, old_peer_addresses)
-        self.info(
-            f"Excluded peers running on old version (< {self.params.peer.minVersion}) ({len(excluded)} entries)."
-        )
+        for p in peers:
+            if not p.is_old(self.params.peer.minVersion):
+                continue
+            await p.message_count.set(None)
 
-        Utils.allowManyNodePerSafe(eligibles)
-        self.debug(f"Allowed many nodes per safe ({len(eligibles)} entries).")
+        Utils.allowManyNodePerSafe(peers)
 
-        low_allowance_addresses = [
-            peer.address
-            for peer in eligibles
-            if peer.safe_allowance < self.params.economicModel.minSafeAllowance
-        ]
-        excluded = Utils.exclude(eligibles, low_allowance_addresses)
-        self.info(f"Excluded nodes with low safe allowance ({len(excluded)} entries).")
-        self.debug(f"Peers with low allowance {[el.address.id for el in excluded]}")
+        ct_nodes = await self.ct_nodes_addresses
+        for p in peers:
+            if not p.is_eligible(
+                self.params.economicModel.minSafeAllowance,
+                self.legacy_model.coefficients.l,
+                ct_nodes,
+                nft_holders,
+                self.params.economicModel.NFTThreshold,
+            ):
+                continue
+            await p.message_count.set(None)
 
-        excluded = Utils.exclude(eligibles, await self.network_nodes_addresses)
-        self.debug(f"Excluded network nodes ({len(excluded)} entries).")
-
-        if threshold := self.params.economicModel.NFTThreshold:
-            low_stake_non_nft_holders = [
-                peer.address
-                for peer in eligibles
-                if peer.safe_address not in nft_holders and peer.split_stake < threshold
-            ]
-            excluded = Utils.exclude(eligibles, low_stake_non_nft_holders)
-            self.info(
-                f"Excluded non-nft-holders with stake < {threshold} ({len(excluded)} entries)."
-            )
-
-        redeemed_rewards = await self.peer_rewards.get()
-        for peer in eligibles:
-            peer.economic_model = deepcopy(self.legacy_model)
-            peer.economic_model.coefficients.c += redeemed_rewards.get(
-                peer.address.address, 0.0
-            )
-
-        low_stake_addresses = [peer.address for peer in eligibles if peer.has_low_stake]
-        excluded = Utils.exclude(eligibles, low_stake_addresses)
-        self.debug(f"Excluded nodes with low stake ({len(excluded)} entries).")
         economic_security = (
-            sum([peer.split_stake for peer in eligibles])
+            sum([peer.split_stake for peer in peers])
             / self.params.economicModel.sigmoid.totalTokenSupply
         )
         network_capacity = (
-            len(eligibles) / self.params.economicModel.sigmoid.networkCapacity
+            len([p for p in peers if p.message_count is not None])
+            / self.params.economicModel.sigmoid.networkCapacity
         )
         sigmoid_model_input = [economic_security, network_capacity]
+        redeemed_rewards = await self.peer_rewards.get()
 
-        for peer in eligibles:
+        for peer in peers:
             legacy_message_count = self.legacy_model.message_count_for_reward(
-                peer.split_stake
+                peer.split_stake, redeemed_rewards.get(peer.address.address, 0.0)
             )
             sigmoid_message_count = self.sigmoid_model.message_count_for_reward(
                 peer.split_stake, sigmoid_model_input
             )
 
-            peer.message_count = legacy_message_count + sigmoid_message_count
-            JOBS_PER_PEER.labels(peer.address.id, "legacy").set(legacy_message_count)
-            JOBS_PER_PEER.labels(peer.address.id, "sigmoid").set(sigmoid_message_count)
+            await peer.message_count.set(legacy_message_count + sigmoid_message_count)
 
         self.info(
-            f"Assigned economic model to eligible nodes. ({len(eligibles)} entries)."
+            f"Eligible nodes: {len([p for p in peers if p.message_count is not None])} entries."
         )
 
-        self.info(f"Eligible nodes ({len(eligibles)} entries).")
-
-        await self.eligible_list.set(eligibles)
-
-        # set prometheus metrics
-        NEXT_DISTRIBUTION_EPOCH.set(
-            Utils.nextEpoch(self.params.economicModel.intervals).timestamp()
-        )
-        ELIGIBLE_PEERS_COUNTER.set(len(eligibles))
-
-        for peer in eligibles:
-            PEER_SPLIT_STAKE.labels(peer.address.id).set(peer.split_stake)
-            PEER_SAFE_COUNT.labels(peer.address.id).set(peer.safe_address_count)
-            PEER_TF_STAKE.labels(peer.address.id).set(peer.transformed_stake)
-            PEER_VERSION.labels(peer.address.id, str(peer.version)).set(1)
-
-    @flagguard
-    @formalin("Distributing rewards")
-    @connectguard
-    async def distribute_rewards(self):
-        delay = Utils.nextDelayInSeconds(self.params.economicModel.intervals)
-        self.debug(f"Waiting {delay} seconds for next distribution.")
-        await asyncio.sleep(delay)
-
-        peers = list[Peer]()
-
-        while len(peers) < self.params.distribution.minEligiblePeers:
-            peers = await self.eligible_list.get()
-            self.warning(
-                f"Min. {self.params.distribution.minEligiblePeers} peers required to distribute rewards (having {len(peers)})."
-            )
-            await asyncio.sleep(2)
-
-        # distribute rewards
-        # randomly split peers into groups, one group per node
-        self.info("Initiating distribution.")
-
-        t: tuple[dict[str, dict[str, Any]], int] = await self.multiple_attempts_sending(
-            peers, self.params.distribution.maxIterations
-        )
-        rewards, iterations = t  # trick for typehinting tuple unpacking
-        self.info("Distribution completed.")
-
-        self.debug(f"Rewards distributed in {iterations} iterations: {rewards}")
-
-        try:
-            with DatabaseConnection(self.params.pg) as session:
-                entries = set[Reward]()
-
-                for peer, values in rewards.items():
-                    expected = values.get("expected", 0)
-                    remaining = values.get("remaining", 0)
-                    issued = values.get("issued", 0)
-                    effective = expected - remaining
-                    status = "SUCCESS" if remaining < 1 else "TIMEOUT"
-
-                    entry = Reward(
-                        peer_id=peer,
-                        node_address="",
-                        expected_count=expected,
-                        effective_count=effective,
-                        status=status,
-                        timestamp=datetime.fromtimestamp(time.time()),
-                        issued_count=issued,
-                    )
-
-                    entries.add(entry)
-
-                session.add_all(entries)
-                session.commit()
-
-                self.debug(f"Stored {len(entries)} reward entries in database: {entry}")
-        except Exception as err:
-            self.error(f"Database error while storing distribution results: {err}")
-
-        self.info(f"Distributed rewards to {len(peers)} peers.")
-
-        EXECUTIONS_COUNTER.inc()
-
-    async def multiple_attempts_sending(
-        self, peers: list[Peer], max_iterations: int = 4
-    ) -> dict[str, dict[str, Any]]:
-        def _total_messages_to_send(rewards: dict[str, dict[str, int]]) -> int:
-            return sum(
-                [max(value.get("remaining", 0), 0) for value in rewards.values()]
-            )
-
-        iteration: int = 0
-
-        reward_per_peer = {
-            peer.address.id: {
-                "expected": peer.message_count,
-                "remaining": peer.message_count,
-                "issued": 0,
-                "tag": idx,
-                "ticket-price": self.budget.ticket_price,
-            }
-            for idx, peer in enumerate(peers)
-        }
-
-        while (
-            iteration < max_iterations and _total_messages_to_send(reward_per_peer) > 0
-        ):
-            peers_groups = Utils.splitDict(reward_per_peer, len(self.nodes))
-
-            # send rewards to peers
-            tasks = set[asyncio.Task]()
-            for node, peers_group in zip(self.nodes, peers_groups):
-                tasks.add(asyncio.create_task(node.distribute_rewards(peers_group)))
-            issued_counts: list[dict] = await asyncio.gather(*tasks)
-
-            # wait for message delivery (if needed)
-            self.debug(
-                f"Waiting {self.params.distribution.messageDeliveryDelay} for message delivery"
-            )
-            await asyncio.sleep(self.params.distribution.messageDeliveryDelay)
-
-            # check inboxes for relayed messages
-            self.debug("Checking inboxes")
-            tasks = set[asyncio.Task]()
-            for node, peers_group in zip(self.nodes, peers_groups):
-                tasks.add(asyncio.create_task(node.check_inbox(peers_group)))
-            relayed_counts: list[dict] = await asyncio.gather(*tasks)
-
-            # for every peer, substract the relayed count from the total count
-            for peer in reward_per_peer:
-                reward_per_peer[peer]["remaining"] -= sum(
-                    [res.get(peer, 0) for res in relayed_counts]
-                )
-                reward_per_peer[peer]["issued"] += sum(
-                    [res.get(peer, 0) for res in issued_counts]
-                )
-
-            self.debug(f"Iteration {iteration} completed.")
-
-            iteration += 1
-
-        return reward_per_peer, iteration
+        ELIGIBLE_PEERS_COUNTER.set(len(peers))
+        await self.all_peers.set(set(peers))
 
     @flagguard
     @formalin("Getting peers rewards amounts")
@@ -556,23 +345,29 @@ class Core(Base):
 
         self.debug(f"Fetched peers rewards amounts ({len(results)} entries).")
 
-    @formalin("Getting ticket price")
+    @formalin("Getting ticket parameters")
     @connectguard
-    async def get_ticket_price(self):
+    async def get_ticket_parameters(self):
         """
-        Gets the ticket price from the api and sets the ticket_price LockedVar. The ticket price is used in the economic model to calculate the number of messages to send to a peer.
+        Gets the ticket price and winning probability from the api. They are used in the economic model to calculate the number of messages to send to a peer.
         """
         price = await self.api.ticket_price()
-
         if price is None:
             self.warning("Ticket price not available.")
             return
 
-        await self.ticket_price.set(price)
-        self.debug(f"Ticket price: {price}")
+        # should be replaced by await self.api.winning_probability()
+        win_probabilty = self.params.economicModel.winningProbability
+        if win_probabilty is None:
+            self.warning("Winning probability not available.")
+            return
+
+        self.debug(f"Ticket price: {price}, winning probability: {win_probabilty}")
 
         self.legacy_model.budget.ticket_price = price
+        self.legacy_model.budget.winning_probability = win_probabilty
         self.sigmoid_model.budget.ticket_price = price
+        self.sigmoid_model.budget.winning_probability = win_probabilty
 
     async def start(self):
         """
@@ -589,7 +384,7 @@ class Core(Base):
 
         for node in self.nodes:
             node.started = True
-            await node._retrieve_address()
+            await node.retrieve_address()
             self.tasks.update(node.tasks())
 
         self.started = True
@@ -597,7 +392,7 @@ class Core(Base):
         self.tasks.add(asyncio.create_task(self.healthcheck()))
         self.tasks.add(asyncio.create_task(self.check_subgraph_urls()))
         self.tasks.add(asyncio.create_task(self.get_peers_rewards()))
-        self.tasks.add(asyncio.create_task(self.get_ticket_price()))
+        self.tasks.add(asyncio.create_task(self.get_ticket_parameters()))
 
         self.tasks.add(asyncio.create_task(self.aggregate_peers()))
         self.tasks.add(asyncio.create_task(self.get_registered_nodes()))
@@ -605,7 +400,6 @@ class Core(Base):
         self.tasks.add(asyncio.create_task(self.get_nft_holders()))
 
         self.tasks.add(asyncio.create_task(self.apply_economic_model()))
-        self.tasks.add(asyncio.create_task(self.distribute_rewards()))
 
         await asyncio.gather(*self.tasks)
 

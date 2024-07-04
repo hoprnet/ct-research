@@ -94,7 +94,8 @@ def test_httpPOST():
     pytest.skip(f"{inspect.stack()[0][3]} not implemented")
 
 
-def test_mergeDataSources():
+@pytest.mark.asyncio
+async def test_mergeDataSources():
     topology_list = [
         TopologyEntry(None, None, 1),
         TopologyEntry("peer_id_2", "address_2", 2),
@@ -112,9 +113,9 @@ def test_mergeDataSources():
         SubgraphEntry("address_3", None, "safe_address_3", "3"),
     ]
 
-    merged = Utils.mergeDataSources(topology_list, peers_list, subgraph_list)
+    merged = await Utils.mergeDataSources(topology_list, peers_list, subgraph_list)
 
-    assert len(merged) == 1
+    assert len(merged) == 3
 
 
 def test_allowManyNodePerSafe():
@@ -183,15 +184,3 @@ async def test_aggregatePeerBalanceInChannels(channel_topology):
     assert len(results) == 2
     assert results["src_1"]["channels_balance"] == 3
     assert results["src_2"]["channels_balance"] == 5
-
-
-def test_splitDict():
-    bins = random.randint(2, 10)
-    num_elements = random.randint(50, 100)
-    source_dict = {f"key_{i}": f"value_{i}" for i in range(num_elements)}
-
-    result = Utils.splitDict(source_dict, bins)
-    key_counts = [len(item.keys()) for item in result]
-
-    assert len(result) == bins
-    assert max(key_counts) - min(key_counts) <= 1

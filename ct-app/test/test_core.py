@@ -16,13 +16,6 @@ def test__safe_subgraph_url(core: Core):
 
 
 @pytest.mark.asyncio
-async def test__retrieve_address(core: Core, addresses: list[dict]):
-    await core._retrieve_address()
-
-    assert core.address in [Address(addr["hopr"], addr["native"]) for addr in addresses]
-
-
-@pytest.mark.asyncio
 async def test_core_healthcheck(core: Core):
     await core.healthcheck()
 
@@ -69,37 +62,3 @@ async def test_apply_economic_model(core: Core):
 @pytest.mark.asyncio
 async def test_get_fundings(core: Core):
     pytest.skip(f"{inspect.stack()[0][3]} not implemented")
-
-
-@pytest.mark.asyncio
-@pytest.mark.skipif(os.environ.get("CI") == "true", reason="Not running in CI")
-async def test_multiple_attempts_sending_stops_by_reward(core: Core, peers: list[Peer]):
-    max_iter = 20
-
-    for peer in peers:
-        peer.message_count = 100
-
-    rewards, iter = await core.multiple_attempts_sending(peers[:-1], max_iter)
-
-    assert iter < max_iter
-    assert len(rewards) == len(peers) - 1
-    assert all([reward["remaining"] <= 0 for reward in rewards.values()])
-    assert all([reward["issued"] >= reward["expected"] for reward in rewards.values()])
-
-
-@pytest.mark.asyncio
-@pytest.mark.skipif(os.environ.get("CI") == "true", reason="Not running in CI")
-async def test_multiple_attempts_sending_stops_by_max_iter(
-    core: Core, peers: list[Peer]
-):
-    max_iter = 2
-    await core.get_ticket_price()
-
-    for peer in peers:
-        peer.message_count = 100
-
-    rewards, iter = await core.multiple_attempts_sending(peers[:-1], max_iter)
-
-    assert iter == max_iter
-    assert len(rewards) == len(peers) - 1
-    assert all([reward["remaining"] >= 0 for reward in rewards.values()])

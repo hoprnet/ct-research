@@ -55,38 +55,35 @@ class Utils(Base):
                 return status, response
 
     @classmethod
-    def mergeDataSources(
+    async def mergeDataSources(
         cls,
         topology: list[TopologyEntry],
         peers: list[Peer],
         safes: list[SubgraphEntry],
     ):
         merged_result: list[Peer] = []
-        addresses = [item.node_address for item in topology]
+        addresses = [item.address.address for item in peers]
 
         for address in addresses:
             peer = next(filter(lambda p: p.address.address == address, peers), None)
             topo = next(filter(lambda t: t.node_address == address, topology), None)
             safe = next(filter(lambda s: s.node_address == address, safes), None)
 
-            # TEMP SOLUTION TO ENFORCE DISTRIBUTION TO PEERS NOT LISTED BY THE SUBGRAPH ON STAGING
-            if safe is None:
-                safe = SubgraphEntry(address, "0", "0x0", "0")
+            if topo is not None:
+                peer.channel_balance = topo.channels_balance
+            if safe is not None:
+                peer.safe_address = safe.safe_address
+                peer.safe_balance = (
+                    safe.wxHoprBalance if safe.wxHoprBalance is not None else 0
+                )
+                peer.safe_allowance = float(safe.safe_allowance)
 
-            if (
-                peer is None
-                or topo is None
-                or safe is None
-                or safe.wxHoprBalance is None
-            ):
-                continue
-
-            peer.safe_address = safe.safe_address
-            peer.safe_balance = safe.wxHoprBalance
-            peer.safe_allowance = float(safe.safe_allowance)
-            peer.channel_balance = topo.channels_balance
+            if peer is None or topo is None or safe is None:
+                await peer.message_count.set(None)
 
             merged_result.append(peer)
+
+        cls().info(f"Merged topology and subgraph data ({len(merged_result)} entries).")
 
         return merged_result
 
@@ -109,7 +106,9 @@ class Utils(Base):
             peer.safe_address_count = safe_counts[peer.safe_address]
 
     @classmethod
-    def exclude(cls, source_data: list[Peer], blacklist: list[Address]) -> list[Peer]:
+    def exclude(
+        cls, source_data: list[Peer], blacklist: list[Address], text: str = ""
+    ) -> list[Peer]:
         """
         Removes elements from a dictionary based on a blacklist.
         :param source_data (dict): The dictionary to be updated.
@@ -125,6 +124,8 @@ class Utils(Base):
         for index in sorted(indexes, reverse=True):
             peer: Peer = source_data.pop(index)
             excluded.append(peer)
+
+        cls().info(f"Excluded {text} ({len(excluded)} entries).")
 
         return excluded
 
@@ -191,19 +192,6 @@ class Utils(Base):
 
         return results
 
-    @classmethod
-    def splitDict(cls, src: dict[str, Any], bins: int) -> list[dict[str, Any]]:
-        """
-        Splits randomly a dict into multiple sub-dictionary of almost equal sizes.
-        :param src: The dict to be split.
-        :param bins: The number of sub-dictionaries.
-        :returns: A list containing the sub-dictionaries.
-        """
-        # Split the dictionary into multiple sub-dictionaries
-        split = [{} for _ in range(bins)]
-
-        # Assign a random number to each element in the dictionary
-        for idx, (key, value) in enumerate(random.sample(src.items(), len(src))):
-            split[idx % bins][key] = value
-
-        return split
+    @property
+    def print_prefix(self) -> str:
+        return "utils"

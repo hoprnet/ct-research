@@ -70,7 +70,7 @@ class SideEffect:
 
 @pytest.fixture
 def budget() -> Budget:
-    budget = Budget(1800)
+    budget = Budget()
     budget.ticket_price = 0.0001
     budget.winning_probability = 1
     return budget
@@ -171,7 +171,7 @@ async def nodes(
         setattr(node.params, "distribution", Parameters())
         setattr(node.params.distribution, "delay_between_two_messages", 0.001)
 
-        await node._retrieve_address()
+        await node.retrieve_address()
 
     return nodes
 
@@ -207,8 +207,7 @@ def channels(peers: list[Peer]) -> NodeChannelsResponse:
 
 
 @pytest.fixture
-async def core(mocker: MockerFixture, nodes: list[Node], economic_model) -> Core:
-    core = Core()
+async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
 
     params = Parameters()
     with open("./test/test_config.yaml", "r") as file:
@@ -222,12 +221,9 @@ async def core(mocker: MockerFixture, nodes: list[Node], economic_model) -> Core
     setattr(params.pg, "port", "port")
     setattr(params.pg, "database", "database")
 
-    core.post_init(nodes, params)
-    core.budget.ticket_price = 0.1
+    core = Core(nodes, params)
     core.legacy_model.budget.ticket_price = 0.1
     core.sigmoid_model.budget.ticket_price = 0.1
-
-    await core._retrieve_address()
 
     return core
 
@@ -261,7 +257,7 @@ async def node(
     node.params = params
 
     await node.healthcheck()
-    await node._retrieve_address()
+    await node.retrieve_address()
 
     return node
 

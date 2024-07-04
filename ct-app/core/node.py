@@ -88,7 +88,7 @@ class Node(Base):
     def print_prefix(self):
         return ".".join(self.url.split("//")[-1].split(".")[:2])
 
-    async def _retrieve_address(self):
+    async def retrieve_address(self):
         """
         Retrieve the address of the node.
         """
@@ -113,7 +113,7 @@ class Node(Base):
         health = await self.api.healthyz()
         await self.connected.set(health)
 
-        if addr := await self._retrieve_address():
+        if addr := await self.retrieve_address():
             self.debug(f"Connection state: {health}")
             HEALTH.labels(addr.id).set(int(health))
         else:
@@ -158,7 +158,7 @@ class Node(Base):
         all_addresses = {
             p.address.address
             for p in await self.peers.get()
-            if not p.version_is_old(self.params.peer.minVersion)
+            if not p.is_old(self.params.peer.minVersion)
         }
         addresses_without_channels = all_addresses - addresses_with_channels
 
@@ -427,102 +427,6 @@ class Node(Base):
         TOTAL_CHANNEL_FUNDS.labels(node_address.id).set(funds)
 
         return funds
-
-    async def _delay_message(
-        self,
-        relayer: str,
-        message: str,
-        tag: int,
-        sleep: float,
-    ):
-        await asyncio.sleep(sleep)
-
-        if node_address := await self.address.get():
-            return await self.api.send_message(node_address.id, message, [relayer], tag)
-        return False
-
-    async def distribute_rewards(
-        self, peer_group: dict[str, dict[str, int]]
-    ) -> dict[str, int]:
-        # format of peer group is:
-        #  {
-        #     "0x1212": {
-        #         "remaining": 10,
-        #         "tag": 49,
-        #         "ticket-price": 0.1,
-        #         ...
-        #     },
-        #     ...
-        # }
-
-        issued_count = {peer_id: 0 for peer_id in peer_group.keys()}
-        node_address = await self.address.get()
-
-        if node_address is None:
-            return issued_count
-
-        for relayer, data in peer_group.items():
-            remaining = data.get("remaining", 0)
-            tag = data.get("tag", None)
-            ticket_price = data.get("ticket-price", None)
-
-            if remaining == 0:
-                continue
-
-            if tag is None or ticket_price is None:
-                self.error(
-                    "Invalid peer in group when sending messages (missing data)"
-                )  # should never happen
-                continue
-
-            tasks = set[asyncio.Task]()
-
-            for it in range(remaining):
-                sleep = it * self.params.distribution.delayBetweenTwoMessages
-                message = f"{relayer}//{time.time()}-{it + 1}/{remaining}"
-
-                task = asyncio.create_task(
-                    self._delay_message(
-                        relayer,
-                        message,
-                        MESSAGE_TAG + tag,
-                        sleep,
-                    )
-                )
-                tasks.add(task)
-
-            issued = await asyncio.gather(*tasks)
-            issued_count[relayer] = sum(issued)
-
-        return issued_count
-
-    async def check_inbox(
-        self, peer_group: dict[str, dict[str, int]]
-    ) -> dict[str, int]:
-        # format of peer group is:
-        #  {
-        #     "0x1212": {
-        #         "remaining": 10,
-        #         "tag": 49,
-        #         "ticket-price": 0.1,
-        #         ...
-        #     },
-        #     ...
-        # }
-        relayed_count = {peer_id: 0 for peer_id in peer_group.keys()}
-
-        messages = await self.api.messages_pop_all()
-        received_messages_tags = [int(message.tag) for message in messages]
-        message_counts = {tag: 0 for tag in set(received_messages_tags)}
-
-        for tag in received_messages_tags:
-            message_counts[tag] += 1
-
-        for relayer, data in peer_group.items():
-            count = message_counts.get(MESSAGE_TAG + data.get("tag", None), 0)
-            relayed_count[relayer] = count
-
-        return relayed_count
 
     def tasks(self):
         self.info("Starting node")

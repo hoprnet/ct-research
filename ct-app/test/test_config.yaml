@@ -36,8 +36,8 @@ flags:
 economicModel:
   minSafeAllowance: -1
   NFTThreshold: ~
-  intervals: 120 # in seconds
-
+  winningProbability: 1
+  
   legacy:
     proportion: 0.9
     apr: 12.0

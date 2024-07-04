@@ -46,7 +46,7 @@ class EconomicModelSigmoid:
         self.buckets = buckets
         self.max_apr = max_apr
         self.proportion = proportion
-        self.budget: Budget = None
+        self.budget: Budget = Budget()
 
     def apr(self, xs: list[float], max_apr: float = None):
         """
@@ -61,13 +61,11 @@ class EconomicModelSigmoid:
 
     def message_count_for_reward(self, stake: float, xs: list[float]):
         """
-        Calculate the message count for the reward.
+        Calculate the yearly message count for the reward.
         """
         apr = self.apr(xs, self.max_apr)
 
-        yearly_rewards = apr * stake / 100.0
-        rewards = yearly_rewards / (365 * 86400 / self.budget.intervals)
-
+        rewards = apr * stake / 100.0
         under = self.budget.ticket_price * self.budget.winning_probability
 
         return round(rewards / under * self.proportion) if under != 0 else 0

@@ -20,16 +20,14 @@ def main(configfile: str = None):
     # import envvars to params, such as self.params.subgraph.deployer_key
     params = Parameters()
     params.parse(config)
-    params.from_env("SUBGRAPH_", "PG")
-    params.overrides("OVERRIDE_")
+    params.from_env("SUBGRAPH", "PG")
+    params.overrides("OVERRIDE")
 
     # create the core and nodes instances
-    instance = Core()
     nodes = Node.fromAddressAndKeyLists(
         *Utils.nodesAddresses("NODE_ADDRESS_", "NODE_KEY_")
     )
-
-    instance.post_init(nodes, params)
+    instance = Core(nodes, params)
 
     # start the prometheus client
     try:

@@ -112,6 +112,5 @@ def test_economic_model_message_count_for_reward(budget: Budget):
         model.apr([0.5, 0.25])
         * stake
         / 100.0
-        / (86400 * 365 / model.budget.intervals)
         / (budget.ticket_price * budget.winning_probability)
     )

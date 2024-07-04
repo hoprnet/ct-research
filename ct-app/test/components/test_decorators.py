@@ -68,13 +68,16 @@ async def test_flagguard(foo_class: FooClass):
 async def test_formalin(foo_class: FooClass):
     async def setup_test(run_time: float, sleep_time: float, expected_count: int):
         foo_class.params.flags.fooclass.foo_formalin_func = sleep_time
-        foo_class.started = True
-        asyncio.create_task(foo_class.foo_formalin_func())
-        await asyncio.sleep(run_time)
-        foo_class.started = False
-        await asyncio.sleep(0.5)
-        assert foo_class.counter == expected_count
         foo_class.counter = 0
+        foo_class.started = True
+        try:
+            await asyncio.wait_for(
+                asyncio.create_task(foo_class.foo_formalin_func()), timeout=run_time
+            )
+        except asyncio.TimeoutError:
+            pass
 
-    setup_test(1, 0, 1)
-    setup_test(1.3, 0.5, 2)
+        assert foo_class.counter == expected_count
+
+    await setup_test(1, 0, 1)
+    await setup_test(1.3, 0.5, 2)
