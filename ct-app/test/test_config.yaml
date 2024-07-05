@@ -5,15 +5,15 @@
 flags:
   core: 
     healthcheck: 10
-    checkSubgraphURLs: 30
-    getFundings: 30
-    getTicketPrice: 30
-    aggregatePeers: 30
-    getTopologyData: 30
-    getSubgraphData: 30
-    getRegisteredNodes: 30
-    getNFTHolders: 30
-    getPeersRewards: 30
+    rotateSubgraphs: 30
+    peersRewards: 30
+    ticketParameters: 30
+
+    connectedPeers: 30
+    registeredNodes: 30
+    topology: 30
+    NFTHolders: 30
+    
     applyEconomicModel: 30
     distributeRewards: ~
     
@@ -72,9 +72,6 @@ economicModel:
         flatness: 10.0
         skewness: 2.75
         upperbound: 1.0
-
-  budget:
-    winningProbability: 1
 
 # =============================================================================
 # 

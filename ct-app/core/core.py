@@ -1,3 +1,4 @@
+# region Imports
 import asyncio
 import random
 
@@ -25,6 +26,9 @@ from .model.subgraph_url import SubgraphURL
 from .model.topology_entry import TopologyEntry
 from .node import Node
 
+# endregion
+
+# region Metrics
 HEALTH = Gauge("core_health", "Node health")
 UNIQUE_PEERS = Gauge("unique_peers", "Unique peers")
 SUBGRAPH_IN_USE = Gauge("subgraph_in_use", "Subgraph in use")
@@ -34,6 +38,7 @@ TOPOLOGY_SIZE = Gauge("topology_size", "Size of the topology")
 NFT_HOLDERS = Gauge("nft_holders", "Number of nr-nft holders")
 ELIGIBLE_PEERS_COUNTER = Gauge("eligible_peers", "# of eligible peers for rewards")
 TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
+# endregion
 
 
 class Core(Base):
@@ -62,8 +67,8 @@ class Core(Base):
 
         self.all_peers = LockedVar("all_peers", set[Peer]())
         self.topology_list = LockedVar("topology_list", list[TopologyEntry]())
-        self.registered_nodes = LockedVar("subgraph_list", list[SubgraphEntry]())
-        self.nft_holders = LockedVar("nft_holders", list[str]())
+        self.registered_nodes_list = LockedVar("subgraph_list", list[SubgraphEntry]())
+        self.nft_holders_list = LockedVar("nft_holders", list[str]())
         self.peer_rewards = LockedVar("peer_rewards", dict[str, float]())
 
         self.subgraph_type = SubgraphType.DEFAULT
@@ -108,24 +113,20 @@ class Core(Base):
         Checks the health of the node. Sets the connected status (LockedVar) and the Prometheus metric accordingly.
         """
         health = await self.api.healthyz()
-        await self.connected.set(health)
 
+        await self.connected.set(health)
         self.debug(f"Connection state: {health}")
         HEALTH.set(int(health))
 
     @flagguard
     @formalin("Checking subgraph URLs")
-    async def check_subgraph_urls(self):
+    async def rotate_subgraphs(self):
         """
         Checks the subgraph URLs and sets the subgraph type in use (default, backup or none)
         """
         for type in SubgraphType.callables():
             self.subgraph_type = type
-            provider = SafesProvider(self.safe_subgraph_url)
-
-            if not await provider.test():
-                continue
-            else:
+            if await SafesProvider(self.safe_subgraph_url).test():
                 break
         else:
             self.subgraph_type = SubgraphType.NONE
@@ -134,7 +135,7 @@ class Core(Base):
 
     @flagguard
     @formalin("Aggregating peers")
-    async def aggregate_peers(self):
+    async def connected_peers(self):
         """
         Aggregates the peers from all nodes and sets the all_peers LockedVar.
         """
@@ -161,7 +162,7 @@ class Core(Base):
 
     @flagguard
     @formalin("Getting registered nodes")
-    async def get_registered_nodes(self):
+    async def registered_nodes(self):
         """
         Gets the subgraph data and sets the subgraph_list LockedVar.
         """
@@ -182,14 +183,14 @@ class Core(Base):
         except ProviderError as err:
             self.error(f"get_registered_nodes: {err}")
 
-        await self.registered_nodes.set(results)
+        await self.registered_nodes_list.set(results)
 
         SUBGRAPH_SIZE.set(len(results))
         self.debug(f"Fetched subgraph data ({len(results)} entries).")
 
     @flagguard
     @formalin("Getting NFT holders")
-    async def get_nft_holders(self):
+    async def nft_holders(self):
         if self.subgraph_type == SubgraphType.NONE:
             self.warning("No subgraph URL available.")
             return
@@ -205,7 +206,7 @@ class Core(Base):
         except ProviderError as err:
             self.error(f"get_nft_holders: {err}")
 
-        await self.nft_holders.set(results)
+        await self.nft_holders_list.set(results)
 
         NFT_HOLDERS.set(len(results))
         self.debug(f"Fetched NFT holders ({len(results)} entries).")
@@ -213,7 +214,7 @@ class Core(Base):
     @flagguard
     @formalin("Getting topology data")
     @connectguard
-    async def get_topology_data(self):
+    async def topology(self):
         """
         Gets a dictionary containing all unique source_peerId-source_address links
         including the aggregated balance of "Open" outgoing payment channels.
@@ -224,7 +225,7 @@ class Core(Base):
             self.warning("Topology data not available")
             return
 
-        results = await Utils.aggregatePeerBalanceInChannels(channels.all)
+        results = await Utils.balanceInChannels(channels.all)
         topology_list = [TopologyEntry.fromDict(*arg) for arg in results.items()]
 
         await self.topology_list.set(topology_list)
@@ -238,8 +239,8 @@ class Core(Base):
         """
         Applies the economic model to the eligible peers (after multiple filtering layers).
         """
-        registered_nodes = await self.registered_nodes.get()
-        nft_holders = await self.nft_holders.get()
+        registered_nodes = await self.registered_nodes_list.get()
+        nft_holders = await self.nft_holders_list.get()
         topology = await self.topology_list.get()
         peers = await self.all_peers.get()
 
@@ -282,10 +283,10 @@ class Core(Base):
         redeemed_rewards = await self.peer_rewards.get()
 
         for peer in peers:
-            legacy_message_count = self.legacy_model.message_count_for_reward(
+            legacy_message_count = self.legacy_model.message_count(
                 peer.split_stake, redeemed_rewards.get(peer.address.address, 0.0)
             )
-            sigmoid_message_count = self.sigmoid_model.message_count_for_reward(
+            sigmoid_message_count = self.sigmoid_model.message_count(
                 peer.split_stake, sigmoid_model_input
             )
 
@@ -300,7 +301,7 @@ class Core(Base):
 
     @flagguard
     @formalin("Getting peers rewards amounts")
-    async def get_peers_rewards(self):
+    async def peers_rewards(self):
         if self.subgraph_type == SubgraphType.NONE:
             self.warning("No subgraph URL available.")
             return
@@ -321,7 +322,7 @@ class Core(Base):
 
     @formalin("Getting ticket parameters")
     @connectguard
-    async def get_ticket_parameters(self):
+    async def ticket_parameters(self):
         """
         Gets the ticket price and winning probability from the api. They are used in the economic model to calculate the number of messages to send to a peer.
         """
@@ -364,14 +365,14 @@ class Core(Base):
         self.started = True
 
         self.tasks.add(asyncio.create_task(self.healthcheck()))
-        self.tasks.add(asyncio.create_task(self.check_subgraph_urls()))
-        self.tasks.add(asyncio.create_task(self.get_peers_rewards()))
-        self.tasks.add(asyncio.create_task(self.get_ticket_parameters()))
+        self.tasks.add(asyncio.create_task(self.rotate_subgraphs()))
+        self.tasks.add(asyncio.create_task(self.peers_rewards()))
+        self.tasks.add(asyncio.create_task(self.ticket_parameters()))
 
-        self.tasks.add(asyncio.create_task(self.aggregate_peers()))
-        self.tasks.add(asyncio.create_task(self.get_registered_nodes()))
-        self.tasks.add(asyncio.create_task(self.get_topology_data()))
-        self.tasks.add(asyncio.create_task(self.get_nft_holders()))
+        self.tasks.add(asyncio.create_task(self.connected_peers()))
+        self.tasks.add(asyncio.create_task(self.registered_nodes()))
+        self.tasks.add(asyncio.create_task(self.topology()))
+        self.tasks.add(asyncio.create_task(self.nft_holders()))
 
         self.tasks.add(asyncio.create_task(self.apply_economic_model()))
 
@@ -387,7 +388,5 @@ class Core(Base):
             node.started = False
 
         for task in self.tasks:
-            task.add_done_callback(self.tasks.discard)
-            task.cancel()
             task.add_done_callback(self.tasks.discard)
             task.cancel()

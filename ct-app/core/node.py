@@ -1,10 +1,10 @@
+# region Imports
 import asyncio
 from datetime import datetime
 
 from prometheus_client import Gauge
 
 from .components.baseclass import Base
-from .components.channelstatus import ChannelStatus
 from .components.decorators import connectguard, flagguard, formalin
 from .components.hoprd_api import HoprdAPI
 from .components.lockedvar import LockedVar
@@ -13,6 +13,9 @@ from .components.utils import Utils
 from .model.address import Address
 from .model.peer import Peer
 
+# endregion
+
+# region Metrics
 BALANCE = Gauge("balance", "Node balance", ["peer_id", "token"])
 PEERS_COUNT = Gauge("peers_count", "Node peers", ["peer_id"])
 HEALTH = Gauge("node_health", "Node health", ["peer_id"])
@@ -53,6 +56,7 @@ ADDRESSES_WOUT_CHANNELS = Gauge(
 TOTAL_CHANNEL_FUNDS = Gauge(
     "total_channel_funds", "Total funds in outgoing channels", ["peer_id"]
 )
+# endregion
 
 
 class Node(Base):
@@ -147,11 +151,7 @@ class Node(Base):
         """
         node_address = await self.address.get()
 
-        out_opens = [
-            c
-            for c in await self.outgoings.get()
-            if not ChannelStatus.isClosed(c.status)
-        ]
+        out_opens = [c for c in await self.outgoings.get() if not c.status.isClosed]
 
         addresses_with_channels = {c.destination_address for c in out_opens}
         all_addresses = {
@@ -190,9 +190,7 @@ class Node(Base):
         """
         node_address = await self.address.get()
 
-        in_opens = [
-            c for c in await self.incomings.get() if ChannelStatus.isOpen(c.status)
-        ]
+        in_opens = [c for c in await self.incomings.get() if c.status.isOpen]
 
         for channel in in_opens:
             self.debug(f"Closing incoming channel {channel.channel_id}")
@@ -214,9 +212,8 @@ class Node(Base):
         Close channels in PendingToClose state.
         """
         node_address = await self.address.get()
-        out_pendings = [
-            c for c in await self.outgoings.get() if ChannelStatus.isPending(c.status)
-        ]
+        outgoing_channels = await self.outgoings.get()
+        out_pendings = [c for c in outgoing_channels if c.status.isPending]
 
         self.info(f"Pending channels: {len(out_pendings)}")
 
@@ -247,9 +244,7 @@ class Node(Base):
         channels_to_close: list[str] = []
 
         address_to_channel_id = {
-            c.destination_address: c.channel_id
-            for c in outgoings
-            if ChannelStatus.isOpen(c.status)
+            c.destination_address: c.channel_id for c in outgoings if c.status.isOpen
         }
 
         for address, channel_id in address_to_channel_id.items():
@@ -293,9 +288,7 @@ class Node(Base):
         """
         node_address = await self.address.get()
 
-        out_opens = [
-            c for c in await self.outgoings.get() if ChannelStatus.isOpen(c.status)
-        ]
+        out_opens = [c for c in await self.outgoings.get() if c.status.isOpen]
 
         low_balances = [
             c
@@ -368,7 +361,7 @@ class Node(Base):
             outgoings = [
                 c
                 for c in channels.all
-                if c.source_peer_id == addr.id and not ChannelStatus.isClosed(c.status)
+                if c.source_peer_id == addr.id and not c.status.isClosed
             ]
 
             await self.outgoings.set(outgoings)
@@ -393,8 +386,7 @@ class Node(Base):
             incomings = [
                 c
                 for c in channels.all
-                if c.destination_peer_id == addr.id
-                and not ChannelStatus.isClosed(c.status)
+                if c.destination_peer_id == addr.id and not c.status.isClosed
             ]
 
             await self.incomings.set(incomings)
@@ -414,7 +406,7 @@ class Node(Base):
         if node_address is None:
             return
 
-        results = await Utils.aggregatePeerBalanceInChannels(channels)
+        results = await Utils.balanceInChannels(channels)
 
         if node_address.id not in results:
             self.warning("Funding info not found")
@@ -429,23 +421,28 @@ class Node(Base):
 
     def tasks(self):
         self.info("Starting node")
-        return [
-            asyncio.create_task(self.healthcheck()),
-            asyncio.create_task(self.retrieve_peers()),
-            asyncio.create_task(self.retrieve_outgoing_channels()),
-            asyncio.create_task(self.retrieve_incoming_channels()),
-            asyncio.create_task(self.retrieve_balances()),
-            asyncio.create_task(self.open_channels()),
-            asyncio.create_task(self.close_incoming_channels()),
-            asyncio.create_task(self.close_pending_channels()),
-            asyncio.create_task(self.close_old_channels()),
-            asyncio.create_task(self.fund_channels()),
-            asyncio.create_task(self.get_total_channel_funds()),
-        ]
+
+        tasks = set[asyncio.Task]()
+
+        tasks.append(asyncio.create_task(self.healthcheck()))
+        tasks.append(asyncio.create_task(self.retrieve_peers()))
+        tasks.append(asyncio.create_task(self.retrieve_outgoing_channels()))
+        tasks.append(asyncio.create_task(self.retrieve_incoming_channels()))
+        tasks.append(asyncio.create_task(self.retrieve_balances()))
+
+        tasks.append(asyncio.create_task(self.open_channels()))
+        tasks.append(asyncio.create_task(self.fund_channels()))
+        tasks.append(asyncio.create_task(self.close_old_channels()))
+        tasks.append(asyncio.create_task(self.close_incoming_channels()))
+        tasks.append(asyncio.create_task(self.close_pending_channels()))
+
+        tasks.append(asyncio.create_task(self.get_total_channel_funds()))
+
+        return tasks
 
     def __str__(self):
         return f"Node(id='{self.url}')"
 
     @classmethod
-    def fromAddressAndKeyLists(cls, addresses: list[str], keys: list[str]):
+    def fromCredentials(cls, addresses: list[str], keys: list[str]):
         return [cls(address, key) for address, key in zip(addresses, keys)]

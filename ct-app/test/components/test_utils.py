@@ -1,5 +1,3 @@
-import datetime
-import inspect
 from test.components.utils import handle_envvars
 
 import pytest
@@ -77,20 +75,16 @@ def channel_topology():
     ]
 
 
-def test_nodeAddresses():
+def test_nodesCredentials():
     with handle_envvars(
         node_address_1="address_1",
         node_address_2="address_2",
         node_key_1="address_1_key",
         node_key_2="address_2_key",
     ):
-        addresses, keys = Utils.nodesAddresses("NODE_ADDRESS_", "NODE_KEY_")
+        addresses, keys = Utils.nodesCredentials("NODE_ADDRESS", "NODE_KEY")
         assert addresses == ["address_1", "address_2"]
         assert keys == ["address_1_key", "address_2_key"]
-
-
-def test_httpPOST():
-    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
 
 
 @pytest.mark.asyncio
@@ -157,28 +151,9 @@ def test_exclude():
         assert item.address in blacklist
 
 
-def test_nextEpoch():
-    timestamp = Utils.nextEpoch(1000)
-    now = datetime.datetime.now()
-
-    assert now < timestamp
-    assert (timestamp - now).total_seconds() < 1000
-
-
-def test_nextDelayInSeconds():
-    delay = Utils.nextDelayInSeconds(1000)
-    assert delay < 1000
-
-    delay = Utils.nextDelayInSeconds(0)
-    assert delay == 1
-
-    delay = Utils.nextDelayInSeconds(1)
-    assert delay == 1
-
-
 @pytest.mark.asyncio
-async def test_aggregatePeerBalanceInChannels(channel_topology):
-    results = await Utils.aggregatePeerBalanceInChannels(channel_topology)
+async def test_balanceInChannels(channel_topology):
+    results = await Utils.balanceInChannels(channel_topology)
 
     assert len(results) == 2
     assert results["src_1"]["channels_balance"] == 3

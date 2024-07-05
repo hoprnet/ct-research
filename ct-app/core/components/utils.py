@@ -1,6 +1,3 @@
-from datetime import datetime, timedelta
-
-from aiohttp import ClientSession
 from core.model.address import Address
 from core.model.peer import Peer
 from core.model.subgraph_entry import SubgraphEntry
@@ -13,7 +10,7 @@ from .environment_utils import EnvironmentUtils
 
 class Utils(Base):
     @classmethod
-    def nodesAddresses(
+    def nodesCredentials(
         cls, address_prefix: str, keyenv: str
     ) -> tuple[list[str], list[str]]:
         """
@@ -26,31 +23,6 @@ class Utils(Base):
         keys = EnvironmentUtils.envvarWithPrefix(keyenv).values()
 
         return list(addresses), list(keys)
-
-    @classmethod
-    async def httpPOST(
-        cls, url: str, data: dict, timeout: int = 60
-    ) -> tuple[int, dict]:
-        """
-        Performs an HTTP POST request.
-        :param url: The URL to send the request to.
-        :param data: The data to be sent.
-        :returns: A tuple containing the status code and the response.
-        """
-
-        async def post(session: ClientSession, url: str, data: dict, timeout: int):
-            async with session.post(url, json=data, timeout=timeout) as response:
-                status = response.status
-                response = await response.json()
-                return status, response
-
-        async with ClientSession() as session:
-            try:
-                status, response = await post(session, url, data, timeout)
-            except Exception:
-                return None, None
-            else:
-                return status, response
 
     @classmethod
     async def mergeDataSources(
@@ -128,39 +100,7 @@ class Utils(Base):
         return excluded
 
     @classmethod
-    def nextEpoch(cls, seconds: int) -> datetime:
-        """
-        Calculates the delay until the next whole `minutes`min and `seconds`sec.
-        :param seconds: next whole second to trigger the function
-        :returns: The next epoch
-        """
-        if seconds == 0:
-            raise ValueError("'seconds' must be greater than 0")
-
-        dt, min_date, delta = datetime.now(), datetime.min, timedelta(seconds=seconds)
-        next_timestamp = min_date + round((dt - min_date) / delta + 0.5) * delta
-
-        return next_timestamp
-
-    @classmethod
-    def nextDelayInSeconds(cls, seconds: int) -> int:
-        """
-        Calculates the delay until the next whole `minutes`min and `seconds`sec.
-        :param seconds: next whole second to trigger the function
-        :returns: The delay in seconds.
-        """
-        if seconds == 0:
-            return 1
-
-        delay = Utils.nextEpoch(seconds) - datetime.now()
-
-        if delay.total_seconds() < 1:
-            return seconds
-        else:
-            return int(delay.total_seconds())
-
-    @classmethod
-    async def aggregatePeerBalanceInChannels(cls, channels: list) -> dict[str, dict]:
+    async def balanceInChannels(cls, channels: list) -> dict[str, dict]:
         """
         Returns a dict containing all unique source_peerId-source_address links.
         :param channels: The list of channels.

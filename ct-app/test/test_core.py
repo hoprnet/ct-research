@@ -39,7 +39,7 @@ async def test_aggregate_peers(core: Core, peers: list[Peer]):
     await core.nodes[1].peers.set(set(list(await core.nodes[1].peers.get())[2:]))
     await core.nodes[2].peers.set(set(list(await core.nodes[2].peers.get())[::2]))
 
-    await core.aggregate_peers()
+    await core.connected_peers()
 
     assert len(await core.all_peers.get()) == len(peers)
 
@@ -52,7 +52,7 @@ async def test_get_subgraph_data(core: Core):
 @pytest.mark.asyncio
 async def test_get_topology_data(core: Core, peers: list[Peer]):
     await core.connected.set(True)
-    await core.get_topology_data()
+    await core.topology()
 
     assert len(await core.topology_list.get()) == len(peers)
 

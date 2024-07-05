@@ -35,7 +35,7 @@ class Peer:
 
         self._safe_address_count = None
 
-        self.message_count = LockedVar("message_count", 0, False)
+        self.message_count = LockedVar("message_count", 0, infer_type=False)
         self._eligible = False
 
     def is_old(self, min_version: Union[str, Version]):

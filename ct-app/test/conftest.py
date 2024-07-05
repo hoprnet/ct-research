@@ -4,6 +4,7 @@ from test.decorators_patches import patches
 
 import pytest
 import yaml
+from core.components.channelstatus import ChannelStatus
 from core.components.parameters import Parameters
 from core.model.budget import Budget
 from core.model.economic_model_legacy import Coefficients as Coefficients
@@ -196,7 +197,7 @@ def channels(peers: list[Peer]) -> NodeChannelsResponse:
                     dest.address.id,
                     src.address.address,
                     src.address.id,
-                    "Open",
+                    ChannelStatus.Open,
                     0,
                 )
             )

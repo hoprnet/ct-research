@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+from typing import Union
 
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
@@ -21,7 +22,7 @@ class GraphQLProvider(Base):
         self._default_key = None
 
     #### PRIVATE METHODS ####
-    def _load_query(self, path: str or Path) -> DocumentNode:
+    def _load_query(self, path: Union[str, Path]) -> DocumentNode:
         """
         Loads a graphql query from a file.
         :param path: Path to the file. The path must be relative to the ct-app folder.

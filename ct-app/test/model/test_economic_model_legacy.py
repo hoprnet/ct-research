@@ -41,9 +41,8 @@ def test_message_count_for_reward(model: EconomicModelLegacy):
     #     model.coefficients.c / model.message_count_for_reward(model.coefficients.c), 2
     # ), "Linear result in [l, c] range"
     assert round(
-        model.message_count_for_reward(model.coefficients.c) / model.coefficients.c, 2
+        model.message_count(model.coefficients.c) / model.coefficients.c, 2
     ) > round(
-        model.message_count_for_reward(2 * model.coefficients.c)
-        / (2 * model.coefficients.c),
+        model.message_count(2 * model.coefficients.c) / (2 * model.coefficients.c),
         2,
     ), "Non linear above [l, c] range"

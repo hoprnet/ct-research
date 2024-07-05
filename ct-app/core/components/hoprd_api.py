@@ -16,6 +16,7 @@ from requests import Response
 from urllib3.exceptions import MaxRetryError
 
 from .baseclass import Base
+from .channelstatus import ChannelStatus
 
 MESSAGE_TAG = 800
 
@@ -233,7 +234,13 @@ class HoprdAPI(Base):
             including_closed="true" if include_closed else "false",
         )
 
-        return response if is_ok else []
+        if not is_ok:
+            return []
+
+        for channel in response.all:
+            channel.status = ChannelStatus.fromString(channel.status)
+
+        return response
 
     async def peers(
         self,

@@ -120,10 +120,10 @@ async def test_get_total_channel_funds(node: Node, channels: NodeChannelsRespons
 
 
 @pytest.mark.asyncio
-async def test_fromAddressAndKeyLists(node: Node):
+async def test_fromCredentials(node: Node):
     addresses = ["LOCALHOST:9091", "LOCALHOST:9092", "LOCALHOST:9093"]
     keys = ["key1", "key2", "key3"]
 
-    nodes = Node.fromAddressAndKeyLists(addresses, keys)
+    nodes = Node.fromCredentials(addresses, keys)
 
     assert len(nodes) == len(addresses) == len(keys)

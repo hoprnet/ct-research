@@ -36,13 +36,6 @@ class SubgraphEntry:
             node["safe"]["allowance"]["wxHoprAllowance"],
         )
 
-    def has_address(self, address: str):
-        """
-        Check if the SubgraphEntry has the specified address.
-        :param address: The address to check for.
-        """
-        return self.node_address == address
-
     def __eq__(self, other):
         return (
             self.node_address == other.node_address

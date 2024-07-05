@@ -5,7 +5,6 @@ TICKET_WINNING_PROB = Gauge("ticket_winning_prob", "Ticket winning probability")
 
 
 class Budget:
-
     def __init__(self):
         self.ticket_price = None
         self.winning_probability = None

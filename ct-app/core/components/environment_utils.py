@@ -10,13 +10,6 @@ class EnvironmentUtils(Base):
         return "EnvUtils"
 
     @classmethod
-    def envvar(cls, var_name: str, default: Any = None, type: type = str):
-        if var_name in environ:
-            return type(environ[var_name])
-        else:
-            return default
-
-    @classmethod
     def envvarWithPrefix(cls, prefix: str, type=str) -> dict[str, Any]:
         var_dict = {
             key: type(v) for key, v in environ.items() if key.startswith(prefix)
