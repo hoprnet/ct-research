@@ -1,3 +1,5 @@
+import asyncio
+
 from core.model.address import Address
 from core.model.peer import Peer
 from core.model.subgraph_entry import SubgraphEntry
@@ -133,3 +135,5 @@ class Utils(Base):
     @property
     def print_prefix(self) -> str:
         return "utils"
+
+    task = asyncio.create_task

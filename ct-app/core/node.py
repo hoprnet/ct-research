@@ -8,6 +8,7 @@ from .components.baseclass import Base
 from .components.decorators import connectguard, flagguard, formalin
 from .components.hoprd_api import HoprdAPI
 from .components.lockedvar import LockedVar
+from .components.messagequeue import MessageQueue
 from .components.parameters import Parameters
 from .components.utils import Utils
 from .model.address import Address
@@ -419,24 +420,30 @@ class Node(Base):
 
         return funds
 
+    @formalin("Subscribing to messages")
+    async def subscribe(self):
+        queue = MessageQueue()
+        message = await queue.buffer.get()
+        print(f"`{self.print_prefix}` received message: {message}")
+
     def tasks(self):
         self.info("Starting node")
 
         tasks = set[asyncio.Task]()
 
-        tasks.append(asyncio.create_task(self.healthcheck()))
-        tasks.append(asyncio.create_task(self.retrieve_peers()))
-        tasks.append(asyncio.create_task(self.retrieve_outgoing_channels()))
-        tasks.append(asyncio.create_task(self.retrieve_incoming_channels()))
-        tasks.append(asyncio.create_task(self.retrieve_balances()))
+        tasks.add(Utils.task(self.healthcheck()))
+        tasks.add(Utils.task(self.retrieve_peers()))
+        tasks.add(Utils.task(self.retrieve_outgoing_channels()))
+        tasks.add(Utils.task(self.retrieve_incoming_channels()))
+        tasks.add(Utils.task(self.retrieve_balances()))
 
-        tasks.append(asyncio.create_task(self.open_channels()))
-        tasks.append(asyncio.create_task(self.fund_channels()))
-        tasks.append(asyncio.create_task(self.close_old_channels()))
-        tasks.append(asyncio.create_task(self.close_incoming_channels()))
-        tasks.append(asyncio.create_task(self.close_pending_channels()))
+        tasks.add(Utils.task(self.open_channels()))
+        tasks.add(Utils.task(self.fund_channels()))
+        tasks.add(Utils.task(self.close_old_channels()))
+        tasks.add(Utils.task(self.close_incoming_channels()))
+        tasks.add(Utils.task(self.close_pending_channels()))
 
-        tasks.append(asyncio.create_task(self.get_total_channel_funds()))
+        tasks.add(Utils.task(self.get_total_channel_funds()))
 
         return tasks
 

@@ -1,7 +1,10 @@
+import asyncio
 from typing import Union
 
+from core.components.baseclass import Base
 from core.components.hoprd_api import HoprdAPI
 from core.components.lockedvar import LockedVar
+from core.components.messagequeue import MessageQueue
 from packaging.version import Version
 from prometheus_client import Gauge
 
@@ -13,7 +16,7 @@ PEER_SAFE_COUNT = Gauge("peer_safe_count", "Number of safes", ["peer_id"])
 PEER_VERSION = Gauge("peer_version", "Peer version", ["peer_id", "version"])
 
 
-class Peer:
+class Peer(Base):
     """
     Representation of a peer in the network. A peer is a node that is part of the network and not hosted by HOPR.
     """
@@ -100,7 +103,11 @@ class Peer:
 
     @property
     async def message_delay(self) -> float:
-        return (365 * 24 * 60 * 60) / (await self.message_count.get())
+        count = await self.message_count.get()
+        if count := count:
+            return (365 * 24 * 60 * 60) / count
+        else:
+            return None
 
     def is_eligible(
         self,
@@ -121,8 +128,17 @@ class Peer:
 
         return all(conditions)
 
-    async def send_message(self, api: HoprdAPI, sender: str, tag: str):
-        await api.send_message(sender, "CT", [self.address.id], tag=tag)
+    async def relay_message(self):
+        queue = MessageQueue()
+
+        while True:
+            if await self.message_delay is None:
+                await asyncio.sleep(60)
+                continue
+
+            await queue.buffer.put("")  # TODO: Add message
+            await asyncio.sleep(self.message_delay)
+            self.debug(f"Relayed message by {self.address.id}")
 
     def __repr__(self):
         return f"Peer(address: {self.address})"
@@ -132,3 +148,7 @@ class Peer:
 
     def __hash__(self):
         return hash(self.address)
+
+    @property
+    def print_prefix(self) -> str:
+        return f"peer {self.address.id}"

@@ -364,17 +364,24 @@ class Core(Base):
 
         self.started = True
 
-        self.tasks.add(asyncio.create_task(self.healthcheck()))
-        self.tasks.add(asyncio.create_task(self.rotate_subgraphs()))
-        self.tasks.add(asyncio.create_task(self.peers_rewards()))
-        self.tasks.add(asyncio.create_task(self.ticket_parameters()))
+        self.tasks.add(Utils.task(self.healthcheck()))
+        self.tasks.add(Utils.task(self.rotate_subgraphs()))
+        self.tasks.add(Utils.task(self.peers_rewards()))
+        self.tasks.add(Utils.task(self.ticket_parameters()))
 
-        self.tasks.add(asyncio.create_task(self.connected_peers()))
-        self.tasks.add(asyncio.create_task(self.registered_nodes()))
-        self.tasks.add(asyncio.create_task(self.topology()))
-        self.tasks.add(asyncio.create_task(self.nft_holders()))
+        self.tasks.add(Utils.task(self.connected_peers()))
+        self.tasks.add(Utils.task(self.registered_nodes()))
+        self.tasks.add(Utils.task(self.topology()))
+        self.tasks.add(Utils.task(self.nft_holders()))
 
-        self.tasks.add(asyncio.create_task(self.apply_economic_model()))
+        self.tasks.add(Utils.task(self.apply_economic_model()))
+
+        for node in self.nodes:
+            self.tasks.add(Utils.task(node.subscribe()))
+
+        # Correct this
+        for peer in await self.all_peers.get():
+            self.tasks.add(Utils.task(peer.relay_message()))
 
         await asyncio.gather(*self.tasks)
 
