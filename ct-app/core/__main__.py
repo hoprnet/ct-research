@@ -33,7 +33,7 @@ def main(configfile: str = None):
     else:
         instance.info("Prometheus client started on port 8080")
 
-    AsyncLoop().run_until_complete(instance.start)
+    AsyncLoop.run(instance.start)
 
 
 if __name__ == "__main__":

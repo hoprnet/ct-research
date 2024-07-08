@@ -35,9 +35,9 @@ async def test_aggregate_peers(core: Core, peers: list[Peer]):
     assert len(await core.all_peers.get()) == 0
 
     # drop manually some peers from nodes
-    await core.nodes[0].peers.set(set(list(await core.nodes[0].peers.get())[:3]))
-    await core.nodes[1].peers.set(set(list(await core.nodes[1].peers.get())[2:]))
-    await core.nodes[2].peers.set(set(list(await core.nodes[2].peers.get())[::2]))
+    await core.nodes[0].peers.set(set(peers[:3]))
+    await core.nodes[1].peers.set(set(peers[2:]))
+    await core.nodes[2].peers.set(set(peers[::2]))
 
     await core.connected_peers()
 

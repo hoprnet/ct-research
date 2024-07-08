@@ -1,6 +1,7 @@
 import asyncio
 from typing import Union
 
+from core.components.asyncloop import AsyncLoop
 from core.components.baseclass import Base
 from core.components.decorators import formalin
 from core.components.lockedvar import LockedVar
@@ -43,6 +44,16 @@ class Peer(Base):
 
         self.params = None
         self.running = False
+
+    @property
+    def running(self) -> bool:
+        return self.running
+
+    @running.setter
+    def running(self, value: bool):
+        self._running = value
+        if value:
+            AsyncLoop.add(self.relay_message)
 
     def is_old(self, min_version: Union[str, Version]):
         """

@@ -156,7 +156,6 @@ class Core(Base):
                 continue
             peer.params = self.params
             peer.running = True
-            AsyncLoop().foo(peer.relay_message)
             previous_peers.add(peer)
 
         await self.all_peers.set(previous_peers)
@@ -358,16 +357,14 @@ class Core(Base):
             self.error("No nodes available, exiting.")
             return
 
-        loop = AsyncLoop()
-
-        if loop.tasks:
+        if AsyncLoop.hasRunningTasks():
             return
 
         for node in self.nodes:
-            loop.update(await node.tasks())
+            AsyncLoop.update(await node.tasks())
 
         self.running = True
-        loop.update(
+        AsyncLoop.update(
             [
                 self.healthcheck,
                 self.rotate_subgraphs,
@@ -382,6 +379,6 @@ class Core(Base):
         )
 
         for node in self.nodes:
-            loop.add(node.subscribe)
+            AsyncLoop.add(node.subscribe)
 
-        await loop.gather()
+        await AsyncLoop.gather()

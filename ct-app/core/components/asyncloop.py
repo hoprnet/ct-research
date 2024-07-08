@@ -14,35 +14,37 @@ class AsyncLoop(Base, metaclass=Singleton):
         self.loop.add_signal_handler(SIGINT, self.stop)
         self.loop.add_signal_handler(SIGTERM, self.stop)
 
-    def run_until_complete(self, process: Callable):
+    @classmethod
+    def hasRunningTasks(cls) -> bool:
+        return bool(cls().tasks)
+
+    @classmethod
+    def run(cls, process: Callable):
         try:
-            self.loop.run_until_complete(process())
+            cls().loop.run_until_complete(process())
         except asyncio.CancelledError:
-            self.error("Stopping the instance...")
+            cls().error("Stopping the instance...")
         finally:
-            self.stop()
+            cls().stop()
 
-    def update(self, tasks: set[Callable]):
+    @classmethod
+    def update(cls, tasks: set[Callable]):
         for task in tasks:
-            self.add(task)
+            cls().add(task)
 
-    def add(self, callback: Callable):
-        task = asyncio.create_task(callback())
-        task.add_done_callback(self.tasks.discard)
+    @classmethod
+    def add(cls, callback: Callable):
+        task = asyncio.ensure_future(callback())
+        cls().tasks.add(task)
 
-        self.tasks.add(task)
+    @classmethod
+    async def gather(cls):
+        await asyncio.gather(*cls().tasks)
 
-    def foo(self, callback: Callable):
-        task = asyncio.create_task(callback())
-        task.add_done_callback(self.tasks.discard)
-
-        asyncio.ensure_future(task, loop=self.loop)
-
-    async def gather(self):
-        return await asyncio.gather(*self.tasks)
-
-    def stop(self):
-        for task in self.tasks:
+    @classmethod
+    def stop(cls):
+        for task in cls().tasks:
+            task.add_done_callback(cls().tasks.discard)
             task.cancel()
 
     @property

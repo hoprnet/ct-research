@@ -1,0 +1,12 @@
+[report]
+exclude_also =
+    def __repr__
+    if self\.debug
+
+    if 0:
+    if __name__ == .__main__.:
+    
+    def print_prefix(self) -> str:
+    
+omit = 
+    test/*
