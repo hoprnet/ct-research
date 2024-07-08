@@ -26,7 +26,7 @@ async def bar_awaitable():
 
 
 @pytest.mark.asyncio
-@clearAsyncLooopInstance
+@clearAsyncLoopInstance
 async def test_add():
     assert len(AsyncLoop().tasks) == 0
 
@@ -35,7 +35,7 @@ async def test_add():
 
 
 @pytest.mark.asyncio
-@clearAsyncLooopInstance
+@clearAsyncLoopInstance
 async def test_update():
     assert len(AsyncLoop().tasks) == 0
 
@@ -44,7 +44,7 @@ async def test_update():
 
 
 @pytest.mark.asyncio
-@clearAsyncLooopInstance
+@clearAsyncLoopInstance
 async def test_hasRunningTasks():
     assert not AsyncLoop.hasRunningTasks()
 
