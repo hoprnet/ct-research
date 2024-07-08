@@ -22,8 +22,6 @@ class Bucket:
             raise e
         except ZeroDivisionError as e:
             raise ValueError("Zero division error in APR calculation") from e
-        except OverflowError as e:
-            raise ValueError("Overflow error in APR calculation") from e
 
     @classmethod
     def fromParameters(cls, name: str, parameters: Parameters):

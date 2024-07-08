@@ -1,6 +1,6 @@
-class SubgraphEntry:
+class NodeSafeEntry:
     """
-    A SubgraphEntry represents a single entry in the subgraph.
+    A NodeSafeEntry represents a single entry in the subgraph.
     """
 
     def __init__(
@@ -11,7 +11,7 @@ class SubgraphEntry:
         safe_allowance: str,
     ):
         """
-        Create a new SubgraphEntry with the specified node_address, wxHoprBalance, safe_address and safe_allowance.
+        Create a new NodeSafeEntry with the specified node_address, wxHoprBalance, safe_address and safe_allowance.
         :param node_address: The address of the node.
         :param wxHoprBalance: The wxHoprBalance of the node.
         :param safe_address: The address of the safe.
@@ -26,8 +26,8 @@ class SubgraphEntry:
     @classmethod
     def fromSubgraphResult(cls, node: dict):
         """
-        Create a new SubgraphEntry from the specified subgraph result.
-        :param node: The subgraph result to create the SubgraphEntry from.
+        Create a new NodeSafeEntry from the specified subgraph result.
+        :param node: The subgraph result to create the NodeSafeEntry from.
         """
         return cls(
             node["node"]["id"],
@@ -46,7 +46,7 @@ class SubgraphEntry:
 
     def __str__(self):
         return (
-            f"SubgraphEntry(node_address={self.node_address}, "
+            f"NodeSafeEntry(node_address={self.node_address}, "
             + f"wxHoprBalance={self.wxHoprBalance}, "
             + f"safe_address={self.safe_address}), "
             + f"safe_allowance={self.safe_allowance})"

@@ -1,8 +1,6 @@
-import asyncio
-
 from core.model.address import Address
+from core.model.nodesafe_entry import NodeSafeEntry
 from core.model.peer import Peer
-from core.model.subgraph_entry import SubgraphEntry
 from core.model.topology_entry import TopologyEntry
 
 from .baseclass import Base
@@ -31,7 +29,7 @@ class Utils(Base):
         cls,
         topology: list[TopologyEntry],
         peers: list[Peer],
-        safes: list[SubgraphEntry],
+        safes: list[NodeSafeEntry],
     ):
         merged_result: list[Peer] = []
         addresses = [item.address.address for item in peers]
@@ -135,5 +133,3 @@ class Utils(Base):
     @property
     def print_prefix(self) -> str:
         return "utils"
-
-    task = asyncio.create_task

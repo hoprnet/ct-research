@@ -20,8 +20,8 @@ from .components.utils import Utils
 from .model.address import Address
 from .model.economic_model_legacy import EconomicModelLegacy
 from .model.economic_model_sigmoid import EconomicModelSigmoid
+from .model.nodesafe_entry import NodeSafeEntry
 from .model.peer import Peer
-from .model.subgraph_entry import SubgraphEntry
 from .model.subgraph_type import SubgraphType
 from .model.subgraph_url import SubgraphURL
 from .model.topology_entry import TopologyEntry
@@ -68,7 +68,7 @@ class Core(Base):
 
         self.all_peers = LockedVar("all_peers", set[Peer]())
         self.topology_list = LockedVar("topology_list", list[TopologyEntry]())
-        self.registered_nodes_list = LockedVar("subgraph_list", list[SubgraphEntry]())
+        self.registered_nodes_list = LockedVar("subgraph_list", list[NodeSafeEntry]())
         self.nft_holders_list = LockedVar("nft_holders", list[str]())
         self.peer_rewards = LockedVar("peer_rewards", dict[str, float]())
 
@@ -174,11 +174,11 @@ class Core(Base):
             return
 
         provider = SafesProvider(self.safe_subgraph_url)
-        results = list[SubgraphEntry]()
+        results = list[NodeSafeEntry]()
         try:
             for safe in await provider.get():
                 entries = [
-                    SubgraphEntry.fromSubgraphResult(node)
+                    NodeSafeEntry.fromSubgraphResult(node)
                     for node in safe["registeredNodesInNetworkRegistry"]
                 ]
                 results.extend(entries)
@@ -353,14 +353,12 @@ class Core(Base):
         """
         self.info(f"CTCore started with {len(self.nodes)} nodes.")
 
-        if len(self.nodes) == 0:
-            self.error("No nodes available, exiting.")
-            return
-
         if AsyncLoop.hasRunningTasks():
             return
 
         for node in self.nodes:
+            node.running = True
+            await node.retrieve_address()
             AsyncLoop.update(await node.tasks())
 
         self.running = True
@@ -379,6 +377,6 @@ class Core(Base):
         )
 
         for node in self.nodes:
-            AsyncLoop.add(node.subscribe)
+            AsyncLoop.add(node.consume)
 
         await AsyncLoop.gather()

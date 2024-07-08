@@ -44,12 +44,10 @@ class Parameters(Base):
 
     def from_env(self, *prefixes: list[str]):
         for prefix in prefixes:
-            subparams_name = prefix.lower()
-            if subparams_name[-1] == "_":
-                subparams_name = subparams_name[:-1]
-
+            subparams_name: str = prefix.lower().strip("_")
             raw_attrs = dir(self)
             attrs = list(map(lambda str: str.lower(), raw_attrs))
+
             if subparams_name in attrs:
                 subparams = getattr(self, raw_attrs[attrs.index(subparams_name)])
             else:

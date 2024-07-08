@@ -5,7 +5,7 @@ from core.components.asyncloop import AsyncLoop
 from core.components.baseclass import Base
 from core.components.decorators import formalin
 from core.components.lockedvar import LockedVar
-from core.components.messagequeue import MessageQueue
+from core.components.message_queue import MessageQueue
 from packaging.version import Version
 from prometheus_client import Gauge
 

@@ -7,7 +7,7 @@ from .components.baseclass import Base
 from .components.decorators import connectguard, flagguard, formalin
 from .components.hoprd_api import HoprdAPI
 from .components.lockedvar import LockedVar
-from .components.messagequeue import MessageQueue
+from .components.message_queue import MessageQueue
 from .components.parameters import Parameters
 from .components.utils import Utils
 from .model.address import Address
@@ -420,7 +420,7 @@ class Node(Base):
         return funds
 
     @formalin(None)
-    async def subscribe(self):
+    async def consume(self):
         relayer = await MessageQueue().buffer.get()
         sender = (await self.address.get()).id
         print(f"Should send a message through {relayer} back to {sender}")
@@ -428,9 +428,6 @@ class Node(Base):
 
     async def tasks(self):
         self.info("Starting node")
-
-        self.running = True
-        await self.retrieve_address()
 
         callbacks = [
             self.healthcheck,
