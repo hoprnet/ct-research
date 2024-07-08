@@ -1,7 +1,9 @@
+#!/bin/bash
 export $(grep -v '^#' .env | xargs)
 
-env=${1:staging}
-count=${2:1}
+env=${1:-staging}
+count=${2:-1}
+
 
 healthyz() { echo $(curl -s -o /dev/null -w "%{http_code}" "${env}/healthyz"); }
 
