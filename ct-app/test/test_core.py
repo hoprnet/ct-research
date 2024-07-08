@@ -43,6 +43,9 @@ async def test_aggregate_peers(core: Core, peers: list[Peer]):
 
     assert len(await core.all_peers.get()) == len(peers)
 
+    for peer in await core.all_peers.get():
+        peer.running = False
+
 
 @pytest.mark.asyncio
 async def test_get_subgraph_data(core: Core):

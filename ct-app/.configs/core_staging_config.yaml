@@ -30,7 +30,7 @@ flags:
     closeIncomingChannels: 'off'
 
     getTotalChannelFunds: 300
-    subscribe: 'on'
+    consume: 'on'
 
   peer:
     relayMessage: 'on'

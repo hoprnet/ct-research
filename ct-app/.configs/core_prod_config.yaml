@@ -15,7 +15,6 @@ flags:
     NFTHolders: 300
     
     applyEconomicModel: 120
-    distributeRewards: 1
     
   node:
     healthcheck: 60
@@ -23,13 +22,19 @@ flags:
     retrieveIncomingChannels: 600
     retrieveOutgoingChannels: 600
     retrieveBalances: 900
+
     openChannels: 300
+    fundChannels: 300
     closeOldChannels: 300
     closePendingChannels: 1800
-    fundChannels: 300
-    closeIncomingChannels: ~
+    closeIncomingChannels: 'off'
+
     getTotalChannelFunds: 900
-    
+    consume: 'on'
+
+  peer:
+    relayMessage: 'off'
+
 # =============================================================================
 # 
 # =============================================================================
