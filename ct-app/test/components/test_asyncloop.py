@@ -4,7 +4,7 @@ import pytest
 from core.components.asyncloop import AsyncLoop
 
 
-def clearAsyncLooopInstance(func):
+def clearAsyncLoopInstance(func):
     async def wrapper_func():
         # Do something before the function
         instance = AsyncLoop()
