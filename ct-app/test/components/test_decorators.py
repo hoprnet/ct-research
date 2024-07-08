@@ -17,7 +17,7 @@ class FooClass(Base):
     def __init__(self):
         super().__init__()
         self.connected = LockedVar("connected", False)
-        self.started = False
+        self.running = False
         self.counter = 0
         self.params = Parameters()
         self.params.parse(flag_dictionary)
@@ -69,7 +69,7 @@ async def test_formalin(foo_class: FooClass):
     async def setup_test(run_time: float, sleep_time: float, expected_count: int):
         foo_class.params.flags.fooclass.foo_formalin_func = sleep_time
         foo_class.counter = 0
-        foo_class.started = True
+        foo_class.running = True
         try:
             await asyncio.wait_for(
                 asyncio.create_task(foo_class.foo_formalin_func()), timeout=run_time

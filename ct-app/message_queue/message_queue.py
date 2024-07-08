@@ -17,7 +17,7 @@ class MessageQueue(metaclass=Singleton):
     async def publish(self, message):
         await self.queue.put(message)
 
-    async def subscriber(self, consumer: str):
+    async def consume(self, consumer: str):
         while True:
             message = await self.queue.get()
             print(f"`{consumer}` received message: {message}")

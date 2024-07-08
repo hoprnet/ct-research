@@ -2,7 +2,7 @@ import asyncio
 from typing import Union
 
 from core.components.baseclass import Base
-from core.components.hoprd_api import HoprdAPI
+from core.components.decorators import formalin
 from core.components.lockedvar import LockedVar
 from core.components.messagequeue import MessageQueue
 from packaging.version import Version
@@ -40,6 +40,9 @@ class Peer(Base):
 
         self.message_count = LockedVar("message_count", 0, infer_type=False)
         self._eligible = False
+
+        self.params = None
+        self.running = False
 
     def is_old(self, min_version: Union[str, Version]):
         """
@@ -128,17 +131,16 @@ class Peer(Base):
 
         return all(conditions)
 
+    @formalin(None)
     async def relay_message(self):
-        queue = MessageQueue()
-
-        while True:
-            if await self.message_delay is None:
-                await asyncio.sleep(60)
-                continue
-
-            await queue.buffer.put("")  # TODO: Add message
-            await asyncio.sleep(self.message_delay)
-            self.debug(f"Relayed message by {self.address.id}")
+        if delay := await self.message_delay:
+            await MessageQueue().buffer.put(self.address.id)
+            print(f"Next message for {self.address.id} in {delay} seconds.")
+            await asyncio.sleep(delay)
+        else:
+            self.debug(f"No messages for {self.address.id}, sleeping for 5 seconds.")
+            await asyncio.sleep(5)
+            return
 
     def __repr__(self):
         return f"Peer(address: {self.address})"
@@ -151,4 +153,4 @@ class Peer(Base):
 
     @property
     def print_prefix(self) -> str:
-        return f"peer {self.address.id}"
+        return f"0x..{self.address.id[-5:]}"

@@ -1,5 +1,4 @@
 # region Imports
-import asyncio
 from datetime import datetime
 
 from prometheus_client import Gauge
@@ -86,11 +85,11 @@ class Node(Base):
 
         self.params = Parameters()
 
-        self.started = False
+        self.running = False
 
     @property
     def print_prefix(self):
-        return ".".join(self.url.split("//")[-1].split(".")[:2])
+        return self.url.split("//")[-1].split(".")[0]
 
     async def retrieve_address(self):
         """
@@ -420,32 +419,34 @@ class Node(Base):
 
         return funds
 
-    @formalin("Subscribing to messages")
+    @formalin(None)
     async def subscribe(self):
-        queue = MessageQueue()
-        message = await queue.buffer.get()
-        print(f"`{self.print_prefix}` received message: {message}")
+        relayer = await MessageQueue().buffer.get()
+        sender = (await self.address.get()).id
+        print(f"Should send a message through {relayer} back to {sender}")
+        # TODO: replace with await self.api.send_message(sender, "This is CT", [relayer])
 
-    def tasks(self):
+    async def tasks(self):
         self.info("Starting node")
 
-        tasks = set[asyncio.Task]()
+        self.running = True
+        await self.retrieve_address()
 
-        tasks.add(Utils.task(self.healthcheck()))
-        tasks.add(Utils.task(self.retrieve_peers()))
-        tasks.add(Utils.task(self.retrieve_outgoing_channels()))
-        tasks.add(Utils.task(self.retrieve_incoming_channels()))
-        tasks.add(Utils.task(self.retrieve_balances()))
+        callbacks = [
+            self.healthcheck,
+            self.retrieve_peers,
+            self.retrieve_outgoing_channels,
+            self.retrieve_incoming_channels,
+            self.retrieve_balances,
+            self.open_channels,
+            self.fund_channels,
+            self.close_old_channels,
+            self.close_incoming_channels,
+            self.close_pending_channels,
+            self.get_total_channel_funds,
+        ]
 
-        tasks.add(Utils.task(self.open_channels()))
-        tasks.add(Utils.task(self.fund_channels()))
-        tasks.add(Utils.task(self.close_old_channels()))
-        tasks.add(Utils.task(self.close_incoming_channels()))
-        tasks.add(Utils.task(self.close_pending_channels()))
-
-        tasks.add(Utils.task(self.get_total_channel_funds()))
-
-        return tasks
+        return callbacks
 
     def __str__(self):
         return f"Node(id='{self.url}')"

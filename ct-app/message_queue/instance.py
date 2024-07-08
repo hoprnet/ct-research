@@ -40,7 +40,7 @@ class Instance:
         self.tasks.add(task(self.long_running()))
 
         for i in range(5):
-            self.tasks.add(task(MessageQueue().subscriber(f"consumer{i}")))
+            self.tasks.add(task(MessageQueue().consume(f"consumer{i}")))
 
         for peer in self.peers:
             self.tasks.add(task(peer.relay()))

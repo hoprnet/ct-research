@@ -4,6 +4,7 @@ import random
 
 from prometheus_client import Gauge
 
+from .components.asyncloop import AsyncLoop
 from .components.baseclass import Base
 from .components.decorators import connectguard, flagguard, formalin
 from .components.graphql_providers import (
@@ -73,7 +74,7 @@ class Core(Base):
 
         self.subgraph_type = SubgraphType.DEFAULT
 
-        self.started = False
+        self.running = False
 
     @property
     def print_prefix(self) -> str:
@@ -153,6 +154,9 @@ class Core(Base):
         for peer in visible_peers:
             if peer in previous_peers:
                 continue
+            peer.params = self.params
+            peer.running = True
+            AsyncLoop().foo(peer.relay_message)
             previous_peers.add(peer)
 
         await self.all_peers.set(previous_peers)
@@ -354,46 +358,30 @@ class Core(Base):
             self.error("No nodes available, exiting.")
             return
 
-        if self.tasks:
+        loop = AsyncLoop()
+
+        if loop.tasks:
             return
 
         for node in self.nodes:
-            node.started = True
-            await node.retrieve_address()
-            self.tasks.update(node.tasks())
+            loop.update(await node.tasks())
 
-        self.started = True
-
-        self.tasks.add(Utils.task(self.healthcheck()))
-        self.tasks.add(Utils.task(self.rotate_subgraphs()))
-        self.tasks.add(Utils.task(self.peers_rewards()))
-        self.tasks.add(Utils.task(self.ticket_parameters()))
-
-        self.tasks.add(Utils.task(self.connected_peers()))
-        self.tasks.add(Utils.task(self.registered_nodes()))
-        self.tasks.add(Utils.task(self.topology()))
-        self.tasks.add(Utils.task(self.nft_holders()))
-
-        self.tasks.add(Utils.task(self.apply_economic_model()))
-
-        for node in self.nodes:
-            self.tasks.add(Utils.task(node.subscribe()))
-
-        # Correct this
-        for peer in await self.all_peers.get():
-            self.tasks.add(Utils.task(peer.relay_message()))
-
-        await asyncio.gather(*self.tasks)
-
-    def stop(self):
-        """
-        Stop the node.
-        """
-        self.started = False
+        self.running = True
+        loop.update(
+            [
+                self.healthcheck,
+                self.rotate_subgraphs,
+                self.peers_rewards,
+                self.ticket_parameters,
+                self.connected_peers,
+                self.registered_nodes,
+                self.topology,
+                self.nft_holders,
+                self.apply_economic_model,
+            ]
+        )
 
         for node in self.nodes:
-            node.started = False
+            loop.add(node.subscribe)
 
-        for task in self.tasks:
-            task.add_done_callback(self.tasks.discard)
-            task.cancel()
+        await loop.gather()
