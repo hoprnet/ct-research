@@ -423,7 +423,7 @@ class Node(Base):
     async def consume(self):
         relayer = await MessageQueue().buffer.get()
         sender = (await self.address.get()).id
-        print(f"Should send a message through {relayer} back to {sender}")
+        self.debug(f"Should send a message through {relayer} back to {sender}")
         # TODO: replace with await self.api.send_message(sender, "This is CT", [relayer])
 
     async def tasks(self):

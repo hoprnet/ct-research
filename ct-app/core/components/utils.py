@@ -49,7 +49,7 @@ class Utils(Base):
                 peer.safe_allowance = float(safe.safe_allowance)
 
             if peer is None or topo is None or safe is None:
-                await peer.message_count.set(None)
+                await peer.yearly_count.set(None)
 
             merged_result.append(peer)
 

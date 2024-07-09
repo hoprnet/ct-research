@@ -15,7 +15,6 @@ flags:
     NFTHolders: 30
     
     applyEconomicModel: 30
-    distributeRewards: 'off'
     
   node:
     healthcheck: 10
@@ -23,16 +22,20 @@ flags:
     retrieveIncomingChannels: 30
     retrieveOutgoingChannels: 30
     retrieveBalances: 30
-    openChannels: 'off'
-    closeOldChannels: 'off'
-    closePendingChannels: 'off'
-    fundChannels: 'off'
-    closeIncomingChannels: 'off'
-    getTotalChannelFunds: 'off'
-  
+
+    openChannels: Off
+    fundChannels: Off
+    closeOldChannels: Off
+    closePendingChannels: Off
+    closeIncomingChannels: Off
+
+    getTotalChannelFunds: Off
+    consume: On
+
   peer:
-    relayMessage: 'off'
-    
+    requestRelay: Off
+    storeDistributionData: Off
+
 # =============================================================================
 # 
 # =============================================================================
@@ -82,9 +85,15 @@ economicModel:
 distribution:
   minEligiblePeers: 500
   messageDeliveryDelay: 0.2
-  delayBetweenTwoMessages: 0.01
   maxIterations: 4
 
+# =============================================================================
+# 
+# =============================================================================
+storage:
+  value: 5 # wxHOPR
+  timeout: 43200 # seconds
+  
 # =============================================================================
 # 
 # =============================================================================

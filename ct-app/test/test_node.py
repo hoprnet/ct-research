@@ -119,8 +119,7 @@ async def test_get_total_channel_funds(node: Node, channels: NodeChannelsRespons
     assert total_funds_from_fixture / 1e18 == total_funds_from_node
 
 
-@pytest.mark.asyncio
-def test_fromCredentials(node: Node):
+def test_fromCredentials():
     addresses = ["LOCALHOST:9091", "LOCALHOST:9092", "LOCALHOST:9093"]
     keys = ["key1", "key2", "key3"]
 

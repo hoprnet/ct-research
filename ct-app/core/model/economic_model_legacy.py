@@ -73,7 +73,7 @@ class EconomicModelLegacy:
 
         return eval(func.formula, kwargs)
 
-    def message_count(self, stake: float, redeemed_rewards: float = 0):
+    def yearly_count(self, stake: float, redeemed_rewards: float = 0):
         """
         Calculate the yearly message count for the reward.
         """

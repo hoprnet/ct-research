@@ -57,7 +57,7 @@ class EconomicModelSigmoid:
 
         return apr
 
-    def message_count(self, stake: float, xs: list[float]):
+    def yearly_count(self, stake: float, xs: list[float]):
         """
         Calculate the yearly message count for the reward.
         """

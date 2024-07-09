@@ -25,15 +25,16 @@ flags:
 
     openChannels: 300
     fundChannels: 300
-    closeOldChannels: 'off'
-    closePendingChannels: 'off'
-    closeIncomingChannels: 'off'
+    closeOldChannels: Off
+    closePendingChannels: Off
+    closeIncomingChannels: Off
 
     getTotalChannelFunds: 300
-    consume: 'on'
+    consume: On
 
   peer:
-    relayMessage: 'on'
+    requestRelay: On
+    storeDistributionData: 30
     
 # =============================================================================
 # 
@@ -82,10 +83,16 @@ economicModel:
 # 
 # =============================================================================
 distribution:
-  minEligiblePeers: 5
-  messageDeliveryDelay: 5.0
-  delayBetweenTwoMessages: 0.0001
-  maxIterations: 2
+  minEligiblePeers: 5 # TODO: check usage
+  messageDeliveryDelay: 5.0 # TODO: check usage
+  maxIterations: 2  # TODO: check usage
+
+# =============================================================================
+# 
+# =============================================================================
+storage:
+  value: 5 # wxHOPR
+  timeout: 43200 # seconds
 
 # =============================================================================
 # 

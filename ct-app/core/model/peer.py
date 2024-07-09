@@ -1,11 +1,13 @@
 import asyncio
+from datetime import datetime
 from typing import Union
 
 from core.components.asyncloop import AsyncLoop
 from core.components.baseclass import Base
-from core.components.decorators import formalin
+from core.components.decorators import flagguard, formalin
 from core.components.lockedvar import LockedVar
 from core.components.message_queue import MessageQueue
+from database import DatabaseConnection, Reward
 from packaging.version import Version
 from prometheus_client import Gauge
 
@@ -39,8 +41,11 @@ class Peer(Base):
 
         self._safe_address_count = None
 
-        self.message_count = LockedVar("message_count", 0, infer_type=False)
-        self._eligible = False
+        self.yearly_count = LockedVar("yearly_count", 0, infer_type=False)
+
+        self.last_db_storage = datetime.now()
+        self.message_value = LockedVar("message_value", 0.0)
+        self.message_count = LockedVar("message_count", 0)
 
         self.params = None
         self.running = False
@@ -53,7 +58,8 @@ class Peer(Base):
     def running(self, value: bool):
         self._running = value
         if value is True:
-            AsyncLoop.add(self.relay_message)
+            AsyncLoop.add(self.request_relay)
+            AsyncLoop.add(self.store_distribution_data)
 
     def is_old(self, min_version: Union[str, Version]):
         """
@@ -94,7 +100,6 @@ class Peer(Base):
     @safe_address_count.setter
     def safe_address_count(self, value: int):
         self._safe_address_count = value
-
         PEER_SAFE_COUNT.labels(self.address.id).set(value)
 
     @property
@@ -105,7 +110,7 @@ class Peer(Base):
             raise ValueError("Channel balance not set")
         if self.safe_address_count is None:
             raise ValueError("Safe address count not set")
-        if self.message_count is None:
+        if self.yearly_count is None:
             return 0
 
         split_stake = float(self.safe_balance) / float(self.safe_address_count) + float(
@@ -117,7 +122,7 @@ class Peer(Base):
 
     @property
     async def message_delay(self) -> float:
-        count = await self.message_count.get()
+        count = await self.yearly_count.get()
         if count := count:
             return (365 * 24 * 60 * 60) / count
         else:
@@ -142,16 +147,53 @@ class Peer(Base):
 
         return all(conditions)
 
+    @flagguard
     @formalin(None)
-    async def relay_message(self):
+    async def request_relay(self):
         if delay := await self.message_delay:
             await MessageQueue().buffer.put(self.address.id)
-            print(f"Next message for {self.address.id} in {delay} seconds.")
+            await self.messages_sent.inc(1)
+            self.debug(f"Next message for {self.address.id} in {delay} seconds.")
             await asyncio.sleep(delay)
         else:
             self.debug(f"No messages for {self.address.id}, sleeping for 5 seconds.")
             await asyncio.sleep(5)
+
+    @flagguard
+    @formalin(None)
+    async def store_distribution_data(self):
+        """
+        Stores the distribution data in the database, if available.
+        """
+        now = datetime.now()
+        value = await self.message_value.get()
+        count = await self.message_count.get()
+
+        if (
+            value < self.params.pg.storage.value
+            and (now - self.last_db_storage).total_seconds()
+            < self.params.storage.timeout
+        ):
             return
+
+        entry = Reward(
+            peer_id=self.address.id,
+            count=count,
+            value=value,
+            timestamp=now,
+            issued_count=value,
+        )
+
+        try:
+            with DatabaseConnection(self.params.pg) as session:
+                session.add(entry)
+                session.commit()
+        except Exception as err:
+            self.error(f"Database error while storing distribution results: {err}")
+        else:
+            await self.message_value.sub(value)
+            await self.message_count.sub(count)
+            self.last_db_storage = now
 
     def __repr__(self):
         return f"Peer(address: {self.address})"

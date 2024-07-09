@@ -100,7 +100,7 @@ def test_bucket_apr():
         bucket.apr(0.5)
 
 
-def test_message_count(budget: Budget):
+def test_yearly_count(budget: Budget):
     stake = 75000
     model = EconomicModelSigmoid(
         10.0, [Bucket("bucket_1", 1, 1, 1), Bucket("bucket_2", 1, 1, 0.5)], 20.0, 1
@@ -108,7 +108,7 @@ def test_message_count(budget: Budget):
     model.budget = budget
 
     assert model.apr([0.5, 0.25]) == 10
-    assert model.message_count(stake, [0.5, 0.25]) == round(
+    assert model.yearly_count(stake, [0.5, 0.25]) == round(
         model.apr([0.5, 0.25])
         * stake
         / 100.0

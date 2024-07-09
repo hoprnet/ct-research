@@ -20,9 +20,8 @@ class Base:
 
     @property
     def print_prefix(self) -> str:
-        cls = self.__class__
         raise NotImplementedError(
-            f"print_prefix not implemented for class '{cls.__name__}'"
+            f"print_prefix not implemented for class '{self.__class__.__name__}'"
         )
 
     @classmethod

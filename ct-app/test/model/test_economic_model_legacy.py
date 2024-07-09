@@ -33,16 +33,16 @@ def test_transformed_stake(model: EconomicModelLegacy):
     )
 
 
-def test_message_count_for_reward(model: EconomicModelLegacy):
-    # assert model.message_count_for_reward(0) == 0, "No reward for 0 stake"
+def test_yearly_count_for_reward(model: EconomicModelLegacy):
+    # assert model.yearly_count(0) == 0, "No reward for 0 stake"
     # assert round(
-    #     model.coefficients.l / model.message_count_for_reward(model.coefficients.l), 2
+    #     model.coefficients.l / model.yearly_count(model.coefficients.l), 2
     # ) == round(
-    #     model.coefficients.c / model.message_count_for_reward(model.coefficients.c), 2
+    #     model.coefficients.c / model.yearly_count(model.coefficients.c), 2
     # ), "Linear result in [l, c] range"
     assert round(
-        model.message_count(model.coefficients.c) / model.coefficients.c, 2
+        model.yearly_count(model.coefficients.c) / model.coefficients.c, 2
     ) > round(
-        model.message_count(2 * model.coefficients.c) / (2 * model.coefficients.c),
+        model.yearly_count(2 * model.coefficients.c) / (2 * model.coefficients.c),
         2,
     ), "Non linear above [l, c] range"

@@ -84,3 +84,6 @@ class Parameters(Base):
             pass
 
         return value
+
+    def __repr__(self):
+        return str(self.__dict__)

@@ -47,7 +47,7 @@ def flagguard(func):
         feature = params_raw[index]
         flag = getattr(class_flags, feature)
 
-        if flag is None or flag == "off":
+        if flag is None or flag is False:
             self.error(f"Feature `{feature}` not yet available")
             return
 
@@ -78,9 +78,9 @@ def formalin(message: Optional[str] = None):
             index = params_clean.index(func_name_clean)
             delay = getattr(class_flags, params_raw[index])
 
-            if delay == "on":
+            if delay is True:
                 delay = 0
-            if delay == "off":
+            if delay is False:
                 delay = None
 
             if delay == 0:

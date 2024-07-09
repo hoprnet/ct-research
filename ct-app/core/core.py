@@ -149,7 +149,7 @@ class Core(Base):
         for peer in previous_peers:
             if peer in visible_peers:
                 continue
-            await peer.message_count.set(None)
+            await peer.yearly_count.set(None)
 
         for peer in visible_peers:
             if peer in previous_peers:
@@ -246,6 +246,8 @@ class Core(Base):
         nft_holders = await self.nft_holders_list.get()
         topology = await self.topology_list.get()
         peers = await self.all_peers.get()
+        ct_nodes = await self.ct_nodes_addresses
+        redeemed_rewards = await self.peer_rewards.get()
 
         if not all(
             [len(topology), len(registered_nodes), len(peers), len(nft_holders)]
@@ -258,11 +260,10 @@ class Core(Base):
         for p in peers:
             if not p.is_old(self.params.peer.minVersion):
                 continue
-            await p.message_count.set(None)
+            await p.yearly_count.set(None)
 
         Utils.allowManyNodePerSafe(peers)
 
-        ct_nodes = await self.ct_nodes_addresses
         for p in peers:
             if not p.is_eligible(
                 self.params.economicModel.minSafeAllowance,
@@ -272,31 +273,33 @@ class Core(Base):
                 self.params.economicModel.NFTThreshold,
             ):
                 continue
-            await p.message_count.set(None)
+            await p.yearly_count.set(None)
 
         economic_security = (
             sum([peer.split_stake for peer in peers])
             / self.params.economicModel.sigmoid.totalTokenSupply
         )
         network_capacity = (
-            len([p for p in peers if p.message_count is not None])
+            len([p for p in peers if p.yearly_count is not None])
             / self.params.economicModel.sigmoid.networkCapacity
         )
         sigmoid_model_input = [economic_security, network_capacity]
-        redeemed_rewards = await self.peer_rewards.get()
 
         for peer in peers:
-            legacy_message_count = self.legacy_model.message_count(
+            if peer.yearly_count is None:
+                continue
+
+            legacy_message_count = self.legacy_model.yearly_count(
                 peer.split_stake, redeemed_rewards.get(peer.address.address, 0.0)
             )
-            sigmoid_message_count = self.sigmoid_model.message_count(
+            sigmoid_message_count = self.sigmoid_model.yearly_count(
                 peer.split_stake, sigmoid_model_input
             )
 
-            await peer.message_count.set(legacy_message_count + sigmoid_message_count)
+            await peer.yearly_count.set(legacy_message_count + sigmoid_message_count)
 
         self.info(
-            f"Eligible nodes: {len([p for p in peers if p.message_count is not None])} entries."
+            f"Eligible nodes: {len([p for p in peers if p.yearly_count is not None])} entries."
         )
 
         ELIGIBLE_PEERS_COUNTER.set(len(peers))
@@ -373,6 +376,7 @@ class Core(Base):
                 self.topology,
                 self.nft_holders,
                 self.apply_economic_model,
+                self.store_distribution_data,
             ]
         )
 
