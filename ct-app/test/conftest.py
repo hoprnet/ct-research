@@ -169,9 +169,6 @@ async def nodes(
         mocker.patch.object(node.api, "startedz", return_value=True)
         mocker.patch.object(node.api, "ticket_price", return_value=0.0001)
 
-        setattr(node.params, "distribution", Parameters())
-        node.params.distribution.delay_between_two_messages = 0.001
-
         await node.retrieve_address()
 
     return nodes

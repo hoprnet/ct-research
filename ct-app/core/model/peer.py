@@ -41,11 +41,14 @@ class Peer(Base):
 
         self._safe_address_count = None
 
-        self.yearly_count = LockedVar("yearly_count", 0, infer_type=False)
+        self.yearly_message_count = LockedVar(
+            "yearly_message_count", 0, infer_type=False
+        )
 
         self.last_db_storage = datetime.now()
         self.message_value = LockedVar("message_value", 0.0)
         self.message_count = LockedVar("message_count", 0)
+        self.ticket_price = 0.0
 
         self.params = None
         self.running = False
@@ -110,7 +113,7 @@ class Peer(Base):
             raise ValueError("Channel balance not set")
         if self.safe_address_count is None:
             raise ValueError("Safe address count not set")
-        if self.yearly_count is None:
+        if self.yearly_message_count is None:
             return 0
 
         split_stake = float(self.safe_balance) / float(self.safe_address_count) + float(
@@ -122,8 +125,9 @@ class Peer(Base):
 
     @property
     async def message_delay(self) -> float:
-        count = await self.yearly_count.get()
-        if count := count:
+        count = await self.yearly_message_count.get()
+
+        if count is not None and count > 0:
             return (365 * 24 * 60 * 60) / count
         else:
             return None
@@ -136,28 +140,37 @@ class Peer(Base):
         nft_holders: list[str],
         nft_threshold: float,
     ) -> bool:
-        conditions: list[bool] = []
+        try:
+            if self.safe_allowance < min_allowance:
+                return False
 
-        conditions.append(self.safe_allowance < min_allowance)
-        conditions.append(self.address in ct_nodes)
-        conditions.append(
-            self.safe_address in nft_holders and self.split_stake < nft_threshold
-        )
-        conditions.append(self.split_stake < min_stake)
+            if self.address in ct_nodes:
+                return False
 
-        return all(conditions)
+            if (
+                self.safe_address not in nft_holders
+                and self.split_stake < nft_threshold
+            ):
+                return False
+
+            if self.split_stake < min_stake:
+                return False
+        except ValueError:
+            return False
+
+        return True
 
     @flagguard
     @formalin(None)
     async def request_relay(self):
         if delay := await self.message_delay:
             await MessageQueue().buffer.put(self.address.id)
-            await self.messages_sent.inc(1)
-            self.debug(f"Next message for {self.address.id} in {delay} seconds.")
+            await self.message_count.inc(1)
+            await self.message_value.inc(self.ticket_price)
             await asyncio.sleep(delay)
         else:
-            self.debug(f"No messages for {self.address.id}, sleeping for 5 seconds.")
-            await asyncio.sleep(5)
+            self.debug(f"No messages for {self.address.id}, sleeping for 60 seconds.")
+            await asyncio.sleep(60)
 
     @flagguard
     @formalin(None)
@@ -205,5 +218,5 @@ class Peer(Base):
         return hash(self.address)
 
     @property
-    def print_prefix(self) -> str:
+    def log_prefix(self) -> str:
         return f"0x..{self.address.id[-5:]}"

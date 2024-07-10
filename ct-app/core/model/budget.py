@@ -6,8 +6,8 @@ TICKET_WINNING_PROB = Gauge("ticket_winning_prob", "Ticket winning probability")
 
 class Budget:
     def __init__(self):
-        self.ticket_price = None
-        self.winning_probability = None
+        self.ticket_price = 1
+        self.winning_probability = 1
 
     @property
     def ticket_price(self):
@@ -22,13 +22,9 @@ class Budget:
         if value is not None:
             self._ticket_price = value
             TICKET_PRICE.set(value)
-        else:
-            self._ticket_price = 1
 
     @winning_probability.setter
     def winning_probability(self, value):
         if value is not None:
             self._winning_probability = value
             TICKET_WINNING_PROB.set(value)
-        else:
-            self._winning_probability = 1

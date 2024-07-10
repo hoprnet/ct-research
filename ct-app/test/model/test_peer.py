@@ -1,5 +1,13 @@
+import asyncio
+import random
+
+import pytest
+from core.components.message_queue import MessageQueue
+from core.components.parameters import Parameters
 from core.model.peer import Peer
 from packaging.version import Version
+
+SECONDS_IN_YEAR = 365 * 24 * 60 * 60
 
 
 def test_peer_version():
@@ -32,3 +40,44 @@ def test_peer_version():
     peer.version = "2.0.7"
     assert not peer.is_old("2.0.7")
     assert not peer.is_old(Version("2.0.7"))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "exc_time,min_range,max_range",
+    [
+        (
+            random.randint(5, 20),
+            round(random.random() * 0.1 + 0.1, 1),
+            round(random.random() * 0.3 + 0.2, 1),
+        )
+    ],
+)
+async def test_request_relay(exc_time: int, min_range: float, max_range: float):
+    peers = {Peer(f"12D{num}", f"0x{num}", "2.1.0") for num in range(10)}
+
+    params = Parameters()
+    params.parse({"flags": {"peer": {"requestRelay": True}}})
+
+    for peer in peers:
+        rand_delay = round(random.random() * (max_range - min_range) + min_range, 1)
+        await peer.yearly_message_count.set(SECONDS_IN_YEAR / rand_delay)
+
+        peer.params = params
+        peer.running = True
+
+    await asyncio.sleep(exc_time)
+
+    buffer = MessageQueue().buffer
+
+    calls_and_delays = {
+        p.address.id: {"calls": 0, "delay": await p.message_delay} for p in peers
+    }
+
+    while buffer.qsize() > 0:
+        calls_and_delays[await buffer.get()]["calls"] += 1
+
+    durations = [
+        (values["calls"] + 1) * values["delay"] for values in calls_and_delays.values()
+    ]
+    assert (max(durations) - min(durations)) < (max_range * 2)

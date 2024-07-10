@@ -35,19 +35,21 @@ class HoprdAPI(Base):
         self.configuration.refresh_api_key_hook = _refresh_token_hook
 
     @property
-    def print_prefix(cls) -> str:
+    def log_prefix(cls) -> str:
         return "api"
 
     async def __call_api(
         self,
         obj: Callable[..., object],
         method: str,
+        call_log: bool = True,
         *args,
         **kwargs,
     ) -> tuple[bool, Optional[object]]:
-        self.debug(
-            f"Calling {obj.__name__}.{method} with kwargs: {kwargs}, args: {args}"
-        )
+        if call_log:
+            self.debug(
+                f"Calling {obj.__name__}.{method} with kwargs: {kwargs}, args: {args}"
+            )
 
         async def __call(
             obj: Callable[..., object],
@@ -322,7 +324,9 @@ class HoprdAPI(Base):
         :return: bool
         """
         body = SendMessageBodyRequest(message, None, hops, destination, tag)
-        is_ok, _ = await self.__call_api(MessagesApi, "send_message", body=body)
+        is_ok, _ = await self.__call_api(
+            MessagesApi, "send_message", call_log=False, body=body
+        )
 
         return is_ok
 

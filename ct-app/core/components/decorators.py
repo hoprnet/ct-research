@@ -48,7 +48,6 @@ def flagguard(func):
         flag = getattr(class_flags, feature)
 
         if flag is None or flag is False:
-            self.error(f"Feature `{feature}` not yet available")
             return
 
         return await func(self, *args, **kwargs)

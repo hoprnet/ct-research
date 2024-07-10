@@ -48,5 +48,5 @@ class AsyncLoop(Base, metaclass=Singleton):
             task.cancel()
 
     @property
-    def print_prefix(self) -> str:
+    def log_prefix(self) -> str:
         return "asyncloop"

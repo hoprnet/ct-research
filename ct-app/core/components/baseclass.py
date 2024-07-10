@@ -19,9 +19,9 @@ class Base:
     logger.propagate = False
 
     @property
-    def print_prefix(self) -> str:
+    def log_prefix(self) -> str:
         raise NotImplementedError(
-            f"print_prefix not implemented for class '{self.__class__.__name__}'"
+            f"log_prefix not implemented for class '{self.__class__.__name__}'"
         )
 
     @classmethod
@@ -29,7 +29,7 @@ class Base:
         return cls.__name__.lower()
 
     def __format(self, message: str):
-        return f"{self.print_prefix} | {message}".replace("\n", "")
+        return f"{self.log_prefix} | {message}".replace("\n", "")
 
     def debug(self, message: str):
         self.logger.debug(self.__format(message))

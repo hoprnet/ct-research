@@ -20,9 +20,7 @@ def main(configfile: str = None):
     # import envvars to params, such as self.params.subgraph.deployer_key
     params = Parameters()
     params.parse(config)
-
-    Base.logger.info(f"Loaded config file parameters values: {params}")
-
+    Base.logger.info(f"Loaded config file: {params}")
     params.from_env("SUBGRAPH", "PG")
     params.overrides("OVERRIDE")
 

@@ -11,7 +11,7 @@ exclude_also =
     if 0:
     if __name__ == .__main__.:
     
-    def print_prefix
+    def log_prefix
 
     
 omit = 

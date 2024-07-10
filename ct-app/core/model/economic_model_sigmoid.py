@@ -57,9 +57,9 @@ class EconomicModelSigmoid:
 
         return apr
 
-    def yearly_count(self, stake: float, xs: list[float]):
+    def yearly_message_count(self, stake: float, xs: list[float]):
         """
-        Calculate the yearly message count for the reward.
+        Calculate the yearly message count a peer should receive based on the stake.
         """
         apr = self.apr(xs, self.max_apr)
 

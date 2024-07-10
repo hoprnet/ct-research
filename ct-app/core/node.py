@@ -88,7 +88,7 @@ class Node(Base):
         self.running = False
 
     @property
-    def print_prefix(self):
+    def log_prefix(self):
         return self.url.split("//")[-1].split(".")[0]
 
     async def retrieve_address(self):
@@ -423,8 +423,7 @@ class Node(Base):
     async def consume(self):
         relayer = await MessageQueue().buffer.get()
         sender = (await self.address.get()).id
-        self.debug(f"Should send a message through {relayer} back to {sender}")
-        # TODO: replace with await self.api.send_message(sender, "This is CT", [relayer])
+        await self.api.send_message(sender, f"CT through {relayer}", [relayer])
 
     async def tasks(self):
         self.info("Starting node")
@@ -446,6 +445,9 @@ class Node(Base):
         return callbacks
 
     def __str__(self):
+        return f"Node(id='{self.url}')"
+
+    def __repr__(self):
         return f"Node(id='{self.url}')"
 
     @classmethod

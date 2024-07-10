@@ -89,5 +89,5 @@ class LockedVar(Base):
             self.value.update(value)
 
     @property
-    def print_prefix(self):
+    def log_prefix(self):
         return f"LockedVar({self.name})"

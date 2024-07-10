@@ -154,7 +154,7 @@ class SafesProvider(GraphQLProvider):
         )
 
     @property
-    def print_prefix(self) -> str:
+    def log_prefix(self) -> str:
         return "safe-provider"
 
 
@@ -165,7 +165,7 @@ class StakingProvider(GraphQLProvider):
         self._sku_query = self._load_query("core/subgraph_queries/staking.graphql")
 
     @property
-    def print_prefix(self) -> str:
+    def log_prefix(self) -> str:
         return "staking-provider"
 
 
@@ -176,5 +176,5 @@ class RewardsProvider(GraphQLProvider):
         self._sku_query = self._load_query("core/subgraph_queries/rewards.graphql")
 
     @property
-    def print_prefix(self) -> str:
+    def log_prefix(self) -> str:
         return "rewards-provider"

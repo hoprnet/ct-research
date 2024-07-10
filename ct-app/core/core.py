@@ -77,7 +77,7 @@ class Core(Base):
         self.running = False
 
     @property
-    def print_prefix(self) -> str:
+    def log_prefix(self) -> str:
         return "ct-core"
 
     @property
@@ -141,27 +141,31 @@ class Core(Base):
         Aggregates the peers from all nodes and sets the all_peers LockedVar.
         """
         visible_peers = set[Peer]()
-        previous_peers: set[Peer] = await self.all_peers.get()
+
+        known_peers: set[Peer] = await self.all_peers.get()
 
         for node in self.nodes:
             visible_peers.update(await node.peers.get())
 
-        for peer in previous_peers:
-            if peer in visible_peers:
-                continue
-            await peer.yearly_count.set(None)
+        # set yearly message count to None (-> not eligible for rewards) for peers that are not visible anymore
+        for peer in known_peers - visible_peers:
+            await peer.yearly_message_count.set(None)
 
-        for peer in visible_peers:
-            if peer in previous_peers:
-                continue
+        # add new peers to the set
+        for peer in visible_peers - known_peers:
             peer.params = self.params
             peer.running = True
-            previous_peers.add(peer)
+            known_peers.add(peer)
 
-        await self.all_peers.set(previous_peers)
+        # update ticket price for all peers
+        if price := self.sigmoid_model.budget.ticket_price:
+            for peer in known_peers:
+                peer.ticket_price = price
 
-        self.debug(f"Aggregated peers ({len(previous_peers)} entries).")
-        UNIQUE_PEERS.set(len(previous_peers))
+        await self.all_peers.set(known_peers)
+
+        self.debug(f"Aggregated peers ({len(known_peers)} entries).")
+        UNIQUE_PEERS.set(len(known_peers))
 
     @flagguard
     @formalin("Getting registered nodes")
@@ -189,7 +193,7 @@ class Core(Base):
         await self.registered_nodes_list.set(results)
 
         SUBGRAPH_SIZE.set(len(results))
-        self.debug(f"Fetched subgraph data ({len(results)} entries).")
+        self.debug(f"Fetched registered_nodes ({len(results)} entries).")
 
     @flagguard
     @formalin("Getting NFT holders")
@@ -258,9 +262,8 @@ class Core(Base):
         peers = await Utils.mergeDataSources(topology, peers, registered_nodes)
 
         for p in peers:
-            if not p.is_old(self.params.peer.minVersion):
-                continue
-            await p.yearly_count.set(None)
+            if p.is_old(self.params.peer.minVersion):
+                await p.yearly_message_count.set(None)
 
         Utils.allowManyNodePerSafe(peers)
 
@@ -272,34 +275,41 @@ class Core(Base):
                 nft_holders,
                 self.params.economicModel.NFTThreshold,
             ):
-                continue
-            await p.yearly_count.set(None)
+                await p.yearly_message_count.set(None)
 
         economic_security = (
-            sum([peer.split_stake for peer in peers])
+            sum(
+                [
+                    p.split_stake
+                    for p in peers
+                    if (await p.yearly_message_count.get()) is not None
+                ]
+            )
             / self.params.economicModel.sigmoid.totalTokenSupply
         )
         network_capacity = (
-            len([p for p in peers if p.yearly_count is not None])
+            len([p for p in peers if (await p.yearly_message_count.get()) is not None])
             / self.params.economicModel.sigmoid.networkCapacity
         )
         sigmoid_model_input = [economic_security, network_capacity]
 
         for peer in peers:
-            if peer.yearly_count is None:
+            if await peer.yearly_message_count.get() is None:
                 continue
 
-            legacy_message_count = self.legacy_model.yearly_count(
+            legacy_message_count = self.legacy_model.yearly_message_count(
                 peer.split_stake, redeemed_rewards.get(peer.address.address, 0.0)
             )
-            sigmoid_message_count = self.sigmoid_model.yearly_count(
+            sigmoid_message_count = self.sigmoid_model.yearly_message_count(
                 peer.split_stake, sigmoid_model_input
             )
 
-            await peer.yearly_count.set(legacy_message_count + sigmoid_message_count)
+            await peer.yearly_message_count.set(
+                legacy_message_count + sigmoid_message_count
+            )
 
         self.info(
-            f"Eligible nodes: {len([p for p in peers if p.yearly_count is not None])} entries."
+            f"Eligible nodes: {len([p for p in peers if await p.yearly_message_count.get() is not None])} entries."
         )
 
         ELIGIBLE_PEERS_COUNTER.set(len(peers))
@@ -361,10 +371,10 @@ class Core(Base):
 
         for node in self.nodes:
             node.running = True
-            await node.retrieve_address()
             AsyncLoop.update(await node.tasks())
 
         self.running = True
+
         AsyncLoop.update(
             [
                 self.healthcheck,
@@ -376,7 +386,6 @@ class Core(Base):
                 self.topology,
                 self.nft_holders,
                 self.apply_economic_model,
-                self.store_distribution_data,
             ]
         )
 

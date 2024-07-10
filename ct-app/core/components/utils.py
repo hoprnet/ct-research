@@ -39,17 +39,15 @@ class Utils(Base):
             topo = next(filter(lambda t: t.node_address == address, topology), None)
             safe = next(filter(lambda s: s.node_address == address, safes), None)
 
-            if topo is not None:
+            if topo is not None and safe is not None and peer is not None:
                 peer.channel_balance = topo.channels_balance
-            if safe is not None:
                 peer.safe_address = safe.safe_address
                 peer.safe_balance = (
                     safe.wxHoprBalance if safe.wxHoprBalance is not None else 0
                 )
                 peer.safe_allowance = float(safe.safe_allowance)
-
-            if peer is None or topo is None or safe is None:
-                await peer.yearly_count.set(None)
+            else:
+                await peer.yearly_message_count.set(None)
 
             merged_result.append(peer)
 
@@ -131,5 +129,5 @@ class Utils(Base):
         return results
 
     @property
-    def print_prefix(self) -> str:
+    def log_prefix(self) -> str:
         return "utils"

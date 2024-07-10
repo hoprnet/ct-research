@@ -11,7 +11,7 @@ flag_dictionary = {"flags": {"fooclass": {"fooFlagguardFunc": 1, "fooFormalinFun
 
 class FooClass(Base):
     @property
-    def print_prefix(self):
+    def log_prefix(self):
         return "FooClass"
 
     def __init__(self):
