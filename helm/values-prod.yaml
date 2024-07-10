@@ -1,5 +1,5 @@
 blue-nodes:
-  enabled: true
+  enabled: false
 green-nodes:
   enabled: true
 
