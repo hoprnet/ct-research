@@ -79,11 +79,11 @@ def test_apr_composition():
 
 
 def test_out_of_bounds_values():
-    with pytest.raises(ValueError):
-        EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 0.5)], 20.0, 1).apr([0.5])
+    assert (
+        EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 0.5)], 20.0, 1).apr([0.5]) == 0
+    )
 
-    with pytest.raises(ValueError):
-        EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 0.5)], 20.0, 1).apr([0])
+    assert EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 0.5)], 20.0, 1).apr([0]) == 0
 
 
 def test_bucket_apr():
