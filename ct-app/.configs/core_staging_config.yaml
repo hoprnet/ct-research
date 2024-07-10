@@ -35,12 +35,12 @@ flags:
 economicModel:
   minSafeAllowance: -1
   NFTThreshold: ~
-  intervals: 1800 # in seconds
+  intervals: 60 # in seconds
   winningProbability: 1
 
   legacy:
     proportion: 0.9
-    apr: .000000000001
+    apr: 0.0000001
 
     coefficients:
       a: 1
@@ -58,7 +58,7 @@ economicModel:
 
   sigmoid:
     proportion: 0.1
-    maxAPR: .000000000001
+    maxAPR: 0.0000001
     offset: 10
     networkCapacity: 100
     totalTokenSupply: 200

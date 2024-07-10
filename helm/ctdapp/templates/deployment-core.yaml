@@ -50,6 +50,6 @@ spec:
             - '-m'
             - core
             - '--configfile'
-            - ./scripts/core_{{ .Values.environmentName }}_config.yaml
+            - ./.config/core_{{ .Values.environmentName }}_config.yaml
           resources:
             {{- toYaml .Values.ctdapp.core.resources | nindent 12 }}

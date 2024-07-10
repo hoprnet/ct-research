@@ -52,7 +52,10 @@ class EconomicModelSigmoid:
         """
         Calculate the APR for the economic model.
         """
-        apr = sum(b.apr(x) for b, x in zip(self.buckets, xs)) + self.offset
+        try:
+            apr = sum(b.apr(x) for b, x in zip(self.buckets, xs)) + self.offset
+        except ValueError:
+            apr = 0
 
         if max_apr is not None:
             apr = min(apr, max_apr)

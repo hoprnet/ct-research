@@ -496,6 +496,8 @@ class Core(Base):
             for idx, peer in enumerate(peers)
         }
 
+        self.info(f"Rewards to distribute: {reward_per_peer}")
+
         while (
             iteration < max_iterations and _total_messages_to_send(reward_per_peer) > 0
         ):
