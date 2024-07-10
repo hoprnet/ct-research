@@ -5,23 +5,23 @@
 flags:
   core: 
     healthcheck: 10
-    rotateSubgraphs: 30
-    peersRewards: 30
-    ticketParameters: 30
+    rotateSubgraphs: 120
+    peersRewards: 120
+    ticketParameters: 120
 
-    connectedPeers: 30
-    registeredNodes: 30
-    topology: 30
-    NFTHolders: 30
+    connectedPeers: 120
+    registeredNodes: 120
+    topology: 120
+    NFTHolders: 120
     
-    applyEconomicModel: 30
+    applyEconomicModel: 120
     
   node:
     healthcheck: 10
-    retrievePeers: 30
-    retrieveIncomingChannels: 30
-    retrieveOutgoingChannels: 30
-    retrieveBalances: 30
+    retrievePeers: 120
+    retrieveIncomingChannels: 120
+    retrieveOutgoingChannels: 120
+    retrieveBalances: 120
 
     openChannels: 300
     fundChannels: 300
