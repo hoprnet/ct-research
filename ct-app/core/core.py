@@ -321,6 +321,7 @@ class Core(Base):
 
         self.debug(f"Fetched peers rewards amounts ({len(results)} entries).")
 
+    @flagguard
     @formalin("Getting ticket parameters")
     @connectguard
     async def ticket_parameters(self):
@@ -371,7 +372,6 @@ class Core(Base):
                 self.topology,
                 self.nft_holders,
                 self.apply_economic_model,
-                self.check_inboxes,
             ]
         )
 
