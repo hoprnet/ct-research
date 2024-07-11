@@ -1,8 +1,3 @@
-from core.model.address import Address
-from core.model.nodesafe_entry import NodeSafeEntry
-from core.model.peer import Peer
-from core.model.topology_entry import TopologyEntry
-
 from .baseclass import Base
 from .channelstatus import ChannelStatus
 from .environment_utils import EnvironmentUtils
@@ -27,11 +22,11 @@ class Utils(Base):
     @classmethod
     async def mergeDataSources(
         cls,
-        topology: list[TopologyEntry],
-        peers: list[Peer],
-        safes: list[NodeSafeEntry],
+        topology: list,
+        peers: list,
+        safes: list,
     ):
-        merged_result: list[Peer] = []
+        merged_result: list = []
         addresses = [item.address.address for item in peers]
 
         for address in addresses:
@@ -56,7 +51,7 @@ class Utils(Base):
         return merged_result
 
     @classmethod
-    def allowManyNodePerSafe(cls, peers: list[Peer]):
+    def allowManyNodePerSafe(cls, peers: list):
         """
         Split the stake managed by a safe address equaly between the nodes
         that the safe manages.
@@ -74,9 +69,7 @@ class Utils(Base):
             peer.safe_address_count = safe_counts[peer.safe_address]
 
     @classmethod
-    def exclude(
-        cls, source_data: list[Peer], blacklist: list[Address], text: str = ""
-    ) -> list[Peer]:
+    def exclude(cls, source_data: list, blacklist: list, text: str = "") -> list:
         """
         Removes elements from a dictionary based on a blacklist.
         :param source_data (dict): The dictionary to be updated.
@@ -90,7 +83,7 @@ class Utils(Base):
         # Remove elements from the list
         excluded = []
         for index in sorted(indexes, reverse=True):
-            peer: Peer = source_data.pop(index)
+            peer = source_data.pop(index)
             excluded.append(peer)
 
         cls().info(f"Excluded {text} ({len(excluded)} entries).")

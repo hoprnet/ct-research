@@ -4,12 +4,15 @@ from test.decorators_patches import patches
 
 import pytest
 import yaml
-from core.components.channelstatus import ChannelStatus
-from core.components.parameters import Parameters
-from core.model.budget import Budget
-from core.model.economic_model_legacy import Coefficients as Coefficients
-from core.model.economic_model_legacy import EconomicModelLegacy, Equation, Equations
-from core.model.peer import Peer
+from core.components import ChannelStatus, Parameters
+from core.model import Peer
+from core.model.economic_model import (
+    Budget,
+    Coefficients,
+    EconomicModelLegacy,
+    Equation,
+    Equations,
+)
 from hoprd_sdk.models import ChannelInfoResponse, NodeChannelsResponse
 from pytest_mock import MockerFixture
 

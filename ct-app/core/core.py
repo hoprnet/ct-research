@@ -4,8 +4,7 @@ import random
 
 from prometheus_client import Gauge
 
-from .components.asyncloop import AsyncLoop
-from .components.baseclass import Base
+from .components import AsyncLoop, Base, HoprdAPI, LockedVar, Parameters, Utils
 from .components.decorators import connectguard, flagguard, formalin
 from .components.graphql_providers import (
     ProviderError,
@@ -13,31 +12,22 @@ from .components.graphql_providers import (
     SafesProvider,
     StakingProvider,
 )
-from .components.hoprd_api import HoprdAPI
-from .components.lockedvar import LockedVar
-from .components.parameters import Parameters
-from .components.utils import Utils
-from .model.address import Address
-from .model.economic_model_legacy import EconomicModelLegacy
-from .model.economic_model_sigmoid import EconomicModelSigmoid
-from .model.nodesafe_entry import NodeSafeEntry
-from .model.peer import Peer
-from .model.subgraph_type import SubgraphType
-from .model.subgraph_url import SubgraphURL
-from .model.topology_entry import TopologyEntry
+from .model import Address, NodeSafeEntry, Peer, TopologyEntry
+from .model.economic_model import EconomicModelLegacy, EconomicModelSigmoid
+from .model.subgraph import SubgraphType, SubgraphURL
 from .node import Node
 
 # endregion
 
 # region Metrics
-HEALTH = Gauge("core_health", "Node health")
-UNIQUE_PEERS = Gauge("unique_peers", "Unique peers")
-SUBGRAPH_IN_USE = Gauge("subgraph_in_use", "Subgraph in use")
-SUBGRAPH_CALLS = Gauge("subgraph_calls", "# of subgraph calls", ["type"])
-SUBGRAPH_SIZE = Gauge("subgraph_size", "Size of the subgraph")
-TOPOLOGY_SIZE = Gauge("topology_size", "Size of the topology")
-NFT_HOLDERS = Gauge("nft_holders", "Number of nr-nft holders")
-ELIGIBLE_PEERS_COUNTER = Gauge("eligible_peers", "# of eligible peers for rewards")
+HEALTH = Gauge("ct_core_health", "Node health")
+UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers")
+SUBGRAPH_IN_USE = Gauge("ct_subgraph_in_use", "Subgraph in use")
+SUBGRAPH_CALLS = Gauge("ct_subgraph_calls", "# of subgraph calls", ["type"])
+SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
+TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
+NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
+ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
 TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
 # endregion
 
@@ -156,11 +146,6 @@ class Core(Base):
             peer.params = self.params
             peer.running = True
             known_peers.add(peer)
-
-        # update ticket price for all peers
-        if price := self.sigmoid_model.budget.ticket_price:
-            for peer in known_peers:
-                peer.ticket_price = price
 
         await self.all_peers.set(known_peers)
 
@@ -312,7 +297,7 @@ class Core(Base):
             f"Eligible nodes: {len([p for p in peers if await p.yearly_message_count.get() is not None])} entries."
         )
 
-        ELIGIBLE_PEERS_COUNTER.set(len(peers))
+        ELIGIBLE_PEERS.set(len(peers))
         await self.all_peers.set(set(peers))
 
     @flagguard
@@ -386,10 +371,11 @@ class Core(Base):
                 self.topology,
                 self.nft_holders,
                 self.apply_economic_model,
+                self.check_inboxes,
             ]
         )
 
         for node in self.nodes:
-            AsyncLoop.add(node.consume)
+            AsyncLoop.add(node.watch_message_queue)
 
         await AsyncLoop.gather()

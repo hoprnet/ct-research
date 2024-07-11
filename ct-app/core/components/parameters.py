@@ -1,5 +1,5 @@
 from .baseclass import Base
-from .environment_utils import EnvironmentUtils
+from .environment_utils import EnvironmentUtils as Utils
 
 
 class Parameters(Base):
@@ -22,7 +22,7 @@ class Parameters(Base):
                 setattr(self, key, value)
 
     def overrides(self, prefix: str):
-        for key, value in EnvironmentUtils.envvarWithPrefix(prefix).items():
+        for key, value in Utils.envvarWithPrefix(prefix).items():
             path = key.replace(prefix, "").lower().split("_")
 
             parent = self
@@ -58,7 +58,7 @@ class Parameters(Base):
             setattr(self, subparams_name, subparams)
 
     def _parse_env_vars(self, prefix, subparams):
-        for key, value in EnvironmentUtils.envvarWithPrefix(prefix).items():
+        for key, value in Utils.envvarWithPrefix(prefix).items():
             k = self._format_key(key, prefix)
             value = self._convert(value)
             setattr(subparams, k, value)

@@ -1,7 +1,7 @@
 import asyncio
 
 import pytest
-from core.components.asyncloop import AsyncLoop
+from core.components import AsyncLoop
 
 
 def clearAsyncLoopInstance(func):

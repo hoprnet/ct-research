@@ -1,7 +1,6 @@
 from prometheus_client import Gauge
 
-TICKET_PRICE = Gauge("ticket_price", "Ticket price")
-TICKET_WINNING_PROB = Gauge("ticket_winning_prob", "Ticket winning probability")
+TICKET_STATS = Gauge("ct_ticket_stats", "Ticket stats", ["type"])
 
 
 class Budget:
@@ -21,10 +20,10 @@ class Budget:
     def ticket_price(self, value):
         if value is not None:
             self._ticket_price = value
-            TICKET_PRICE.set(value)
+            TICKET_STATS.labels("price").set(value)
 
     @winning_probability.setter
     def winning_probability(self, value):
         if value is not None:
             self._winning_probability = value
-            TICKET_WINNING_PROB.set(value)
+            TICKET_STATS.labels("win_prob").set(value)

@@ -1,12 +1,9 @@
-from test.components.utils import handle_envvars
-
 import pytest
-from core.components.utils import Utils
-from core.model.address import Address
-from core.model.nodesafe_entry import NodeSafeEntry
-from core.model.peer import Peer
-from core.model.topology_entry import TopologyEntry
+from core.components import Utils
+from core.model import Address, NodeSafeEntry, Peer, TopologyEntry
 from hoprd_sdk.models import ChannelInfoResponse
+
+from .utils import handle_envvars
 
 
 @pytest.fixture

@@ -30,11 +30,13 @@ flags:
     closeIncomingChannels: Off
 
     getTotalChannelFunds: 300
-    consume: On
+    
+    watchMessageQueue: On  # should only be On / Off
+    relayedMessagesToDB: 120
 
   peer:
-    requestRelay: On
-    storeDistributionData: 30
+    messageRelayRequest: On # should only be On / Off
+    sentMessagesToDB: 30
     
 # =============================================================================
 # 
@@ -85,7 +87,7 @@ economicModel:
 # 
 # =============================================================================
 storage:
-  value: 5 # wxHOPR
+  count: 100 # wxHOPR
   timeout: 43200 # seconds
 
 # =============================================================================

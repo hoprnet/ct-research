@@ -1,8 +1,8 @@
 import inspect
 
 import pytest
-from core.model.peer import Peer
-from core.model.subgraph_type import SubgraphType
+from core.model import Peer
+from core.model.subgraph import SubgraphType
 
 from .conftest import Core
 

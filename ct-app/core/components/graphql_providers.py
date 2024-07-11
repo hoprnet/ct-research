@@ -17,7 +17,7 @@ class ProviderError(Exception):
 class GraphQLProvider(Base):
     def __init__(self, url: str):
         transport = AIOHTTPTransport(url=url)
-        self.pwd = Path(__file__).parent.parent.parent
+        self.pwd = Path(__file__).parent
         self._client = Client(transport=transport)
         self._default_key = None
 
@@ -149,9 +149,7 @@ class SafesProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
         self._default_key = "safes"
-        self._sku_query = self._load_query(
-            "core/subgraph_queries/safes_balance.graphql"
-        )
+        self._sku_query = self._load_query("./subgraph_queries/safes_balance.graphql")
 
     @property
     def log_prefix(self) -> str:
@@ -162,7 +160,7 @@ class StakingProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
         self._default_key = "boosts"
-        self._sku_query = self._load_query("core/subgraph_queries/staking.graphql")
+        self._sku_query = self._load_query("./subgraph_queries/staking.graphql")
 
     @property
     def log_prefix(self) -> str:
@@ -173,7 +171,7 @@ class RewardsProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
         self._default_key = "accounts"
-        self._sku_query = self._load_query("core/subgraph_queries/rewards.graphql")
+        self._sku_query = self._load_query("./subgraph_queries/rewards.graphql")
 
     @property
     def log_prefix(self) -> str:

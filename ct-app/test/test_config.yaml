@@ -30,11 +30,13 @@ flags:
     closeIncomingChannels: Off
 
     getTotalChannelFunds: Off
-    consume: On
+    
+    watchMessageQueue: On
+    relayedMessagesToDB: 120
 
   peer:
-    requestRelay: Off
-    storeDistributionData: Off
+    messageRelayRequest: Off
+    sentMessagesToDB: Off
 
 # =============================================================================
 # 

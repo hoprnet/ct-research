@@ -1,4 +1,4 @@
-from core.model.subgraph_type import SubgraphType
+from core.model.subgraph import SubgraphType
 
 
 def test_callables():

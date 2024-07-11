@@ -1,4 +1,4 @@
-from core.components.channelstatus import ChannelStatus
+from core.components import ChannelStatus
 
 
 def test_channelstatus():

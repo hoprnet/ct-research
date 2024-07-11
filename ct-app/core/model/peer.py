@@ -2,21 +2,17 @@ import asyncio
 from datetime import datetime
 from typing import Union
 
-from core.components.asyncloop import AsyncLoop
-from core.components.baseclass import Base
+from core.components import AsyncLoop, Base, LockedVar, MessageQueue
 from core.components.decorators import flagguard, formalin
-from core.components.lockedvar import LockedVar
-from core.components.message_queue import MessageQueue
-from database import DatabaseConnection, Reward
 from packaging.version import Version
 from prometheus_client import Gauge
 
 from .address import Address
+from .database import DatabaseConnection, SentMessages
 
-PEER_SPLIT_STAKE = Gauge("peer_split_stake", "Splitted stake", ["peer_id"])
-PEER_TF_STAKE = Gauge("peer_tf_stake", "Transformed stake", ["peer_id"])
-PEER_SAFE_COUNT = Gauge("peer_safe_count", "Number of safes", ["peer_id"])
-PEER_VERSION = Gauge("peer_version", "Peer version", ["peer_id", "version"])
+STAKE = Gauge("ct_peer_stake", "Stake", ["peer_id", "type"])
+SAFE_COUNT = Gauge("ct_peer_safe_count", "Number of safes", ["peer_id"])
+VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
 
 
 class Peer(Base):
@@ -46,9 +42,7 @@ class Peer(Base):
         )
 
         self.last_db_storage = datetime.now()
-        self.message_value = LockedVar("message_value", 0.0)
         self.message_count = LockedVar("message_count", 0)
-        self.ticket_price = 0.0
 
         self.params = None
         self.running = False
@@ -61,8 +55,8 @@ class Peer(Base):
     def running(self, value: bool):
         self._running = value
         if value is True:
-            AsyncLoop.add(self.request_relay)
-            AsyncLoop.add(self.store_distribution_data)
+            AsyncLoop.add(self.message_relay_request)
+            AsyncLoop.add(self.sent_messages_to_db)
 
     def is_old(self, min_version: Union[str, Version]):
         """
@@ -87,7 +81,7 @@ class Peer(Base):
                 value = Version("0.0.0")
 
         self._version = value
-        PEER_VERSION.labels(self.address.id, str(value)).set(1)
+        VERSION.labels(self.address.id, str(value)).set(1)
 
     @property
     def node_address(self) -> str:
@@ -103,7 +97,7 @@ class Peer(Base):
     @safe_address_count.setter
     def safe_address_count(self, value: int):
         self._safe_address_count = value
-        PEER_SAFE_COUNT.labels(self.address.id).set(value)
+        SAFE_COUNT.labels(self.address.id).set(value)
 
     @property
     def split_stake(self) -> float:
@@ -119,7 +113,7 @@ class Peer(Base):
         split_stake = float(self.safe_balance) / float(self.safe_address_count) + float(
             self.channel_balance
         )
-        PEER_SPLIT_STAKE.labels(self.address.id).set(split_stake)
+        STAKE.labels(self.address.id, "split").set(split_stake)
 
         return split_stake
 
@@ -162,11 +156,10 @@ class Peer(Base):
 
     @flagguard
     @formalin(None)
-    async def request_relay(self):
+    async def message_relay_request(self):
         if delay := await self.message_delay:
             await MessageQueue().buffer.put(self.address.id)
             await self.message_count.inc(1)
-            await self.message_value.inc(self.ticket_price)
             await asyncio.sleep(delay)
         else:
             self.debug(f"No messages for {self.address.id}, sleeping for 60 seconds.")
@@ -174,37 +167,35 @@ class Peer(Base):
 
     @flagguard
     @formalin(None)
-    async def store_distribution_data(self):
+    async def sent_messages_to_db(self):
         """
         Stores the distribution data in the database, if available.
         """
         now = datetime.now()
-        value = await self.message_value.get()
         count = await self.message_count.get()
 
         if (
-            value < self.params.pg.storage.value
+            count < self.params.storage.count
             and (now - self.last_db_storage).total_seconds()
             < self.params.storage.timeout
         ):
             return
 
-        entry = Reward(
-            peer_id=self.address.id,
+        self.info(
+            f"Storing distribution data in the database for {self.address.id} (count: {count})"
+        )
+        entry = SentMessages(
+            relayer=self.address.id,
             count=count,
-            value=value,
             timestamp=now,
-            issued_count=value,
         )
 
         try:
-            with DatabaseConnection(self.params.pg) as session:
-                session.add(entry)
-                session.commit()
+            DatabaseConnection.session().add(entry)
+            DatabaseConnection.session().commit()
         except Exception as err:
-            self.error(f"Database error while storing distribution results: {err}")
+            self.error(f"Database error while storing sent messages entries: {err}")
         else:
-            await self.message_value.sub(value)
             await self.message_count.sub(count)
             self.last_db_storage = now
 

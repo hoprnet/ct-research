@@ -1,6 +1,6 @@
 import pytest
-from core.model.budget import Budget
-from core.model.economic_model_legacy import (
+from core.model.economic_model import (
+    Budget,
     Coefficients,
     EconomicModelLegacy,
     Equation,

@@ -1,10 +1,8 @@
 import asyncio
 
 import pytest
-from core.components.baseclass import Base
+from core.components import Base, LockedVar, Parameters
 from core.components.decorators import connectguard, flagguard, formalin
-from core.components.lockedvar import LockedVar
-from core.components.parameters import Parameters
 
 flag_dictionary = {"flags": {"fooclass": {"fooFlagguardFunc": 1, "fooFormalinFunc": 1}}}
 
