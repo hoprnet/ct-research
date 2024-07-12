@@ -23,8 +23,8 @@ flags:
     retrieveOutgoingChannels: 120
     retrieveBalances: 120
 
-    openChannels: 300
-    fundChannels: 300
+    openChannels: On
+    fundChannels: On
     closeOldChannels: Off
     closePendingChannels: Off
     closeIncomingChannels: Off

@@ -88,8 +88,8 @@ def formalin(message: Optional[str] = None):
                 self.info(f"Running `{params_raw[index]}` every {delay} seconds")
 
             while self.running:
-                if message:
-                    self.feature(message)
+                # if message:
+                #     self.feature(message)
                 await func(self, *args, **kwargs)
 
                 if delay is None:

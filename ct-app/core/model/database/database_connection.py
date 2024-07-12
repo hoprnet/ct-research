@@ -31,7 +31,7 @@ class DatabaseConnection(metaclass=Singleton):
             query={},
         )
 
-        self.engine = create_engine(url, pool_size=5, echo_pool=True)
+        self.engine = create_engine(url, pool_size=5)
         Base.metadata.create_all(self.engine)
         self.session = Session(self.engine)
 

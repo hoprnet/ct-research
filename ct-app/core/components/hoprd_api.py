@@ -297,7 +297,7 @@ class HoprdAPI(Base):
         elif isinstance(address, str):
             address = [address]
 
-        is_ok, response = await self.__call_api(AccountApi, "addresses")
+        is_ok, response = await self.__call_api(AccountApi, "addresses", call_log=False)
 
         if not is_ok:
             return None
@@ -330,7 +330,7 @@ class HoprdAPI(Base):
 
         return is_ok
 
-    async def messages_pop(self, tag: int = None) -> bool:
+    async def messages_pop(self, tag: int = MESSAGE_TAG) -> bool:
         """
         Pop next message from the inbox
         :param: tag = 0x0320
@@ -341,7 +341,7 @@ class HoprdAPI(Base):
 
         return response
 
-    async def messages_pop_all(self, tag: int = None) -> list:
+    async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
         """
         Pop all messages from the inbox
         :param: tag = 0x0320

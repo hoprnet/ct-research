@@ -1,3 +1,5 @@
+from core.model import NodeSafeEntry
+
 from .baseclass import Base
 from .channelstatus import ChannelStatus
 from .environment_utils import EnvironmentUtils
@@ -33,6 +35,9 @@ class Utils(Base):
             peer = next(filter(lambda p: p.address.address == address, peers), None)
             topo = next(filter(lambda t: t.node_address == address, topology), None)
             safe = next(filter(lambda s: s.node_address == address, safes), None)
+
+            if safe is None:
+                safe = NodeSafeEntry(address, "0", "0x0", "0")
 
             if topo is not None and safe is not None and peer is not None:
                 peer.channel_balance = topo.channels_balance

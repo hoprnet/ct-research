@@ -143,13 +143,14 @@ class Peer(Base):
 
             if (
                 self.safe_address not in nft_holders
+                and nft_threshold
                 and self.split_stake < nft_threshold
             ):
                 return False
 
             if self.split_stake < min_stake:
                 return False
-        except ValueError:
+        except Exception:
             return False
 
         return True
@@ -163,7 +164,9 @@ class Peer(Base):
             await self.message_count.inc(1)
             await asyncio.sleep(delay)
         else:
-            self.debug(f"No messages for {self.address.id}, sleeping for 60 seconds.")
+            self.debug(
+                f"No messages for {self.address.id[-5:]}, sleeping for 60 seconds."
+            )
             await asyncio.sleep(60)
 
     @flagguard
@@ -183,7 +186,7 @@ class Peer(Base):
             return
 
         self.info(
-            f"Storing distribution data in the database for {self.address.id} (count: {count})"
+            f"Storing sent messages in the database for {self.address.id} (count: {count})"
         )
         entry = SentMessages(
             relayer=self.address.id,
@@ -211,4 +214,4 @@ class Peer(Base):
 
     @property
     def log_prefix(self) -> str:
-        return f"0x..{self.address.id[-5:]}"
+        return f"..{self.address.id[-5:]}"

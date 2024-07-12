@@ -20,7 +20,6 @@ from .node import Node
 # endregion
 
 # region Metrics
-HEALTH = Gauge("ct_core_health", "Node health")
 UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers")
 SUBGRAPH_IN_USE = Gauge("ct_subgraph_in_use", "Subgraph in use")
 SUBGRAPH_CALLS = Gauge("ct_subgraph_calls", "# of subgraph calls", ["type"])
@@ -106,8 +105,6 @@ class Core(Base):
         health = await self.api.healthyz()
 
         await self.connected.set(health)
-        self.debug(f"Connection state: {health}")
-        HEALTH.set(int(health))
 
     @flagguard
     @formalin("Checking subgraph URLs")
@@ -178,7 +175,7 @@ class Core(Base):
         await self.registered_nodes_list.set(results)
 
         SUBGRAPH_SIZE.set(len(results))
-        self.debug(f"Fetched registered_nodes ({len(results)} entries).")
+        self.debug(f"Fetched registered nodes ({len(results)} entries).")
 
     @flagguard
     @formalin("Getting NFT holders")

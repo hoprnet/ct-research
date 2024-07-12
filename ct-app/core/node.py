@@ -73,9 +73,10 @@ class Node(Base):
         if "hopr" not in address or "native" not in address:
             return
 
-        await self.address.set(Address(address["hopr"], address["native"]))
+        address = Address(address["hopr"], address["native"])
+        await self.address.set(address)
 
-        return await self.address.get()
+        return address
 
     @flagguard
     @formalin(None)
@@ -87,8 +88,9 @@ class Node(Base):
         await self.connected.set(health)
 
         if addr := await self.retrieve_address():
-            self.debug(f"Connection state: {health}")
             HEALTH.labels(addr.id).set(int(health))
+            if not health:
+                self.warning("Node is not reachable.")
         else:
             self.warning("No address found")
 
@@ -387,7 +389,7 @@ class Node(Base):
         messages = []
         for m in await self.api.messages_pop_all():
             try:
-                message = MessageFormat.parse(m)
+                message = MessageFormat.parse(m.body)
             except ValueError as err:
                 self.error(f"Error while parsing message: {err}")
                 continue
@@ -431,8 +433,6 @@ class Node(Base):
         await self.api.send_message(sender, message.format(), [message.relayer])
 
     async def tasks(self):
-        self.info("Starting node")
-
         callbacks = [
             self.healthcheck,
             self.retrieve_peers,
@@ -445,6 +445,7 @@ class Node(Base):
             self.close_incoming_channels,
             self.close_pending_channels,
             self.get_total_channel_funds,
+            self.relayed_messages_to_db,
         ]
 
         return callbacks
