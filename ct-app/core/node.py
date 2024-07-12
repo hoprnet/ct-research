@@ -3,7 +3,15 @@ from datetime import datetime
 
 from prometheus_client import Gauge
 
-from .components import Base, HoprdAPI, LockedVar, MessageQueue, Parameters, Utils
+from .components import (
+    Base,
+    HoprdAPI,
+    LockedVar,
+    MessageFormat,
+    MessageQueue,
+    Parameters,
+    Utils,
+)
 from .components.decorators import connectguard, flagguard, formalin
 from .model import Address, Peer
 from .model.database import DatabaseConnection, RelayedMessages
@@ -374,13 +382,22 @@ class Node(Base):
         """
         Check the inbox for messages.
         """
-        messages = await self.api.messages_pop_all()
         address = await self.address.get()
 
+        messages = []
+        for m in await self.api.messages_pop_all():
+            try:
+                message = MessageFormat.parse(m)
+            except ValueError as err:
+                self.error(f"Error while parsing message: {err}")
+                continue
+            messages.append(message)
+
         for message in messages:
-            if message not in self.message_distributed:
-                self.message_distributed[message] = 0
-            self.message_distributed[message] += 1
+            relayer = message.relayer
+            if relayer not in self.message_distributed:
+                self.message_distributed[relayer] = 0
+            self.message_distributed[relayer] += 1
 
         entries = []
         for peer, count in self.message_distributed.items():
@@ -409,9 +426,9 @@ class Node(Base):
 
     @formalin(None)
     async def watch_message_queue(self):
-        relayer = await MessageQueue().buffer.get()
+        message: MessageFormat = await MessageQueue().buffer.get()
         sender = (await self.address.get()).id
-        await self.api.send_message(sender, relayer, [relayer])
+        await self.api.send_message(sender, message.format(), [message.relayer])
 
     async def tasks(self):
         self.info("Starting node")

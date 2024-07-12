@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime
 from typing import Union
 
-from core.components import AsyncLoop, Base, LockedVar, MessageQueue
+from core.components import AsyncLoop, Base, LockedVar, MessageFormat, MessageQueue
 from core.components.decorators import flagguard, formalin
 from packaging.version import Version
 from prometheus_client import Gauge
@@ -158,7 +158,8 @@ class Peer(Base):
     @formalin(None)
     async def message_relay_request(self):
         if delay := await self.message_delay:
-            await MessageQueue().buffer.put(self.address.id)
+            message = MessageFormat(self.address.id, datetime.now())
+            await MessageQueue().buffer.put(message)
             await self.message_count.inc(1)
             await asyncio.sleep(delay)
         else:

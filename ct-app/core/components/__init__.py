@@ -11,7 +11,7 @@ from .graphql_providers import (
 )
 from .hoprd_api import HoprdAPI
 from .lockedvar import LockedVar
-from .message_queue import MessageQueue
+from .messages import MessageFormat, MessageQueue
 from .parameters import Parameters
 from .singleton import Singleton
 from .utils import Utils
@@ -27,6 +27,7 @@ __all__ = [
     "HoprdAPI",
     "LockedVar",
     "MessageQueue",
+    "MessageFormat",
     "Parameters",
     "Singleton",
     "Utils",
