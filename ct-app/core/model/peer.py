@@ -13,6 +13,7 @@ from .database import DatabaseConnection, SentMessages
 STAKE = Gauge("ct_peer_stake", "Stake", ["peer_id", "type"])
 SAFE_COUNT = Gauge("ct_peer_safe_count", "Number of safes", ["peer_id"])
 VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
+DELAY = Gauge("ct_peer_delay", "Delay between two messages", ["peer_id"])
 
 
 class Peer(Base):
@@ -122,9 +123,13 @@ class Peer(Base):
         count = await self.yearly_message_count.get()
 
         if count is not None and count > 0:
-            return (365 * 24 * 60 * 60) / count
+            value = (365 * 24 * 60 * 60) / count
         else:
-            return None
+            value = None
+
+        DELAY.labels(self.address.id).set(value)
+
+        return value
 
     def is_eligible(
         self,
