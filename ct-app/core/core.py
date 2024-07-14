@@ -27,6 +27,9 @@ SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
 TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
 NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
 ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
+MESSAGE_COUNT = Gauge(
+    "ct_message_count", "messages one should receive / year", ["peer_id", "model"]
+)
 TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
 # endregion
 
@@ -289,12 +292,14 @@ class Core(Base):
             await peer.yearly_message_count.set(
                 legacy_message_count + sigmoid_message_count
             )
+            MESSAGE_COUNT.labels(peer.address.id, "legacy").set(legacy_message_count)
+            MESSAGE_COUNT.labels(peer.address.id, "sigmoid").set(sigmoid_message_count)
 
-        self.info(
-            f"Eligible nodes: {len([p for p in peers if await p.yearly_message_count.get() is not None])} entries."
-        )
+        eligibles = [p for p in peers if await p.yearly_message_count.get() is not None]
 
-        ELIGIBLE_PEERS.set(len(peers))
+        self.info(f"Eligible nodes: {len(eligibles)} entries.")
+
+        ELIGIBLE_PEERS.set(len(eligibles))
         await self.all_peers.set(set(peers))
 
     @flagguard
