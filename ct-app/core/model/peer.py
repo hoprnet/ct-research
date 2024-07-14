@@ -122,12 +122,11 @@ class Peer(Base):
     async def message_delay(self) -> float:
         count = await self.yearly_message_count.get()
 
+        value = None
         if count is not None and count > 0:
             value = (365 * 24 * 60 * 60) / count
-        else:
-            value = None
 
-        DELAY.labels(self.address.id).set(value)
+        DELAY.labels(self.address.id).set(value if value is not None else 0)
 
         return value
 
