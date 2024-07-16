@@ -46,7 +46,3 @@ class AsyncLoop(Base, metaclass=Singleton):
         for task in cls().tasks:
             task.add_done_callback(cls().tasks.discard)
             task.cancel()
-
-    @property
-    def log_prefix(self) -> str:
-        return "asyncloop"

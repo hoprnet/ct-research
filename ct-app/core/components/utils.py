@@ -125,7 +125,3 @@ class Utils(Base):
             results[c.source_peer_id]["channels_balance"] += int(c.balance) / 1e18
 
         return results
-
-    @property
-    def log_prefix(self) -> str:
-        return "utils"

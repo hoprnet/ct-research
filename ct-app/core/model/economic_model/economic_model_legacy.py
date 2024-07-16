@@ -83,7 +83,7 @@ class EconomicModelLegacy:
 
         under = self.budget.ticket_price * self.budget.winning_probability
 
-        return round(rewards / under * self.proportion) if under != 0 else 0
+        return rewards / under * self.proportion if under != 0 else 0
 
     @classmethod
     def fromParameters(cls, parameters: Parameters):

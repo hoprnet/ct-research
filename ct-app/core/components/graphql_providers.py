@@ -151,10 +151,6 @@ class SafesProvider(GraphQLProvider):
         self._default_key = "safes"
         self._sku_query = self._load_query("./subgraph_queries/safes_balance.graphql")
 
-    @property
-    def log_prefix(self) -> str:
-        return "safe-provider"
-
 
 class StakingProvider(GraphQLProvider):
     def __init__(self, url: str):
@@ -162,17 +158,9 @@ class StakingProvider(GraphQLProvider):
         self._default_key = "boosts"
         self._sku_query = self._load_query("./subgraph_queries/staking.graphql")
 
-    @property
-    def log_prefix(self) -> str:
-        return "staking-provider"
-
 
 class RewardsProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
         self._default_key = "accounts"
         self._sku_query = self._load_query("./subgraph_queries/rewards.graphql")
-
-    @property
-    def log_prefix(self) -> str:
-        return "rewards-provider"

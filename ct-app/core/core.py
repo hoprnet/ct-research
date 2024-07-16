@@ -69,10 +69,6 @@ class Core(Base):
         self.running = False
 
     @property
-    def log_prefix(self) -> str:
-        return "ct-core"
-
-    @property
     def api(self) -> HoprdAPI:
         return random.choice(self.nodes).api
 

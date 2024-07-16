@@ -5,10 +5,6 @@ from .baseclass import Base
 
 
 class EnvironmentUtils(Base):
-    @property
-    def log_prefix(self) -> str:
-        return "EnvUtils"
-
     @classmethod
     def envvarWithPrefix(cls, prefix: str, type=str) -> dict[str, Any]:
         var_dict = {

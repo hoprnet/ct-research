@@ -8,10 +8,6 @@ flag_dictionary = {"flags": {"fooclass": {"fooFlagguardFunc": 1, "fooFormalinFun
 
 
 class FooClass(Base):
-    @property
-    def log_prefix(self):
-        return "FooClass"
-
     def __init__(self):
         super().__init__()
         self.connected = LockedVar("connected", False)

@@ -12,13 +12,12 @@ from hoprd_sdk import (
 )
 from hoprd_sdk.api import AccountApi, ChannelsApi, MessagesApi, NetworkApi, NodeApi
 from hoprd_sdk.rest import ApiException
-from requests import Response
 from urllib3.exceptions import MaxRetryError
 
 from .baseclass import Base
 from .channelstatus import ChannelStatus
 
-MESSAGE_TAG = 800
+MESSAGE_TAG = 0x1245
 
 
 class HoprdAPI(Base):
@@ -385,7 +384,7 @@ class HoprdAPI(Base):
         """
         Checks if the node is started. Return True if `startedz` returns 200 after max `timeout` seconds.
         """
-        return await is_url_returning_200(
+        return await HoprdAPI.isUrlReturning200(
             f"{self.configuration.host}/startedz", timeout
         )
 
@@ -393,33 +392,34 @@ class HoprdAPI(Base):
         """
         Checks if the node is ready. Return True if `readyz` returns 200 after max `timeout` seconds.
         """
-        return await is_url_returning_200(f"{self.configuration.host}/readyz", timeout)
+        return await HoprdAPI.isUrlReturning200(
+            f"{self.configuration.host}/readyz", timeout
+        )
 
     async def healthyz(self, timeout: int = 20):
         """
         Checks if the node is healthy. Return True if `healthyz` returns 200 after max `timeout` seconds.
         """
-        return await is_url_returning_200(
+        return await HoprdAPI.isUrlReturning200(
             f"{self.configuration.host}/healthyz", timeout
         )
 
+    @classmethod
+    async def isUrlReturning200(cls, url: str, timeout: int = 20) -> requests.Response:
+        """
+        Checks if the given URL is returning 200 after max `timeout` seconds.
+        """
 
-async def is_url_returning_200(url: str, timeout: int = 20) -> Response:
-    """
-    Checks if the given URL is returning 200 after max `timeout` seconds.
-    """
+        async def _check_url(url: str):
+            while True:
+                try:
+                    return requests.get(url)
+                except Exception:
+                    await asyncio.sleep(0.25)
 
-    async def _check_url(url: str):
-        while True:
-            try:
-                req = requests.get(url)
-                return req
-            except Exception:
-                await asyncio.sleep(0.25)
-
-    try:
-        result = await asyncio.wait_for(_check_url(url), timeout=timeout)
-    except TimeoutError:
-        return False
-    else:
-        return result.status_code == 200
+        try:
+            result = await asyncio.wait_for(_check_url(url), timeout=timeout)
+        except TimeoutError:
+            return False
+        else:
+            return result.status_code == 200

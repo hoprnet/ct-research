@@ -87,7 +87,3 @@ class Parameters(Base):
 
     def __repr__(self):
         return str(self.__dict__)
-
-    @property
-    def log_prefix(self):
-        return "parameters"

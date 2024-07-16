@@ -90,4 +90,4 @@ class LockedVar(Base):
 
     @property
     def log_prefix(self):
-        return f"LockedVar({self.name})"
+        return f"lockedvar({self.name})"

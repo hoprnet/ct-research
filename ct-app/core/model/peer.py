@@ -218,4 +218,4 @@ class Peer(Base):
 
     @property
     def log_prefix(self) -> str:
-        return f"..{self.address.id[-5:]}"
+        return f"peer ..{self.address.id[-5:]}"

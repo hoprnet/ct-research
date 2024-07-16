@@ -20,9 +20,7 @@ class Base:
 
     @property
     def log_prefix(self) -> str:
-        raise NotImplementedError(
-            f"log_prefix not implemented for class '{self.__class__.__name__}'"
-        )
+        return self.__class__.__name__.lower()
 
     @classmethod
     def class_prefix(cls) -> str:
