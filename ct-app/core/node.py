@@ -1,4 +1,5 @@
 # region Imports
+import asyncio
 from datetime import datetime
 
 from prometheus_client import Gauge
@@ -430,7 +431,9 @@ class Node(Base):
     async def watch_message_queue(self):
         message: MessageFormat = await MessageQueue().buffer.get()
         sender = (await self.address.get()).id
-        await self.api.send_message(sender, message.format(), [message.relayer])
+        asyncio.create_task(
+            self.api.send_message(sender, message.format(), [message.relayer])
+        )
 
     async def tasks(self):
         callbacks = [
