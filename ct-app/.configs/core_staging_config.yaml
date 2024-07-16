@@ -48,7 +48,7 @@ economicModel:
 
   legacy:
     proportion: 0.9
-    apr: 0.000005
+    apr: 0.000003
 
 
     coefficients:
@@ -67,7 +67,7 @@ economicModel:
 
   sigmoid:
     proportion: 0.1
-    maxAPR: 0.000005
+    maxAPR: 0.000003
 
     offset: 10
     networkCapacity: 100
