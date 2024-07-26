@@ -78,7 +78,7 @@ peer:
 # 
 # =============================================================================
 channel:
-  minBalance: 15
+  minBalance: 30
   fundingAmount: 35
   maxAgeSeconds: 172800
 
