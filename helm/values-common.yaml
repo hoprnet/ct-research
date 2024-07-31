@@ -1,10 +1,10 @@
 deployment:
   resources: |
     limits:
-      cpu: 2000m
-      memory: 2Gi
+      cpu: 1000m
+      memory: 1Gi
     requests:
-      cpu: 250m
+      cpu: 200m
       memory: 250Mi
   startupProbe: |
     failureThreshold: 800
