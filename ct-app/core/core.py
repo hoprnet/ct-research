@@ -623,5 +623,3 @@ class Core(Base):
         for task in self.tasks:
             task.add_done_callback(self.tasks.discard)
             task.cancel()
-            task.add_done_callback(self.tasks.discard)
-            task.cancel()
