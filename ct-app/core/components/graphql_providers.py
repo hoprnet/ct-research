@@ -1,10 +1,8 @@
 import asyncio
 from pathlib import Path
+from typing import Union
 
-from gql import Client, gql
-from gql.transport.aiohttp import AIOHTTPTransport
-from gql.transport.exceptions import TransportQueryError
-from graphql.language.ast import DocumentNode
+import aiohttp
 
 from .baseclass import Base
 
@@ -15,32 +13,32 @@ class ProviderError(Exception):
 
 class GraphQLProvider(Base):
     def __init__(self, url: str):
-        transport = AIOHTTPTransport(url=url)
+        self.url = url
         self.pwd = Path(__file__).parent.parent.parent
-        self._client = Client(transport=transport)
         self._default_key = None
 
     #### PRIVATE METHODS ####
-    def _load_query(self, path: str or Path) -> DocumentNode:
+    def _load_query(self, path: Union[str, Path]) -> str:
         """
         Loads a graphql query from a file.
         :param path: Path to the file. The path must be relative to the ct-app folder.
         :return: The query as a gql object.
         """
         with open(self.pwd.joinpath(path)) as f:
-            return gql(f.read())
+            return f.read()
 
-    async def _execute(self, query: DocumentNode, variable_values: dict):
+    async def _execute(self, query: str, variable_values: dict) -> tuple[dict, dict]:
         """
         Executes a graphql query.
         :param query: The query to execute.
         :param variable_values: The variables to use in the query (dict)"""
+
         try:
-            return await self._client.execute_async(
-                query, variable_values=variable_values
-            )
-        except TransportQueryError as err:
-            raise ProviderError(f"TransportQueryError error: {err}")
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    self.url, json={"query": query, "variables": variable_values}
+                ) as response:
+                    return await response.json(), response.headers
         except TimeoutError as err:
             self.error(f"Timeout error: {err}")
         except Exception as err:
@@ -56,16 +54,18 @@ class GraphQLProvider(Base):
         vars = {"first": 1, "skip": 0}
         vars.update(kwargs)
 
-        # call `self._execute(self._sku_query, vars)` with a timeout
         try:
-            response = await asyncio.wait_for(
+            response, _ = await asyncio.wait_for(
                 self._execute(self._sku_query, vars), timeout=30
             )
         except asyncio.TimeoutError:
             self.error("Query timeout occurred")
             return False
+        except ProviderError as err:
+            self.error(f"ProviderError error: {err}")
+            return False
 
-        return response and key in response
+        return key in response["data"]
 
     async def _get(self, key: str, **kwargs) -> dict:
         """
@@ -79,26 +79,38 @@ class GraphQLProvider(Base):
         data = []
 
         while True:
-            vars = {"first": page_size, "skip": skip}
-            vars.update(kwargs)
+            kwargs.update({"first": page_size, "skip": skip})
 
             try:
-                response = await asyncio.wait_for(
-                    self._execute(self._sku_query, vars), timeout=30
+                response, headers = await asyncio.wait_for(
+                    self._execute(self._sku_query, kwargs), timeout=30
                 )
             except asyncio.TimeoutError:
                 self.error("Timeout error while fetching data from subgraph.")
                 break
+            except ProviderError as err:
+                self.error(f"ProviderError error: {err}")
+                break
+
             if response is None:
                 break
 
-            content = response.get(key, [])
+            try:
+                content = response.get("data", dict()).get(key, [])
+            except Exception as err:
+                self.error(f"Error while fetching data from subgraph: {err}")
+                break
             data.extend(content)
 
             skip += page_size
             if len(content) < page_size:
                 break
 
+        try:
+            self.debug(f"Subgraph attestations {headers.getall('graph-attestation')}")
+        except KeyError:
+            # raised if using the centralized endpoint
+            pass
         return data
 
     #### DEFAULT PUBLIC METHODS ####
