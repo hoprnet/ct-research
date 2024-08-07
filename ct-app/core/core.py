@@ -212,7 +212,7 @@ class Core(Base):
 
         provider = AllocationsProvider(self.allocation_sg_url)
 
-        result = list[AllocationEntry]()
+        results = list[AllocationEntry]()
         try:
             results = await provider.get()
         except ProviderError as err:
