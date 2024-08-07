@@ -1,5 +1,6 @@
 from math import log, pow, prod
 
+from core.components.baseclass import Base
 from core.components.parameters import Parameters
 
 from .budget import Budget
@@ -49,7 +50,7 @@ class Bucket:
         )
 
 
-class EconomicModelSigmoid:
+class EconomicModelSigmoid(Base):
     def __init__(
         self, offset: float, buckets: list[Bucket], max_apr: float, proportion: float
     ):
@@ -74,7 +75,8 @@ class EconomicModelSigmoid:
                 )
                 + self.offset
             )
-        except ValueError:
+        except ValueError as e:
+            self.error(f"Value error in APR calculation: {e}")
             apr = 0
 
         if max_apr is not None:
@@ -111,3 +113,7 @@ class EconomicModelSigmoid:
 
     def __repr__(self):
         return f"EconomicModelSigmoid({self.offset}, {self.buckets}, {self.budget})"
+
+    @property
+    def print_prefix(self) -> str:
+        return "EconomicModelSigmoid"
