@@ -1,4 +1,3 @@
-import math
 from math import log, pow, prod
 
 from core.components.parameters import Parameters
