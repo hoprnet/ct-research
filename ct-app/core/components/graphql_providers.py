@@ -34,11 +34,10 @@ class GraphQLProvider(Base):
         :param variable_values: The variables to use in the query (dict)"""
 
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    self.url, json={"query": query, "variables": variable_values}
-                ) as response:
-                    return await response.json(), response.headers
+            async with aiohttp.ClientSession() as session, session.post(
+                self.url, json={"query": query, "variables": variable_values}
+            ) as response:
+                return await response.json(), response.headers
         except TimeoutError as err:
             self.error(f"Timeout error: {err}")
         except Exception as err:
