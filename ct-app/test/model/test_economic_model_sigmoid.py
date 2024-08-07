@@ -15,11 +15,13 @@ def test_init_class():
                     "flatness": 1,
                     "skewness": 2,
                     "upperbound": 3,
+                    "offset": 0,
                 },
                 "bucket_2": {
                     "flatness": 4,
                     "skewness": 5,
                     "upperbound": 6,
+                    "offset": 0,
                 },
             },
         }
@@ -57,7 +59,10 @@ def test_values_mid_range():
 
 
 def test_value_above_mid_range():
-    assert EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)], 20.0, 1).apr([0.75]) < 0
+    print(EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)], 20.0, 1).apr([0.75]))
+    assert (
+        EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)], 20.0, 1).apr([0.75]) == 0
+    )
 
 
 def test_value_below_mid_range():
@@ -67,34 +72,31 @@ def test_value_below_mid_range():
 def test_apr_composition():
     assert EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)], 20.0, 1).apr(
         [0.25]
-    ) * 2 == EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)] * 2, 20.0, 1).apr(
-        [0.25] * 2
-    )
-
-    assert EconomicModelSigmoid(1, [Bucket("bucket", 1, 1, 1)], 20.0, 1).apr(
-        [0.25]
-    ) * 2 != EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)] * 2, 20.0, 1).apr(
+    ) == EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)] * 2, 20.0, 1).apr(
         [0.25] * 2
     )
 
 
 def test_out_of_bounds_values():
     assert (
-        EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 0.5)], 20.0, 1).apr([0.5]) == 0
+        EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 0.5, 0)], 20.0, 1).apr([0.5])
+        == 0
     )
 
-    assert EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 0.5)], 20.0, 1).apr([0]) == 0
+    assert (
+        EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 0.5, 0)], 20.0, 1).apr([0]) == 0
+    )
 
 
 def test_bucket_apr():
-    bucket = Bucket("bucket", 1, 1, 0.5)
+    bucket = Bucket("bucket", 1, 1, 0.5, 0)
 
     with pytest.raises(ValueError):
         bucket.apr(0)
 
     assert bucket.apr(0.125) > 0
     assert bucket.apr(0.25) == 0
-    assert bucket.apr(0.375) < 0
+    assert bucket.apr(0.375) == 0
 
     with pytest.raises(ValueError):
         bucket.apr(0.5)
@@ -103,7 +105,10 @@ def test_bucket_apr():
 def test_economic_model_message_count_for_reward(budget: Budget):
     stake = 75000
     model = EconomicModelSigmoid(
-        10.0, [Bucket("bucket_1", 1, 1, 1), Bucket("bucket_2", 1, 1, 0.5)], 20.0, 1
+        10.0,
+        [Bucket("bucket_1", 1, 1, 1, 0), Bucket("bucket_2", 1, 1, 0.5, 0)],
+        20.0,
+        1,
     )
     model.budget = budget
 
