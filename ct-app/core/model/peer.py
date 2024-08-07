@@ -15,6 +15,8 @@ SAFE_COUNT = Gauge("ct_peer_safe_count", "Number of safes", ["peer_id"])
 VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
 DELAY = Gauge("ct_peer_delay", "Delay between two messages", ["peer_id"])
 
+SECONDS_IN_A_NON_LEAP_YEAR = 365 * 24 * 60 * 60
+
 
 class Peer(Base):
     """
@@ -124,7 +126,7 @@ class Peer(Base):
 
         value = None
         if count is not None and count > 0:
-            value = (365 * 24 * 60 * 60) / count
+            value = SECONDS_IN_A_NON_LEAP_YEAR / count
 
         DELAY.labels(self.address.id).set(value if value is not None else 0)
 
