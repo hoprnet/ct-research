@@ -109,15 +109,16 @@ channel:
 # 
 # =============================================================================
 subgraph:
-  safesBalance:
-    queryID: GP2abJCarirMJCanuk4SBmnadiobEWH9ME2MNRAHbBTp
-    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-nodes-dufour/version/latest
-
-  staking:
-    queryID: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
-    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-stake-all-seasons/version/latest
-  
+  allocations:
+    queryID: TODO
+    URLBackup: https://api.studio.thegraph.com/query/58438/allocations/version/latest
   rewards:
     queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
     URLBackup: https://api.studio.thegraph.com/query/78696/hopr-channels/version/latest
+  safesBalance:
+    queryID: GP2abJCarirMJCanuk4SBmnadiobEWH9ME2MNRAHbBTp
+    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-nodes-dufour/version/latest
+  staking:
+    queryID: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
+    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-stake-all-seasons/version/latest
 ...

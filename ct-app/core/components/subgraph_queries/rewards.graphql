@@ -1,6 +1,4 @@
-query ($first: Int!, $skip: Int!) { 
-    accounts(first: $first, skip: $skip, where: {redeemedValue_gt: "0"}) {
-        redeemedValue
-        id
-    }
+accounts(first: $first, skip: $skip, where: {redeemedValue_gt: "0"}) {
+    redeemedValue
+    id
 }

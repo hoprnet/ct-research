@@ -9,13 +9,13 @@ from .conftest import Core
 
 def test_safe_subgraph_url(core: Core):
     core.subgraph_type = SubgraphType.DEFAULT
-    assert "query-id-safes" in core.safe_subgraph_url
+    assert "query-id-safes" in core.safe_sg_url
 
     core.subgraph_type = SubgraphType.BACKUP
-    assert core.safe_subgraph_url == "safes_backup_url"
+    assert core.safe_sg_url == "safes_backup_url"
 
     core.subgraph_type = SubgraphType.NONE
-    assert core.safe_subgraph_url is None
+    assert core.safe_sg_url is None
 
 
 @pytest.mark.asyncio

@@ -28,8 +28,13 @@ class GraphQLProvider(Base):
         :param path: Path to the file. The path must be relative to the ct-app folder.
         :return: The query as a gql object.
         """
+
+        header = "query ($first: Int!, $skip: Int!) {"
+        footer = "}"
         with open(self.pwd.joinpath(path)) as f:
-            return gql(f.read())
+            body = f.read()
+
+        return gql("\n".join([header, body, footer]))
 
     async def _execute(self, query: DocumentNode, variable_values: dict):
         """
@@ -164,3 +169,10 @@ class RewardsProvider(GraphQLProvider):
         super().__init__(url)
         self._default_key = "accounts"
         self._sku_query = self._load_query("./subgraph_queries/rewards.graphql")
+
+
+class AllocationsProvider(GraphQLProvider):
+    def __init__(self, url: str):
+        super().__init__(url)
+        self._default_key = "allocations"
+        self._sku_query = self._load_query("./subgraph_queries/allocations.graphql")
