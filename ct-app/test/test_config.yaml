@@ -67,19 +67,21 @@ economicModel:
   sigmoid:
     proportion: 0.1
     maxAPR: 15.0
-    offset: 10
     networkCapacity: 50
     totalTokenSupply: 1000000000
 
+    offset: 10
     buckets:
       economicSecurity:
         flatness: 1.65
         skewness: 1.50
         upperbound: 0.5
+        offset: 0
       networkCapacity:
         flatness: 10.0
         skewness: 2.75
         upperbound: 1.0
+        offset: 0
 
 # =============================================================================
 # 
