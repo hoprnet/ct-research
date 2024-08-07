@@ -1,6 +1,3 @@
-from .peer import Peer
-
-
 class TopologyEntry:
     """
     Class that represents a single topology entry (from the API).
@@ -33,8 +30,3 @@ class TopologyEntry:
             + f"node_address={self.node_address}, "
             + f"channels_balance={self.channels_balance})"
         )
-
-    def to_peer(self) -> Peer:
-        peer = Peer(self.peer_id, self.node_address, "0.0.0")
-        peer.channel_balance = self.channels_balance
-        return peer

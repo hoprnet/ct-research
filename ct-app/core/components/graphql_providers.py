@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+from typing import Union
 
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
@@ -16,12 +17,12 @@ class ProviderError(Exception):
 class GraphQLProvider(Base):
     def __init__(self, url: str):
         transport = AIOHTTPTransport(url=url)
-        self.pwd = Path(__file__).parent.parent.parent
+        self.pwd = Path(__file__).parent
         self._client = Client(transport=transport)
         self._default_key = None
 
     #### PRIVATE METHODS ####
-    def _load_query(self, path: str or Path) -> DocumentNode:
+    def _load_query(self, path: Union[str, Path]) -> DocumentNode:
         """
         Loads a graphql query from a file.
         :param path: Path to the file. The path must be relative to the ct-app folder.
@@ -148,32 +149,18 @@ class SafesProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
         self._default_key = "safes"
-        self._sku_query = self._load_query(
-            "core/subgraph_queries/safes_balance.graphql"
-        )
-
-    @property
-    def print_prefix(self) -> str:
-        return "safe-provider"
+        self._sku_query = self._load_query("./subgraph_queries/safes_balance.graphql")
 
 
 class StakingProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
         self._default_key = "boosts"
-        self._sku_query = self._load_query("core/subgraph_queries/staking.graphql")
-
-    @property
-    def print_prefix(self) -> str:
-        return "staking-provider"
+        self._sku_query = self._load_query("./subgraph_queries/staking.graphql")
 
 
 class RewardsProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
         self._default_key = "accounts"
-        self._sku_query = self._load_query("core/subgraph_queries/rewards.graphql")
-
-    @property
-    def print_prefix(self) -> str:
-        return "rewards-provider"
+        self._sku_query = self._load_query("./subgraph_queries/rewards.graphql")

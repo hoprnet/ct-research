@@ -1,7 +1,7 @@
 import os
 
 import pytest
-from core.components.parameters import Parameters
+from core.components import Parameters
 
 params_from_yaml = {
     "parent1": "value1",

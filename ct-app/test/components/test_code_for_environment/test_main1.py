@@ -1,4 +1,4 @@
-from core.components.parameters import Parameters
+from core.components import Parameters
 
 
 def main():
