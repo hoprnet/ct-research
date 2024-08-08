@@ -22,7 +22,7 @@ class GraphQLProvider(Base):
         """
         Loads a graphql query from a file.
         :param path: Path to the file. The path must be relative to the ct-app folder.
-        :return: The query as a gql object.
+        :return: The query as a string.
         """
         with open(self.pwd.joinpath(path)) as f:
             return f.read()
