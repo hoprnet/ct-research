@@ -16,6 +16,14 @@ class SafeEntry(SubgraphEntry):
         self.balance = float(balance) if balance else 0
         self.allowance = float(allowance) if balance else 0
         self.owners = owners
+        self.additional_balance = 0
+
+    @property
+    def total_balance(self) -> float:
+        """
+        Get the total balance of the safe.
+        """
+        return self.balance + self.additional_balance
 
     @classmethod
     def fromSubgraphResult(cls, safe: dict):

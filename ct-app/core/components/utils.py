@@ -23,25 +23,27 @@ class Utils(Base):
 
     @classmethod
     async def mergeDataSources(
-        cls,
-        topology: list,
-        peers: list,
-        nodes: list,
+        cls, topology: list, peers: list, nodes: list, allocations: list
     ):
         merged_result: list = []
         addresses = [item.address.address for item in peers]
-
         for address in addresses:
             peer = next(filter(lambda p: p.address.address == address, peers), None)
             topo = next(filter(lambda t: t.node_address == address, topology), None)
             node = next(filter(lambda s: s.node_address == address, nodes), None)
+
             safe = getattr(node, "safe", SafeEntry.default())
+
+            for allocation in allocations:
+                if safe.address in allocation.linked_safes:
+                    safe.additional_balance += (
+                        allocation.allocatedAmount / allocation.num_linked_safes
+                    )
 
             if topo is not None and safe is not None and peer is not None:
                 peer.channel_balance = topo.channels_balance
-                peer.safe_address = safe.address
-                peer.safe_balance = safe.balance
-                peer.safe_allowance = safe.allowance
+                peer.safe = safe
+
             else:
                 await peer.yearly_message_count.set(None)
 

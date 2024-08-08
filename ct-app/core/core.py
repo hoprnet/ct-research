@@ -260,22 +260,29 @@ class Core(Base):
         """
         Applies the economic model to the eligible peers (after multiple filtering layers).
         """
-        registered_nodes = await self.registered_nodes_list.get()
+        nodes = await self.registered_nodes_list.get()
         nft_holders = await self.nft_holders_list.get()
         topology = await self.topology_list.get()
-        peers = await self.all_peers.get()
+        peers: set[Peer] = await self.all_peers.get()
         ct_nodes = await self.ct_nodes_addresses
         redeemed_rewards = await self.peer_rewards.get()
+        allocations: list[AllocationEntry] = await self.allocations_data.get()
 
-        if not all(
-            [len(topology), len(registered_nodes), len(peers), len(nft_holders)]
-        ):
+        if not all([len(topology), len(nodes), len(peers)]):
             self.warning("Not enough data to apply economic model.")
             return
 
-        peers = await Utils.mergeDataSources(topology, peers, registered_nodes)
+        allocations_addresses = [a.address for a in allocations]
+        for p in peers:
+            for owner in p.safe.owners:
+                try:
+                    index = allocations_addresses.index(owner)
+                except ValueError:
+                    continue
 
-        # TODO: INCLUDE ALLOCATIONS HERE
+                allocations[index].linked_safes.append(p.safe.address)
+
+        peers = await Utils.mergeDataSources(topology, peers, nodes, allocations)
 
         for p in peers:
             if p.is_old(self.params.peer.minVersion):

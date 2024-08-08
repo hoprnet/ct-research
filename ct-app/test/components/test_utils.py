@@ -103,8 +103,11 @@ async def test_mergeDataSources():
         NodeEntry("address_2", SafeEntry("safe_address_2", "10", "2", [])),
         NodeEntry("address_3", SafeEntry("safe_address_3", None, "3", [])),
     ]
+    allocation_list = []
 
-    merged = await Utils.mergeDataSources(topology_list, peers_list, subgraph_list)
+    merged = await Utils.mergeDataSources(
+        topology_list, peers_list, subgraph_list, allocation_list
+    )
 
     assert len(merged) == 3
 
