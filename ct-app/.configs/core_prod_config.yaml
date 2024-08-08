@@ -12,6 +12,7 @@ flags:
     connectedPeers: 300
     registeredNodes: 300
     topology: 300
+    allocations: 300
     NFTHolders: 300
     
     applyEconomicModel: 120

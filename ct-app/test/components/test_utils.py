@@ -1,6 +1,7 @@
 import pytest
 from core.components import Utils
-from core.model import Address, NodeSafeEntry, Peer, TopologyEntry
+from core.model import Address, Peer
+from core.model.subgraph import NodeEntry, SafeEntry, TopologyEntry
 from hoprd_sdk.models import ChannelInfoResponse
 
 from .utils import handle_envvars
@@ -98,9 +99,9 @@ async def test_mergeDataSources():
         Peer("peer_id_3", "address_3", "1.0.2"),
     ]
     subgraph_list = [
-        NodeSafeEntry("address_1", "10", "safe_address_1", "1"),
-        NodeSafeEntry("address_2", "10", "safe_address_2", "2"),
-        NodeSafeEntry("address_3", None, "safe_address_3", "3"),
+        NodeEntry("address_1", SafeEntry("safe_address_1", "10", "1", [])),
+        NodeEntry("address_2", SafeEntry("safe_address_2", "10", "2", [])),
+        NodeEntry("address_3", SafeEntry("safe_address_3", None, "3", [])),
     ]
 
     merged = await Utils.mergeDataSources(topology_list, peers_list, subgraph_list)

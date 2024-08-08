@@ -1,4 +1,4 @@
-from core.model import NodeSafeEntry
+from core.model.subgraph import SafeEntry
 
 from .baseclass import Base
 from .channelstatus import ChannelStatus
@@ -26,7 +26,7 @@ class Utils(Base):
         cls,
         topology: list,
         peers: list,
-        safes: list,
+        nodes: list,
     ):
         merged_result: list = []
         addresses = [item.address.address for item in peers]
@@ -34,18 +34,14 @@ class Utils(Base):
         for address in addresses:
             peer = next(filter(lambda p: p.address.address == address, peers), None)
             topo = next(filter(lambda t: t.node_address == address, topology), None)
-            safe = next(filter(lambda s: s.node_address == address, safes), None)
-
-            if safe is None:
-                safe = NodeSafeEntry(address, "0", "0x0", "0")
+            node = next(filter(lambda s: s.node_address == address, nodes), None)
+            safe = getattr(node, "safe", SafeEntry.default())
 
             if topo is not None and safe is not None and peer is not None:
                 peer.channel_balance = topo.channels_balance
-                peer.safe_address = safe.safe_address
-                peer.safe_balance = (
-                    safe.wxHoprBalance if safe.wxHoprBalance is not None else 0
-                )
-                peer.safe_allowance = float(safe.safe_allowance)
+                peer.safe_address = safe.address
+                peer.safe_balance = safe.balance
+                peer.safe_allowance = safe.allowance
             else:
                 await peer.yearly_message_count.set(None)
 

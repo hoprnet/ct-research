@@ -6,17 +6,20 @@ from prometheus_client import Gauge
 
 from .components import AsyncLoop, Base, HoprdAPI, LockedVar, Parameters, Utils
 from .components.decorators import connectguard, flagguard, formalin
-from .components.graphql_providers import (
+from .model import Address, Peer
+from .model.economic_model import EconomicModelLegacy, EconomicModelSigmoid
+from .model.subgraph import (
+    AllocationEntry,
     AllocationsProvider,
+    NodeEntry,
     ProviderError,
     RewardsProvider,
     SafesProvider,
     StakingProvider,
+    SubgraphType,
+    SubgraphURL,
+    TopologyEntry,
 )
-from .model import Address, NodeSafeEntry, Peer, TopologyEntry
-from .model.allocation_entry import AllocationEntry
-from .model.economic_model import EconomicModelLegacy, EconomicModelSigmoid
-from .model.subgraph import SubgraphType, SubgraphURL
 from .node import Node
 
 # endregion
@@ -62,7 +65,7 @@ class Core(Base):
 
         self.all_peers = LockedVar("all_peers", set[Peer]())
         self.topology_list = LockedVar("topology_list", list[TopologyEntry]())
-        self.registered_nodes_list = LockedVar("subgraph_list", list[NodeSafeEntry]())
+        self.registered_nodes_list = LockedVar("subgraph_list", list[NodeEntry]())
         self.nft_holders_list = LockedVar("nft_holders_list", list[str]())
         self.allocations_data = LockedVar("allocations_data", list[AllocationEntry]())
         self.peer_rewards = LockedVar("peer_rewards", dict[str, float]())
@@ -91,10 +94,10 @@ class Core(Base):
         subgraph_params = self.params.subgraph
         key = subgraph_params.apiKey
 
-        self.safe_sg_url = SubgraphURL(key, subgraph_params.safesBalance)(value)
-        self.staking_sg_url = SubgraphURL(key, subgraph_params.staking)(value)
-        self.rewards_sg_url = SubgraphURL(key, subgraph_params.rewards)(value)
-        self.allocation_sg_url = SubgraphURL(key, subgraph_params.allocations)(value)
+        self.safe_sg_url = SubgraphURL(key, subgraph_params.safesBalance)[value]
+        self.staking_sg_url = SubgraphURL(key, subgraph_params.staking)[value]
+        self.rewards_sg_url = SubgraphURL(key, subgraph_params.rewards)[value]
+        self.allocation_sg_url = SubgraphURL(key, subgraph_params.allocations)[value]
 
         SUBGRAPH_IN_USE.set(value.toInt())
         self._subgraph_type = value
@@ -163,11 +166,11 @@ class Core(Base):
             return
 
         provider = SafesProvider(self.safe_sg_url)
-        results = list[NodeSafeEntry]()
+        results = list[NodeEntry]()
         try:
             for safe in await provider.get():
                 entries = [
-                    NodeSafeEntry.fromSubgraphResult(node)
+                    NodeEntry.fromSubgraphResult(node)
                     for node in safe["registeredNodesInNetworkRegistry"]
                 ]
                 results.extend(entries)
@@ -214,7 +217,8 @@ class Core(Base):
 
         results = list[AllocationEntry]()
         try:
-            results = await provider.get()
+            for account in await provider.get():
+                results.append(AllocationEntry(**account["account"]))
         except ProviderError as err:
             self.error(f"allocations: {err}")
 

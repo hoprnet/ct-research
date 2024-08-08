@@ -11,6 +11,11 @@ safes(first: $first, skip: $skip, where: {registeredNodesInNetworkRegistry_: {no
             allowance {
                 wxHoprAllowance 
             }
+            owners {
+                owner {
+                    id
+                }
+            }
         }
     }
 }
