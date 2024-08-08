@@ -111,6 +111,8 @@ channel:
 # 
 # =============================================================================
 subgraph:
+  type: auto # auto | default | backup
+
   allocations:
     queryID: TODO
     URLBackup: https://api.studio.thegraph.com/query/58438/allocations/version/latest
