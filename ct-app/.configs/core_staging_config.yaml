@@ -111,7 +111,7 @@ channel:
 # 
 # =============================================================================
 subgraph:
-  type: auto # auto | default | backup
+  type: backup # auto | default | backup
 
   allocations:
     queryID: TODO

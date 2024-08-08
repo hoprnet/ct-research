@@ -158,14 +158,12 @@ class SafesProvider(GraphQLProvider):
 class StakingProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
-        self._default_key = "boosts"
-        self._default_key = self._sku_query = self._load_query("staking.graphql")
+        self._default_key, self._sku_query = self._load_query("staking.graphql")
 
 
 class RewardsProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
-        self._default_key = "accounts"
         self._default_key, self._sku_query = self._load_query("rewards.graphql")
 
 

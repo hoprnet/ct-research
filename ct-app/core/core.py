@@ -118,14 +118,21 @@ class Core(Base):
         """
         Checks the subgraph URLs and sets the subgraph type in use (default, backup or none)
         """
-        for type in SubgraphType.callables():
-            self.subgraph_type = type
-            if await SafesProvider(self.safe_sg_url).test():
-                break
-        else:
-            self.subgraph_type = SubgraphType.NONE
+        if self.params.subgraph.type == "auto":
+            for type in SubgraphType.callables():
+                self.subgraph_type = type
+                if await SafesProvider(self.safe_sg_url).test():
+                    break
+            else:
+                self.subgraph_type = SubgraphType.NONE
 
-        SUBGRAPH_CALLS.labels(type.value).inc()
+        else:
+            self.subgraph_type = getattr(
+                SubgraphType, self.params.subgraph.type.upper(), SubgraphType.NONE
+            )
+            self.warning(f"Using static {self.subgraph_type} subgraph endpoint")
+
+        SUBGRAPH_CALLS.labels(self.subgraph_type.value).inc()
 
     @flagguard
     @formalin("Aggregating peers")

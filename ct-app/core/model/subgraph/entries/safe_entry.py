@@ -27,7 +27,7 @@ class SafeEntry(SubgraphEntry):
             safe["id"],
             safe["balance"]["wxHoprBalance"],
             safe["allowance"]["wxHoprAllowance"],
-            [owner["id"] for owner in safe["owners"]],
+            [owner["owner"]["id"] for owner in safe["owners"]],
         )
 
     @classmethod
