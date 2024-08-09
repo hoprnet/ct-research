@@ -272,16 +272,7 @@ class Core(Base):
             self.warning("Not enough data to apply economic model.")
             return
 
-        allocations_addresses = [a.address for a in allocations]
-        for p in peers:
-            for owner in p.safe.owners:
-                try:
-                    index = allocations_addresses.index(owner)
-                except ValueError:
-                    continue
-
-                allocations[index].linked_safes.append(p.safe.address)
-
+        Utils.associateAllocationsAndSafes(allocations, nodes)
         peers = await Utils.mergeDataSources(topology, peers, nodes, allocations)
 
         for p in peers:

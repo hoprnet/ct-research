@@ -40,10 +40,9 @@ class Utils(Base):
                         allocation.allocatedAmount / allocation.num_linked_safes
                     )
 
-            if topo is not None and safe is not None and peer is not None:
+            if topo is not None and safe != SafeEntry.default() and peer is not None:
                 peer.channel_balance = topo.channels_balance
                 peer.safe = safe
-
             else:
                 await peer.yearly_message_count.set(None)
 
@@ -52,6 +51,18 @@ class Utils(Base):
         cls().info(f"Merged topology and subgraph data ({len(merged_result)} entries).")
 
         return merged_result
+
+    @classmethod
+    def associateAllocationsAndSafes(cls, allocations, nodes):
+        allocations_addresses = [a.address for a in allocations]
+        for n in nodes:
+            for owner in n.safe.owners:
+                try:
+                    index = allocations_addresses.index(owner)
+                except ValueError:
+                    continue
+
+                allocations[index].linked_safes.append(n.safe.address)
 
     @classmethod
     def allowManyNodePerSafe(cls, peers: list):

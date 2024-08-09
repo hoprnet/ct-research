@@ -1,7 +1,7 @@
 import pytest
 from core.components import Utils
 from core.model import Address, Peer
-from core.model.subgraph import NodeEntry, SafeEntry, TopologyEntry
+from core.model.subgraph import AllocationEntry, NodeEntry, SafeEntry, TopologyEntry
 from hoprd_sdk.models import ChannelInfoResponse
 
 from .utils import handle_envvars
@@ -88,9 +88,9 @@ def test_nodesCredentials():
 @pytest.mark.asyncio
 async def test_mergeDataSources():
     topology_list = [
-        TopologyEntry(None, None, 1),
+        TopologyEntry("peer_id_1", "address_1", 1),
         TopologyEntry("peer_id_2", "address_2", 2),
-        TopologyEntry("peer_id_3", "address_3", 3),
+        TopologyEntry(None, None, 3),
         TopologyEntry("peer_id_4", "address_4", 4),
     ]
     peers_list = [
@@ -98,18 +98,51 @@ async def test_mergeDataSources():
         Peer("peer_id_2", "address_2", "1.1.0"),
         Peer("peer_id_3", "address_3", "1.0.2"),
     ]
-    subgraph_list = [
-        NodeEntry("address_1", SafeEntry("safe_address_1", "10", "1", [])),
-        NodeEntry("address_2", SafeEntry("safe_address_2", "10", "2", [])),
-        NodeEntry("address_3", SafeEntry("safe_address_3", None, "3", [])),
+    nodes_list = [
+        NodeEntry("address_1", SafeEntry("safe_address_1", "10", "1", ["owner_1"])),
+        NodeEntry(
+            "address_2", SafeEntry("safe_address_2", "10", "2", ["owner_1", "owner_2"])
+        ),
+        NodeEntry("address_3", SafeEntry("safe_address_3", None, "3", ["owner_3"])),
     ]
-    allocation_list = []
+    allocation_list = [
+        AllocationEntry("owner_1", "0", f"{100*1e18:.0f}"),
+        AllocationEntry("owner_2", "0", f"{250*1e18:.0f}"),
+    ]
 
-    merged = await Utils.mergeDataSources(
-        topology_list, peers_list, subgraph_list, allocation_list
+    allocation_list[0].linked_safes = ["safe_address_1", "safe_address_2"]
+    allocation_list[1].linked_safes = ["safe_address_2"]
+
+    merged: list[Peer] = await Utils.mergeDataSources(
+        topology_list, peers_list, nodes_list, allocation_list
     )
 
     assert len(merged) == 3
+    assert len([p for p in merged if p.safe is not None]) == 2
+    assert merged[0].safe.additional_balance == allocation_list[0].allocatedAmount / 2
+    assert (
+        merged[1].safe.additional_balance
+        == allocation_list[0].allocatedAmount / 2 + allocation_list[1].allocatedAmount
+    )
+
+
+def test_associateAllocationsAndSafes():
+    allocations = [
+        AllocationEntry("owner_1", "0", f"{100*1e18:.0f}"),
+        AllocationEntry("owner_2", "0", f"{250*1e18:.0f}"),
+    ]
+    nodes = [
+        NodeEntry("address_1", SafeEntry("safe_address_1", "10", "1", ["owner_1"])),
+        NodeEntry(
+            "address_2", SafeEntry("safe_address_2", "10", "2", ["owner_1", "owner_2"])
+        ),
+        NodeEntry("address_3", SafeEntry("safe_address_3", None, "3", ["owner_3"])),
+    ]
+
+    Utils.associateAllocationsAndSafes(allocations, nodes)
+
+    assert allocations[0].linked_safes == ["safe_address_1", "safe_address_2"]
+    assert allocations[1].linked_safes == ["safe_address_2"]
 
 
 def test_allowManyNodePerSafe():
