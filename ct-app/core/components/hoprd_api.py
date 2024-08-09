@@ -17,7 +17,7 @@ from urllib3.exceptions import MaxRetryError
 
 from .baseclass import Base
 
-MESSAGE_TAG = 800
+MESSAGE_TAG = 1800
 
 
 class HoprdAPI(Base):

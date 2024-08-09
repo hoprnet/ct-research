@@ -4,66 +4,83 @@
 # =============================================================================
 flags:
   core: 
-    healthcheck: 10
-    checkSubgraphURLs: 30
-    getTicketPrice: 30
-    aggregatePeers: 30
-    getTopologyData: 30
-    getSubgraphData: 30
-    getRegisteredNodes: 30
-    getNFTHolders: 30
-    getPeersRewards: 30
-    applyEconomicModel: 30
+    healthcheck: 60
+    checkSubgraphURLs: 300
+    getTicketPrice: 120
+    aggregatePeers: 300
+    getTopologyData: 300
+    getSubgraphData: 300
+    getRegisteredNodes: 300
+    getNFTHolders: 300
+    getPeersRewards: 300
+    applyEconomicModel: 120
     distributeRewards: 1
     
   node:
-    healthcheck: 10
-    retrievePeers: 30
-    retrieveIncomingChannels: 30
-    retrieveOutgoingChannels: 30
-    retrieveBalances: 30
+    healthcheck: 60
+    retrievePeers: 300
+    retrieveIncomingChannels: 600
+    retrieveOutgoingChannels: 600
+    retrieveBalances: 900
     openChannels: 300
-    closeOldChannels: ~
-    closePendingChannels: ~
+    closeOldChannels: 300
+    closePendingChannels: 1800
     fundChannels: 300
     closeIncomingChannels: ~
-    getTotalChannelFunds: 300
+    getTotalChannelFunds: 900
     
 # =============================================================================
 # 
 # =============================================================================
 economicModel:
   minSafeAllowance: -1
-  maxAPRPercentage: 15.0
-  NFTThreshold: ~
+  NFTThreshold: 30000
+  intervals: 1800 # in seconds
+  winningProbability: 1
 
-  coefficients:
-    a: 1
-    b: 2
-    c: 3
-    l: 0.00001
-  
-  equations: 
-    fx: 
-      formula: "a * x"
-      condition: "l <= x <= c"
-    gx:
-      formula: "a * c + (x - c) ** (1 / b)"
-      condition: "x > c"
-  
-  budget:
-    # one distribution every 15min
-    amount: 0.00000000005
-    period: 86400
-    s: 1
-    countsInPeriod: 96
-    winningProbability: 1
+  legacy:
+    proportion: 0.9
+    apr: 12.5
+
+    coefficients:
+      a: 1
+      b: 1.4
+      c: 75000
+      l: 10000
+    
+    equations: 
+      fx: 
+        formula: "a * x"
+        condition: "l <= x <= c"
+      gx:
+        formula: "a * c + (x - c) ** (1 / b)"
+        condition: "x > c"
+
+  sigmoid:
+    proportion: 0.1
+    maxAPR: 15
+    networkCapacity: 2000
+    totalTokenSupply: 40000000
+
+    offset: -0.9
+    buckets:
+      economicSecurity:
+        flatness: 1.8
+        skewness: 1.52
+        upperbound: 0.4
+        offset: 3.14
+
+      networkCapacity:
+        flatness: 2.97
+        skewness: 0.72
+        upperbound: 1.0
+        offset: 4.08
 
 # =============================================================================
 # 
 # =============================================================================
 distribution:
-  minEligiblePeers: 5
+  minEligiblePeers: 100
   messageDeliveryDelay: 5.0
   delayBetweenTwoMessages: 0.0001
   maxIterations: 2
@@ -78,22 +95,22 @@ peer:
 # 
 # =============================================================================
 channel:
-  minBalance: 0.05
-  fundingAmount: 0.2
-  maxAgeSeconds: 86400
+  minBalance: 30
+  fundingAmount: 35
+  maxAgeSeconds: 172800
 
 # =============================================================================
 # 
 # =============================================================================
 subgraph:
   safesBalance:
-    queryID: GmbJTpa1o4baeStDT48TfQu4ditJmQwwXYPG1DvEiufB
-    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-nodes-rotsee/version/latest
+    queryID: GP2abJCarirMJCanuk4SBmnadiobEWH9ME2MNRAHbBTp
+    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-nodes-dufour/version/latest
 
   staking:
     queryID: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
     URLBackup: https://api.studio.thegraph.com/query/78696/hopr-stake-all-seasons/version/latest
-
+  
   rewards:
     queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
     URLBackup: https://api.studio.thegraph.com/query/78696/hopr-channels/version/latest

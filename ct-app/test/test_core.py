@@ -1,3 +1,4 @@
+import inspect
 import os
 
 import pytest
@@ -30,7 +31,7 @@ async def test_core_healthcheck(core: Core):
 
 @pytest.mark.asyncio
 async def test_check_subgraph_urls(core: Core):
-    pytest.skip("Not implemented")
+    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
 
 
 @pytest.mark.asyncio
@@ -49,7 +50,7 @@ async def test_aggregate_peers(core: Core, peers: list[Peer]):
 
 @pytest.mark.asyncio
 async def test_get_subgraph_data(core: Core):
-    pytest.skip("Not implemented")
+    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
 
 
 @pytest.mark.asyncio
@@ -62,18 +63,22 @@ async def test_get_topology_data(core: Core, peers: list[Peer]):
 
 @pytest.mark.asyncio
 async def test_apply_economic_model(core: Core):
-    pytest.skip("Not implemented")
+    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
 
 
 @pytest.mark.asyncio
 async def test_get_fundings(core: Core):
-    pytest.skip("Not implemented")
+    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
 
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(os.environ.get("CI") == "true", reason="Not running in CI")
 async def test_multiple_attempts_sending_stops_by_reward(core: Core, peers: list[Peer]):
     max_iter = 20
+
+    for peer in peers:
+        peer.message_count = 100
+
     rewards, iter = await core.multiple_attempts_sending(peers[:-1], max_iter)
 
     assert iter < max_iter
@@ -89,6 +94,10 @@ async def test_multiple_attempts_sending_stops_by_max_iter(
 ):
     max_iter = 2
     await core.get_ticket_price()
+
+    for peer in peers:
+        peer.message_count = 100
+
     rewards, iter = await core.multiple_attempts_sending(peers[:-1], max_iter)
 
     assert iter == max_iter
