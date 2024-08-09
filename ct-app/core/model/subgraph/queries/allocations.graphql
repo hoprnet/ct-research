@@ -1,0 +1,7 @@
+allocations(first: $first, skip: $skip, where: {schedule: "investor-node-remainder-2024-01"}) {
+  account {
+    id
+    claimedAmount
+    allocatedAmount
+  }
+}

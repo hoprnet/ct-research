@@ -1,4 +1,4 @@
-from core.model import NodeSafeEntry
+from core.model.subgraph import SafeEntry
 
 from .baseclass import Base
 from .channelstatus import ChannelStatus
@@ -23,29 +23,26 @@ class Utils(Base):
 
     @classmethod
     async def mergeDataSources(
-        cls,
-        topology: list,
-        peers: list,
-        safes: list,
+        cls, topology: list, peers: list, nodes: list, allocations: list
     ):
         merged_result: list = []
         addresses = [item.address.address for item in peers]
-
         for address in addresses:
             peer = next(filter(lambda p: p.address.address == address, peers), None)
             topo = next(filter(lambda t: t.node_address == address, topology), None)
-            safe = next(filter(lambda s: s.node_address == address, safes), None)
+            node = next(filter(lambda s: s.node_address == address, nodes), None)
 
-            if safe is None:
-                safe = NodeSafeEntry(address, "0", "0x0", "0")
+            safe = getattr(node, "safe", SafeEntry.default())
 
-            if topo is not None and safe is not None and peer is not None:
+            for allocation in allocations:
+                if safe.address in allocation.linked_safes:
+                    safe.additional_balance += (
+                        allocation.allocatedAmount / allocation.num_linked_safes
+                    )
+
+            if topo is not None and safe != SafeEntry.default() and peer is not None:
                 peer.channel_balance = topo.channels_balance
-                peer.safe_address = safe.safe_address
-                peer.safe_balance = (
-                    safe.wxHoprBalance if safe.wxHoprBalance is not None else 0
-                )
-                peer.safe_allowance = float(safe.safe_allowance)
+                peer.safe = safe
             else:
                 await peer.yearly_message_count.set(None)
 
@@ -54,6 +51,18 @@ class Utils(Base):
         cls().info(f"Merged topology and subgraph data ({len(merged_result)} entries).")
 
         return merged_result
+
+    @classmethod
+    def associateAllocationsAndSafes(cls, allocations, nodes):
+        allocations_addresses = [a.address for a in allocations]
+        for n in nodes:
+            for owner in n.safe.owners:
+                try:
+                    index = allocations_addresses.index(owner)
+                except ValueError:
+                    continue
+
+                allocations[index].linked_safes.append(n.safe.address)
 
     @classmethod
     def allowManyNodePerSafe(cls, peers: list):

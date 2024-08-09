@@ -116,15 +116,16 @@ channel:
 # 
 # =============================================================================
 subgraph:
+  allocations:
+    queryID: ~
+    URLBackup: allocations_backup_url
+  rewards:
+    queryID: ~
+    URLBackup: rewards_backup_url
   safesBalance:
     queryID: query-id-safes
     URLBackup: safes_backup_url
-
   staking:
     queryID: query-id-staking
     URLBackup: staking_backup_url
-  
-  rewards:
-    queryID: ~
-    URLBackup: URLBackup_backup_url
 ...

@@ -24,5 +24,5 @@ class SubgraphURL:
     def _construct_backup(self):
         return self.param_set.URLBackup
 
-    def __call__(self, type: SubgraphType) -> str:
-        return self._urls.get(type, None)
+    def __getitem__(self, index: SubgraphType) -> str:
+        return self._urls.get(index, None)

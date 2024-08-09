@@ -1,0 +1,24 @@
+---
+scenarios:
+  one_hop:
+    executor: SendMessages
+    description: Send messages through a staging node
+    execute: true
+    stages:
+    - duration: 5
+      rate: 10
+    - duration: 5
+      rate: 15
+    - duration: 5
+      rate: 20
+    env:
+      DELAY_BEFORE_INBOX_CHECK: 2
+      RELAYER_PEER_ID: <PEER_ID>
+      MESSAGE_TAG: 10000
+logs:
+  level: INFO
+  enabled: true
+global_env:
+  API_URL: <API_URL>
+  API_KEY: <API_KEY>
+  PROGRESS_BAR_LENGTH: 50

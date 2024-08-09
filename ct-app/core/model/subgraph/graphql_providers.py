@@ -2,12 +2,11 @@ import asyncio
 from pathlib import Path
 from typing import Union
 
+from core.components.baseclass import Base
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 from gql.transport.exceptions import TransportQueryError
 from graphql.language.ast import DocumentNode
-
-from .baseclass import Base
 
 
 class ProviderError(Exception):
@@ -17,19 +16,24 @@ class ProviderError(Exception):
 class GraphQLProvider(Base):
     def __init__(self, url: str):
         transport = AIOHTTPTransport(url=url)
-        self.pwd = Path(__file__).parent
+        self.pwd = Path(__file__).parent.joinpath("queries")
         self._client = Client(transport=transport)
         self._default_key = None
 
     #### PRIVATE METHODS ####
-    def _load_query(self, path: Union[str, Path]) -> DocumentNode:
+    def _load_query(self, path: Union[str, Path]) -> tuple[str, DocumentNode]:
         """
         Loads a graphql query from a file.
         :param path: Path to the file. The path must be relative to the ct-app folder.
         :return: The query as a gql object.
         """
+
+        header = "query ($first: Int!, $skip: Int!) {"
+        footer = "}"
         with open(self.pwd.joinpath(path)) as f:
-            return gql(f.read())
+            body = f.read()
+
+        return body.split("(")[0], gql("\n".join([header, body, footer]))
 
     async def _execute(self, query: DocumentNode, variable_values: dict):
         """
@@ -148,19 +152,22 @@ class GraphQLProvider(Base):
 class SafesProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
-        self._default_key = "safes"
-        self._sku_query = self._load_query("./subgraph_queries/safes_balance.graphql")
+        self._default_key, self._sku_query = self._load_query("safes_balance.graphql")
 
 
 class StakingProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
-        self._default_key = "boosts"
-        self._sku_query = self._load_query("./subgraph_queries/staking.graphql")
+        self._default_key, self._sku_query = self._load_query("staking.graphql")
 
 
 class RewardsProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
-        self._default_key = "accounts"
-        self._sku_query = self._load_query("./subgraph_queries/rewards.graphql")
+        self._default_key, self._sku_query = self._load_query("rewards.graphql")
+
+
+class AllocationsProvider(GraphQLProvider):
+    def __init__(self, url: str):
+        super().__init__(url)
+        self._default_key, self._sku_query = self._load_query("allocations.graphql")

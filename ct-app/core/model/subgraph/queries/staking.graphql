@@ -1,0 +1,6 @@
+boosts(first: $first, skip: $skip, where: {uri_ends_with: "Network_registry/community"}) {
+    id
+    owner {
+        id
+    }
+}

@@ -6,15 +6,20 @@ from prometheus_client import Gauge
 
 from .components import AsyncLoop, Base, HoprdAPI, LockedVar, Parameters, Utils
 from .components.decorators import connectguard, flagguard, formalin
-from .components.graphql_providers import (
+from .model import Address, Peer
+from .model.economic_model import EconomicModelLegacy, EconomicModelSigmoid
+from .model.subgraph import (
+    AllocationEntry,
+    AllocationsProvider,
+    NodeEntry,
     ProviderError,
     RewardsProvider,
     SafesProvider,
     StakingProvider,
+    SubgraphType,
+    SubgraphURL,
+    TopologyEntry,
 )
-from .model import Address, NodeSafeEntry, Peer, TopologyEntry
-from .model.economic_model import EconomicModelLegacy, EconomicModelSigmoid
-from .model.subgraph import SubgraphType, SubgraphURL
 from .node import Node
 
 # endregion
@@ -60,8 +65,9 @@ class Core(Base):
 
         self.all_peers = LockedVar("all_peers", set[Peer]())
         self.topology_list = LockedVar("topology_list", list[TopologyEntry]())
-        self.registered_nodes_list = LockedVar("subgraph_list", list[NodeSafeEntry]())
-        self.nft_holders_list = LockedVar("nft_holders", list[str]())
+        self.registered_nodes_list = LockedVar("subgraph_list", list[NodeEntry]())
+        self.nft_holders_list = LockedVar("nft_holders_list", list[str]())
+        self.allocations_data = LockedVar("allocations_data", list[AllocationEntry]())
         self.peer_rewards = LockedVar("peer_rewards", dict[str, float]())
 
         self.subgraph_type = SubgraphType.DEFAULT
@@ -88,9 +94,10 @@ class Core(Base):
         subgraph_params = self.params.subgraph
         key = subgraph_params.apiKey
 
-        self.safe_subgraph_url = SubgraphURL(key, subgraph_params.safesBalance)(value)
-        self.staking_subgraph_url = SubgraphURL(key, subgraph_params.staking)(value)
-        self.rewards_subgraph_url = SubgraphURL(key, subgraph_params.rewards)(value)
+        self.safe_sg_url = SubgraphURL(key, subgraph_params.safesBalance)[value]
+        self.staking_sg_url = SubgraphURL(key, subgraph_params.staking)[value]
+        self.rewards_sg_url = SubgraphURL(key, subgraph_params.rewards)[value]
+        self.allocation_sg_url = SubgraphURL(key, subgraph_params.allocations)[value]
 
         SUBGRAPH_IN_USE.set(value.toInt())
         self._subgraph_type = value
@@ -111,14 +118,21 @@ class Core(Base):
         """
         Checks the subgraph URLs and sets the subgraph type in use (default, backup or none)
         """
-        for type in SubgraphType.callables():
-            self.subgraph_type = type
-            if await SafesProvider(self.safe_subgraph_url).test():
-                break
-        else:
-            self.subgraph_type = SubgraphType.NONE
+        if self.params.subgraph.type == "auto":
+            for type in SubgraphType.callables():
+                self.subgraph_type = type
+                if await SafesProvider(self.safe_sg_url).test():
+                    break
+            else:
+                self.subgraph_type = SubgraphType.NONE
 
-        SUBGRAPH_CALLS.labels(type.value).inc()
+        else:
+            self.subgraph_type = getattr(
+                SubgraphType, self.params.subgraph.type.upper(), SubgraphType.NONE
+            )
+            self.warning(f"Using static {self.subgraph_type} subgraph endpoint")
+
+        SUBGRAPH_CALLS.labels(self.subgraph_type.value).inc()
 
     @flagguard
     @formalin("Aggregating peers")
@@ -158,12 +172,12 @@ class Core(Base):
             self.warning("No subgraph URL available.")
             return
 
-        provider = SafesProvider(self.safe_subgraph_url)
-        results = list[NodeSafeEntry]()
+        provider = SafesProvider(self.safe_sg_url)
+        results = list[NodeEntry]()
         try:
             for safe in await provider.get():
                 entries = [
-                    NodeSafeEntry.fromSubgraphResult(node)
+                    NodeEntry.fromSubgraphResult(node)
                     for node in safe["registeredNodesInNetworkRegistry"]
                 ]
                 results.extend(entries)
@@ -183,7 +197,7 @@ class Core(Base):
             self.warning("No subgraph URL available.")
             return
 
-        provider = StakingProvider(self.staking_subgraph_url)
+        provider = StakingProvider(self.staking_sg_url)
 
         results = list[str]()
         try:
@@ -192,12 +206,31 @@ class Core(Base):
                     results.append(owner)
 
         except ProviderError as err:
-            self.error(f"get_nft_holders: {err}")
+            self.error(f"nft_holders: {err}")
 
         await self.nft_holders_list.set(results)
 
         NFT_HOLDERS.set(len(results))
         self.debug(f"Fetched NFT holders ({len(results)} entries).")
+
+    @flagguard
+    @formalin("Getting allocations from subgraph")
+    async def allocations(self):
+        if self.subgraph_type == SubgraphType.NONE:
+            self.warning("No subgraph URL available.")
+            return
+
+        provider = AllocationsProvider(self.allocation_sg_url)
+
+        results = list[AllocationEntry]()
+        try:
+            for account in await provider.get():
+                results.append(AllocationEntry(**account["account"]))
+        except ProviderError as err:
+            self.error(f"allocations: {err}")
+
+        await self.allocations_data.set(results)
+        self.debug(f"Fetched allocations ({len(results)} entries).")
 
     @flagguard
     @formalin("Getting topology data")
@@ -227,20 +260,20 @@ class Core(Base):
         """
         Applies the economic model to the eligible peers (after multiple filtering layers).
         """
-        registered_nodes = await self.registered_nodes_list.get()
+        nodes = await self.registered_nodes_list.get()
         nft_holders = await self.nft_holders_list.get()
         topology = await self.topology_list.get()
-        peers = await self.all_peers.get()
+        peers: set[Peer] = await self.all_peers.get()
         ct_nodes = await self.ct_nodes_addresses
         redeemed_rewards = await self.peer_rewards.get()
+        allocations: list[AllocationEntry] = await self.allocations_data.get()
 
-        if not all(
-            [len(topology), len(registered_nodes), len(peers), len(nft_holders)]
-        ):
+        if not all([len(topology), len(nodes), len(peers)]):
             self.warning("Not enough data to apply economic model.")
             return
 
-        peers = await Utils.mergeDataSources(topology, peers, registered_nodes)
+        Utils.associateAllocationsAndSafes(allocations, nodes)
+        peers = await Utils.mergeDataSources(topology, peers, nodes, allocations)
 
         for p in peers:
             if p.is_old(self.params.peer.minVersion):
@@ -305,7 +338,7 @@ class Core(Base):
             self.warning("No subgraph URL available.")
             return
 
-        provider = RewardsProvider(self.rewards_subgraph_url)
+        provider = RewardsProvider(self.rewards_sg_url)
 
         results = dict()
         try:
@@ -369,6 +402,7 @@ class Core(Base):
                 self.registered_nodes,
                 self.topology,
                 self.nft_holders,
+                self.allocations,
                 self.apply_economic_model,
             ]
         )
