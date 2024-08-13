@@ -6,8 +6,12 @@ import pytest
 import yaml
 from core.components.parameters import Parameters
 from core.model.budget import Budget
-from core.model.economic_model_legacy import Coefficients as Coefficients
-from core.model.economic_model_legacy import EconomicModelLegacy, Equation, Equations
+from core.model.economic_model_legacy import (
+    Coefficients,
+    EconomicModelLegacy,
+    Equation,
+    Equations,
+)
 from core.model.peer import Peer
 from hoprd_sdk.models import ChannelInfoResponse, NodeChannelsResponse
 from pytest_mock import MockerFixture
@@ -207,7 +211,7 @@ def channels(peers: list[Peer]) -> NodeChannelsResponse:
 
 
 @pytest.fixture
-async def core(mocker: MockerFixture, nodes: list[Node], economic_model) -> Core:
+async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
     core = Core()
 
     params = Parameters()
