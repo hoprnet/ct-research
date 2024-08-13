@@ -59,7 +59,6 @@ def test_values_mid_range():
 
 
 def test_value_above_mid_range():
-    print(EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)], 20.0, 1).apr([0.75]))
     assert (
         EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)], 20.0, 1).apr([0.75]) == 0
     )
