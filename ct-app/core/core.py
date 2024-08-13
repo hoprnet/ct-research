@@ -1,6 +1,7 @@
 # region Imports
 import asyncio
 import random
+from copy import deepcopy
 
 from prometheus_client import Gauge
 
@@ -53,10 +54,6 @@ class Core(Base):
         self.sigmoid_model = EconomicModelSigmoid.fromParameters(
             self.params.economicModel.sigmoid
         )
-
-        self.legacy_model: EconomicModelLegacy = None
-        self.sigmoid_model: EconomicModelSigmoid = None
-        self._budget: Budget = None
 
         self.tasks = set[asyncio.Task]()
 
@@ -269,7 +266,7 @@ class Core(Base):
         self.info(f"Excluded nodes with low safe allowance ({len(excluded)} entries).")
         self.debug(f"Peers with low allowance {[el.address.id for el in excluded]}")
 
-        excluded = Utils.exclude(eligibles, await self.network_nodes_addresses)
+        excluded = Utils.exclude(eligibles, ct_nodes)
         self.debug(f"Excluded network nodes ({len(excluded)} entries).")
 
         if threshold := self.params.economicModel.NFTThreshold:
@@ -311,8 +308,8 @@ class Core(Base):
             )
 
             peer.message_count = legacy_message_count + sigmoid_message_count
-            JOBS_PER_PEER.labels(peer.address.id, "legacy").set(legacy_message_count)
-            JOBS_PER_PEER.labels(peer.address.id, "sigmoid").set(sigmoid_message_count)
+            MESSAGE_COUNT.labels(peer.address.id, "legacy").set(legacy_message_count)
+            MESSAGE_COUNT.labels(peer.address.id, "sigmoid").set(sigmoid_message_count)
 
         self.info(
             f"Assigned economic model to eligible nodes. ({len(eligibles)} entries)."
@@ -322,18 +319,7 @@ class Core(Base):
 
         await self.eligible_list.set(eligibles)
 
-        # set prometheus metrics
-        NEXT_DISTRIBUTION_EPOCH.set(
-            Utils.nextEpoch(self.params.economicModel.intervals).timestamp()
-        )
-        ELIGIBLE_PEERS_COUNTER.set(len(eligibles))
-
-        for peer in eligibles:
-            PEER_SPLIT_STAKE.labels(peer.address.id).set(peer.split_stake)
-            PEER_SAFE_COUNT.labels(peer.address.id).set(peer.safe_address_count)
-            PEER_TF_STAKE.labels(peer.address.id).set(peer.transformed_stake)
-            PEER_VERSION.labels(peer.address.id, str(peer.version)).set(1)
-
+        ELIGIBLE_PEERS.set(len(eligibles))
 
     @flagguard
     @formalin("Getting peers rewards amounts")

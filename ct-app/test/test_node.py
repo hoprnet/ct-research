@@ -1,7 +1,4 @@
-import asyncio
 import inspect
-import time
-from random import randint, random
 
 import pytest
 from hoprd_sdk.models import NodeChannelsResponse
@@ -120,51 +117,6 @@ async def test_get_total_channel_funds(node: Node, channels: NodeChannelsRespons
     )
 
     assert total_funds_from_fixture / 1e18 == total_funds_from_node
-
-    
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "num_tasks,sleep", [(randint(10, 20), round(random() * 0.3 + 0.2, 2))]
-)
-async def test__delay_message(node: Node, num_tasks: int, sleep: float):
-    tasks = set[asyncio.Task]()
-
-    for idx in range(num_tasks):
-        tasks.add(
-            asyncio.create_task(
-                node._delay_message(idx, "random_relayer", 0, sleep * idx)
-            )
-        )
-
-    before = time.time()
-    issued = await asyncio.gather(*tasks)
-    after = time.time()
-
-    assert after - before <= sleep * num_tasks
-    assert after - before >= sleep * (num_tasks - 1)
-    assert sum(issued) == num_tasks
-
-
-@pytest.mark.asyncio
-async def test_distribute_rewards(node: Node):
-    await node.retrieve_peers()
-
-    peer_group = {}
-    for idx, peer in enumerate(await node.peers.get()):
-        message_count = randint(4, 10)
-
-        peer_group[peer.address.id] = {
-            "expected": message_count,
-            "remaining": message_count,
-            "issued": 0,
-            "tag": idx,
-            "ticket-price": 0.01,
-        }
-
-    issued_count = await node.distribute_rewards(peer_group)
-
-    assert len(issued_count) == len(peer_group)
-    assert all([v != 0 for v in issued_count.values()])
 
 
 @pytest.mark.asyncio

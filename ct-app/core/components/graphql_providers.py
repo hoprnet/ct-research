@@ -13,11 +13,12 @@ class ProviderError(Exception):
 
 class GraphQLProvider(Base):
     def __init__(self, url: str):
+        self.url = url
         self.pwd = Path(__file__).parent
         self._default_key = None
 
     #### PRIVATE METHODS ####
-    def _load_query(self, path: Union[str, Path]) -> DocumentNode:
+    def _load_query(self, path: Union[str, Path]) -> str:
         """
         Loads a graphql query from a file.
         :param path: Path to the file. The path must be relative to the ct-app folder.
@@ -41,6 +42,7 @@ class GraphQLProvider(Base):
             self.error(f"Timeout error: {err}")
         except Exception as err:
             self.error(f"Unknown error: {err}")
+        return {}, None
 
     async def _test_query(self, key: str, **kwargs) -> bool:
         """
@@ -63,7 +65,7 @@ class GraphQLProvider(Base):
             self.error(f"ProviderError error: {err}")
             return False
 
-        return key in response["data"]
+        return key in response.get("data", [])
 
     async def _get(self, key: str, **kwargs) -> dict:
         """
@@ -105,7 +107,10 @@ class GraphQLProvider(Base):
                 break
 
         try:
-            self.debug(f"Subgraph attestations {headers.getall('graph-attestation')}")
+            if headers is not None:
+                self.debug(
+                    f"Subgraph attestations {headers.getall('graph-attestation')}"
+                )
         except UnboundLocalError:
             # raised if the headers variable is not defined
             pass
