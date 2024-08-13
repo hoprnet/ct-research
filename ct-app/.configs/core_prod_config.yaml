@@ -57,10 +57,10 @@ economicModel:
         condition: "x > c"
 
   sigmoid:
-    proportion: 0.9
+    proportion: 0
     maxAPR: 15
     networkCapacity: 2000
-    totalTokenSupply: 40000000
+    totalTokenSupply: 450000000
 
     offset: -0.9
     buckets:

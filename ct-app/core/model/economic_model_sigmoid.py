@@ -31,11 +31,11 @@ class Bucket:
                 + self.offset
             )
         except ValueError as e:
-            raise e
+            raise ValueError(f"Math domain error: {x=}, {vars(self)}") from e
         except ZeroDivisionError as e:
-            raise ValueError("Zero division error in APR calculation") from e
+            raise ValueError("Zero division error") from e
         except OverflowError as e:
-            raise ValueError("Overflow error in APR calculation") from e
+            raise ValueError("Overflow error") from e
 
         return max(apr, 0)
 
@@ -63,7 +63,7 @@ class EconomicModelSigmoid(Base):
         self.proportion = proportion
         self.budget: Budget = None
 
-    def apr(self, xs: list[float], max_apr: float = None):
+    def apr(self, xs: list[float]):
         """
         Calculate the APR for the economic model.
         """
@@ -79,8 +79,8 @@ class EconomicModelSigmoid(Base):
             self.error(f"Value error in APR calculation: {e}")
             apr = 0
 
-        if max_apr is not None:
-            apr = min(apr, max_apr)
+        if self.max_apr is not None:
+            apr = min(apr, self.max_apr)
 
         return apr
 
@@ -88,24 +88,22 @@ class EconomicModelSigmoid(Base):
         """
         Calculate the message count for the reward.
         """
-        apr = self.apr(xs, self.max_apr)
+        apr = self.apr(xs)
 
         yearly_rewards = apr * stake / 100.0
         rewards = yearly_rewards / (365 * 86400 / self.budget.intervals)
 
         under = self.budget.ticket_price * self.budget.winning_probability
 
-        return round(rewards / under * self.proportion) if under != 0 else 0
+        return round(self.proportion * rewards / under) if under != 0 else 0
 
     @classmethod
     def fromParameters(cls, parameters: Parameters):
-        bucket_names = vars(parameters.buckets)
-
         return cls(
             parameters.offset,
             [
                 Bucket.fromParameters(name, getattr(parameters.buckets, name))
-                for name in bucket_names
+                for name in vars(parameters.buckets)
             ],
             parameters.maxAPR,
             parameters.proportion,

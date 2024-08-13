@@ -371,6 +371,7 @@ class Core(Base):
         low_stake_addresses = [peer.address for peer in eligibles if peer.has_low_stake]
         excluded = Utils.exclude(eligibles, low_stake_addresses)
         self.debug(f"Excluded nodes with low stake ({len(excluded)} entries).")
+
         economic_security = (
             sum([peer.split_stake for peer in eligibles])
             / self.params.economicModel.sigmoid.totalTokenSupply
@@ -378,19 +379,20 @@ class Core(Base):
         network_capacity = (
             len(eligibles) / self.params.economicModel.sigmoid.networkCapacity
         )
-        sigmoid_model_input = [economic_security, network_capacity]
 
         for peer in eligibles:
             legacy_message_count = self.legacy_model.message_count_for_reward(
                 peer.split_stake
             )
             sigmoid_message_count = self.sigmoid_model.message_count_for_reward(
-                peer.split_stake, sigmoid_model_input
+                peer.split_stake, [economic_security, network_capacity]
             )
 
             peer.message_count = legacy_message_count + sigmoid_message_count
             JOBS_PER_PEER.labels(peer.address.id, "legacy").set(legacy_message_count)
             JOBS_PER_PEER.labels(peer.address.id, "sigmoid").set(sigmoid_message_count)
+
+            print(f"{peer.address.id} {legacy_message_count} {sigmoid_message_count}")
 
         self.info(
             f"Assigned economic model to eligible nodes. ({len(eligibles)} entries)."

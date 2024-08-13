@@ -76,5 +76,5 @@ async def test_formalin(foo_class: FooClass):
         assert foo_class.counter == expected_count
         foo_class.counter = 0
 
-    setup_test(1, 0, 1)
-    setup_test(1.3, 0.5, 2)
+    await setup_test(1, 0, 1)
+    await setup_test(1.3, 0.5, 2)

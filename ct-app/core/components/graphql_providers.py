@@ -107,6 +107,9 @@ class GraphQLProvider(Base):
 
         try:
             self.debug(f"Subgraph attestations {headers.getall('graph-attestation')}")
+        except UnboundLocalError:
+            # raised if the headers variable is not defined
+            pass
         except KeyError:
             # raised if using the centralized endpoint
             pass
