@@ -404,7 +404,7 @@ async def is_url_returning_200(url: str, timeout: int = 20) -> Response:
 
     try:
         result = await asyncio.wait_for(_check_url(url), timeout=timeout)
-    except TimeoutError:
+    except Exception:
         return False
     else:
         return result.status_code == 200
