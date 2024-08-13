@@ -5,9 +5,13 @@ from test.decorators_patches import patches
 import pytest
 import yaml
 from core.components.parameters import Parameters
-from core.model.economic_model import Budget
-from core.model.economic_model import Coefficients as Coefficients
-from core.model.economic_model import EconomicModel, Equation, Equations
+from core.model.budget import Budget
+from core.model.economic_model_legacy import (
+    Coefficients,
+    EconomicModelLegacy,
+    Equation,
+    Equations,
+)
 from core.model.peer import Peer
 from hoprd_sdk.models import ChannelInfoResponse, NodeChannelsResponse
 from pytest_mock import MockerFixture
@@ -69,14 +73,24 @@ class SideEffect:
 
 
 @pytest.fixture
-def economic_model() -> EconomicModel:
+def budget() -> Budget:
+    budget = Budget(1800)
+    budget.ticket_price = 0.0001
+    budget.winning_probability = 1
+    return budget
+
+
+@pytest.fixture
+def economic_model(budget: Budget) -> EconomicModelLegacy:
     equations = Equations(
         Equation("a * x", "l <= x <= c"),
         Equation("a * c + (x - c) ** (1 / b)", "x > c"),
     )
     parameters = Coefficients(1, 1, 3, 0)
-    budget = Budget(100, 15, 0.25, 2, 1)
-    return EconomicModel(equations, parameters, budget)
+
+    model = EconomicModelLegacy(equations, parameters, 1, 15)
+    model.budget = budget
+    return model
 
 
 @pytest.fixture
@@ -95,17 +109,14 @@ def peers_raw() -> list[dict]:
 
 
 @pytest.fixture
-def peers(peers_raw: list[dict], economic_model: EconomicModel) -> list[Peer]:
+def peers(peers_raw: list[dict]) -> list[Peer]:
     peers = [
         Peer(peer["peer_id"], peer["peer_address"], peer["reported_version"])
         for peer in peers_raw
     ]
     for peer in peers:
-        peer.economic_model = economic_model
-        peer.reward_probability = 0.02
         peer.safe_balance = randint(100, 200)
         peer.channel_balance = randint(10, 50)
-        peer.economic_model.budget.ticket_price = 0.01
 
     return peers
 
@@ -159,7 +170,7 @@ async def nodes(
 
         mocker.patch.object(node.api, "healthyz", return_value=True)
         mocker.patch.object(node.api, "startedz", return_value=True)
-        mocker.patch.object(node.api, "ticket_price", return_value=0.01)
+        mocker.patch.object(node.api, "ticket_price", return_value=0.0001)
 
         setattr(node.params, "distribution", Parameters())
         setattr(node.params.distribution, "delay_between_two_messages", 0.001)
@@ -206,7 +217,7 @@ async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
     params = Parameters()
     with open("./test/test_config.yaml", "r") as file:
         params.parse(yaml.safe_load(file))
-    setattr(params.subgraph, "deployerKey", "foo_deployer_key")
+    setattr(params.subgraph, "apiKey", "foo_deployer_key")
 
     setattr(params, "pg", Parameters())
     setattr(params.pg, "user", "user")
@@ -216,6 +227,9 @@ async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
     setattr(params.pg, "database", "database")
 
     core.post_init(nodes, params)
+    core.budget.ticket_price = 0.1
+    core.legacy_model.budget.ticket_price = 0.1
+    core.sigmoid_model.budget.ticket_price = 0.1
 
     await core._retrieve_address()
 
@@ -246,7 +260,7 @@ async def node(
     params = Parameters()
     with open("./test/test_config.yaml", "r") as file:
         params.parse(yaml.safe_load(file))
-    setattr(params.subgraph, "deployerKey", "foo_deployer_key")
+    setattr(params.subgraph, "apiKey", "foo_deployer_key")
 
     node.params = params
 

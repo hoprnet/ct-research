@@ -129,31 +129,6 @@ class Utils(Base):
         return excluded
 
     @classmethod
-    def rewardProbability(cls, peers: list[Peer]) -> list[int]:
-        """
-        Evaluate the function for each stake value in the eligible_peers dictionary.
-        :param peers: A dict containing the data.
-        :returns: A list containing the excluded elements due to low stake.
-        """
-
-        indexes_to_remove = [
-            idx for idx, peer in enumerate(peers) if peer.has_low_stake
-        ]
-
-        # remove entries from the list
-        excluded: list[Peer] = []
-        for index in sorted(indexes_to_remove, reverse=True):
-            peer: Peer = peers.pop(index)
-            excluded.append(peer)
-
-        # compute ct probability
-        total_tf_stake = sum(peer.transformed_stake for peer in peers)
-        for peer in peers:
-            peer.reward_probability = peer.transformed_stake / total_tf_stake
-
-        return excluded
-
-    @classmethod
     def nextEpoch(cls, seconds: int) -> datetime:
         """
         Calculates the delay until the next whole `minutes`min and `seconds`sec.

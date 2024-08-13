@@ -4,24 +4,24 @@
 # =============================================================================
 flags:
   core: 
-    healthcheck: 10
-    checkSubgraphURLs: 30
-    getTicketPrice: 30
-    aggregatePeers: 30
-    getTopologyData: 30
-    getSubgraphData: 30
-    getRegisteredNodes: 30
-    getNFTHolders: 30
-    getPeersRewards: 30
-    applyEconomicModel: 30
+    healthcheck: 30
+    checkSubgraphURLs: 120
+    getTicketPrice: 120
+    aggregatePeers: 120
+    getTopologyData: 120
+    getSubgraphData: 120
+    getRegisteredNodes: 120
+    getNFTHolders: 120
+    getPeersRewards: 120
+    applyEconomicModel: 60
     distributeRewards: 1
     
   node:
-    healthcheck: 10
-    retrievePeers: 30
-    retrieveIncomingChannels: 30
-    retrieveOutgoingChannels: 30
-    retrieveBalances: 30
+    healthcheck: 30
+    retrievePeers: 120
+    retrieveIncomingChannels: 120
+    retrieveOutgoingChannels: 120
+    retrieveBalances: 120
     openChannels: 300
     closeOldChannels: ~
     closePendingChannels: ~
@@ -34,30 +34,47 @@ flags:
 # =============================================================================
 economicModel:
   minSafeAllowance: -1
-  maxAPRPercentage: 15.0
   NFTThreshold: ~
+  intervals: 1800 # in seconds
+  winningProbability: 1
 
-  coefficients:
-    a: 1
-    b: 2
-    c: 3
-    l: 0.00001
-  
-  equations: 
-    fx: 
-      formula: "a * x"
-      condition: "l <= x <= c"
-    gx:
-      formula: "a * c + (x - c) ** (1 / b)"
-      condition: "x > c"
-  
-  budget:
-    # one distribution every 15min
-    amount: 0.00000000005
-    period: 86400
-    s: 1
-    countsInPeriod: 96
-    winningProbability: 1
+  legacy:
+    proportion: 1.0
+    apr: 0.0000001
+
+    coefficients:
+      a: 1
+      b: 2
+      c: 3
+      l: 0.000001
+    
+    equations: 
+      fx: 
+        formula: "a * x"
+        condition: "l <= x <= c"
+      gx:
+        formula: "a * c + (x - c) ** (1 / b)"
+        condition: "x > c"
+
+  sigmoid:
+    proportion: 0
+    maxAPR: 0.0000001
+    networkCapacity: 100
+    totalTokenSupply: 200
+
+    offset: 10
+    buckets:
+      economicSecurity:
+        flatness: 1.65
+        skewness: 1.50
+        upperbound: 0.5
+        offset: 0
+
+      networkCapacity:
+        flatness: 10.0
+        skewness: 2.75
+        upperbound: 1.0
+        offset: 0
 
 # =============================================================================
 # 

@@ -17,7 +17,7 @@ from urllib3.exceptions import MaxRetryError
 
 from .baseclass import Base
 
-MESSAGE_TAG = 800
+MESSAGE_TAG = 1800
 
 
 class HoprdAPI(Base):
@@ -404,7 +404,7 @@ async def is_url_returning_200(url: str, timeout: int = 20) -> Response:
 
     try:
         result = await asyncio.wait_for(_check_url(url), timeout=timeout)
-    except TimeoutError:
+    except Exception:
         return False
     else:
         return result.status_code == 200
