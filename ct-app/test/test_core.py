@@ -1,5 +1,4 @@
 import inspect
-
 import pytest
 from core.model import Peer
 from core.model.subgraph import SubgraphType

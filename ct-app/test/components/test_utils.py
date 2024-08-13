@@ -1,3 +1,9 @@
+
+import datetime
+import inspect
+import random
+from test.components.utils import handle_envvars
+
 import pytest
 from core.components import Utils
 from core.model import Address, NodeSafeEntry, Peer, TopologyEntry
@@ -83,9 +89,9 @@ def test_nodesCredentials():
         assert addresses == ["address_1", "address_2"]
         assert keys == ["address_1_key", "address_2_key"]
 
-
 @pytest.mark.asyncio
 async def test_mergeDataSources():
+
     topology_list = [
         TopologyEntry(None, None, 1),
         TopologyEntry("peer_id_2", "address_2", 2),

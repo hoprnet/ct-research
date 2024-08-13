@@ -37,7 +37,7 @@ flags:
   peer:
     messageRelayRequest: Off
     sentMessagesToDB: 900
-    
+
 # =============================================================================
 # 
 # =============================================================================
@@ -47,7 +47,8 @@ economicModel:
   winningProbability: 1
 
   legacy:
-    proportion: 0.9
+    proportion: 1.0
+
     apr: 12.5
 
     coefficients:
@@ -65,10 +66,11 @@ economicModel:
         condition: "x > c"
 
   sigmoid:
-    proportion: 0.1
+    proportion: 0
     maxAPR: 15
     networkCapacity: 2000
     totalTokenSupply: 40000000
+
 
     offset: -0.9
     buckets:

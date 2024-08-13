@@ -54,6 +54,10 @@ class Core(Base):
             self.params.economicModel.sigmoid
         )
 
+        self.legacy_model: EconomicModelLegacy = None
+        self.sigmoid_model: EconomicModelSigmoid = None
+        self._budget: Budget = None
+
         self.tasks = set[asyncio.Task]()
 
         self.connected = LockedVar("connected", False)
@@ -240,63 +244,96 @@ class Core(Base):
             self.warning("Not enough data to apply economic model.")
             return
 
-        peers = await Utils.mergeDataSources(topology, peers, registered_nodes)
+        eligibles = Utils.mergeDataSources(topology, peers, registered_nodes)
+        self.info(f"Merged topology and subgraph data ({len(eligibles)} entries).")
 
-        for p in peers:
-            if p.is_old(self.params.peer.minVersion):
-                await p.yearly_message_count.set(None)
+        old_peer_addresses = [
+            peer.address
+            for peer in eligibles
+            if peer.version_is_old(self.params.peer.minVersion)
+        ]
+        excluded = Utils.exclude(eligibles, old_peer_addresses)
+        self.info(
+            f"Excluded peers running on old version (< {self.params.peer.minVersion}) ({len(excluded)} entries)."
+        )
 
-        Utils.allowManyNodePerSafe(peers)
+        Utils.allowManyNodePerSafe(eligibles)
+        self.debug(f"Allowed many nodes per safe ({len(eligibles)} entries).")
 
-        for p in peers:
-            if not p.is_eligible(
-                self.params.economicModel.minSafeAllowance,
-                self.legacy_model.coefficients.l,
-                ct_nodes,
-                nft_holders,
-                self.params.economicModel.NFTThreshold,
-            ):
-                await p.yearly_message_count.set(None)
+        low_allowance_addresses = [
+            peer.address
+            for peer in eligibles
+            if peer.safe_allowance < self.params.economicModel.minSafeAllowance
+        ]
+        excluded = Utils.exclude(eligibles, low_allowance_addresses)
+        self.info(f"Excluded nodes with low safe allowance ({len(excluded)} entries).")
+        self.debug(f"Peers with low allowance {[el.address.id for el in excluded]}")
+
+        excluded = Utils.exclude(eligibles, await self.network_nodes_addresses)
+        self.debug(f"Excluded network nodes ({len(excluded)} entries).")
+
+        if threshold := self.params.economicModel.NFTThreshold:
+            low_stake_non_nft_holders = [
+                peer.address
+                for peer in eligibles
+                if peer.safe_address not in nft_holders and peer.split_stake < threshold
+            ]
+            excluded = Utils.exclude(eligibles, low_stake_non_nft_holders)
+            self.info(
+                f"Excluded non-nft-holders with stake < {threshold} ({len(excluded)} entries)."
+            )
+
+        redeemed_rewards = await self.peer_rewards.get()
+        for peer in eligibles:
+            peer.economic_model = deepcopy(self.legacy_model)
+            peer.economic_model.coefficients.c += redeemed_rewards.get(
+                peer.address.address, 0.0
+            )
+
+        low_stake_addresses = [peer.address for peer in eligibles if peer.has_low_stake]
+        excluded = Utils.exclude(eligibles, low_stake_addresses)
+        self.debug(f"Excluded nodes with low stake ({len(excluded)} entries).")
 
         economic_security = (
-            sum(
-                [
-                    p.split_stake
-                    for p in peers
-                    if (await p.yearly_message_count.get()) is not None
-                ]
-            )
+            sum([peer.split_stake for peer in eligibles])
             / self.params.economicModel.sigmoid.totalTokenSupply
         )
         network_capacity = (
-            len([p for p in peers if (await p.yearly_message_count.get()) is not None])
-            / self.params.economicModel.sigmoid.networkCapacity
+            len(eligibles) / self.params.economicModel.sigmoid.networkCapacity
         )
-        sigmoid_model_input = [economic_security, network_capacity]
 
-        for peer in peers:
-            if await peer.yearly_message_count.get() is None:
-                continue
-
-            legacy_message_count = self.legacy_model.yearly_message_count(
-                peer.split_stake, redeemed_rewards.get(peer.address.address, 0.0)
+        for peer in eligibles:
+            legacy_message_count = self.legacy_model.message_count_for_reward(
+                peer.split_stake
             )
-            sigmoid_message_count = self.sigmoid_model.yearly_message_count(
-                peer.split_stake, sigmoid_model_input
+            sigmoid_message_count = self.sigmoid_model.message_count_for_reward(
+                peer.split_stake, [economic_security, network_capacity]
             )
 
-            await peer.yearly_message_count.set(
-                legacy_message_count + sigmoid_message_count
-            )
-            MESSAGE_COUNT.labels(peer.address.id, "legacy").set(legacy_message_count)
-            MESSAGE_COUNT.labels(peer.address.id, "sigmoid").set(sigmoid_message_count)
+            peer.message_count = legacy_message_count + sigmoid_message_count
+            JOBS_PER_PEER.labels(peer.address.id, "legacy").set(legacy_message_count)
+            JOBS_PER_PEER.labels(peer.address.id, "sigmoid").set(sigmoid_message_count)
 
-        eligibles = [p for p in peers if await p.yearly_message_count.get() is not None]
+        self.info(
+            f"Assigned economic model to eligible nodes. ({len(eligibles)} entries)."
+        )
 
-        self.info(f"Eligible nodes: {len(eligibles)} entries.")
+        self.info(f"Eligible nodes ({len(eligibles)} entries).")
 
-        ELIGIBLE_PEERS.set(len(eligibles))
-        await self.all_peers.set(set(peers))
+        await self.eligible_list.set(eligibles)
+
+        # set prometheus metrics
+        NEXT_DISTRIBUTION_EPOCH.set(
+            Utils.nextEpoch(self.params.economicModel.intervals).timestamp()
+        )
+        ELIGIBLE_PEERS_COUNTER.set(len(eligibles))
+
+        for peer in eligibles:
+            PEER_SPLIT_STAKE.labels(peer.address.id).set(peer.split_stake)
+            PEER_SAFE_COUNT.labels(peer.address.id).set(peer.safe_address_count)
+            PEER_TF_STAKE.labels(peer.address.id).set(peer.transformed_stake)
+            PEER_VERSION.labels(peer.address.id, str(peer.version)).set(1)
+
 
     @flagguard
     @formalin("Getting peers rewards amounts")

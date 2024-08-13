@@ -47,10 +47,9 @@ economicModel:
   winningProbability: 1
 
   legacy:
-    proportion: 0.9
+    proportion: 1.0
     apr: 0.0000001
-
-
+    
     coefficients:
       a: 1
       b: 2
@@ -66,7 +65,8 @@ economicModel:
         condition: "x > c"
 
   sigmoid:
-    proportion: 0.1
+    proportion: 0
+
     maxAPR: 0.0000001
     networkCapacity: 100
     totalTokenSupply: 200
