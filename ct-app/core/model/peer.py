@@ -104,14 +104,14 @@ class Peer(Base):
 
     @property
     def split_stake(self) -> float:
-        if self.yearly_message_count is None:
-            return 0
         if self.safe_balance is None:
             raise ValueError("Safe balance not set")
         if self.channel_balance is None:
             raise ValueError("Channel balance not set")
         if self.safe_address_count is None:
             raise ValueError("Safe address count not set")
+        if self.yearly_message_count is None:
+            return 0
 
         split_stake = float(self.safe_balance) / float(self.safe_address_count) + float(
             self.channel_balance
