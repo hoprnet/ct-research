@@ -17,7 +17,7 @@ class SentMessages(Base):
 
     def __repr__(self) -> str:
         return (
-            f"Reward(id={self.id!r}, relayer={self.peer_id!r}, "
+            f"Reward(id={self.id!r}, relayer={self.relayer!r}, "
             + f"count={self.count!r}, "
             + f"timestamp={self.timestamp})"
         )
@@ -33,7 +33,7 @@ class RelayedMessages(Base):
 
     def __repr__(self) -> str:
         return (
-            f"Reward(id={self.id!r}, peer_id={self.peer_id!r}, "
+            f"Reward(id={self.id!r}, relayer={self.relayer!r}, "
             + f"sender={self.sender!r}, "
             + f"count={self.count!r}, "
             + f"timestamp={self.timestamp})"
