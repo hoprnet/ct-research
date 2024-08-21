@@ -269,7 +269,7 @@ class Core(Base):
             self.warning("Not enough data to apply economic model.")
             return
 
-        await Utils.mergeDataSources(topology, peers, registered_nodes)
+        await Utils.mergeDataSources(topology, peers, nodes, allocations)
 
         for p in peers:
             if p.is_old(self.params.peer.minVersion):
