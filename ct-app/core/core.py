@@ -241,7 +241,7 @@ class Core(Base):
             self.warning("Not enough data to apply economic model.")
             return
 
-        eligibles = Utils.mergeDataSources(topology, peers, registered_nodes)
+        eligibles = await Utils.mergeDataSources(topology, peers, registered_nodes)
         self.info(f"Merged topology and subgraph data ({len(eligibles)} entries).")
 
         old_peer_addresses = [
