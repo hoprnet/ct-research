@@ -9,10 +9,11 @@ from .conftest import Core
 
 def test_safe_subgraph_url(core: Core):
     core.subgraph_type = SubgraphType.DEFAULT
+    print(f"{core.safe_sg_url=}")
     assert "query-id-safes" in core.safe_sg_url
 
     core.subgraph_type = SubgraphType.BACKUP
-    assert core.safe_sg_url == "safes_backup_url"
+    assert "safes_backup_url" in core.safe_sg_url
 
     core.subgraph_type = SubgraphType.NONE
     assert core.safe_sg_url is None

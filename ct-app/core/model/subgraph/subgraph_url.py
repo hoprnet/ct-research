@@ -4,10 +4,12 @@ from .subgraph_type import SubgraphType
 
 
 class SubgraphURL:
-    def __init__(self, deployer_key: str, param_set: Parameters):
+
+    def __init__(self, params: Parameters, key: str):
         super().__init__()
-        self.param_set = param_set
-        self.deployer_key = deployer_key
+        self.params = getattr(params, key)
+        self.deployer_key = params.apiKey
+        self.user_id = params.userID
 
         self._urls = {
             SubgraphType.DEFAULT: self._construct_default(),
@@ -16,13 +18,13 @@ class SubgraphURL:
         }
 
     def _construct_default(self):
-        if not self.param_set.queryID:
+        if not self.params.queryID:
             return self._construct_backup()
 
-        return f"https://gateway-arbitrum.network.thegraph.com/api/{self.deployer_key}/subgraphs/id/{self.param_set.queryID}"
+        return f"https://gateway-arbitrum.network.thegraph.com/api/{self.deployer_key}/subgraphs/id/{self.params.queryID}"
 
     def _construct_backup(self):
-        return self.param_set.URLBackup
+        return f"https://api.studio.thegraph.com/query/{self.user_id}/{self.params.slug}/{self.params.version}"
 
     def __getitem__(self, index: SubgraphType) -> str:
         return self._urls.get(index, None)

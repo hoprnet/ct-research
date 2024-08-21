@@ -112,17 +112,22 @@ channel:
 # =============================================================================
 subgraph:
   type: auto # auto | default | backup
+  userID: 78696
 
   allocations:
     queryID: QmY8cHMjh4eptG9E7ao3SvHtaojp9Tyi5ZRTqXKLoYUQPP
-    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-allocations/version/latest
+    slug: hopr-allocations
+    version: version/latest
   rewards:
     queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
-    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-channels/version/latest
+    slug: hopr-channels
+    version: version/latest
   safesBalance:
     queryID: GmbJTpa1o4baeStDT48TfQu4ditJmQwwXYPG1DvEiufB
-    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-nodes-rotsee/version/latest
+    slug: hopr-nodes-rotsee
+    version: version/latest
   staking:
     queryID: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
-    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-stake-all-seasons/version/latest
+    slug: hopr-stake-all-seasons
+    version: version/latest
 ...

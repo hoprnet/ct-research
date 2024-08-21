@@ -91,13 +91,10 @@ class Core(Base):
         if not hasattr(self, "_subgraph_type") or value != self._subgraph_type:
             self.info(f"Now using '{value.value}' subgraph.")
 
-        subgraph_params = self.params.subgraph
-        key = subgraph_params.apiKey
-
-        self.safe_sg_url = SubgraphURL(key, subgraph_params.safesBalance)[value]
-        self.staking_sg_url = SubgraphURL(key, subgraph_params.staking)[value]
-        self.rewards_sg_url = SubgraphURL(key, subgraph_params.rewards)[value]
-        self.allocation_sg_url = SubgraphURL(key, subgraph_params.allocations)[value]
+        self.safe_sg_url = SubgraphURL(self.params.subgraph, "safesBalance")[value]
+        self.staking_sg_url = SubgraphURL(self.params.subgraph, "staking")[value]
+        self.rewards_sg_url = SubgraphURL(self.params.subgraph, "rewards")[value]
+        self.allocation_sg_url = SubgraphURL(self.params.subgraph, "allocations")[value]
 
         SUBGRAPH_IN_USE.set(value.toInt())
         self._subgraph_type = value

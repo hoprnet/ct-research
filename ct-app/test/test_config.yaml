@@ -116,16 +116,23 @@ channel:
 # 
 # =============================================================================
 subgraph:
+  type: auto # auto | default | backup
+  userID: 1000
+
   allocations:
     queryID: ~
-    URLBackup: allocations_backup_url
+    slug: allocations_backup_url
+    version: version/latest
   rewards:
     queryID: ~
-    URLBackup: rewards_backup_url
+    slug: rewards_backup_url
+    version: version/latest
   safesBalance:
     queryID: query-id-safes
-    URLBackup: safes_backup_url
+    slug: safes_backup_url
+    version: version/latest
   staking:
     queryID: query-id-staking
-    URLBackup: staking_backup_url
+    slug: staking_backup_url
+    version: version/latest
 ...
