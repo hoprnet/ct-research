@@ -28,11 +28,8 @@ class Utils(Base):
         peers: list,
         safes: list,
     ):
-        merged_result: list = []
-        addresses = [item.address.address for item in peers]
-
-        for address in addresses:
-            peer = next(filter(lambda p: p.address.address == address, peers), None)
+        for peer in peers:
+            address = peer.address.address
             topo = next(filter(lambda t: t.node_address == address, topology), None)
             safe = next(filter(lambda s: s.node_address == address, safes), None)
 
@@ -49,11 +46,7 @@ class Utils(Base):
             else:
                 await peer.yearly_message_count.set(None)
 
-            merged_result.append(peer)
-
-        cls().info(f"Merged topology and subgraph data ({len(merged_result)} entries).")
-
-        return merged_result
+        cls().info(f"Merged topology, peers, and safes data.")
 
     @classmethod
     def allowManyNodePerSafe(cls, peers: list):

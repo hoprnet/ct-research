@@ -104,9 +104,9 @@ async def test_mergeDataSources():
         NodeSafeEntry("address_3", None, "safe_address_3", "3"),
     ]
 
-    merged = await Utils.mergeDataSources(topology_list, peers_list, subgraph_list)
+    await Utils.mergeDataSources(topology_list, peers_list, subgraph_list)
 
-    assert len(merged) == 3
+    assert len(peers_list) == 3
 
 
 def test_allowManyNodePerSafe():
