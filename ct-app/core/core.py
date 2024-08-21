@@ -247,7 +247,7 @@ class Core(Base):
         old_peer_addresses = [
             peer.address
             for peer in eligibles
-            if peer.version_is_old(self.params.peer.minVersion)
+            if peer.is_old(self.params.peer.minVersion)
         ]
         excluded = Utils.exclude(eligibles, old_peer_addresses)
         self.info(
