@@ -1,9 +1,15 @@
-import pytest
-from core.components import Utils
-from core.model import Address, NodeSafeEntry, Peer, TopologyEntry
-from hoprd_sdk.models import ChannelInfoResponse
+import datetime
+import inspect
+import random
+from test.components.utils import handle_envvars
 
-from .utils import handle_envvars
+import pytest
+from core.components.utils import Utils
+from core.model.address import Address
+from core.model.peer import Peer
+from core.model.subgraph_entry import SubgraphEntry
+from core.model.topology_entry import TopologyEntry
+from hoprd_sdk.models import ChannelInfoResponse
 
 
 @pytest.fixture
@@ -72,21 +78,23 @@ def channel_topology():
     ]
 
 
-def test_nodesCredentials():
+def test_nodeAddresses():
     with handle_envvars(
         node_address_1="address_1",
         node_address_2="address_2",
         node_key_1="address_1_key",
         node_key_2="address_2_key",
     ):
-        addresses, keys = Utils.nodesCredentials("NODE_ADDRESS", "NODE_KEY")
+        addresses, keys = Utils.nodesAddresses("NODE_ADDRESS_", "NODE_KEY_")
         assert addresses == ["address_1", "address_2"]
         assert keys == ["address_1_key", "address_2_key"]
 
 
-@pytest.mark.asyncio
-async def test_mergeDataSources():
+def test_httpPOST():
+    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
 
+
+def test_mergeDataSources():
     topology_list = [
         TopologyEntry(None, None, 1),
         TopologyEntry("peer_id_2", "address_2", 2),
@@ -99,14 +107,14 @@ async def test_mergeDataSources():
         Peer("peer_id_3", "address_3", "1.0.2"),
     ]
     subgraph_list = [
-        NodeSafeEntry("address_1", "10", "safe_address_1", "1"),
-        NodeSafeEntry("address_2", "10", "safe_address_2", "2"),
-        NodeSafeEntry("address_3", None, "safe_address_3", "3"),
+        SubgraphEntry("address_1", "10", "safe_address_1", "1"),
+        SubgraphEntry("address_2", "10", "safe_address_2", "2"),
+        SubgraphEntry("address_3", None, "safe_address_3", "3"),
     ]
 
-    merged = await Utils.mergeDataSources(topology_list, peers_list, subgraph_list)
+    merged = Utils.mergeDataSources(topology_list, peers_list, subgraph_list)
 
-    assert len(merged) == 3
+    assert len(merged) == 1
 
 
 def test_allowManyNodePerSafe():
@@ -149,10 +157,41 @@ def test_exclude():
         assert item.address in blacklist
 
 
+def test_nextEpoch():
+    timestamp = Utils.nextEpoch(1000)
+    now = datetime.datetime.now()
+
+    assert now < timestamp
+    assert (timestamp - now).total_seconds() < 1000
+
+
+def test_nextDelayInSeconds():
+    delay = Utils.nextDelayInSeconds(1000)
+    assert delay < 1000
+
+    delay = Utils.nextDelayInSeconds(0)
+    assert delay == 1
+
+    delay = Utils.nextDelayInSeconds(1)
+    assert delay == 1
+
+
 @pytest.mark.asyncio
-async def test_balanceInChannels(channel_topology):
-    results = await Utils.balanceInChannels(channel_topology)
+async def test_aggregatePeerBalanceInChannels(channel_topology):
+    results = await Utils.aggregatePeerBalanceInChannels(channel_topology)
 
     assert len(results) == 2
     assert results["src_1"]["channels_balance"] == 3
     assert results["src_2"]["channels_balance"] == 5
+
+
+def test_splitDict():
+    bins = random.randint(2, 10)
+    num_elements = random.randint(50, 100)
+    source_dict = {f"key_{i}": f"value_{i}" for i in range(num_elements)}
+
+    result = Utils.splitDict(source_dict, bins)
+    key_counts = [len(item.keys()) for item in result]
+
+    assert len(result) == bins
+    assert max(key_counts) - min(key_counts) <= 1

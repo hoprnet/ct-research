@@ -1,6 +1,6 @@
-class NodeSafeEntry:
+class SubgraphEntry:
     """
-    A NodeSafeEntry represents a single entry in the subgraph.
+    A SubgraphEntry represents a single entry in the subgraph.
     """
 
     def __init__(
@@ -11,7 +11,7 @@ class NodeSafeEntry:
         safe_allowance: str,
     ):
         """
-        Create a new NodeSafeEntry with the specified node_address, wxHoprBalance, safe_address and safe_allowance.
+        Create a new SubgraphEntry with the specified node_address, wxHoprBalance, safe_address and safe_allowance.
         :param node_address: The address of the node.
         :param wxHoprBalance: The wxHoprBalance of the node.
         :param safe_address: The address of the safe.
@@ -26,8 +26,8 @@ class NodeSafeEntry:
     @classmethod
     def fromSubgraphResult(cls, node: dict):
         """
-        Create a new NodeSafeEntry from the specified subgraph result.
-        :param node: The subgraph result to create the NodeSafeEntry from.
+        Create a new SubgraphEntry from the specified subgraph result.
+        :param node: The subgraph result to create the SubgraphEntry from.
         """
         return cls(
             node["node"]["id"],
@@ -35,6 +35,13 @@ class NodeSafeEntry:
             node["safe"]["id"],
             node["safe"]["allowance"]["wxHoprAllowance"],
         )
+
+    def has_address(self, address: str):
+        """
+        Check if the SubgraphEntry has the specified address.
+        :param address: The address to check for.
+        """
+        return self.node_address == address
 
     def __eq__(self, other):
         return (
@@ -46,7 +53,7 @@ class NodeSafeEntry:
 
     def __str__(self):
         return (
-            f"NodeSafeEntry(node_address={self.node_address}, "
+            f"SubgraphEntry(node_address={self.node_address}, "
             + f"wxHoprBalance={self.wxHoprBalance}, "
             + f"safe_address={self.safe_address}), "
             + f"safe_allowance={self.safe_allowance})"

@@ -1,7 +1,6 @@
 import logging
 
 from core.components.parameters import Parameters
-from core.components.singleton import Singleton
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm import Session
@@ -11,7 +10,7 @@ from .models import Base
 log = logging.getLogger()
 
 
-class DatabaseConnection(metaclass=Singleton):
+class DatabaseConnection:
     """
     Database connection class.
     """
@@ -31,35 +30,22 @@ class DatabaseConnection(metaclass=Singleton):
             query={},
         )
 
-        self.engine = create_engine(url, pool_size=5)
+        self.engine = create_engine(url)
         Base.metadata.create_all(self.engine)
         self.session = Session(self.engine)
 
         log.info("Database connection established.")
 
-    @classmethod
-    def open(cls, params: Parameters):
-        return cls(params)
+    def __enter__(self):
+        """
+        Return the session (used by context manager)
+        """
+        return self.session
 
-    @classmethod
-    def close(cls):
-        try:
-            instance = cls()
-        except Exception as e:
-            raise Exception(
-                f"Unable to find a running instance of DatabaseConnection: {e}"
-            )
-
-        instance.session.close()
-        instance.engine.dispose()
-
-    @classmethod
-    def session(cls) -> Session:
-        try:
-            instance = cls()
-        except Exception as e:
-            raise Exception(
-                f"Unable to find a running instance of DatabaseConnection: {e}"
-            )
-        else:
-            return instance.session
+    def __exit__(self, exc_type, exc_value, traceback):
+        """
+        Close the session and the engine (used by context manager)
+        """
+        self.session.close()
+        self.engine.dispose()
+        log.info("Database connection closed.")

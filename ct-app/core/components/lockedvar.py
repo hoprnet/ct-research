@@ -59,20 +59,6 @@ class LockedVar(Base):
         async with self.lock:
             self.value += value
 
-    async def sub(self, value: Any):
-        """
-        Asyncronously decrement the value of the variable by the specified value in a locked manner. If the type of the value is different from the type of the variable, a TypeError will be raised.
-
-        :param value: The value to decrement the variable by.
-        """
-        if self.type and not isinstance(value, self.type):
-            self.warning(
-                f"Trying to change value of type {type(value)} to {self.type}, ignoring"
-            )
-
-        async with self.lock:
-            self.value -= value
-
     async def update(self, value: Any):
         """
         Asynchronously update the value of the variable with the specified value in a locked manner. If the type of the value is different from the type of the variable, a TypeError will be raised.
@@ -89,5 +75,5 @@ class LockedVar(Base):
             self.value.update(value)
 
     @property
-    def log_prefix(self):
-        return f"lockedvar({self.name})"
+    def print_prefix(self):
+        return f"LockedVar({self.name})"

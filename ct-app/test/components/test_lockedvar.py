@@ -1,7 +1,7 @@
 import asyncio
 
 import pytest
-from core.components import LockedVar
+from core.components.lockedvar import LockedVar
 
 
 @pytest.fixture

@@ -44,10 +44,8 @@ def flagguard(func):
             raise AttributeError(f"Feature `{func.__name__}` not in config file")
 
         index = params_clean.index(func_name_clean)
-        feature = params_raw[index]
-        flag = getattr(class_flags, feature)
-
-        if flag is None or flag is False:
+        if getattr(class_flags, params_raw[index]) is None:
+            self.error(f"Feature `{params_raw[index]}` not yet available")
             return
 
         return await func(self, *args, **kwargs)
@@ -77,24 +75,19 @@ def formalin(message: Optional[str] = None):
             index = params_clean.index(func_name_clean)
             delay = getattr(class_flags, params_raw[index])
 
-            if delay is True:
-                delay = 0
-            if delay is False:
-                delay = None
-
-            if delay == 0:
-                self.info(f"Running `{params_raw[index]}` continuously")
-            elif delay is not None:
+            if delay is not None:
                 self.info(f"Running `{params_raw[index]}` every {delay} seconds")
 
-            while self.running:
-                # if message:
-                #     self.feature(message)
+            while self.started:
+                if message:
+                    self.feature(message)
                 await func(self, *args, **kwargs)
 
-                if delay is None:
+                if delay == 0:
                     break
-                await asyncio.sleep(delay)
+
+                if delay is not None:
+                    await asyncio.sleep(delay)
 
         return wrapper
 

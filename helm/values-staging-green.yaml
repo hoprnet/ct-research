@@ -12,7 +12,7 @@ config: |
       allow_recursive: false
       strategies: []
   inbox:
-    capacity: 16384
+    capacity: 2048
 
 identityPool:
   funding:

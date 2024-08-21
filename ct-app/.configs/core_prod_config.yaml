@@ -5,16 +5,16 @@
 flags:
   core: 
     healthcheck: 60
-    rotateSubgraphs: 300
-    peersRewards: 300
-    ticketParameters: 120
-
-    connectedPeers: 300
-    registeredNodes: 300
-    topology: 300
-    NFTHolders: 300
-    
+    checkSubgraphURLs: 300
+    getTicketPrice: 120
+    aggregatePeers: 300
+    getTopologyData: 300
+    getSubgraphData: 300
+    getRegisteredNodes: 300
+    getNFTHolders: 300
+    getPeersRewards: 300
     applyEconomicModel: 120
+    distributeRewards: 1
     
   node:
     healthcheck: 60
@@ -22,28 +22,20 @@ flags:
     retrieveIncomingChannels: 600
     retrieveOutgoingChannels: 600
     retrieveBalances: 900
-
     openChannels: 300
-    fundChannels: 300
     closeOldChannels: 300
     closePendingChannels: 1800
-    closeIncomingChannels: Off
-
+    fundChannels: 300
+    closeIncomingChannels: ~
     getTotalChannelFunds: 900
     
-    watchMessageQueue: On
-    relayedMessagesToDB: 120
-
-  peer:
-    messageRelayRequest: On
-    sentMessagesToDB: 120
-
 # =============================================================================
 # 
 # =============================================================================
 economicModel:
   minSafeAllowance: -1
   NFTThreshold: 30000
+  intervals: 1800 # in seconds
   winningProbability: 1
 
   legacy:
@@ -87,9 +79,11 @@ economicModel:
 # =============================================================================
 # 
 # =============================================================================
-storage:
-  count: 1000
-  timeout: 43200 # seconds
+distribution:
+  minEligiblePeers: 100
+  messageDeliveryDelay: 5.0
+  delayBetweenTwoMessages: 0.0001
+  maxIterations: 2
 
 # =============================================================================
 # 

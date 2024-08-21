@@ -14,7 +14,7 @@ class ProviderError(Exception):
 class GraphQLProvider(Base):
     def __init__(self, url: str):
         self.url = url
-        self.pwd = Path(__file__).parent
+        self.pwd = Path(__file__).parent.parent.parent
         self._default_key = None
 
     #### PRIVATE METHODS ####
@@ -42,7 +42,6 @@ class GraphQLProvider(Base):
             self.error(f"Timeout error: {err}")
         except Exception as err:
             self.error(f"Unknown error: {err}")
-        return {}, None
 
     async def _test_query(self, key: str, **kwargs) -> bool:
         """
@@ -65,7 +64,7 @@ class GraphQLProvider(Base):
             self.error(f"ProviderError error: {err}")
             return False
 
-        return key in response.get("data", [])
+        return key in response["data"]
 
     async def _get(self, key: str, **kwargs) -> dict:
         """
@@ -107,10 +106,7 @@ class GraphQLProvider(Base):
                 break
 
         try:
-            if headers is not None:
-                self.debug(
-                    f"Subgraph attestations {headers.getall('graph-attestation')}"
-                )
+            self.debug(f"Subgraph attestations {headers.getall('graph-attestation')}")
         except UnboundLocalError:
             # raised if the headers variable is not defined
             pass
@@ -166,18 +162,32 @@ class SafesProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
         self._default_key = "safes"
-        self._sku_query = self._load_query("./subgraph_queries/safes_balance.graphql")
+        self._sku_query = self._load_query(
+            "core/subgraph_queries/safes_balance.graphql"
+        )
+
+    @property
+    def print_prefix(self) -> str:
+        return "safe-provider"
 
 
 class StakingProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
         self._default_key = "boosts"
-        self._sku_query = self._load_query("./subgraph_queries/staking.graphql")
+        self._sku_query = self._load_query("core/subgraph_queries/staking.graphql")
+
+    @property
+    def print_prefix(self) -> str:
+        return "staking-provider"
 
 
 class RewardsProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
         self._default_key = "accounts"
-        self._sku_query = self._load_query("./subgraph_queries/rewards.graphql")
+        self._sku_query = self._load_query("core/subgraph_queries/rewards.graphql")
+
+    @property
+    def print_prefix(self) -> str:
+        return "rewards-provider"
