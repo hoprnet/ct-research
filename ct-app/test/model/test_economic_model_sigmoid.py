@@ -58,7 +58,6 @@ def test_values_mid_range():
 
 
 def test_value_above_mid_range():
-    print(EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)], 20.0, 1).apr([0.75]))
     assert (
         EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)], 20.0, 1).apr([0.75]) == 0
     )
@@ -112,9 +111,10 @@ def test_yearly_message_count(budget: Budget):
     model.budget = budget
 
     assert model.apr([0.5, 0.25]) == 10
+
     assert model.yearly_message_count(stake, [0.5, 0.25]) == round(
         model.apr([0.5, 0.25])
+        / 100
         * stake
-        / 100.0
         / (budget.ticket_price * budget.winning_probability)
     )

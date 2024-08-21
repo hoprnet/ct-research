@@ -87,6 +87,7 @@ def test_nodesCredentials():
 
 @pytest.mark.asyncio
 async def test_mergeDataSources():
+
     topology_list = [
         TopologyEntry("peer_id_1", "address_1", 1),
         TopologyEntry("peer_id_2", "address_2", 2),

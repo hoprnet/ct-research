@@ -421,5 +421,8 @@ class HoprdAPI(Base):
             result = await asyncio.wait_for(_check_url(url), timeout=timeout)
         except TimeoutError:
             return False
+        except Exception:
+            return False
         else:
             return result.status_code == 200
+

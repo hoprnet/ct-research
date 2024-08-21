@@ -119,7 +119,13 @@ async def test_get_total_channel_funds(node: Node, channels: NodeChannelsRespons
     assert total_funds_from_fixture / 1e18 == total_funds_from_node
 
 
-def test_fromCredentials():
+@pytest.mark.asyncio
+async def test_check_inbox(node: Node):
+    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
+
+
+@pytest.mark.asyncio
+async def test_fromAddressAndKeyLists(node: Node):
     addresses = ["LOCALHOST:9091", "LOCALHOST:9092", "LOCALHOST:9093"]
     keys = ["key1", "key2", "key3"]
 
