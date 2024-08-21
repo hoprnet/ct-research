@@ -47,8 +47,8 @@ class DatabaseConnection(metaclass=Singleton):
             instance = cls()
         except Exception as e:
             raise Exception(
-                f"Unable to find a running instance of DatabaseConnection: {e}"
-            )
+                "Unable to find a running instance of DatabaseConnection"
+            ) from e
 
         instance.session.close()
         instance.engine.dispose()
@@ -59,7 +59,7 @@ class DatabaseConnection(metaclass=Singleton):
             instance = cls()
         except Exception as e:
             raise Exception(
-                f"Unable to find a running instance of DatabaseConnection: {e}"
-            )
+                "Unable to find a running instance of DatabaseConnection"
+            ) from e
         else:
             return instance.session

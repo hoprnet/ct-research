@@ -114,15 +114,15 @@ async def test_mergeDataSources():
     allocation_list[0].linked_safes = ["safe_address_1", "safe_address_2"]
     allocation_list[1].linked_safes = ["safe_address_2"]
 
-    merged: list[Peer] = await Utils.mergeDataSources(
+    Utils.mergeDataSources(
         topology_list, peers_list, nodes_list, allocation_list
     )
 
-    assert len(merged) == 3
-    assert len([p for p in merged if p.safe is not None]) == 2
-    assert merged[0].safe.additional_balance == allocation_list[0].allocatedAmount / 2
+    assert len(peers_list) == 3
+    assert len([p for p in peers_list if p.safe is not None]) == 2
+    assert peers_list[0].safe.additional_balance == allocation_list[0].allocatedAmount / 2
     assert (
-        merged[1].safe.additional_balance
+        peers_list[1].safe.additional_balance
         == allocation_list[0].allocatedAmount / 2 + allocation_list[1].allocatedAmount
     )
 

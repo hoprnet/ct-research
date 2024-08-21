@@ -25,10 +25,8 @@ class Utils(Base):
     async def mergeDataSources(
         cls, topology: list, peers: list, nodes: list, allocations: list
     ):
-        merged_result: list = []
-        addresses = [item.address.address for item in peers]
-        for address in addresses:
-            peer = next(filter(lambda p: p.address.address == address, peers), None)
+        for peer in peers:
+            address = peer.address.address
             topo = next(filter(lambda t: t.node_address == address, topology), None)
             node = next(filter(lambda s: s.node_address == address, nodes), None)
 
@@ -46,11 +44,7 @@ class Utils(Base):
             else:
                 await peer.yearly_message_count.set(None)
 
-            merged_result.append(peer)
-
-        cls().info(f"Merged topology and subgraph data ({len(merged_result)} entries).")
-
-        return merged_result
+        cls().info("Merged topology, peers, and safes data.")
 
     @classmethod
     def associateAllocationsAndSafes(cls, allocations, nodes):
