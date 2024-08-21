@@ -35,8 +35,8 @@ flags:
     relayedMessagesToDB: 120
 
   peer:
-    messageRelayRequest: Off
-    sentMessagesToDB: 900
+    messageRelayRequest: On
+    sentMessagesToDB: 120
 
 # =============================================================================
 # 
@@ -48,7 +48,6 @@ economicModel:
 
   legacy:
     proportion: 1.0
-
     apr: 12.5
 
     coefficients:
@@ -89,7 +88,7 @@ economicModel:
 # 
 # =============================================================================
 storage:
-  value: 5 # wxHOPR
+  count: 1000
   timeout: 43200 # seconds
 
 # =============================================================================
