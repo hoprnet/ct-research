@@ -14,7 +14,7 @@ class SafeEntry(SubgraphEntry):
         """
         self.address = address
         self.balance = float(balance) if balance else 0
-        self.allowance = float(allowance) if balance else 0
+        self.allowance = float(allowance) if allowance else 0
         self.owners = owners
         self.additional_balance = 0
 
