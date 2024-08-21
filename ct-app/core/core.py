@@ -291,12 +291,6 @@ class Core(Base):
         excluded = Utils.exclude(eligibles, low_stake_addresses)
         self.debug(f"Excluded nodes with low stake ({len(excluded)} entries).")
 
-        eligibles = [
-            peer
-            for peer in eligibles
-            if await peer.yearly_message_count.get() is not None
-        ]
-
         economic_security = (
             sum([peer.split_stake for peer in eligibles])
             / self.params.economicModel.sigmoid.totalTokenSupply
@@ -322,6 +316,8 @@ class Core(Base):
         )
 
         self.info(f"Eligible nodes ({len(eligibles)} entries).")
+
+        await self.eligible_list.set(eligibles)
 
         ELIGIBLE_PEERS.set(len(eligibles))
 
