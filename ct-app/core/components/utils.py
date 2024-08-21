@@ -46,7 +46,7 @@ class Utils(Base):
             else:
                 await peer.yearly_message_count.set(None)
 
-        cls().info(f"Merged topology, peers, and safes data.")
+        cls().info("Merged topology, peers, and safes data.")
 
     @classmethod
     def allowManyNodePerSafe(cls, peers: list):
