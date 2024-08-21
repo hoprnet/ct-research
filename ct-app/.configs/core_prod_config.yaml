@@ -114,7 +114,7 @@ subgraph:
   userID: 78696
 
   allocations:
-    queryID: QmY8cHMjh4eptG9E7ao3SvHtaojp9Tyi5ZRTqXKLoYUQPP
+    queryID: FhU1GxUovoP1zphNbWFEQHwpabLGELQBdWWyFX1yjBkf
     slug: hopr-allocations
     version: version/latest
   rewards:
