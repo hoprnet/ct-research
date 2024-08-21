@@ -6,14 +6,22 @@ class ChannelStatus(Enum):
     PendingToClose = "PendingToClose"
     Closed = "Closed"
 
-    @classmethod
-    def isPending(cls, value: str):
-        return value == cls.PendingToClose.value
+    @property
+    def isPending(self):
+        return self == self.PendingToClose
+
+    @property
+    def isOpen(self):
+        return self == self.Open
+
+    @property
+    def isClosed(self):
+        return self == self.Closed
 
     @classmethod
-    def isOpen(cls, value: str):
-        return value == cls.Open.value
+    def fromString(cls, value: str):
+        for status in cls:
+            if status.value == value:
+                return status
 
-    @classmethod
-    def isClosed(cls, value: str):
-        return value == cls.Closed.value
+        return None

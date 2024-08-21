@@ -1,23 +1,17 @@
 import asyncio
 
 import pytest
-from core.components.baseclass import Base
+from core.components import Base, LockedVar, Parameters
 from core.components.decorators import connectguard, flagguard, formalin
-from core.components.lockedvar import LockedVar
-from core.components.parameters import Parameters
 
 flag_dictionary = {"flags": {"fooclass": {"fooFlagguardFunc": 1, "fooFormalinFunc": 1}}}
 
 
 class FooClass(Base):
-    @property
-    def print_prefix(self):
-        return "FooClass"
-
     def __init__(self):
         super().__init__()
         self.connected = LockedVar("connected", False)
-        self.started = False
+        self.running = False
         self.counter = 0
         self.params = Parameters()
         self.params.parse(flag_dictionary)
@@ -68,13 +62,16 @@ async def test_flagguard(foo_class: FooClass):
 async def test_formalin(foo_class: FooClass):
     async def setup_test(run_time: float, sleep_time: float, expected_count: int):
         foo_class.params.flags.fooclass.foo_formalin_func = sleep_time
-        foo_class.started = True
-        asyncio.create_task(foo_class.foo_formalin_func())
-        await asyncio.sleep(run_time)
-        foo_class.started = False
-        await asyncio.sleep(0.5)
-        assert foo_class.counter == expected_count
         foo_class.counter = 0
+        foo_class.running = True
+        try:
+            await asyncio.wait_for(
+                asyncio.create_task(foo_class.foo_formalin_func()), timeout=run_time
+            )
+        except asyncio.TimeoutError:
+            pass
+
+        assert foo_class.counter == expected_count
 
     await setup_test(1, 0, 1)
     await setup_test(1.3, 0.5, 2)

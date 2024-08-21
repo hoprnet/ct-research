@@ -1,7 +1,6 @@
 import pytest
-from core.components.parameters import Parameters
-from core.model.budget import Budget
-from core.model.economic_model_sigmoid import Bucket, EconomicModelSigmoid
+from core.components import Parameters
+from core.model.economic_model import Bucket, Budget, EconomicModelSigmoid
 
 
 def test_init_class():
@@ -101,7 +100,7 @@ def test_bucket_apr():
         bucket.apr(0.5)
 
 
-def test_economic_model_message_count_for_reward(budget: Budget):
+def test_yearly_message_count(budget: Budget):
     stake = 75000
     model = EconomicModelSigmoid(
         10.0,
@@ -112,10 +111,10 @@ def test_economic_model_message_count_for_reward(budget: Budget):
     model.budget = budget
 
     assert model.apr([0.5, 0.25]) == 10
-    assert model.message_count_for_reward(stake, [0.5, 0.25]) == round(
+
+    assert model.yearly_message_count(stake, [0.5, 0.25]) == round(
         model.apr([0.5, 0.25])
+        / 100
         * stake
-        / 100.0
-        / (86400 * 365 / model.budget.intervals)
         / (budget.ticket_price * budget.winning_probability)
     )

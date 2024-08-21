@@ -12,12 +12,12 @@ from hoprd_sdk import (
 )
 from hoprd_sdk.api import AccountApi, ChannelsApi, MessagesApi, NetworkApi, NodeApi
 from hoprd_sdk.rest import ApiException
-from requests import Response
 from urllib3.exceptions import MaxRetryError
 
 from .baseclass import Base
+from .channelstatus import ChannelStatus
 
-MESSAGE_TAG = 1800
+MESSAGE_TAG = 0x1245
 
 
 class HoprdAPI(Base):
@@ -34,16 +34,22 @@ class HoprdAPI(Base):
         self.configuration.refresh_api_key_hook = _refresh_token_hook
 
     @property
-    def print_prefix(cls) -> str:
+    def log_prefix(cls) -> str:
         return "api"
 
     async def __call_api(
         self,
         obj: Callable[..., object],
         method: str,
+        call_log: bool = True,
         *args,
         **kwargs,
     ) -> tuple[bool, Optional[object]]:
+        if call_log:
+            self.debug(
+                f"Calling {obj.__name__}.{method} with kwargs: {kwargs}, args: {args}"
+            )
+
         async def __call(
             obj: Callable[..., object],
             method: str,
@@ -229,7 +235,13 @@ class HoprdAPI(Base):
             including_closed="true" if include_closed else "false",
         )
 
-        return response if is_ok else []
+        if not is_ok:
+            return []
+
+        for channel in response.all:
+            channel.status = ChannelStatus.fromString(channel.status)
+
+        return response
 
     async def peers(
         self,
@@ -284,7 +296,7 @@ class HoprdAPI(Base):
         elif isinstance(address, str):
             address = [address]
 
-        is_ok, response = await self.__call_api(AccountApi, "addresses")
+        is_ok, response = await self.__call_api(AccountApi, "addresses", call_log=False)
 
         if not is_ok:
             return None
@@ -311,11 +323,13 @@ class HoprdAPI(Base):
         :return: bool
         """
         body = SendMessageBodyRequest(message, None, hops, destination, tag)
-        is_ok, _ = await self.__call_api(MessagesApi, "send_message", body=body)
+        is_ok, _ = await self.__call_api(
+            MessagesApi, "send_message", call_log=False, body=body
+        )
 
         return is_ok
 
-    async def messages_pop(self, tag: int = None) -> bool:
+    async def messages_pop(self, tag: int = MESSAGE_TAG) -> bool:
         """
         Pop next message from the inbox
         :param: tag = 0x0320
@@ -326,7 +340,7 @@ class HoprdAPI(Base):
 
         return response
 
-    async def messages_pop_all(self, tag: int = None) -> list:
+    async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
         """
         Pop all messages from the inbox
         :param: tag = 0x0320
@@ -370,7 +384,7 @@ class HoprdAPI(Base):
         """
         Checks if the node is started. Return True if `startedz` returns 200 after max `timeout` seconds.
         """
-        return await is_url_returning_200(
+        return await HoprdAPI.isUrlReturning200(
             f"{self.configuration.host}/startedz", timeout
         )
 
@@ -378,33 +392,37 @@ class HoprdAPI(Base):
         """
         Checks if the node is ready. Return True if `readyz` returns 200 after max `timeout` seconds.
         """
-        return await is_url_returning_200(f"{self.configuration.host}/readyz", timeout)
+        return await HoprdAPI.isUrlReturning200(
+            f"{self.configuration.host}/readyz", timeout
+        )
 
     async def healthyz(self, timeout: int = 20):
         """
         Checks if the node is healthy. Return True if `healthyz` returns 200 after max `timeout` seconds.
         """
-        return await is_url_returning_200(
+        return await HoprdAPI.isUrlReturning200(
             f"{self.configuration.host}/healthyz", timeout
         )
 
+    @classmethod
+    async def isUrlReturning200(cls, url: str, timeout: int = 20) -> requests.Response:
+        """
+        Checks if the given URL is returning 200 after max `timeout` seconds.
+        """
 
-async def is_url_returning_200(url: str, timeout: int = 20) -> Response:
-    """
-    Checks if the given URL is returning 200 after max `timeout` seconds.
-    """
+        async def _check_url(url: str):
+            while True:
+                try:
+                    return requests.get(url)
+                except Exception:
+                    await asyncio.sleep(0.25)
 
-    async def _check_url(url: str):
-        while True:
-            try:
-                req = requests.get(url)
-                return req
-            except Exception:
-                await asyncio.sleep(0.25)
+        try:
+            result = await asyncio.wait_for(_check_url(url), timeout=timeout)
+        except TimeoutError:
+            return False
+        except Exception:
+            return False
+        else:
+            return result.status_code == 200
 
-    try:
-        result = await asyncio.wait_for(_check_url(url), timeout=timeout)
-    except Exception:
-        return False
-    else:
-        return result.status_code == 200
