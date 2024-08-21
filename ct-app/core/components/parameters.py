@@ -1,5 +1,5 @@
 from .baseclass import Base
-from .environment_utils import EnvironmentUtils
+from .environment_utils import EnvironmentUtils as Utils
 
 
 class Parameters(Base):
@@ -22,7 +22,7 @@ class Parameters(Base):
                 setattr(self, key, value)
 
     def overrides(self, prefix: str):
-        for key, value in EnvironmentUtils.envvarWithPrefix(prefix).items():
+        for key, value in Utils.envvarWithPrefix(prefix).items():
             path = key.replace(prefix, "").lower().split("_")
 
             parent = self
@@ -44,12 +44,10 @@ class Parameters(Base):
 
     def from_env(self, *prefixes: list[str]):
         for prefix in prefixes:
-            subparams_name = prefix.lower()
-            if subparams_name[-1] == "_":
-                subparams_name = subparams_name[:-1]
-
+            subparams_name: str = prefix.lower().strip("_")
             raw_attrs = dir(self)
             attrs = list(map(lambda str: str.lower(), raw_attrs))
+
             if subparams_name in attrs:
                 subparams = getattr(self, raw_attrs[attrs.index(subparams_name)])
             else:
@@ -60,7 +58,7 @@ class Parameters(Base):
             setattr(self, subparams_name, subparams)
 
     def _parse_env_vars(self, prefix, subparams):
-        for key, value in EnvironmentUtils.envvarWithPrefix(prefix).items():
+        for key, value in Utils.envvarWithPrefix(prefix).items():
             k = self._format_key(key, prefix)
             value = self._convert(value)
             setattr(subparams, k, value)
@@ -86,3 +84,6 @@ class Parameters(Base):
             pass
 
         return value
+
+    def __repr__(self):
+        return str(self.__dict__)
