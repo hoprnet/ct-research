@@ -170,9 +170,6 @@ class Peer(Base):
             await self.message_count.inc(1)
             await asyncio.sleep(delay)
         else:
-            self.debug(
-                f"No messages for {self.address.id[-5:]}, sleeping for 60 seconds."
-            )
             await asyncio.sleep(60)
 
     @flagguard
