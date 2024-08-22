@@ -26,21 +26,20 @@ class Utils(Base):
         cls, topology: list, peers: list, nodes: list, allocations: list
     ):
         for peer in peers:
-            address = peer.address.address
-            topo = next(filter(lambda t: t.node_address == address, topology), None)
-            node = next(filter(lambda s: s.node_address == address, nodes), None)
+            address = peer.node_address
+            topo = next(filter(lambda t: t.address == address, topology), None)
+            node = next(filter(lambda n: n.address == address, nodes), None)
 
-            safe = getattr(node, "safe", SafeEntry.default())
+            peer.safe = getattr(node, "safe", SafeEntry.default())
 
             for allocation in allocations:
-                if safe.address in allocation.linked_safes:
-                    safe.additional_balance += (
+                if peer.safe.address in allocation.linked_safes:
+                    peer.safe.additional_balance += (
                         allocation.allocatedAmount / allocation.num_linked_safes
                     )
 
-            if topo is not None and safe != SafeEntry.default() and peer is not None:
+            if topo is not None:
                 peer.channel_balance = topo.channels_balance
-                peer.safe = safe
             else:
                 await peer.yearly_message_count.set(None)
 
@@ -56,7 +55,7 @@ class Utils(Base):
                 except ValueError:
                     continue
 
-                allocations[index].linked_safes.append(n.safe.address)
+                allocations[index].linked_safes.add(n.safe.address)
 
     @classmethod
     def allowManyNodePerSafe(cls, peers: list):
@@ -66,15 +65,15 @@ class Utils(Base):
         :param peer: list of peers
         :returns: nothing.
         """
-        safe_counts = {peer.safe_address: 0 for peer in peers}
+        safe_counts = {peer.safe.address: 0 for peer in peers}
 
         # Calculate the number of safe_addresses related to a node address
         for peer in peers:
-            safe_counts[peer.safe_address] += 1
+            safe_counts[peer.safe.address] += 1
 
         # Update the input_dict with the calculated splitted_stake
         for peer in peers:
-            peer.safe_address_count = safe_counts[peer.safe_address]
+            peer.safe_address_count = safe_counts[peer.safe.address]
 
     @classmethod
     def exclude(cls, source_data: list, blacklist: list, text: str = "") -> list:

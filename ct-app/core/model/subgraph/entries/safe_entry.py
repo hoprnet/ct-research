@@ -44,3 +44,6 @@ class SafeEntry(SubgraphEntry):
         Create a new SafeEntry with default values.
         """
         return cls("", "0", "0", [])
+
+    def __str__(self):
+        return f"SafeEntry({self.address}, {self.balance}, {self.additional_balance}, {self.allowance}, {self.owners})"

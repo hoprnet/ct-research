@@ -12,7 +12,6 @@ exclude_also =
     if __name__ == .__main__.:
     
     def log_prefix
-
     
 omit = 
     test/*

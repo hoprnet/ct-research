@@ -7,17 +7,15 @@ class NodeEntry(SubgraphEntry):
     A NodeEntry represents a single entry in the subgraph.
     """
 
-    def __init__(self, node_address: str, safe: SafeEntry):
+    def __init__(self, address: str, safe: SafeEntry):
         """
-        Create a new NodeEntry with the specified node_address, wxHoprBalance, safe_address and safe_allowance.
-        :param node_address: The address of the node.
+        Create a new NodeEntry.
+        :param address: The address of the node.
         :param wxHoprBalance: The wxHoprBalance of the node.
-        :param safe_address: The address of the safe.
-        :param safe_allowance: The wxHoprAllowance of the safe.
-        :param owners: The owners' addresses.
+        :param safe: A SafeEntry object.
         """
 
-        self.node_address = node_address
+        self.address = address
         self.safe = safe
 
     @classmethod
