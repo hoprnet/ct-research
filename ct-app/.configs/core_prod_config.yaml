@@ -51,7 +51,6 @@ economicModel:
 
   legacy:
     proportion: 1.0
-
     apr: 12.5
 
     coefficients:
