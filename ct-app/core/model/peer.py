@@ -206,7 +206,7 @@ class Peer(Base):
             self.last_db_storage = now
 
     def __repr__(self):
-        return f"Peer(address: {self.address})"
+        return f"Peer(address: {self.address}, safe: {self.safe})"
 
     def __eq__(self, other):
         return self.address == other.address

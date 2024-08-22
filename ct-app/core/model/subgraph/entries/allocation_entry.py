@@ -7,7 +7,7 @@ class AllocationEntry(SubgraphEntry):
         self.address = id
         self.claimedAmount = float(claimedAmount) / 1e18
         self.allocatedAmount = float(allocatedAmount) / 1e18
-        self.linked_safes: list[SafeEntry] = []
+        self.linked_safes: set[SafeEntry] = set()
 
     @property
     def num_linked_safes(self):

@@ -271,6 +271,8 @@ class Core(Base):
             self.warning("Not enough data to apply economic model.")
             return
 
+        Utils.associateAllocationsAndSafes(allocations, nodes)
+
         await Utils.mergeDataSources(topology, peers, nodes, allocations)
 
         for p in peers:

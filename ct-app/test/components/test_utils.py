@@ -117,7 +117,7 @@ async def test_mergeDataSources():
     await Utils.mergeDataSources(topology_list, peers_list, nodes_list, allocation_list)
 
     assert len(peers_list) == 3
-    assert len([p for p in peers_list if p.safe is not None]) == 2
+    assert len([p for p in peers_list if p.safe is not None]) == 3
     assert (
         peers_list[0].safe.additional_balance == allocation_list[0].allocatedAmount / 2
     )
@@ -142,8 +142,8 @@ def test_associateAllocationsAndSafes():
 
     Utils.associateAllocationsAndSafes(allocations, nodes)
 
-    assert allocations[0].linked_safes == ["safe_address_1", "safe_address_2"]
-    assert allocations[1].linked_safes == ["safe_address_2"]
+    assert allocations[0].linked_safes == {"safe_address_1", "safe_address_2"}
+    assert allocations[1].linked_safes == {"safe_address_2"}
 
 
 def test_allowManyNodePerSafe():
@@ -152,10 +152,10 @@ def test_allowManyNodePerSafe():
     peer_3 = Peer("id_3", "address_3", "v1.0.2")
     peer_4 = Peer("id_4", "address_4", "v1.0.0")
 
-    peer_1.safe_address = "safe_address_1"
-    peer_2.safe_address = "safe_address_2"
-    peer_3.safe_address = "safe_address_3"
-    peer_4.safe_address = "safe_address_2"
+    peer_1.safe = SafeEntry("safe_address_1", "10", "1", [])
+    peer_2.safe = SafeEntry("safe_address_2", "10", "1", [])
+    peer_3.safe = SafeEntry("safe_address_3", "10", "1", [])
+    peer_4.safe = SafeEntry("safe_address_2", "10", "1", [])
 
     source_data = [peer_1, peer_2, peer_3, peer_4]
 
