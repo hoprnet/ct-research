@@ -4,15 +4,15 @@ from test.decorators_patches import patches
 
 import pytest
 import yaml
-from core.components.parameters import Parameters
-from core.model.budget import Budget
-from core.model.economic_model_legacy import (
+from core.components import ChannelStatus, Parameters
+from core.model import Peer
+from core.model.economic_model import (
+    Budget,
     Coefficients,
     EconomicModelLegacy,
     Equation,
     Equations,
 )
-from core.model.peer import Peer
 from hoprd_sdk.models import ChannelInfoResponse, NodeChannelsResponse
 from pytest_mock import MockerFixture
 
@@ -74,7 +74,7 @@ class SideEffect:
 
 @pytest.fixture
 def budget() -> Budget:
-    budget = Budget(1800)
+    budget = Budget()
     budget.ticket_price = 0.0001
     budget.winning_probability = 1
     return budget
@@ -171,11 +171,7 @@ async def nodes(
         mocker.patch.object(node.api, "healthyz", return_value=True)
         mocker.patch.object(node.api, "startedz", return_value=True)
         mocker.patch.object(node.api, "ticket_price", return_value=0.0001)
-
-        setattr(node.params, "distribution", Parameters())
-        setattr(node.params.distribution, "delay_between_two_messages", 0.001)
-
-        await node._retrieve_address()
+        await node.retrieve_address()
 
     return nodes
 
@@ -200,7 +196,7 @@ def channels(peers: list[Peer]) -> NodeChannelsResponse:
                     dest.address.id,
                     src.address.address,
                     src.address.id,
-                    "Open",
+                    ChannelStatus.Open,
                     0,
                 )
             )
@@ -212,7 +208,6 @@ def channels(peers: list[Peer]) -> NodeChannelsResponse:
 
 @pytest.fixture
 async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
-    core = Core()
 
     params = Parameters()
     with open("./test/test_config.yaml", "r") as file:
@@ -226,12 +221,9 @@ async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
     setattr(params.pg, "port", "port")
     setattr(params.pg, "database", "database")
 
-    core.post_init(nodes, params)
-    core.budget.ticket_price = 0.1
+    core = Core(nodes, params)
     core.legacy_model.budget.ticket_price = 0.1
     core.sigmoid_model.budget.ticket_price = 0.1
-
-    await core._retrieve_address()
 
     return core
 
@@ -265,7 +257,7 @@ async def node(
     node.params = params
 
     await node.healthcheck()
-    await node._retrieve_address()
+    await node.retrieve_address()
 
     return node
 

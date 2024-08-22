@@ -1,6 +1,6 @@
 import pytest
-from core.model.budget import Budget
-from core.model.economic_model_legacy import (
+from core.model.economic_model import (
+    Budget,
     Coefficients,
     EconomicModelLegacy,
     Equation,
@@ -34,17 +34,17 @@ def test_transformed_stake(model: EconomicModelLegacy):
 
 
 def test_message_count_for_reward(model: EconomicModelLegacy):
-    assert model.message_count_for_reward(0) == 0, "No reward for 0 stake"
+    assert model.yearly_message_count(0) == 0, "No reward for 0 stake"
+
     assert round(
-        model.coefficients.l / model.message_count_for_reward(model.coefficients.l), 2
+        model.yearly_message_count(model.coefficients.l) / model.coefficients.l, 2
     ) == round(
-        model.coefficients.c / model.message_count_for_reward(model.coefficients.c), 2
+        model.yearly_message_count(model.coefficients.c) / model.coefficients.c, 2
     ), "Linear result in [l, c] range"
+
     assert round(
-        model.coefficients.c / model.message_count_for_reward(model.coefficients.c), 2
+        model.yearly_message_count(model.coefficients.c) / model.coefficients.c, 2
     ) < round(
-        2
-        * model.coefficients.c
-        / model.message_count_for_reward(2 * model.coefficients.c),
+        2 * model.yearly_message_count(2 * model.coefficients.c) / model.coefficients.c,
         2,
     ), "Non linear above [l, c] range"

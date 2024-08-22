@@ -5,17 +5,16 @@
 flags:
   core: 
     healthcheck: 10
-    checkSubgraphURLs: 30
-    getFundings: 30
-    getTicketPrice: 30
-    aggregatePeers: 30
-    getTopologyData: 30
-    getSubgraphData: 30
-    getRegisteredNodes: 30
-    getNFTHolders: 30
-    getPeersRewards: 30
+    rotateSubgraphs: 30
+    peersRewards: 30
+    ticketParameters: 30
+
+    connectedPeers: 30
+    registeredNodes: 30
+    topology: 30
+    NFTHolders: 30
+    
     applyEconomicModel: 30
-    distributeRewards: ~
     
   node:
     healthcheck: 10
@@ -23,20 +22,29 @@ flags:
     retrieveIncomingChannels: 30
     retrieveOutgoingChannels: 30
     retrieveBalances: 30
-    openChannels: ~
-    closeOldChannels: ~
-    closePendingChannels: ~
-    fundChannels: ~
-    closeIncomingChannels: ~
-    getTotalChannelFunds: ~
+
+    openChannels: Off
+    fundChannels: Off
+    closeOldChannels: Off
+    closePendingChannels: Off
+    closeIncomingChannels: Off
+
+    getTotalChannelFunds: Off
     
+    watchMessageQueue: On
+    relayedMessagesToDB: 120
+
+  peer:
+    messageRelayRequest: Off
+    sentMessagesToDB: Off
+
 # =============================================================================
 # 
 # =============================================================================
 economicModel:
   minSafeAllowance: -1
   NFTThreshold: ~
-  intervals: 120 # in seconds
+  winningProbability: 1
 
   legacy:
     proportion: 0.9
@@ -58,25 +66,23 @@ economicModel:
 
   sigmoid:
     proportion: 0.1
-    maxAPR: 15.0
-    networkCapacity: 50
-    totalTokenSupply: 1000000000
+    maxAPR: 15
+    networkCapacity: 2000
+    totalTokenSupply: 450000000
 
-    offset: 10
+    offset: -0.9
     buckets:
       economicSecurity:
-        flatness: 1.65
-        skewness: 1.50
-        upperbound: 0.5
-        offset: 0
-      networkCapacity:
-        flatness: 10.0
-        skewness: 2.75
-        upperbound: 1.0
-        offset: 0
+        flatness: 1.8
+        skewness: 1.52
+        upperbound: 0.4
+        offset: 3.14
 
-  budget:
-    winningProbability: 1
+      networkCapacity:
+        flatness: 2.97
+        skewness: 0.72
+        upperbound: 1.0
+        offset: 4.08
 
 # =============================================================================
 # 
@@ -84,9 +90,15 @@ economicModel:
 distribution:
   minEligiblePeers: 500
   messageDeliveryDelay: 0.2
-  delayBetweenTwoMessages: 0.01
   maxIterations: 4
 
+# =============================================================================
+# 
+# =============================================================================
+storage:
+  value: 5 # wxHOPR
+  timeout: 43200 # seconds
+  
 # =============================================================================
 # 
 # =============================================================================

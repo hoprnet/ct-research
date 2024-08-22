@@ -1,0 +1,21 @@
+[report]
+exclude_also =
+    def __repr__
+    def __str__
+    if self\.debug
+    self.debug
+    self.info
+    self.warning
+    self.error
+
+    if 0:
+    if __name__ == .__main__.:
+    
+    def log_prefix
+
+    
+omit = 
+    test/*
+    hoprd_api.py
+    graphql_providers.py
+    message_queue.py

@@ -4,30 +4,39 @@
 # =============================================================================
 flags:
   core: 
-    healthcheck: 30
-    checkSubgraphURLs: 120
-    getTicketPrice: 120
-    aggregatePeers: 120
-    getTopologyData: 120
-    getSubgraphData: 120
-    getRegisteredNodes: 120
-    getNFTHolders: 120
-    getPeersRewards: 120
-    applyEconomicModel: 60
-    distributeRewards: 1
+    healthcheck: 10
+    rotateSubgraphs: 120
+    peersRewards: 120
+    ticketParameters: 120
+
+    connectedPeers: 120
+    registeredNodes: 120
+    topology: 120
+    NFTHolders: 120
+    
+    applyEconomicModel: 120
     
   node:
-    healthcheck: 30
+    healthcheck: 10
     retrievePeers: 120
     retrieveIncomingChannels: 120
     retrieveOutgoingChannels: 120
     retrieveBalances: 120
-    openChannels: 300
-    closeOldChannels: ~
-    closePendingChannels: ~
-    fundChannels: 300
-    closeIncomingChannels: ~
+
+    openChannels: 120
+    fundChannels: 120
+    closeOldChannels: Off
+    closePendingChannels: Off
+    closeIncomingChannels: Off
+
     getTotalChannelFunds: 300
+    
+    watchMessageQueue: On  # should only be On / Off
+    relayedMessagesToDB: 120
+
+  peer:
+    messageRelayRequest: On # should only be On / Off
+    sentMessagesToDB: 30
     
 # =============================================================================
 # 
@@ -35,13 +44,12 @@ flags:
 economicModel:
   minSafeAllowance: -1
   NFTThreshold: ~
-  intervals: 1800 # in seconds
   winningProbability: 1
 
   legacy:
     proportion: 1.0
     apr: 0.0000001
-
+    
     coefficients:
       a: 1
       b: 2
@@ -79,11 +87,9 @@ economicModel:
 # =============================================================================
 # 
 # =============================================================================
-distribution:
-  minEligiblePeers: 5
-  messageDeliveryDelay: 5.0
-  delayBetweenTwoMessages: 0.0001
-  maxIterations: 2
+storage:
+  count: 1000
+  timeout: 43200 # seconds
 
 # =============================================================================
 # 
