@@ -16,6 +16,8 @@ flags:
     NFTHolders: 300
     
     applyEconomicModel: 120
+
+    safeFundings: 600
     
   node:
     healthcheck: 60
@@ -32,11 +34,11 @@ flags:
 
     getTotalChannelFunds: 900
     
-    watchMessageQueue: On
+    watchMessageQueue: On # should only be On / Off
     relayedMessagesToDB: 120
 
   peer:
-    messageRelayRequest: On
+    messageRelayRequest: On # should only be On / Off
     sentMessagesToDB: 120
 
 # =============================================================================
@@ -110,6 +112,13 @@ channel:
 # =============================================================================
 # 
 # =============================================================================
+fundings:
+  sender: '0xd9a00176cf49dfb9ca3ef61805a2850f45cb1d05'
+  constant: 626500
+  
+# =============================================================================
+# 
+# =============================================================================
 subgraph:
   type: auto # auto | default | backup
   userID: 78696
@@ -117,6 +126,10 @@ subgraph:
   allocations:
     queryID: FhU1GxUovoP1zphNbWFEQHwpabLGELQBdWWyFX1yjBkf
     slug: hopr-allocations
+    version: version/latest
+  fundings:
+    queryID: EpAdSFzDLT7N5RhA3UxtqGUwkFxmMunSE2yGLb8juQjC
+    slug: subgraph-wxhopr-txs
     version: version/latest
   rewards:
     queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk

@@ -1,0 +1,5 @@
+transactions(first: $first, skip: $skip, where: { from: $from, to: $to }) { 
+    from 
+    to 
+    amount
+}

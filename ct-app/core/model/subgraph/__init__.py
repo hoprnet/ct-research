@@ -1,6 +1,7 @@
 from .entries import AllocationEntry, NodeEntry, SafeEntry, TopologyEntry
 from .graphql_providers import (
     AllocationsProvider,
+    FundingsProvider,
     ProviderError,
     RewardsProvider,
     SafesProvider,
@@ -13,6 +14,7 @@ __all__ = [
     "SubgraphType",
     "SubgraphURL",
     "AllocationsProvider",
+    "FundingsProvider",
     "ProviderError",
     "RewardsProvider",
     "SafesProvider",

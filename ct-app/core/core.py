@@ -11,6 +11,7 @@ from .model.economic_model import EconomicModelLegacy, EconomicModelSigmoid
 from .model.subgraph import (
     AllocationEntry,
     AllocationsProvider,
+    FundingsProvider,
     NodeEntry,
     ProviderError,
     RewardsProvider,
@@ -95,6 +96,7 @@ class Core(Base):
         self.staking_sg_url = SubgraphURL(self.params.subgraph, "staking")[value]
         self.rewards_sg_url = SubgraphURL(self.params.subgraph, "rewards")[value]
         self.allocation_sg_url = SubgraphURL(self.params.subgraph, "allocations")[value]
+        self.fundings_sg_url = SubgraphURL(self.params.subgraph, "fundings")[value]
 
         SUBGRAPH_IN_USE.set(value.toInt())
         self._subgraph_type = value
@@ -371,6 +373,33 @@ class Core(Base):
         self.sigmoid_model.budget.ticket_price = price
         self.sigmoid_model.budget.winning_probability = win_probabilty
 
+    @flagguard
+    @formalin("Getting safe fundings")
+    async def safe_fundings(self):
+        """
+        Gets the total amount that was sent to CT safes.
+        """
+        if self.subgraph_type == SubgraphType.NONE:
+            self.warning("No subgraph URL available.")
+            return
+
+        addresses = set(
+            [(await node.api.node_info()).hopr_node_safe for node in self.nodes]
+        )
+        from_address = self.params.fundings.sender
+        provider = FundingsProvider(self.fundings_sg_url)
+
+        entries = []
+        for to in addresses:
+            try:
+                entries.extend(await provider.get(**{"from": from_address, "to": to}))
+            except ProviderError as err:
+                self.error(f"get_peers_rewards: {err}")
+        amount = sum([float(item["amount"]) for item in entries])
+
+        TOTAL_FUNDING.set(amount + self.params.fundings.constant)
+        self.debug(f"ct safe fundings: {amount} + {self.params.fundings.constant}")
+
     async def start(self):
         """
         Start the node.
@@ -398,6 +427,7 @@ class Core(Base):
                 self.nft_holders,
                 self.allocations,
                 self.apply_economic_model,
+                self.safe_fundings,
             ]
         )
 

@@ -15,6 +15,7 @@ flags:
     NFTHolders: 30
     
     applyEconomicModel: 30
+    fundings: 30
     
   node:
     healthcheck: 10
@@ -123,6 +124,10 @@ subgraph:
   allocations:
     queryID: ~
     slug: allocations_backup_url
+    version: version/latest
+  fundings:
+    queryID: ~
+    slug: subgraph-wxhopr-txs
     version: version/latest
   rewards:
     queryID: ~

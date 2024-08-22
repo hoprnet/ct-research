@@ -17,15 +17,18 @@ class GraphQLProvider(Base):
         self._default_key = None
 
     #### PRIVATE METHODS ####
-    def _load_query(self, path: Union[str, Path]) -> str:
+    def _load_query(self, path: Union[str, Path], **kwargs) -> str:
         """
         Loads a graphql query from a file.
         :param path: Path to the file. The path must be relative to the ct-app folder.
         :return: The query as a string.
         """
+        kwargs.update({"first": "Int", "skip": "Int"})
+        param_string = ", ".join([f"${key}: {val}!" for key, val in kwargs.items()])
 
-        header = "query ($first: Int!, $skip: Int!) {"
+        header = f"query ({param_string})" + " {"
         footer = "}"
+
         with open(self.pwd.joinpath(path)) as f:
             body = f.read()
 
@@ -188,3 +191,11 @@ class AllocationsProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
         self._default_key, self._sku_query = self._load_query("allocations.graphql")
+
+
+class FundingsProvider(GraphQLProvider):
+    def __init__(self, url: str):
+        super().__init__(url)
+        self._default_key, self._sku_query = self._load_query(
+            "fundings.graphql", **{"from": "String", "to": "String"}
+        )
