@@ -27,7 +27,7 @@ class FooClass(Base):
         return True
 
     @flagguard
-    @formalin("Foo formalin")
+    @formalin
     async def foo_formalin_func(self):
         self.counter += 1
         await asyncio.sleep(0.1)

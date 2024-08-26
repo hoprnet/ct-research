@@ -31,9 +31,11 @@ class Bucket:
                 + self.offset
             )
         except ValueError as e:
-            raise e
+            raise ValueError(f"Math domain error: {x=}, {vars(self)}") from e
         except ZeroDivisionError as e:
-            raise ValueError("Zero division error in APR calculation") from e
+            raise ValueError("Zero division error") from e
+        except OverflowError as e:
+            raise ValueError("Overflow error") from e
 
         return max(apr, 0)
 
@@ -61,7 +63,10 @@ class EconomicModelSigmoid(Base):
         self.proportion = proportion
         self.budget: Budget = Budget()
 
-    def apr(self, xs: list[float], max_apr: float = None):
+    def apr(
+        self,
+        xs: list[float],
+    ):
         """
         Calculate the APR for the economic model.
         """
@@ -77,8 +82,8 @@ class EconomicModelSigmoid(Base):
             self.error(f"Value error in APR calculation: {e}")
             apr = 0
 
-        if max_apr is not None:
-            apr = min(apr, max_apr)
+        if self.max_apr is not None:
+            apr = min(apr, self.max_apr)
 
         return apr
 
@@ -86,7 +91,7 @@ class EconomicModelSigmoid(Base):
         """
         Calculate the yearly message count a peer should receive based on the stake.
         """
-        apr = self.apr(xs, self.max_apr)
+        apr = self.apr(xs)
 
         rewards = apr * stake / 100.0
         under = self.budget.ticket_price * self.budget.winning_probability

@@ -5,7 +5,7 @@ import random
 from prometheus_client import Gauge
 
 from .components import AsyncLoop, Base, HoprdAPI, LockedVar, Parameters, Utils
-from .components.decorators import connectguard, flagguard, formalin
+from .components.decorators import flagguard, formalin
 from .components.graphql_providers import (
     ProviderError,
     RewardsProvider,
@@ -96,17 +96,7 @@ class Core(Base):
         self._subgraph_type = value
 
     @flagguard
-    @formalin(None)
-    async def healthcheck(self) -> dict:
-        """
-        Checks the health of the node. Sets the connected status (LockedVar) and the Prometheus metric accordingly.
-        """
-        health = await self.api.healthyz()
-
-        await self.connected.set(health)
-
-    @flagguard
-    @formalin("Checking subgraph URLs")
+    @formalin
     async def rotate_subgraphs(self):
         """
         Checks the subgraph URLs and sets the subgraph type in use (default, backup or none)
@@ -121,7 +111,7 @@ class Core(Base):
         SUBGRAPH_CALLS.labels(type.value).inc()
 
     @flagguard
-    @formalin("Aggregating peers")
+    @formalin
     async def connected_peers(self):
         """
         Aggregates the peers from all nodes and sets the all_peers LockedVar.
@@ -149,7 +139,7 @@ class Core(Base):
         UNIQUE_PEERS.set(len(known_peers))
 
     @flagguard
-    @formalin("Getting registered nodes")
+    @formalin
     async def registered_nodes(self):
         """
         Gets the subgraph data and sets the subgraph_list LockedVar.
@@ -177,7 +167,7 @@ class Core(Base):
         self.debug(f"Fetched registered nodes ({len(results)} entries).")
 
     @flagguard
-    @formalin("Getting NFT holders")
+    @formalin
     async def nft_holders(self):
         if self.subgraph_type == SubgraphType.NONE:
             self.warning("No subgraph URL available.")
@@ -200,8 +190,7 @@ class Core(Base):
         self.debug(f"Fetched NFT holders ({len(results)} entries).")
 
     @flagguard
-    @formalin("Getting topology data")
-    @connectguard
+    @formalin
     async def topology(self):
         """
         Gets a dictionary containing all unique source_peerId-source_address links
@@ -222,7 +211,7 @@ class Core(Base):
         self.debug(f"Fetched topology links ({len(topology_list)} entries).")
 
     @flagguard
-    @formalin("Applying economic model")
+    @formalin
     async def apply_economic_model(self):
         """
         Applies the economic model to the eligible peers (after multiple filtering layers).
@@ -297,7 +286,7 @@ class Core(Base):
         await self.all_peers.set(set(peers))
 
     @flagguard
-    @formalin("Getting peers rewards amounts")
+    @formalin
     async def peers_rewards(self):
         if self.subgraph_type == SubgraphType.NONE:
             self.warning("No subgraph URL available.")
@@ -318,8 +307,7 @@ class Core(Base):
         self.debug(f"Fetched peers rewards amounts ({len(results)} entries).")
 
     @flagguard
-    @formalin("Getting ticket parameters")
-    @connectguard
+    @formalin
     async def ticket_parameters(self):
         """
         Gets the ticket price and winning probability from the api. They are used in the economic model to calculate the number of messages to send to a peer.
@@ -353,13 +341,13 @@ class Core(Base):
 
         for node in self.nodes:
             node.running = True
+            await node._healthcheck()
             AsyncLoop.update(await node.tasks())
 
         self.running = True
 
         AsyncLoop.update(
             [
-                self.healthcheck,
                 self.rotate_subgraphs,
                 self.peers_rewards,
                 self.ticket_parameters,

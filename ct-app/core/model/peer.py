@@ -162,7 +162,7 @@ class Peer(Base):
         return True
 
     @flagguard
-    @formalin(None)
+    @formalin
     async def message_relay_request(self):
         if delay := await self.message_delay:
             message = MessageFormat(self.address.id, datetime.now())
@@ -173,7 +173,7 @@ class Peer(Base):
             await asyncio.sleep(60)
 
     @flagguard
-    @formalin(None)
+    @formalin
     async def sent_messages_to_db(self):
         """
         Stores the distribution data in the database, if available.
