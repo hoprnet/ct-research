@@ -1,7 +1,7 @@
 import asyncio
 from typing import Callable, Optional, Union
 
-import requests
+import aiohttp
 from hoprd_sdk import (
     ApiClient,
     Configuration,
@@ -380,32 +380,16 @@ class HoprdAPI(Base):
 
         return 0 if len(channel) == 0 else int(channel[0].balance) / 1e18
 
-    async def startedz(self, timeout: int = 20):
-        """
-        Checks if the node is started. Return True if `startedz` returns 200 after max `timeout` seconds.
-        """
-        return await HoprdAPI.isUrlReturning200(
-            f"{self.configuration.host}/startedz", timeout
-        )
-
-    async def readyz(self, timeout: int = 20):
-        """
-        Checks if the node is ready. Return True if `readyz` returns 200 after max `timeout` seconds.
-        """
-        return await HoprdAPI.isUrlReturning200(
-            f"{self.configuration.host}/readyz", timeout
-        )
-
     async def healthyz(self, timeout: int = 20):
         """
         Checks if the node is healthy. Return True if `healthyz` returns 200 after max `timeout` seconds.
         """
-        return await HoprdAPI.isUrlReturning200(
-            f"{self.configuration.host}/healthyz", timeout
+        return await HoprdAPI.checkStatus(
+            f"{self.configuration.host}/healthyz", 200, timeout
         )
 
     @classmethod
-    async def isUrlReturning200(cls, url: str, timeout: int = 20) -> requests.Response:
+    async def checkStatus(cls, url: str, target: int, timeout: int = 20) -> int:
         """
         Checks if the given URL is returning 200 after max `timeout` seconds.
         """
@@ -413,16 +397,16 @@ class HoprdAPI(Base):
         async def _check_url(url: str):
             while True:
                 try:
-                    return requests.get(url)
+                    async with aiohttp.ClientSession() as s, s.get(url) as response:
+                        return response.status
                 except Exception:
                     await asyncio.sleep(0.25)
 
         try:
-            result = await asyncio.wait_for(_check_url(url), timeout=timeout)
+            status = await asyncio.wait_for(_check_url(url), timeout=timeout)
         except TimeoutError:
             return False
         except Exception:
             return False
         else:
-            return result.status_code == 200
-
+            return status == target

@@ -5,6 +5,9 @@ from test.decorators_patches import patches
 import pytest
 import yaml
 from core.components import ChannelStatus, Parameters
+
+# needs to be imported after the patches are applied
+from core.core import Core
 from core.model import Peer
 from core.model.economic_model import (
     Budget,
@@ -13,15 +16,9 @@ from core.model.economic_model import (
     Equation,
     Equations,
 )
+from core.node import Node
 from hoprd_sdk.models import ChannelInfoResponse, NodeChannelsResponse
 from pytest_mock import MockerFixture
-
-for p in patches:
-    p.start()
-
-# needs to be imported after the patches are applied
-from core.core import Core  # noqa: E402
-from core.node import Node  # noqa: E402
 
 
 class SideEffect:
@@ -169,7 +166,6 @@ async def nodes(
         )
 
         mocker.patch.object(node.api, "healthyz", return_value=True)
-        mocker.patch.object(node.api, "startedz", return_value=True)
         mocker.patch.object(node.api, "ticket_price", return_value=0.0001)
         await node.retrieve_address()
 
@@ -247,7 +243,6 @@ async def node(
     )
     mocker.patch.object(node.api, "send_message", return_value=1)
     mocker.patch.object(node.api, "healthyz", return_value=True)
-    mocker.patch.object(node.api, "startedz", return_value=True)
 
     params = Parameters()
     with open("./test/test_config.yaml", "r") as file:

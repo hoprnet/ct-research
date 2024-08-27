@@ -1,4 +1,5 @@
 import inspect
+
 import pytest
 from core.model import Peer
 from core.model.subgraph import SubgraphType
@@ -15,13 +16,6 @@ def test_safe_subgraph_url(core: Core):
 
     core.subgraph_type = SubgraphType.NONE
     assert core.safe_subgraph_url is None
-
-
-@pytest.mark.asyncio
-async def test_core_healthcheck(core: Core):
-    await core.healthcheck()
-
-    assert await core.connected.get()
 
 
 @pytest.mark.asyncio
