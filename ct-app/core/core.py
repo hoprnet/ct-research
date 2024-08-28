@@ -131,21 +131,21 @@ class Core(Base):
                 peer.running = True
 
             # get the peers that disappeared, and reset their parameters
-            lost_peers: set[Peer] = current_peers.difference(visible_peers)
-            for peer in lost_peers:
+            unreachable_peers: set[Peer] = current_peers.difference(visible_peers)
+            for peer in unreachable_peers:
                 await peer.yearly_message_count.set(None)
                 peer.running = False
 
             # get the peers that are again visible, and ensure they parameters are se
-            old_peers: set[Peer] = current_peers.intersection(new_peers)
+            old_peers: set[Peer] = current_peers.intersection(visible_peers)
             for peer in old_peers:
                 await peer.yearly_message_count.replace_value(None, 0)
                 peer.running = True
 
-            self.all_peers.value = new_peers | old_peers | lost_peers
+            self.all_peers.value = new_peers | old_peers | unreachable_peers
 
             self.debug(
-                f"Aggregated peers ({len(self.all_peers.value)} entries) ({len(new_peers)} new, {len(old_peers)} known, {len(lost_peers)} lost)."
+                f"Aggregated peers ({len(self.all_peers.value)} entries) ({len(new_peers)} new, {len(old_peers)} known, {len(unreachable_peers)} unreachable)."
             )
             UNIQUE_PEERS.set(len(self.all_peers.value))
 
