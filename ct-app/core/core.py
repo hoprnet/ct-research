@@ -127,19 +127,19 @@ class Core(Base):
             new_peers: set[Peer] = visible_peers.difference(current_peers)
             for peer in new_peers:
                 peer.params = self.params
-                self.running = True
+                peer.running = True
 
             # get the peers that disappeared, and reset their parameters
             lost_peers: set[Peer] = current_peers.difference(visible_peers)
             for peer in lost_peers:
                 await peer.yearly_message_count.set(None)
-                self.running = False
+                peer.running = False
 
             # get the peers that are again visible, and ensure they parameters are se
             old_peers: set[Peer] = current_peers.intersection(new_peers)
             for peer in old_peers:
                 await peer.yearly_message_count.replace_value(None, 0)
-                self.running = True
+                peer.running = True
 
             self.all_peers.value = new_peers | old_peers | lost_peers
 
