@@ -126,7 +126,6 @@ class Core(Base):
             # get the peers that are new, and set their parameters
             new_peers: set[Peer] = visible_peers.difference(current_peers)
             for peer in new_peers:
-                peer.params = self.params
                 await peer.yearly_message_count.set(0)
                 peer.running = True
 
@@ -143,6 +142,9 @@ class Core(Base):
                 peer.running = True
 
             self.all_peers.value = new_peers | old_peers | unreachable_peers
+
+            for peer in self.all_peers.value:
+                peer.params = self.params
 
             self.debug(
                 f"Aggregated peers ({len(self.all_peers.value)} entries) ({len(new_peers)} new, {len(old_peers)} known, {len(unreachable_peers)} unreachable)."
