@@ -127,6 +127,7 @@ class Core(Base):
             new_peers: set[Peer] = visible_peers.difference(current_peers)
             for peer in new_peers:
                 peer.params = self.params
+                await peer.yearly_message_count.set(0)
                 peer.running = True
 
             # get the peers that disappeared, and reset their parameters

@@ -56,10 +56,11 @@ class Peer(Base):
 
     @running.setter
     def running(self, value: bool):
-        self._running = value
-        if value is True:
+        if value is True and self._running is False:
             AsyncLoop.add(self.message_relay_request)
             AsyncLoop.add(self.sent_messages_to_db)
+
+        self._running = value
 
     def is_old(self, min_version: Union[str, Version]):
         """
