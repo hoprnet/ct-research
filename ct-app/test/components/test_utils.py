@@ -119,11 +119,11 @@ async def test_mergeDataSources():
     assert len(peers_list) == 3
     assert len([p for p in peers_list if p.safe is not None]) == 3
     assert (
-        peers_list[0].safe.additional_balance == allocation_list[0].allocatedAmount / 2
+        peers_list[0].safe.additional_balance == allocation_list[0].allocated_amount / 2
     )
     assert (
         peers_list[1].safe.additional_balance
-        == allocation_list[0].allocatedAmount / 2 + allocation_list[1].allocatedAmount
+        == allocation_list[0].allocated_amount / 2 + allocation_list[1].allocated_amount
     )
 
 

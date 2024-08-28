@@ -19,13 +19,6 @@ def test_safe_subgraph_url(core: Core):
 
 
 @pytest.mark.asyncio
-async def test_core_healthcheck(core: Core):
-    await core.healthcheck()
-
-    assert await core.connected.get()
-
-
-@pytest.mark.asyncio
 async def test_check_subgraph_urls(core: Core):
     pytest.skip(f"{inspect.stack()[0][3]} not implemented")
 

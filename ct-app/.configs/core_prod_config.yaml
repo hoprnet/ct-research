@@ -4,7 +4,6 @@
 # =============================================================================
 flags:
   core: 
-    healthcheck: 60
     rotateSubgraphs: 300
     peersRewards: 300
     ticketParameters: 120

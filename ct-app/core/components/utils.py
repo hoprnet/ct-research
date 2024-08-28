@@ -35,7 +35,7 @@ class Utils(Base):
             for allocation in allocations:
                 if peer.safe.address in allocation.linked_safes:
                     peer.safe.additional_balance += (
-                        allocation.allocatedAmount / allocation.num_linked_safes
+                        allocation.unclaimed_amount / allocation.num_linked_safes
                     )
 
             if topo is not None:

@@ -79,9 +79,7 @@ class Node(Base):
 
         return address
 
-    @flagguard
-    @formalin(None)
-    async def healthcheck(self):
+    async def _healthcheck(self):
         """
         Perform a healthcheck on the node.
         """
@@ -96,7 +94,12 @@ class Node(Base):
             self.warning("No address found")
 
     @flagguard
-    @formalin("Retrieving balances")
+    @formalin
+    async def healthcheck(self):
+        await self._healthcheck()
+
+    @flagguard
+    @formalin
     @connectguard
     async def retrieve_balances(self):
         """
@@ -116,7 +119,7 @@ class Node(Base):
         return balances
 
     @flagguard
-    @formalin("Opening channels")
+    @formalin
     @connectguard
     async def open_channels(self):
         """
@@ -150,7 +153,7 @@ class Node(Base):
                 self.warning(f"Failed to open channel to {address}")
 
     @flagguard
-    @formalin("Closing incoming channels")
+    @formalin
     @connectguard
     async def close_incoming_channels(self):
         """
@@ -171,7 +174,7 @@ class Node(Base):
                 self.warning(f"Failed to close channel {channel.channel_id}")
 
     @flagguard
-    @formalin("Closing pending channels")
+    @formalin
     @connectguard
     async def close_pending_channels(self):
         """
@@ -194,7 +197,7 @@ class Node(Base):
                 self.warning(f"Failed to close pending channel {channel.channel_id}")
 
     @flagguard
-    @formalin("Closing old channels")
+    @formalin
     @connectguard
     async def close_old_channels(self):
         """
@@ -241,7 +244,7 @@ class Node(Base):
                 self.warning(f"Failed to close channel {channel_id}")
 
     @flagguard
-    @formalin("Funding channels")
+    @formalin
     @connectguard
     async def fund_channels(self):
         """
@@ -275,7 +278,7 @@ class Node(Base):
                     self.warning(f"Failed to fund channel {channel.channel_id}")
 
     @flagguard
-    @formalin("Retrieving peers")
+    @formalin
     @connectguard
     async def retrieve_peers(self):
         """
@@ -303,7 +306,7 @@ class Node(Base):
             PEERS_COUNT.labels(addr.id).set(len(peers))
 
     @flagguard
-    @formalin("Retrieving outgoing channels")
+    @formalin
     @connectguard
     async def retrieve_outgoing_channels(self):
         """
@@ -328,7 +331,7 @@ class Node(Base):
             CHANNELS.labels(addr.id, "outgoing").set(len(outgoings))
 
     @flagguard
-    @formalin("Retrieving incoming channels")
+    @formalin
     @connectguard
     async def retrieve_incoming_channels(self):
         """
@@ -353,7 +356,7 @@ class Node(Base):
             CHANNELS.labels(addr.id, "incoming").set(len(incomings))
 
     @flagguard
-    @formalin("Retrieving total funds")
+    @formalin
     @connectguard
     async def get_total_channel_funds(self):
         """
@@ -379,7 +382,7 @@ class Node(Base):
         return funds
 
     @flagguard
-    @formalin("Checking inbox for messages, and maybe storing to db")
+    @formalin
     @connectguard
     async def relayed_messages_to_db(self):
         """
@@ -427,7 +430,7 @@ class Node(Base):
             for entry in entries:
                 self.message_distributed[entry.relayer] -= entry.count
 
-    @formalin(None)
+    @formalin
     async def watch_message_queue(self):
         message: MessageFormat = await MessageQueue().buffer.get()
         sender = (await self.address.get()).id
