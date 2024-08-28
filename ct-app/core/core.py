@@ -117,39 +117,40 @@ class Core(Base):
         Aggregates the peers from all nodes and sets the all_peers LockedVar.
         """
 
+        counts = {"new": 0, "known": 0, "unreachable": 0}
+
         async with self.all_peers.lock:
             visible_peers: set[Peer] = set()
             visible_peers.update(*[await node.peers.get() for node in self.nodes])
             current_peers: set[Peer] = self.all_peers.value
 
-            # get the peers that are new, and set their parameters
-            new_peers: set[Peer] = visible_peers - current_peers
-            for peer in new_peers:
-                await peer.yearly_message_count.set(0)
-                peer.running = True
-
-            # get the peers that disappeared, and reset their parameters
-            unreachable_peers: set[Peer] = current_peers - visible_peers
-            for peer in unreachable_peers:
-                await peer.yearly_message_count.set(None)
-                peer.running = False
-
-            # get the peers that are again visible, and ensure they parameters are se
-            old_peers: set[Peer] = current_peers.intersection(visible_peers)
-            for peer in old_peers:
-                await peer.yearly_message_count.replace_value(None, 0)
-                if peer.running is False:
+            for peer in current_peers:
+                # if peer is still visible
+                if peer in visible_peers:
+                    await peer.yearly_message_count.replace_value(None, 0)
                     peer.running = True
+                    counts["known"] += 1
 
-            self.all_peers.value = new_peers | old_peers | unreachable_peers
+                # if peer is not visible anymore
+                else:
+                    await peer.yearly_message_count.set(None)
+                    peer.running = False
+                    counts["unreachable"] += 1
 
-            for peer in self.all_peers.value:
-                peer.params = self.params
+            for peer in visible_peers:
+                if peer not in current_peers:
+                    peer.params = self.params
+                    await peer.yearly_message_count.set(0)
+                    peer.running = True
+                    current_peers.add(peer)
+                    counts["new"] += 1
+
+            self.all_peers.value = current_peers
 
             self.debug(
-                f"Aggregated peers ({len(self.all_peers.value)} entries) ({len(new_peers)} new, {len(old_peers)} known, {len(unreachable_peers)} unreachable)."
+                f"Aggregated peers ({len(self.all_peers.value)} entries) ({', '.join([f'{value} {key}' for key, value in counts.items() ] )})."
             )
-            UNIQUE_PEERS.set(len(self.all_peers.value))
+            UNIQUE_PEERS.set(len(current_peers))
 
     @flagguard
     @formalin

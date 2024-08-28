@@ -37,7 +37,10 @@ async def test_connected_peers(core: Core, peers: list[Peer]):
     all_peers = await core.all_peers.get()
 
     assert len(all_peers) == len(peers) - 1
-    assert sum([peer.running for peer in all_peers]) == 4
+    assert (
+        sum([(await peer.yearly_message_count.get()) is not None for peer in all_peers])
+        == 4
+    )
 
     # drop manually all but #0 and #1
     for node in core.nodes:
@@ -47,8 +50,10 @@ async def test_connected_peers(core: Core, peers: list[Peer]):
     all_peers = await core.all_peers.get()
 
     assert len(all_peers) == len(peers) - 1
-    assert sum([peer.running for peer in all_peers]) == 2
-
+    assert (
+        sum([(await peer.yearly_message_count.get()) is not None for peer in all_peers])
+        == 2
+    )
     # last peer appear
     await core.nodes[0].peers.update(set([peers_list[3]]))
 
@@ -56,7 +61,10 @@ async def test_connected_peers(core: Core, peers: list[Peer]):
     all_peers = await core.all_peers.get()
 
     assert len(all_peers) == len(peers)
-    assert sum([peer.running for peer in all_peers]) == 3
+    assert (
+        sum([(await peer.yearly_message_count.get()) is not None for peer in all_peers])
+        == 3
+    )
 
     # peer reappear
     await core.nodes[0].peers.update(set([peers_list[-1]]))
@@ -65,7 +73,10 @@ async def test_connected_peers(core: Core, peers: list[Peer]):
     all_peers = await core.all_peers.get()
 
     assert len(all_peers) == len(peers)
-    assert sum([peer.running for peer in all_peers]) == 4
+    assert (
+        sum([(await peer.yearly_message_count.get()) is not None for peer in all_peers])
+        == 4
+    )
 
     # all disappear
     for node in core.nodes:
@@ -75,7 +86,10 @@ async def test_connected_peers(core: Core, peers: list[Peer]):
     all_peers = await core.all_peers.get()
 
     assert len(all_peers) == len(peers)
-    assert sum([peer.running for peer in all_peers]) == 0
+    assert (
+        sum([(await peer.yearly_message_count.get()) is not None for peer in all_peers])
+        == 0
+    )
 
 
 @pytest.mark.asyncio
