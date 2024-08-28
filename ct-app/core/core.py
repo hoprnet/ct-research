@@ -100,17 +100,7 @@ class Core(Base):
         self._subgraph_type = value
 
     @flagguard
-    @formalin(None)
-    async def healthcheck(self) -> dict:
-        """
-        Checks the health of the node. Sets the connected status (LockedVar) and the Prometheus metric accordingly.
-        """
-        health = await self.api.healthyz()
-
-        await self.connected.set(health)
-
-    @flagguard
-    @formalin("Checking subgraph URLs")
+    @formalin
     async def rotate_subgraphs(self):
         """
         Checks the subgraph URLs and sets the subgraph type in use (default, backup or none)
@@ -132,35 +122,37 @@ class Core(Base):
         SUBGRAPH_CALLS.labels(self.subgraph_type.value).inc()
 
     @flagguard
-    @formalin("Aggregating peers")
+    @formalin
     async def connected_peers(self):
         """
         Aggregates the peers from all nodes and sets the all_peers LockedVar.
         """
-        visible_peers = set[Peer]()
 
-        known_peers: set[Peer] = await self.all_peers.get()
+        async with self.all_peers.lock:
+            visible_peers = set[Peer]()
 
-        for node in self.nodes:
-            visible_peers.update(await node.peers.get())
+            known_peers: set[Peer] = self.all_peers.value
 
-        # set yearly message count to None (-> not eligible for rewards) for peers that are not visible anymore
-        for peer in known_peers - visible_peers:
-            await peer.yearly_message_count.set(None)
+            for node in self.nodes:
+                visible_peers.update(await node.peers.get())
 
-        # add new peers to the set
-        for peer in visible_peers - known_peers:
-            peer.params = self.params
-            peer.running = True
-            known_peers.add(peer)
+            # set yearly message count to None (-> not eligible for rewards) for peers that are not visible anymore
+            for peer in known_peers - visible_peers:
+                await peer.yearly_message_count.set(None)
 
-        await self.all_peers.set(known_peers)
+            # add new peers to the set
+            for peer in visible_peers - known_peers:
+                peer.params = self.params
+                peer.running = True
+                known_peers.add(peer)
 
-        self.debug(f"Aggregated peers ({len(known_peers)} entries).")
-        UNIQUE_PEERS.set(len(known_peers))
+            self.all_peers.value = known_peers
+
+            self.debug(f"Aggregated peers ({len(known_peers)} entries).")
+            UNIQUE_PEERS.set(len(known_peers))
 
     @flagguard
-    @formalin("Getting registered nodes")
+    @formalin
     async def registered_nodes(self):
         """
         Gets the subgraph data and sets the subgraph_list LockedVar.
@@ -188,7 +180,7 @@ class Core(Base):
         self.debug(f"Fetched registered nodes ({len(results)} entries).")
 
     @flagguard
-    @formalin("Getting NFT holders")
+    @formalin
     async def nft_holders(self):
         if self.subgraph_type == SubgraphType.NONE:
             self.warning("No subgraph URL available.")
@@ -230,7 +222,7 @@ class Core(Base):
         self.debug(f"Fetched allocations ({len(results)} entries).")
 
     @flagguard
-    @formalin("Getting topology data")
+    @formalin
     @connectguard
     async def topology(self):
         """
@@ -252,7 +244,7 @@ class Core(Base):
         self.debug(f"Fetched topology links ({len(topology_list)} entries).")
 
     @flagguard
-    @formalin("Applying economic model")
+    @formalin
     async def apply_economic_model(self):
         """
         Applies the economic model to the eligible peers (after multiple filtering layers).
@@ -260,75 +252,90 @@ class Core(Base):
         nodes = await self.registered_nodes_list.get()
         nft_holders = await self.nft_holders_list.get()
         topology = await self.topology_list.get()
-        peers: set[Peer] = await self.all_peers.get()
         ct_nodes = await self.ct_nodes_addresses
         redeemed_rewards = await self.peer_rewards.get()
         allocations: list[AllocationEntry] = await self.allocations_data.get()
+  
+        async with self.all_peers.lock:
+            peers = self.all_peers.value
+  
+            Utils.associateAllocationsAndSafes(allocations, nodes)
 
-        if not all([len(topology), len(nodes), len(peers)]):
-            self.warning("Not enough data to apply economic model.")
-            return
+            if not all([len(topology), len(nodes), len(peers)]):
+                self.warning("Not enough data to apply economic model.")
+                return
 
-        Utils.associateAllocationsAndSafes(allocations, nodes)
+            await Utils.mergeDataSources(topology, peers, nodes, allocations)
 
-        await Utils.mergeDataSources(topology, peers, nodes, allocations)
+            for p in peers:
+                if p.is_old(self.params.peer.minVersion):
+                    await p.yearly_message_count.set(None)
 
-        for p in peers:
-            if p.is_old(self.params.peer.minVersion):
-                await p.yearly_message_count.set(None)
+            Utils.allowManyNodePerSafe(peers)
 
-        Utils.allowManyNodePerSafe(peers)
+            for p in peers:
+                if not p.is_eligible(
+                    self.params.economicModel.minSafeAllowance,
+                    self.legacy_model.coefficients.l,
+                    ct_nodes,
+                    nft_holders,
+                    self.params.economicModel.NFTThreshold,
+                ):
+                    await p.yearly_message_count.set(None)
 
-        for p in peers:
-            if not p.is_eligible(
-                self.params.economicModel.minSafeAllowance,
-                self.legacy_model.coefficients.l,
-                ct_nodes,
-                nft_holders,
-                self.params.economicModel.NFTThreshold,
-            ):
-                await p.yearly_message_count.set(None)
-
-        economic_security = (
-            sum(
-                [
-                    p.split_stake
-                    for p in peers
-                    if (await p.yearly_message_count.get()) is not None
-                ]
+            economic_security = (
+                sum(
+                    [
+                        p.split_stake
+                        for p in peers
+                        if (await p.yearly_message_count.get()) is not None
+                    ]
+                )
+                / self.params.economicModel.sigmoid.totalTokenSupply
             )
-            / self.params.economicModel.sigmoid.totalTokenSupply
-        )
-        network_capacity = (
-            len([p for p in peers if (await p.yearly_message_count.get()) is not None])
-            / self.params.economicModel.sigmoid.networkCapacity
-        )
-        sigmoid_model_input = [economic_security, network_capacity]
-
-        for peer in peers:
-            if await peer.yearly_message_count.get() is None:
-                continue
-
-            legacy_message_count = self.legacy_model.yearly_message_count(
-                peer.split_stake, redeemed_rewards.get(peer.address.address, 0.0)
+            network_capacity = (
+                len(
+                    [
+                        p
+                        for p in peers
+                        if (await p.yearly_message_count.get()) is not None
+                    ]
+                )
+                / self.params.economicModel.sigmoid.networkCapacity
             )
-            sigmoid_message_count = self.sigmoid_model.yearly_message_count(
-                peer.split_stake, sigmoid_model_input
-            )
+            sigmoid_model_input = [economic_security, network_capacity]
 
-            await peer.yearly_message_count.set(
-                legacy_message_count + sigmoid_message_count
-            )
-            MESSAGE_COUNT.labels(peer.address.id, "legacy").set(legacy_message_count)
-            MESSAGE_COUNT.labels(peer.address.id, "sigmoid").set(sigmoid_message_count)
+            for peer in peers:
+                if await peer.yearly_message_count.get() is None:
+                    continue
 
-        eligibles = [p for p in peers if await p.yearly_message_count.get() is not None]
-        self.info(f"Eligible nodes: {len(eligibles)} entries.")
-        ELIGIBLE_PEERS.set(len(eligibles))
-        await self.all_peers.set(set(peers))
+                legacy_message_count = self.legacy_model.yearly_message_count(
+                    peer.split_stake, redeemed_rewards.get(peer.address.address, 0.0)
+                )
+                sigmoid_message_count = self.sigmoid_model.yearly_message_count(
+                    peer.split_stake, sigmoid_model_input
+                )
+
+                await peer.yearly_message_count.set(
+                    legacy_message_count + sigmoid_message_count
+                )
+                MESSAGE_COUNT.labels(peer.address.id, "legacy").set(
+                    legacy_message_count
+                )
+                MESSAGE_COUNT.labels(peer.address.id, "sigmoid").set(
+                    sigmoid_message_count
+                )
+
+            eligibles = [
+                p for p in peers if await p.yearly_message_count.get() is not None
+            ]
+            self.info(f"Eligible nodes: {len(eligibles)} entries.")
+            ELIGIBLE_PEERS.set(len(eligibles))
+
+            self.all_peers.value = set(peers)
 
     @flagguard
-    @formalin("Getting peers rewards amounts")
+    @formalin
     async def peers_rewards(self):
         if self.subgraph_type == SubgraphType.NONE:
             self.warning("No subgraph URL available.")
@@ -349,8 +356,7 @@ class Core(Base):
         self.debug(f"Fetched peers rewards amounts ({len(results)} entries).")
 
     @flagguard
-    @formalin("Getting ticket parameters")
-    @connectguard
+    @formalin
     async def ticket_parameters(self):
         """
         Gets the ticket price and winning probability from the api. They are used in the economic model to calculate the number of messages to send to a peer.
@@ -384,13 +390,13 @@ class Core(Base):
 
         for node in self.nodes:
             node.running = True
+            await node._healthcheck()
             AsyncLoop.update(await node.tasks())
 
         self.running = True
 
         AsyncLoop.update(
             [
-                self.healthcheck,
                 self.rotate_subgraphs,
                 self.peers_rewards,
                 self.ticket_parameters,
