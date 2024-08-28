@@ -203,7 +203,7 @@ class Core(Base):
         self.debug(f"Fetched NFT holders ({len(results)} entries).")
 
     @flagguard
-    @formalin("Getting allocations from subgraph")
+    @formalin
     async def allocations(self):
         if self.subgraph_type == SubgraphType.NONE:
             self.warning("No subgraph URL available.")
@@ -255,10 +255,10 @@ class Core(Base):
         ct_nodes = await self.ct_nodes_addresses
         redeemed_rewards = await self.peer_rewards.get()
         allocations: list[AllocationEntry] = await self.allocations_data.get()
-  
+
         async with self.all_peers.lock:
             peers = self.all_peers.value
-  
+
             Utils.associateAllocationsAndSafes(allocations, nodes)
 
             if not all([len(topology), len(nodes), len(peers)]):
