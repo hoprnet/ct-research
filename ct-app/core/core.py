@@ -120,17 +120,16 @@ class Core(Base):
         async with self.all_peers.lock:
             visible_peers: set[Peer] = set()
             visible_peers.update(*[await node.peers.get() for node in self.nodes])
-
             current_peers: set[Peer] = self.all_peers.value
 
             # get the peers that are new, and set their parameters
-            new_peers: set[Peer] = visible_peers.difference(current_peers)
+            new_peers: set[Peer] = visible_peers - current_peers
             for peer in new_peers:
                 await peer.yearly_message_count.set(0)
                 peer.running = True
 
             # get the peers that disappeared, and reset their parameters
-            unreachable_peers: set[Peer] = current_peers.difference(visible_peers)
+            unreachable_peers: set[Peer] = current_peers - visible_peers
             for peer in unreachable_peers:
                 await peer.yearly_message_count.set(None)
                 peer.running = False
@@ -139,7 +138,8 @@ class Core(Base):
             old_peers: set[Peer] = current_peers.intersection(visible_peers)
             for peer in old_peers:
                 await peer.yearly_message_count.replace_value(None, 0)
-                peer.running = True
+                if peer.running is False:
+                    peer.running = True
 
             self.all_peers.value = new_peers | old_peers | unreachable_peers
 

@@ -58,10 +58,11 @@ class Peer(Base):
 
     @running.setter
     def running(self, value: bool):
-        if value is True and self._running is False:
+        if value and len(self.tasks) == 0:
             self.tasks.add(AsyncLoop.add(self.message_relay_request))
             self.tasks.add(AsyncLoop.add(self.sent_messages_to_db))
-        elif value is False:
+
+        if value is False:
             for task in self.tasks:
                 task.add_done_callback(self.tasks.discard)
                 task.cancel()
