@@ -33,9 +33,11 @@ class AsyncLoop(Base, metaclass=Singleton):
             cls().add(task)
 
     @classmethod
-    def add(cls, callback: Callable):
+    def add(cls, callback: Callable) -> asyncio.Task:
         task = asyncio.ensure_future(callback())
         cls().tasks.add(task)
+
+        return task
 
     @classmethod
     async def gather(cls):

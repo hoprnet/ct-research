@@ -48,6 +48,7 @@ class Peer(Base):
         self.message_count = LockedVar("message_count", 0)
 
         self.params = None
+        self.tasks = set[asyncio.Task]()
         self.running = False
 
     @property
@@ -57,8 +58,14 @@ class Peer(Base):
     @running.setter
     def running(self, value: bool):
         if value is True and self._running is False:
-            AsyncLoop.add(self.message_relay_request)
-            AsyncLoop.add(self.sent_messages_to_db)
+            self.tasks.update(
+                AsyncLoop.add(self.message_relay_request),
+                AsyncLoop.add(self.sent_messages_to_db),
+            )
+        elif value is False:
+            for task in self.tasks:
+                task.add_done_callback(self.tasks.discard)
+                task.cancel()
 
         self._running = value
 
