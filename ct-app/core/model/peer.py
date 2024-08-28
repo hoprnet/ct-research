@@ -1,4 +1,5 @@
 import asyncio
+import random
 from datetime import datetime
 from typing import Union
 
@@ -176,7 +177,11 @@ class Peer(Base):
             await self.message_count.inc(1)
             await asyncio.sleep(delay)
         else:
-            await asyncio.sleep(60)
+            await asyncio.sleep(
+                random.normalvariate(
+                    self.params.initialSleep.mean, self.params.initialSleep.std
+                )
+            )
 
     @flagguard
     @formalin
