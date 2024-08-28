@@ -88,6 +88,22 @@ class LockedVar(Base):
         async with self.lock:
             self.value.update(value)
 
+    async def replace_value(self, old: Any, new: Any):
+        """
+        Asynchronously replace the old value with the new value in a locked manner. If the type of the value is different from the type of the variable, a TypeError will be raised.
+
+        :param old: The old value to replace.
+        :param new: The new value to replace with.
+        """
+        if self.type and not isinstance(new, self.type):
+            self.warning(
+                f"Trying to change value of type {type(new)} to {self.type}, ignoring"
+            )
+
+        async with self.lock:
+            if self.value == old:
+                self.value = new
+
     @property
     def log_prefix(self):
         return f"lockedvar({self.name})"

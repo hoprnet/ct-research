@@ -118,27 +118,35 @@ class Core(Base):
         """
 
         async with self.all_peers.lock:
-            visible_peers = set[Peer]()
+            visible_peers: set[Peer] = set()
+            visible_peers.update(*[await node.peers.get() for node in self.nodes])
 
-            known_peers: set[Peer] = self.all_peers.value
+            current_peers: set[Peer] = self.all_peers.value
 
-            for node in self.nodes:
-                visible_peers.update(await node.peers.get())
-
-            # set yearly message count to None (-> not eligible for rewards) for peers that are not visible anymore
-            for peer in known_peers - visible_peers:
-                await peer.yearly_message_count.set(None)
-
-            # add new peers to the set
-            for peer in visible_peers - known_peers:
+            # get the peers that are new, and set their parameters
+            new_peers: set[Peer] = visible_peers.difference(current_peers)
+            for peer in new_peers:
                 peer.params = self.params
-                peer.running = True
-                known_peers.add(peer)
+                self.running = True
 
-            self.all_peers.value = known_peers
+            # get the peers that disappeared, and reset their parameters
+            lost_peers: set[Peer] = current_peers.difference(visible_peers)
+            for peer in lost_peers:
+                await peer.yearly_message_count.set(None)
+                self.running = False
 
-            self.debug(f"Aggregated peers ({len(known_peers)} entries).")
-            UNIQUE_PEERS.set(len(known_peers))
+            # get the peers that are again visible, and ensure they parameters are se
+            old_peers: set[Peer] = current_peers.intersection(new_peers)
+            for peer in old_peers:
+                await peer.yearly_message_count.replace_value(None, 0)
+                self.running = True
+
+            self.all_peers.value = new_peers | old_peers | lost_peers
+
+            self.debug(
+                f"Aggregated peers ({len(self.all_peers.value)} entries) ({len(new_peers)} new, {len(old_peers)} known, {len(lost_peers)} lost)."
+            )
+            UNIQUE_PEERS.set(len(self.all_peers.value))
 
     @flagguard
     @formalin

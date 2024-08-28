@@ -55,3 +55,19 @@ async def test_locked_var_update_with_infer_type():
 
     with pytest.raises(TypeError):
         await locked_var.update(10)
+
+
+@pytest.mark.asyncio
+async def test_locked_var_replace_succeeds():
+    locked_var = LockedVar("test_var", None, infer_type=False)
+    await locked_var.replace_value(None, 0)
+
+    assert (await locked_var.get()) == 0
+
+
+@pytest.mark.asyncio
+async def test_locked_var_replace_fails():
+    locked_var = LockedVar("test_var", None, infer_type=False)
+    await locked_var.replace_value(0, 1)
+
+    assert (await locked_var.get()) is None
