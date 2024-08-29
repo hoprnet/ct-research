@@ -9,7 +9,7 @@ flags:
     ticketParameters: 120
 
     connectedPeers: 120
-    registeredNodes: 12'
+    registeredNodes: 120
     topology: 120
     NFTHolders: 120
     
