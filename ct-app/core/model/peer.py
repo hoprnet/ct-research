@@ -49,25 +49,7 @@ class Peer(Base):
         self.message_count = LockedVar("message_count", 0)
 
         self.params = None
-        self.tasks = set[asyncio.Task]()
         self.running = False
-
-    @property
-    def running(self) -> bool:
-        return self._running
-
-    @running.setter
-    def running(self, value: bool):
-        if value and len(self.tasks) == 0:
-            self.tasks.add(AsyncLoop.add(self.message_relay_request))
-            self.tasks.add(AsyncLoop.add(self.sent_messages_to_db))
-
-        if value is False:
-            for task in self.tasks:
-                task.add_done_callback(self.tasks.discard)
-                task.cancel()
-
-        self._running = value
 
     def is_old(self, min_version: Union[str, Version]):
         """
@@ -180,7 +162,8 @@ class Peer(Base):
         else:
             await asyncio.sleep(
                 random.normalvariate(
-                    self.params.initialSleep.mean, self.params.initialSleep.std
+                    self.params.peer.initialSleep.mean,
+                    self.params.peer.initialSleep.std,
                 )
             )
 
@@ -217,6 +200,15 @@ class Peer(Base):
         else:
             await self.message_count.sub(count)
             self.last_db_storage = now
+
+    def start_async_processes(self):
+        if self.running is False:
+            self.running = True
+            AsyncLoop.add(self.message_relay_request)
+            AsyncLoop.add(self.sent_messages_to_db)
+
+    def stop_async_processes(self):
+        self.running = False
 
     def __repr__(self):
         return f"Peer(address: {self.address})"

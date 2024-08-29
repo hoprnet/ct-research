@@ -137,11 +137,12 @@ class Core(Base):
                     peer.running = False
                     counts["unreachable"] += 1
 
+            # if peer is new
             for peer in visible_peers:
                 if peer not in current_peers:
                     peer.params = self.params
                     await peer.yearly_message_count.set(0)
-                    peer.running = True
+                    peer.start_async_processes()
                     current_peers.add(peer)
                     counts["new"] += 1
 
