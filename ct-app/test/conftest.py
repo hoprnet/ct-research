@@ -106,7 +106,7 @@ def peers_raw() -> list[dict]:
 
 
 @pytest.fixture
-def peers(peers_raw: list[dict]) -> list[Peer]:
+def peers(peers_raw: list[dict]) -> set[Peer]:
     peers = [
         Peer(peer["peer_id"], peer["peer_address"], peer["reported_version"])
         for peer in peers_raw
@@ -115,7 +115,7 @@ def peers(peers_raw: list[dict]) -> list[Peer]:
         peer.safe_balance = randint(100, 200)
         peer.channel_balance = randint(10, 50)
 
-    return peers
+    return set(peers)
 
 
 @pytest.fixture
@@ -132,7 +132,7 @@ def addresses() -> list[dict]:
 @pytest.fixture
 async def nodes(
     mocker: MockerFixture,
-    peers: list[Peer],
+    peers: set[Peer],
     addresses: list[dict],
     peers_raw: list[dict],
     channels: NodeChannelsResponse,
@@ -145,9 +145,6 @@ async def nodes(
         Node("localhost:9004", "random_key"),
     ]
     for idx, node in enumerate(nodes):
-        mocker.patch.object(
-            node.peers, "get", return_value=peers[:idx] + peers[idx + 1 :]
-        )
         mocker.patch.object(node.api, "get_address", return_value=addresses[idx])
         mocker.patch.object(node.api, "all_channels", return_value=channels)
         mocker.patch.object(
@@ -173,7 +170,7 @@ async def nodes(
 
 
 @pytest.fixture
-def channels(peers: list[Peer]) -> NodeChannelsResponse:
+def channels(peers: set[Peer]) -> NodeChannelsResponse:
     channels = list[ChannelInfoResponse]()
     index = 0
 
