@@ -8,16 +8,16 @@ flags:
     peersRewards: 120
     ticketParameters: 120
 
-    connectedPeers: 30
-    registeredNodes: 30
+    connectedPeers: 120
+    registeredNodes: 12'
     topology: 120
     NFTHolders: 120
     
-    applyEconomicModel: 30
+    applyEconomicModel: 120
     
   node:
     healthcheck: 10
-    retrievePeers: 30
+    retrievePeers: 120
     retrieveIncomingChannels: 120
     retrieveOutgoingChannels: 120
     retrieveBalances: 120
