@@ -20,7 +20,7 @@ from .node import Node
 # endregion
 
 # region Metrics
-UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers")
+UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers", ["type"])
 SUBGRAPH_IN_USE = Gauge("ct_subgraph_in_use", "Subgraph in use")
 SUBGRAPH_CALLS = Gauge("ct_subgraph_calls", "# of subgraph calls", ["type"])
 SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
@@ -151,7 +151,8 @@ class Core(Base):
             self.debug(
                 f"Aggregated peers ({len(self.all_peers.value)} entries) ({', '.join([f'{value} {key}' for key, value in counts.items() ] )})."
             )
-            UNIQUE_PEERS.set(len(current_peers))
+            for key, value in counts.items():
+                UNIQUE_PEERS.labels(key).set(value)
 
     @flagguard
     @formalin

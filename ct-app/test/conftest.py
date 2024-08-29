@@ -145,11 +145,6 @@ async def nodes(
         Node("localhost:9004", "random_key"),
     ]
     for idx, node in enumerate(nodes):
-        # mocker.patch.object(
-        #     node.peers,
-        #     "get",
-        #     return_value=set(list(peers)[:idx] + list(peers)[idx + 1 :]),
-        # )
         mocker.patch.object(node.api, "get_address", return_value=addresses[idx])
         mocker.patch.object(node.api, "all_channels", return_value=channels)
         mocker.patch.object(

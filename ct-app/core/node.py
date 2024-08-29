@@ -419,8 +419,6 @@ class Node(Base):
                 )
             )
 
-        self.info(f"Storing relayed messages entries for {len(entries)} peers")
-
         try:
             DatabaseConnection.session().add_all(entries)
             DatabaseConnection.session().commit()

@@ -183,9 +183,6 @@ class Peer(Base):
         ):
             return
 
-        self.info(
-            f"Storing sent messages in the database for {self.address.id} (count: {count})"
-        )
         entry = SentMessages(
             relayer=self.address.id,
             count=count,
