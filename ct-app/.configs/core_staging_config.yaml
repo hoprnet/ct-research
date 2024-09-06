@@ -129,4 +129,8 @@ subgraph:
     queryID: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
     slug: hopr-stake-all-seasons
     version: version/latest
+  allBalances:
+    queryID: 2wMRp1AW1ghxoFiM6WeRD93djHNvNGhXsuQyadmwCyqE
+    slug: hopr-on-gnosis
+    version: version/latest
 ...
