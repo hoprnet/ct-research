@@ -114,7 +114,9 @@ async def test_mergeDataSources():
     allocation_list[0].linked_safes = ["safe_address_1", "safe_address_2"]
     allocation_list[1].linked_safes = ["safe_address_2"]
 
-    await Utils.mergeDataSources(topology_list, peers_list, nodes_list, allocation_list)
+    await Utils.mergeDataSources(
+        topology_list, peers_list, nodes_list, allocation_list, {}
+    )
 
     assert len(peers_list) == 3
     assert len([p for p in peers_list if p.safe is not None]) == 3

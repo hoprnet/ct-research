@@ -119,20 +119,25 @@ subgraph:
   type: auto # auto | default | backup
   userID: 1000
 
-  allocations:
+  mainnetAllocations:
     queryID: ~
-    slug: allocations_backup_url
-    version: version/latest
+    slug: hopr-allocations
+  gnosisAllocations:
+    queryID: ~
+    slug: hopr-allocations-gnosis
+  hoprOnMainet:
+    queryID: ~
+    slug: hopr-on-mainnet
+  hoprOnGnosis:
+    queryID: ~
+    slug: hopr-on-gnosis
   rewards:
     queryID: ~
     slug: rewards_backup_url
-    version: version/latest
   safesBalance:
     queryID: query-id-safes
     slug: safes_backup_url
-    version: version/latest
   staking:
     queryID: query-id-staking
     slug: staking_backup_url
-    version: version/latest
 ...

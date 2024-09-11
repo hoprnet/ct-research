@@ -2,6 +2,7 @@ from .entries import AllocationEntry, BalanceEntry, NodeEntry, SafeEntry, Topolo
 from .graphql_providers import (
     AllocationsProvider,
     EOABalanceProvider,
+    GraphQLProvider,
     ProviderError,
     RewardsProvider,
     SafesProvider,
@@ -25,4 +26,5 @@ __all__ = [
     "NodeEntry",
     "SafeEntry",
     "TopologyEntry",
+    "GraphQLProvider",
 ]

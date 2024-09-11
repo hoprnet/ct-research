@@ -13,12 +13,12 @@ from .model.subgraph import (
     AllocationsProvider,
     BalanceEntry,
     EOABalanceProvider,
+    GraphQLProvider,
     NodeEntry,
     ProviderError,
     RewardsProvider,
     SafesProvider,
     StakingProvider,
-    SubgraphType,
     SubgraphURL,
     TopologyEntry,
 )
@@ -28,8 +28,6 @@ from .node import Node
 
 # region Metrics
 UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers")
-SUBGRAPH_IN_USE = Gauge("ct_subgraph_in_use", "Subgraph in use")
-SUBGRAPH_CALLS = Gauge("ct_subgraph_calls", "# of subgraph calls", ["type"])
 SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
 TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
 NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
@@ -73,7 +71,23 @@ class Core(Base):
         self.eoa_balances_data = LockedVar("eoa_balances_data", list[BalanceEntry]())
         self.peer_rewards = LockedVar("peer_rewards", dict[str, float]())
 
-        # self.subgraph_type = SubgraphType.DEFAULT
+        self.subgraph_providers: dict[str, GraphQLProvider] = {
+            "safes": SafesProvider(SubgraphURL(self.params.subgraph, "safesBalance")),
+            "staking": StakingProvider(SubgraphURL(self.params.subgraph, "staking")),
+            "rewards": RewardsProvider(SubgraphURL(self.params.subgraph, "rewards")),
+            "mainnet_allocations": AllocationsProvider(
+                SubgraphURL(self.params.subgraph, "mainnetAllocations")
+            ),
+            "gnosis_allocations": AllocationsProvider(
+                SubgraphURL(self.params.subgraph, "gnosisAllocations")
+            ),
+            "mainnet_balances": EOABalanceProvider(
+                SubgraphURL(self.params.subgraph, "hoprOnMainet")
+            ),
+            "gnosis_balances": EOABalanceProvider(
+                SubgraphURL(self.params.subgraph, "hoprOnGnosis")
+            ),
+        }
 
         self.running = False
 
@@ -85,53 +99,14 @@ class Core(Base):
     async def ct_nodes_addresses(self) -> list[Address]:
         return await asyncio.gather(*[node.address.get() for node in self.nodes])
 
-    @property
-    def subgraph_type(self) -> SubgraphType:
-        return self._subgraph_type
-
-    @subgraph_type.setter
-    def subgraph_type(self, value: SubgraphType):
-
-        self.safe_sg_url = SubgraphURL(self.params.subgraph, "safesBalance")[value]
-        self.staking_sg_url = SubgraphURL(self.params.subgraph, "staking")[value]
-        self.rewards_sg_url = SubgraphURL(self.params.subgraph, "rewards")[value]
-        self.mainnet_allocation_sg_url = SubgraphURL(
-            self.params.subgraph, "mainnetAllocations"
-        )[value]
-        self.gnosis_allocation_sg_url = SubgraphURL(
-            self.params.subgraph, "gnosisAllocations"
-        )[value]
-        self.mainnet_balances_sg_url = SubgraphURL(
-            self.params.subgraph, "hoprOnMainet"
-        )[value]
-        self.gnosis_balances_sg_url = SubgraphURL(self.params.subgraph, "hoprOnGnosis")[
-            value
-        ]
-
-        SUBGRAPH_IN_USE.set(value.toInt())
-        self._subgraph_type = value
-
     @flagguard
     @formalin
     async def rotate_subgraphs(self):
         """
         Checks the subgraph URLs and sets the subgraph type in use (default, backup or none)
         """
-        if self.params.subgraph.type == "auto":
-            for type in SubgraphType.callables():
-                self.subgraph_type = type
-                if await SafesProvider(self.safe_sg_url).test():
-                    break
-            else:
-                self.subgraph_type = SubgraphType.NONE
-
-        else:
-            self.subgraph_type = getattr(
-                SubgraphType, self.params.subgraph.type.upper(), SubgraphType.NONE
-            )
-            self.warning(f"Using static {self.subgraph_type} subgraph endpoint")
-
-        SUBGRAPH_CALLS.labels(self.subgraph_type.value).inc()
+        for provider in self.subgraph_providers.values():
+            await provider.test(self.params.subgraph.type, id_in=[""])
 
     @flagguard
     @formalin
@@ -169,11 +144,8 @@ class Core(Base):
         """
         Gets the subgraph data and sets the subgraph_list LockedVar.
         """
-        if self.subgraph_type == SubgraphType.NONE:
-            self.warning("No subgraph URL available.")
-            return
+        provider = self.subgraph_providers["safes"]
 
-        provider = SafesProvider(self.safe_sg_url)
         results = list[NodeEntry]()
         try:
             for safe in await provider.get():
@@ -194,11 +166,7 @@ class Core(Base):
     @flagguard
     @formalin
     async def nft_holders(self):
-        if self.subgraph_type == SubgraphType.NONE:
-            self.warning("No subgraph URL available.")
-            return
-
-        provider = StakingProvider(self.staking_sg_url)
+        provider = self.subgraph_providers["staking"]
 
         results = list[str]()
         try:
@@ -217,12 +185,8 @@ class Core(Base):
     @flagguard
     @formalin
     async def allocations(self):
-        if self.subgraph_type == SubgraphType.NONE:
-            self.warning("No subgraph URL available.")
-            return
-
-        mainnet_provider = AllocationsProvider(self.mainnet_allocation_sg_url)
-        gnosis_provider = AllocationsProvider(self.gnosis_allocation_sg_url)
+        mainnet_provider = self.subgraph_providers["mainnet_allocations"]
+        gnosis_provider = self.subgraph_providers["gnosis_allocations"]
 
         results = list[AllocationEntry]()
         try:
@@ -243,12 +207,8 @@ class Core(Base):
     @flagguard
     @formalin
     async def eoa_balances(self):
-        if self.subgraph_type == SubgraphType.NONE:
-            self.warning("No subgraph URL available.")
-            return
-
-        mainnet_provider = EOABalanceProvider(self.mainnet_balances_sg_url)
-        gnosis_provider = EOABalanceProvider(self.gnosis_balances_sg_url)
+        mainnet_provider = self.subgraph_providers["mainnet_balances"]
+        gnosis_provider = self.subgraph_providers["gnosis_balances"]
 
         addresses = [alloc.address for alloc in await self.allocations_data.get()]
         if len(addresses) == 0:
@@ -308,7 +268,7 @@ class Core(Base):
         ct_nodes = await self.ct_nodes_addresses
         redeemed_rewards = await self.peer_rewards.get()
         eoa_balances = await self.eoa_balances_data.get()
-        allocations: list[AllocationEntry] = await self.allocations_data.get()
+        allocations = await self.allocations_data.get()
 
         async with self.all_peers.lock:
             peers = self.all_peers.value
@@ -394,11 +354,7 @@ class Core(Base):
     @flagguard
     @formalin
     async def peers_rewards(self):
-        if self.subgraph_type == SubgraphType.NONE:
-            self.warning("No subgraph URL available.")
-            return
-
-        provider = RewardsProvider(self.rewards_sg_url)
+        provider = self.subgraph_providers["rewards"]
 
         results = dict()
         try:

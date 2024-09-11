@@ -5,11 +5,12 @@ from .subgraph_type import SubgraphType
 
 class SubgraphURL:
 
-    def __init__(self, params: Parameters, key: str):
+    def __init__(self, params: Parameters, key: str, type: SubgraphType = None):
         super().__init__()
         self.params = getattr(params, key)
         self.deployer_key = params.apiKey
         self.user_id = params.userID
+        self.type = SubgraphType.DEFAULT if type is None else type
 
         self._urls = {
             SubgraphType.DEFAULT: self._construct_default(),
@@ -28,3 +29,7 @@ class SubgraphURL:
 
     def __getitem__(self, index: SubgraphType) -> str:
         return self._urls.get(index, None)
+
+    @property
+    def url(self) -> str:
+        return self[self.type]

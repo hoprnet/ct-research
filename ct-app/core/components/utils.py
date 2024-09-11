@@ -71,7 +71,7 @@ class Utils(Base):
     def associateEOABalancesAndSafes(cls, balances, nodes):
         eoa_addresses = [b.address for b in balances]
         for n in nodes:
-            for owner in n.safe_owners:
+            for owner in n.safe.owners:
                 try:
                     index = eoa_addresses.index(owner)
                 except ValueError:
