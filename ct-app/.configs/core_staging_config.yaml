@@ -12,6 +12,7 @@ flags:
     registeredNodes: 120
     topology: 120
     allocations: 120
+    EOABalances: 15
     NFTHolders: 120
     
     applyEconomicModel: 120
@@ -113,24 +114,28 @@ subgraph:
   type: auto # auto | default | backup
   userID: 78696
 
-  allocations:
+  mainnetAllocations:
     queryID: FhU1GxUovoP1zphNbWFEQHwpabLGELQBdWWyFX1yjBkf
     slug: hopr-allocations
-    version: version/latest
+  gnosisAllocations:
+    queryID: 
+    slug: hopr-allocations-gnosis
+  hoprOnMainet:
+    queryID: 
+    slug: hopr-on-mainnet
+  hoprOnGnosis:
+    queryID: 2wMRp1AW1ghxoFiM6WeRD93djHNvNGhXsuQyadmwCyqE
+    slug: hopr-on-gnosis
   rewards:
     queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
     slug: hopr-channels
-    version: version/latest
   safesBalance:
     queryID: GmbJTpa1o4baeStDT48TfQu4ditJmQwwXYPG1DvEiufB
     slug: hopr-nodes-rotsee
-    version: version/latest
   staking:
     queryID: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
     slug: hopr-stake-all-seasons
-    version: version/latest
   allBalances:
     queryID: 2wMRp1AW1ghxoFiM6WeRD93djHNvNGhXsuQyadmwCyqE
     slug: hopr-on-gnosis
-    version: version/latest
 ...

@@ -24,7 +24,7 @@ class SubgraphURL:
         return f"https://gateway-arbitrum.network.thegraph.com/api/{self.deployer_key}/subgraphs/id/{self.params.queryID}"
 
     def _construct_backup(self):
-        return f"https://api.studio.thegraph.com/query/{self.user_id}/{self.params.slug}/{self.params.version}"
+        return f"https://api.studio.thegraph.com/query/{self.user_id}/{self.params.slug}/{getattr(self.params, 'version','version/latest')}"
 
     def __getitem__(self, index: SubgraphType) -> str:
         return self._urls.get(index, None)

@@ -11,6 +11,8 @@ from .model.economic_model import EconomicModelLegacy, EconomicModelSigmoid
 from .model.subgraph import (
     AllocationEntry,
     AllocationsProvider,
+    BalanceEntry,
+    EOABalanceProvider,
     NodeEntry,
     ProviderError,
     RewardsProvider,
@@ -68,9 +70,10 @@ class Core(Base):
         self.registered_nodes_list = LockedVar("subgraph_list", list[NodeEntry]())
         self.nft_holders_list = LockedVar("nft_holders_list", list[str]())
         self.allocations_data = LockedVar("allocations_data", list[AllocationEntry]())
+        self.eoa_balances_data = LockedVar("eoa_balances_data", list[BalanceEntry]())
         self.peer_rewards = LockedVar("peer_rewards", dict[str, float]())
 
-        self.subgraph_type = SubgraphType.DEFAULT
+        # self.subgraph_type = SubgraphType.DEFAULT
 
         self.running = False
 
@@ -88,13 +91,22 @@ class Core(Base):
 
     @subgraph_type.setter
     def subgraph_type(self, value: SubgraphType):
-        if not hasattr(self, "_subgraph_type") or value != self._subgraph_type:
-            self.info(f"Now using '{value.value}' subgraph.")
 
         self.safe_sg_url = SubgraphURL(self.params.subgraph, "safesBalance")[value]
         self.staking_sg_url = SubgraphURL(self.params.subgraph, "staking")[value]
         self.rewards_sg_url = SubgraphURL(self.params.subgraph, "rewards")[value]
-        self.allocation_sg_url = SubgraphURL(self.params.subgraph, "allocations")[value]
+        self.mainnet_allocation_sg_url = SubgraphURL(
+            self.params.subgraph, "mainnetAllocations"
+        )[value]
+        self.gnosis_allocation_sg_url = SubgraphURL(
+            self.params.subgraph, "gnosisAllocations"
+        )[value]
+        self.mainnet_balances_sg_url = SubgraphURL(
+            self.params.subgraph, "hoprOnMainet"
+        )[value]
+        self.gnosis_balances_sg_url = SubgraphURL(self.params.subgraph, "hoprOnGnosis")[
+            value
+        ]
 
         SUBGRAPH_IN_USE.set(value.toInt())
         self._subgraph_type = value
@@ -209,17 +221,58 @@ class Core(Base):
             self.warning("No subgraph URL available.")
             return
 
-        provider = AllocationsProvider(self.allocation_sg_url)
+        mainnet_provider = AllocationsProvider(self.mainnet_allocation_sg_url)
+        gnosis_provider = AllocationsProvider(self.gnosis_allocation_sg_url)
 
         results = list[AllocationEntry]()
         try:
-            for account in await provider.get():
+            for account in await mainnet_provider.get():
+                results.append(AllocationEntry(**account["account"]))
+        except ProviderError as err:
+            self.error(f"allocations: {err}")
+
+        try:
+            for account in await gnosis_provider.get():
                 results.append(AllocationEntry(**account["account"]))
         except ProviderError as err:
             self.error(f"allocations: {err}")
 
         await self.allocations_data.set(results)
         self.debug(f"Fetched allocations ({len(results)} entries).")
+
+    @flagguard
+    @formalin
+    async def eoa_balances(self):
+        if self.subgraph_type == SubgraphType.NONE:
+            self.warning("No subgraph URL available.")
+            return
+
+        mainnet_provider = EOABalanceProvider(self.mainnet_balances_sg_url)
+        gnosis_provider = EOABalanceProvider(self.gnosis_balances_sg_url)
+
+        addresses = [alloc.address for alloc in await self.allocations_data.get()]
+        if len(addresses) == 0:
+            self.info("No investors addresses found.")
+            return
+        else:
+            balances = {address: 0 for address in addresses}
+
+        try:
+            for account in await mainnet_provider.get(id_in=list(balances.keys())):
+                balances[account["id"]] += float(account["totalBalance"]) / 1e18
+        except ProviderError as err:
+            self.error(f"eoa_balances: {err}")
+
+        try:
+            for account in await gnosis_provider.get(id_in=list(balances.keys())):
+                balances[account["id"]] += float(account["totalBalance"]) / 1e18
+        except ProviderError as err:
+            self.error(f"eoa_balances: {err}")
+
+        eoa_balances = [BalanceEntry(key, value) for key, value in balances.items()]
+
+        await self.eoa_balances_data.set(eoa_balances)
+        self.debug(f"Fetched EOA balances ({len(balances)} entries).")
 
     @flagguard
     @formalin
@@ -254,18 +307,22 @@ class Core(Base):
         topology = await self.topology_list.get()
         ct_nodes = await self.ct_nodes_addresses
         redeemed_rewards = await self.peer_rewards.get()
+        eoa_balances = await self.eoa_balances_data.get()
         allocations: list[AllocationEntry] = await self.allocations_data.get()
 
         async with self.all_peers.lock:
             peers = self.all_peers.value
 
             Utils.associateAllocationsAndSafes(allocations, nodes)
+            Utils.associateEOABalancesAndSafes(eoa_balances, nodes)
 
             if not all([len(topology), len(nodes), len(peers)]):
                 self.warning("Not enough data to apply economic model.")
                 return
 
-            await Utils.mergeDataSources(topology, peers, nodes, allocations)
+            await Utils.mergeDataSources(
+                topology, peers, nodes, allocations, eoa_balances
+            )
 
             for p in peers:
                 if p.is_old(self.params.peer.minVersion):
@@ -405,6 +462,7 @@ class Core(Base):
                 self.topology,
                 self.nft_holders,
                 self.allocations,
+                self.eoa_balances,
                 self.apply_economic_model,
             ]
         )

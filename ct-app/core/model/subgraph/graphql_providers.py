@@ -17,14 +17,15 @@ class GraphQLProvider(Base):
         self._default_key = None
 
     #### PRIVATE METHODS ####
-    def _load_query(self, path: Union[str, Path]) -> str:
+    def _load_query(self, path: Union[str, Path], extra_inputs: list[str] = []) -> str:
         """
         Loads a graphql query from a file.
         :param path: Path to the file. The path must be relative to the ct-app folder.
         :return: The query as a string.
         """
+        inputs = ["$first: Int!", "$skip: Int!", *extra_inputs]
 
-        header = "query ($first: Int!, $skip: Int!) {"
+        header = "query (" + ",".join(inputs) + ") {"
         footer = "}"
         with open(self.pwd.joinpath(path)) as f:
             body = f.read()
@@ -98,6 +99,9 @@ class GraphQLProvider(Base):
 
             if response is None:
                 break
+
+            if "errors" in response:
+                self.error(f"Internal error: {response['errors']}")
 
             try:
                 content = response.get("data", dict()).get(key, [])
@@ -188,3 +192,11 @@ class AllocationsProvider(GraphQLProvider):
     def __init__(self, url: str):
         super().__init__(url)
         self._default_key, self._sku_query = self._load_query("allocations.graphql")
+
+
+class EOABalanceProvider(GraphQLProvider):
+    def __init__(self, url: str):
+        super().__init__(url)
+        self._default_key, self._sku_query = self._load_query(
+            "eoa_balance.graphql", extra_inputs=["$id_in: [Bytes!]"]
+        )

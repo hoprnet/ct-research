@@ -23,7 +23,12 @@ class Utils(Base):
 
     @classmethod
     async def mergeDataSources(
-        cls, topology: list, peers: list, nodes: list, allocations: list
+        cls,
+        topology: list,
+        peers: list,
+        nodes: list,
+        allocations: list,
+        eoa_balances: dict,
     ):
         for peer in peers:
             address = peer.node_address
@@ -36,6 +41,11 @@ class Utils(Base):
                 if peer.safe.address in allocation.linked_safes:
                     peer.safe.additional_balance += (
                         allocation.unclaimed_amount / allocation.num_linked_safes
+                    )
+            for eoa_balances in eoa_balances:
+                if peer.safe_address in eoa_balances.linked_safes:
+                    peer.safe.additional_balance += (
+                        eoa_balances.balance / eoa_balances.num_linked_safes
                     )
 
             if topo is not None:
@@ -56,6 +66,18 @@ class Utils(Base):
                     continue
 
                 allocations[index].linked_safes.add(n.safe.address)
+
+    @classmethod
+    def associateEOABalancesAndSafes(cls, balances, nodes):
+        eoa_addresses = [b.address for b in balances]
+        for n in nodes:
+            for owner in n.safe_owners:
+                try:
+                    index = eoa_addresses.index(owner)
+                except ValueError:
+                    continue
+
+                balances[index].linked_safes.add(n.safe.address)
 
     @classmethod
     def allowManyNodePerSafe(cls, peers: list):
