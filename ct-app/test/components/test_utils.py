@@ -1,7 +1,13 @@
 import pytest
 from core.components import Utils
 from core.model import Address, Peer
-from core.model.subgraph import AllocationEntry, NodeEntry, SafeEntry, TopologyEntry
+from core.model.subgraph import (
+    AllocationEntry,
+    BalanceEntry,
+    NodeEntry,
+    SafeEntry,
+    TopologyEntry,
+)
 from hoprd_sdk.models import ChannelInfoResponse
 
 from .utils import handle_envvars
@@ -146,6 +152,25 @@ def test_associateAllocationsAndSafes():
 
     assert allocations[0].linked_safes == {"safe_address_1", "safe_address_2"}
     assert allocations[1].linked_safes == {"safe_address_2"}
+
+
+def test_associateEOABalancesAndSafes():
+    balances = [
+        BalanceEntry("owner_1", f"{100*1e18:.0f}"),
+        BalanceEntry("owner_2", f"{250*1e18:.0f}"),
+    ]
+    nodes = [
+        NodeEntry("address_1", SafeEntry("safe_address_1", "10", "1", ["owner_1"])),
+        NodeEntry(
+            "address_2", SafeEntry("safe_address_2", "10", "2", ["owner_1", "owner_2"])
+        ),
+        NodeEntry("address_3", SafeEntry("safe_address_3", None, "3", ["owner_3"])),
+    ]
+
+    Utils.associateEOABalancesAndSafes(balances, nodes)
+
+    assert balances[0].linked_safes == {"safe_address_1", "safe_address_2"}
+    assert balances[1].linked_safes == {"safe_address_2"}
 
 
 def test_allowManyNodePerSafe():
