@@ -27,6 +27,7 @@ from .node import Node
 # endregion
 
 # region Metrics
+UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers", ["type"])
 SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
 TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
 NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
