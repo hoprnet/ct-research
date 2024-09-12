@@ -15,9 +15,4 @@ class SubgraphType(Enum):
 
     @classmethod
     def fromString(cls, type: str):
-        if type == "default":
-            return cls.DEFAULT
-        elif type == "backup":
-            return cls.BACKUP
-        else:
-            return cls.NONE
+        return {"default": cls.DEFAULT, "backup": cls.BACKUP}.get(type, cls.NONE)

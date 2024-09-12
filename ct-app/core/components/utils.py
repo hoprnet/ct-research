@@ -42,10 +42,10 @@ class Utils(Base):
                     peer.safe.additional_balance += (
                         allocation.unclaimed_amount / allocation.num_linked_safes
                     )
-            for eoa_balances in eoa_balances:
-                if peer.safe_address in eoa_balances.linked_safes:
+            for eoa_balance in eoa_balances:
+                if peer.safe_address in eoa_balance.linked_safes:
                     peer.safe.additional_balance += (
-                        eoa_balances.balance / eoa_balances.num_linked_safes
+                        eoa_balance.balance / eoa_balance.num_linked_safes
                     )
 
             if topo is not None:
