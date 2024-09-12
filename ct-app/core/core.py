@@ -27,7 +27,6 @@ from .node import Node
 # endregion
 
 # region Metrics
-UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers")
 SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
 TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
 NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
@@ -115,28 +114,42 @@ class Core(Base):
         Aggregates the peers from all nodes and sets the all_peers LockedVar.
         """
 
+        counts = {"new": 0, "known": 0, "unreachable": 0}
+
         async with self.all_peers.lock:
-            visible_peers = set[Peer]()
+            visible_peers: set[Peer] = set()
+            visible_peers.update(*[await node.peers.get() for node in self.nodes])
+            current_peers: set[Peer] = self.all_peers.value
 
-            known_peers: set[Peer] = self.all_peers.value
+            for peer in current_peers:
+                # if peer is still visible
+                if peer in visible_peers:
+                    await peer.yearly_message_count.replace_value(None, 0)
+                    peer.running = True
+                    counts["known"] += 1
 
-            for node in self.nodes:
-                visible_peers.update(await node.peers.get())
+                # if peer is not visible anymore
+                else:
+                    await peer.yearly_message_count.set(None)
+                    peer.running = False
+                    counts["unreachable"] += 1
 
-            # set yearly message count to None (-> not eligible for rewards) for peers that are not visible anymore
-            for peer in known_peers - visible_peers:
-                await peer.yearly_message_count.set(None)
+            # if peer is new
+            for peer in visible_peers:
+                if peer not in current_peers:
+                    peer.params = self.params
+                    await peer.yearly_message_count.set(0)
+                    peer.start_async_processes()
+                    current_peers.add(peer)
+                    counts["new"] += 1
 
-            # add new peers to the set
-            for peer in visible_peers - known_peers:
-                peer.params = self.params
-                peer.running = True
-                known_peers.add(peer)
+            self.all_peers.value = current_peers
 
-            self.all_peers.value = known_peers
-
-            self.debug(f"Aggregated peers ({len(known_peers)} entries).")
-            UNIQUE_PEERS.set(len(known_peers))
+            self.debug(
+                f"Aggregated peers ({len(self.all_peers.value)} entries) ({', '.join([f'{value} {key}' for key, value in counts.items() ] )})."
+            )
+            for key, value in counts.items():
+                UNIQUE_PEERS.labels(key).set(value)
 
     @flagguard
     @formalin
