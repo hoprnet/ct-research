@@ -190,17 +190,13 @@ class Core(Base):
 
         results = list[AllocationEntry]()
         try:
-            for account in await mainnet_provider.get(
-                schedule_in=self.params.subgraph.mainnetAllocations.schedules
-            ):
+            for account in await mainnet_provider.get():
                 results.append(AllocationEntry(**account["account"]))
         except ProviderError as err:
             self.error(f"allocations: {err}")
 
         try:
-            for account in await gnosis_provider.get(
-                schedule_in=self.params.subgraph.gnosisAllocations.schedules
-            ):
+            for account in await gnosis_provider.get():
                 results.append(AllocationEntry(**account["account"]))
         except ProviderError as err:
             self.error(f"allocations: {err}")

@@ -151,6 +151,8 @@ class GraphQLProvider(Base):
             )
             return []
 
+        if inputs := getattr(self.url.params, "inputs", None):
+            kwargs.update(vars(inputs))
         return await self._get(key, **kwargs)
 
     async def test(self, method: str, **kwargs):

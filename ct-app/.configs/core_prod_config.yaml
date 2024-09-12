@@ -117,15 +117,17 @@ subgraph:
   mainnetAllocations:
     queryID: FhU1GxUovoP1zphNbWFEQHwpabLGELQBdWWyFX1yjBkf
     slug: hopr-allocations
-    schedules:
-      - investor-node-remainder-2024-01
+    inputs:
+      schedule_in:
+        - investor-node-remainder-2024-01
   gnosisAllocations:
-    queryID:
+    queryID: D86Urbx1zgA6ovmtvuRwLtzVtMFCDF5dYcFaWZT6F3UC
     slug: hopr-allocations-on-gnosis
-    schedules:
-      - investor-node-remainder-2024-01
+    inputs:
+      schedule_in:
+        - investor-node-remainder-2024-01
   hoprOnMainet:
-    queryID:
+    queryID: D86Urbx1zgA6ovmtvuRwLtzVtMFCDF5dYcFaWZT6F3UC
     slug: hopr-on-mainnet
   hoprOnGnosis:
     queryID: 2wMRp1AW1ghxoFiM6WeRD93djHNvNGhXsuQyadmwCyqE
