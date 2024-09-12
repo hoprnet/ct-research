@@ -64,15 +64,11 @@ class GraphQLProvider(Base):
         :param kwargs: The variables to use in the query (dict).
         :return: True if the query is successful, False otherwise.
         """
-        vars = {"first": 1, "skip": 0}
-        vars.update(kwargs)
-
-        print(f"{self.url.url=}")
-        print(f"{vars=}")
+        kwargs.update({"first": 1, "skip": 0})
 
         try:
             response, _ = await asyncio.wait_for(
-                self._execute(self._sku_query, vars), timeout=30
+                self._execute(self._sku_query, kwargs), timeout=30
             )
         except asyncio.TimeoutError:
             self.error("Query timeout occurred")
@@ -184,9 +180,12 @@ class GraphQLProvider(Base):
             else:
                 self.url.type = SubgraphType.NONE
 
-        SUBGRAPH_IN_USE.labels(self.url.params.slug).set(self.url.type.toInt())
-        self.warning(f"Subgraph in use for `{self.url.params.slug}`: {self.url.type}")
+        if self.url.type == SubgraphType.NONE:
+            self.warning(f"No subgraph available for '{self.url.params.slug}'")
 
+        # self.info(f"Using {self.url.type} for {self.url.params.slug}")
+
+        SUBGRAPH_IN_USE.labels(self.url.params.slug).set(self.url.type.toInt())
         return self.url.type
 
 
@@ -211,12 +210,16 @@ class RewardsProvider(GraphQLProvider):
 class AllocationsProvider(GraphQLProvider):
     def __init__(self, url: SubgraphURL):
         super().__init__(url)
-        self._default_key, self._sku_query = self._load_query("allocations.graphql")
+        self._default_key, self._sku_query = self._load_query(
+            "allocations.graphql",
+            extra_inputs=['$schedule_in: [String!] = [""]'],
+        )
 
 
 class EOABalanceProvider(GraphQLProvider):
     def __init__(self, url: SubgraphURL):
         super().__init__(url)
         self._default_key, self._sku_query = self._load_query(
-            "eoa_balance.graphql", extra_inputs=["$id_in: [Bytes!]"]
+            "eoa_balance.graphql",
+            extra_inputs=['$id_in: [Bytes!] = [""]'],
         )

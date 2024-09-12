@@ -106,7 +106,7 @@ class Core(Base):
         Checks the subgraph URLs and sets the subgraph type in use (default, backup or none)
         """
         for provider in self.subgraph_providers.values():
-            await provider.test(self.params.subgraph.type, id_in=[""])
+            await provider.test(self.params.subgraph.type)
 
     @flagguard
     @formalin
@@ -190,13 +190,17 @@ class Core(Base):
 
         results = list[AllocationEntry]()
         try:
-            for account in await mainnet_provider.get():
+            for account in await mainnet_provider.get(
+                schedule_in=self.params.subgraph.mainnetAllocations.schedules
+            ):
                 results.append(AllocationEntry(**account["account"]))
         except ProviderError as err:
             self.error(f"allocations: {err}")
 
         try:
-            for account in await gnosis_provider.get():
+            for account in await gnosis_provider.get(
+                schedule_in=self.params.subgraph.gnosisAllocations.schedules
+            ):
                 results.append(AllocationEntry(**account["account"]))
         except ProviderError as err:
             self.error(f"allocations: {err}")
