@@ -356,11 +356,11 @@ class Core(Base):
                     sigmoid_message_count
                 )
 
-            eligibles = [
-                p for p in peers if await p.yearly_message_count.get() is not None
-            ]
-            self.info(f"Eligible nodes: {len(eligibles)} entries.")
-            ELIGIBLE_PEERS.set(len(eligibles))
+            eligibles = sum(
+                [(await p.yearly_message_count.get() is not None) for p in peers]
+            )
+            self.info(f"Eligible nodes: {eligibles} entries.")
+            ELIGIBLE_PEERS.set(eligibles)
 
             self.all_peers.value = set(peers)
 
