@@ -69,7 +69,6 @@ class GraphQLProvider(Base):
         try:
             response, _ = await asyncio.wait_for(
                 self._execute(self._sku_query, kwargs), timeout=30
-
             )
         except asyncio.TimeoutError:
             self.error("Query timeout occurred")
@@ -217,14 +216,16 @@ class AllocationsProvider(GraphQLProvider):
             "allocations.graphql",
             extra_inputs=['$schedule_in: [String!] = [""]'],
         )
-        
+
+
 class FundingsProvider(GraphQLProvider):
     def __init__(self, url: SubgraphURL):
         super().__init__(url)
         self._default_key, self._sku_query = self._load_query(
-            "fundings.graphql", 
-            extra_inputs=['$from: String! = ""','$to: String! = ""'],
+            "fundings.graphql",
+            extra_inputs=['$from: String = ""', '$to_in: [String!] = [""]'],
         )
+
 
 class EOABalanceProvider(GraphQLProvider):
     def __init__(self, url: SubgraphURL):

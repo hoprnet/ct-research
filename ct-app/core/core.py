@@ -11,9 +11,9 @@ from .model.economic_model import EconomicModelLegacy, EconomicModelSigmoid
 from .model.subgraph import (
     AllocationEntry,
     AllocationsProvider,
-    FundingsProvider,
     BalanceEntry,
     EOABalanceProvider,
+    FundingsProvider,
     GraphQLProvider,
     NodeEntry,
     ProviderError,
@@ -62,8 +62,6 @@ class Core(Base):
 
         self.tasks = set[asyncio.Task]()
 
-        self.connected = LockedVar("connected", False)
-
         self.all_peers = LockedVar("all_peers", set[Peer]())
         self.topology_list = LockedVar("topology_list", list[TopologyEntry]())
         self.registered_nodes_list = LockedVar("subgraph_list", list[NodeEntry]())
@@ -88,9 +86,7 @@ class Core(Base):
             "gnosis_balances": EOABalanceProvider(
                 SubgraphURL(self.params.subgraph, "hoprOnGnosis")
             ),
-            "fundings":  FundingsProvider(
-                SubgraphURL(self.params.subgraph, "fundings")
-            )
+            "fundings": FundingsProvider(SubgraphURL(self.params.subgraph, "fundings")),
         }
 
         self.running = False
@@ -411,28 +407,25 @@ class Core(Base):
         self.sigmoid_model.budget.winning_probability = win_probabilty
 
     @flagguard
-    @formalin("Getting safe fundings")
+    @formalin
     async def safe_fundings(self):
         """
         Gets the total amount that was sent to CT safes.
         """
         provider = self.subgraph_providers["fundings"]
 
-        addresses = set(
-            [(await node.api.node_info()).hopr_node_safe for node in self.nodes]
+        addresses = list(
+            set([(await node.api.node_info()).hopr_node_safe for node in self.nodes])
         )
-        from_address = self.params.fundings.sender
-
-        entries = []
-        for to in addresses:
-            try:
-                entries.extend(await provider.get(**{"from": from_address, "to": to}))
-            except ProviderError as err:
-                self.error(f"get_peers_rewards: {err}")
+        try:
+            entries = await provider.get(to_in=addresses)
+        except ProviderError as err:
+            self.error(f"get_peers_rewards: {err}")
+            entries = []
         amount = sum([float(item["amount"]) for item in entries])
 
         TOTAL_FUNDING.set(amount + self.params.fundings.constant)
-        self.debug(f"ct safe fundings: {amount} + {self.params.fundings.constant}")
+        self.debug(f"Safe fundings: {amount} + {self.params.fundings.constant}")
 
     async def start(self):
         """

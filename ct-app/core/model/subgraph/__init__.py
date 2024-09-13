@@ -2,8 +2,8 @@ from .entries import AllocationEntry, BalanceEntry, NodeEntry, SafeEntry, Topolo
 from .graphql_providers import (
     AllocationsProvider,
     EOABalanceProvider,
-    GraphQLProvider,
     FundingsProvider,
+    GraphQLProvider,
     ProviderError,
     RewardsProvider,
     SafesProvider,
