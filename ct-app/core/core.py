@@ -5,7 +5,7 @@ import random
 from prometheus_client import Gauge
 
 from .components import AsyncLoop, Base, HoprdAPI, LockedVar, Parameters, Utils
-from .components.decorators import connectguard, flagguard, formalin
+from .components.decorators import flagguard, formalin
 from .model import Address, Peer
 from .model.economic_model import EconomicModelLegacy, EconomicModelSigmoid
 from .model.subgraph import (
