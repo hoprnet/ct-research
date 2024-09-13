@@ -218,6 +218,15 @@ class AllocationsProvider(GraphQLProvider):
         )
 
 
+class FundingsProvider(GraphQLProvider):
+    def __init__(self, url: SubgraphURL):
+        super().__init__(url)
+        self._default_key, self._sku_query = self._load_query(
+            "fundings.graphql",
+            extra_inputs=['$from: String = ""', '$to_in: [String!] = [""]'],
+        )
+
+
 class EOABalanceProvider(GraphQLProvider):
     def __init__(self, url: SubgraphURL):
         super().__init__(url)

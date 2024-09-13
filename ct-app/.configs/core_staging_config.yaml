@@ -17,6 +17,8 @@ flags:
     
     applyEconomicModel: 120
     
+    safeFundings: 600
+
   node:
     healthcheck: 60
     retrievePeers: 120
@@ -31,7 +33,7 @@ flags:
     closeIncomingChannels: Off
 
     getTotalChannelFunds: 300
-    
+
     watchMessageQueue: Off  # should only be On / Off
     relayedMessagesToDB: Off
 
@@ -113,6 +115,12 @@ channel:
 # =============================================================================
 # 
 # =============================================================================
+fundings:
+  constant: 0
+
+# =============================================================================
+# 
+# =============================================================================
 subgraph:
   type: auto # auto | default | backup
   userID: 78696
@@ -135,6 +143,11 @@ subgraph:
   hoprOnGnosis:
     queryID: 2wMRp1AW1ghxoFiM6WeRD93djHNvNGhXsuQyadmwCyqE
     slug: hopr-on-gnosis
+  fundings:
+    queryID: EpAdSFzDLT7N5RhA3UxtqGUwkFxmMunSE2yGLb8juQjC
+    slug: subgraph-wxhopr-txs
+    inputs:
+      from: '0xd9a00176cf49dfb9ca3ef61805a2850f45cb1d05'
   rewards:
     queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
     slug: hopr-channels
@@ -144,7 +157,4 @@ subgraph:
   staking:
     queryID: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
     slug: hopr-stake-all-seasons
-  allBalances:
-    queryID: 2wMRp1AW1ghxoFiM6WeRD93djHNvNGhXsuQyadmwCyqE
-    slug: hopr-on-gnosis
 ...

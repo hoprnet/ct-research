@@ -42,6 +42,7 @@ class Utils(Base):
                     peer.safe.additional_balance += (
                         allocation.unclaimed_amount / allocation.num_linked_safes
                     )
+
             for eoa_balance in eoa_balances:
                 if peer.safe.address in eoa_balance.linked_safes:
                     peer.safe.additional_balance += (

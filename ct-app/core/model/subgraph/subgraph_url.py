@@ -4,7 +4,7 @@ from .subgraph_type import SubgraphType
 
 
 class SubgraphURL:
-    def __init__(self, params: Parameters, key):
+    def __init__(self, params: Parameters, key: str):
         super().__init__()
         self.params = getattr(params, key)
         self.deployer_key = params.apiKey

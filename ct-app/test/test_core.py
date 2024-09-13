@@ -77,7 +77,6 @@ async def test_connected_peers(core: Core, peers: list[Peer]):
 
 @pytest.mark.asyncio
 async def test_get_topology_data(core: Core, peers: list[Peer]):
-    await core.connected.set(True)
     await core.topology()
 
     assert len(await core.topology_list.get()) == len(peers)
