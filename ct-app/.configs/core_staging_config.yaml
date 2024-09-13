@@ -13,7 +13,6 @@ flags:
     topology: 600
     allocations: 600
     EOABalances: 600
-    allocations: 600
     NFTHolders: 600
     
     applyEconomicModel: 120
