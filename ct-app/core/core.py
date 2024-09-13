@@ -280,7 +280,6 @@ class Core(Base):
         topology = await self.topology_list.get()
         ct_nodes = await self.ct_nodes_addresses
         redeemed_rewards = await self.peer_rewards.get()
-        allocations: list[AllocationEntry] = await self.allocations_data.get()
         eoa_balances = await self.eoa_balances_data.get()
         allocations = await self.allocations_data.get()
 
