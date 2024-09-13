@@ -1,4 +1,5 @@
 import asyncio
+import random
 from datetime import datetime
 from typing import Union
 
@@ -48,17 +49,6 @@ class Peer(Base):
 
         self.params = None
         self.running = False
-
-    @property
-    def running(self) -> bool:
-        return self._running
-
-    @running.setter
-    def running(self, value: bool):
-        self._running = value
-        if value is True:
-            AsyncLoop.add(self.message_relay_request)
-            AsyncLoop.add(self.sent_messages_to_db)
 
     def is_old(self, min_version: Union[str, Version]):
         """
@@ -169,7 +159,12 @@ class Peer(Base):
             await self.message_count.inc(1)
             await asyncio.sleep(delay)
         else:
-            await asyncio.sleep(60)
+            await asyncio.sleep(
+                random.normalvariate(
+                    self.params.peer.initialSleep.mean,
+                    self.params.peer.initialSleep.std,
+                )
+            )
 
     @flagguard
     @formalin
@@ -187,9 +182,6 @@ class Peer(Base):
         ):
             return
 
-        self.info(
-            f"Storing sent messages in the database for {self.address.id} (count: {count})"
-        )
         entry = SentMessages(
             relayer=self.address.id,
             count=count,
@@ -204,6 +196,15 @@ class Peer(Base):
         else:
             await self.message_count.sub(count)
             self.last_db_storage = now
+
+    def start_async_processes(self):
+        if self.running is False:
+            self.running = True
+            AsyncLoop.add(self.message_relay_request)
+            AsyncLoop.add(self.sent_messages_to_db)
+
+    def stop_async_processes(self):
+        self.running = False
 
     def __repr__(self):
         return f"Peer(address: {self.address}, safe: {self.safe})"

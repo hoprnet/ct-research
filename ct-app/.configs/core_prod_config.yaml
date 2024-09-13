@@ -12,6 +12,7 @@ flags:
     registeredNodes: 300
     topology: 300
     allocations: 300
+    EOABalances: 300
     NFTHolders: 300
     
     applyEconomicModel: 120
@@ -50,6 +51,7 @@ economicModel:
 
   legacy:
     proportion: 1.0
+
     apr: 12.5
 
     coefficients:
@@ -90,7 +92,7 @@ economicModel:
 # 
 # =============================================================================
 storage:
-  count: 5
+  count: 25
   timeout: 3600 # seconds
 
 # =============================================================================
@@ -98,7 +100,9 @@ storage:
 # =============================================================================
 peer:
   minVersion: '2.1.0'
-
+  initialSleep:
+    mean: 30
+    std: 2
 # =============================================================================
 # 
 # =============================================================================
@@ -121,24 +125,34 @@ subgraph:
   type: auto # auto | default | backup
   userID: 78696
 
-  allocations:
+  mainnetAllocations:
     queryID: FhU1GxUovoP1zphNbWFEQHwpabLGELQBdWWyFX1yjBkf
     slug: hopr-allocations
-    version: version/latest
+    inputs:
+      schedule_in:
+        - investor-node-remainder-2024-01
+  gnosisAllocations:
+    queryID: DXy4UwhNms3zm7abYeSYaD3hTkuaWYyNvozrXSXejMbS
+    slug: hopr-allocations---gnosis
+    inputs:
+      schedule_in:
+        - investor-node-remainder-2024-01
+  hoprOnMainet:
+    queryID: 4GZdwVtPcQp95RF77W27GK2ezgGLB1iintG6mYZQ1w33
+    slug: hopr---mainnet
+  hoprOnGnosis:
+    queryID: 2wMRp1AW1ghxoFiM6WeRD93djHNvNGhXsuQyadmwCyqE
+    slug: hopr-on-gnosis
   fundings:
     queryID: EpAdSFzDLT7N5RhA3UxtqGUwkFxmMunSE2yGLb8juQjC
     slug: subgraph-wxhopr-txs
-    version: version/latest
   rewards:
     queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
     slug: hopr-channels
-    version: version/latest
   safesBalance:
     queryID: GP2abJCarirMJCanuk4SBmnadiobEWH9ME2MNRAHbBTp
     slug: hopr-nodes-dufour
-    version: version/latest
   staking:
     queryID: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
     slug: hopr-stake-all-seasons
-    version: version/latest
 ...
