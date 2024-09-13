@@ -56,28 +56,16 @@ class Utils(Base):
         cls().info("Merged topology, peers, and safes data.")
 
     @classmethod
-    def associateAllocationsAndSafes(cls, allocations, nodes):
-        allocations_addresses = [a.address for a in allocations]
+    def associateEntitiesToNodes(cls, entities, nodes):
+        entity_addresses = [e.address for e in entities]
         for n in nodes:
             for owner in n.safe.owners:
                 try:
-                    index = allocations_addresses.index(owner)
+                    index = entity_addresses.index(owner)
                 except ValueError:
                     continue
 
-                allocations[index].linked_safes.add(n.safe.address)
-
-    @classmethod
-    def associateEOABalancesAndSafes(cls, balances, nodes):
-        eoa_addresses = [b.address for b in balances]
-        for n in nodes:
-            for owner in n.safe.owners:
-                try:
-                    index = eoa_addresses.index(owner)
-                except ValueError:
-                    continue
-
-                balances[index].linked_safes.add(n.safe.address)
+                entities[index].linked_safes.add(n.safe.address)
 
     @classmethod
     def allowManyNodePerSafe(cls, peers: list):

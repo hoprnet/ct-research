@@ -135,7 +135,7 @@ async def test_mergeDataSources():
     )
 
 
-def test_associateAllocationsAndSafes():
+def test_associateEntitiesToNodes_with_allocations():
     allocations = [
         AllocationEntry("owner_1", "0", f"{100*1e18:.0f}"),
         AllocationEntry("owner_2", "0", f"{250*1e18:.0f}"),
@@ -148,13 +148,13 @@ def test_associateAllocationsAndSafes():
         NodeEntry("address_3", SafeEntry("safe_address_3", None, "3", ["owner_3"])),
     ]
 
-    Utils.associateAllocationsAndSafes(allocations, nodes)
+    Utils.associateEntitiesToNodes(allocations, nodes)
 
     assert allocations[0].linked_safes == {"safe_address_1", "safe_address_2"}
     assert allocations[1].linked_safes == {"safe_address_2"}
 
 
-def test_associateEOABalancesAndSafes():
+def test_associateEntitiesToNodes_with_eoa_balances():
     balances = [
         BalanceEntry("owner_1", f"{100*1e18:.0f}"),
         BalanceEntry("owner_2", f"{250*1e18:.0f}"),
@@ -167,7 +167,7 @@ def test_associateEOABalancesAndSafes():
         NodeEntry("address_3", SafeEntry("safe_address_3", None, "3", ["owner_3"])),
     ]
 
-    Utils.associateEOABalancesAndSafes(balances, nodes)
+    Utils.associateEntitiesToNodes(balances, nodes)
 
     assert balances[0].linked_safes == {"safe_address_1", "safe_address_2"}
     assert balances[1].linked_safes == {"safe_address_2"}

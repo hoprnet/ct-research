@@ -287,8 +287,8 @@ class Core(Base):
         async with self.all_peers.lock:
             peers = self.all_peers.value
 
-            Utils.associateAllocationsAndSafes(allocations, nodes)
-            Utils.associateEOABalancesAndSafes(eoa_balances, nodes)
+            Utils.associateEntitiesToNodes(allocations, nodes)
+            Utils.associateEntitiesToNodes(eoa_balances, nodes)
 
             if not all([len(topology), len(nodes), len(peers)]):
                 self.warning("Not enough data to apply economic model.")
