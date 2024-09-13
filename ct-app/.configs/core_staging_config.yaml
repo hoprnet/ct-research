@@ -4,16 +4,16 @@
 # =============================================================================
 flags:
   core: 
-    rotateSubgraphs: 120
+    rotateSubgraphs: 300
     peersRewards: 120
     ticketParameters: 120
 
     connectedPeers: 120
-    registeredNodes: 120
-    topology: 120
-    allocations: 120
-    EOABalances: 120
-    NFTHolders: 120
+    registeredNodes: 600
+    topology: 600
+    allocations: 600
+    EOABalances: 600
+    NFTHolders: 600
     
     applyEconomicModel: 120
     
