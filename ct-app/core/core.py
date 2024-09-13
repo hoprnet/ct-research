@@ -250,7 +250,6 @@ class Core(Base):
 
     @flagguard
     @formalin
-    @connectguard
     async def topology(self):
         """
         Gets a dictionary containing all unique source_peerId-source_address links
@@ -287,12 +286,12 @@ class Core(Base):
         async with self.all_peers.lock:
             peers = self.all_peers.value
 
-            Utils.associateEntitiesToNodes(allocations, nodes)
-            Utils.associateEntitiesToNodes(eoa_balances, nodes)
-
             if not all([len(topology), len(nodes), len(peers)]):
                 self.warning("Not enough data to apply economic model.")
                 return
+
+            Utils.associateEntitiesToNodes(allocations, nodes)
+            Utils.associateEntitiesToNodes(eoa_balances, nodes)
 
             await Utils.mergeDataSources(
                 topology, peers, nodes, allocations, eoa_balances
