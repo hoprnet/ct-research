@@ -10,15 +10,12 @@ from .node import Node
 
 @click.command()
 @click.option("--configfile", help="The .yaml configuration file to use")
-def main(configfile: str = None):
-
+def main(configfile: str):
     with open(configfile, "r") as file:
         config = yaml.safe_load(file)
 
-    # import envvars to params, such as self.params.subgraph.deployer_key
     params = Parameters()
-    params.parse(config)
-    Base.logger.info(f"Loaded config file: {params}")
+    params.parse(config, entrypoint=True)
     params.from_env("SUBGRAPH", "PG")
     params.overrides("OVERRIDE")
 

@@ -10,6 +10,7 @@ from prometheus_client import Gauge
 
 from .address import Address
 from .database import DatabaseConnection, SentMessages
+from .subgraph.entries import SafeEntry
 
 STAKE = Gauge("ct_peer_stake", "Stake", ["peer_id", "type"])
 SAFE_COUNT = Gauge("ct_peer_safe_count", "Number of safes", ["peer_id"])
@@ -35,9 +36,7 @@ class Peer(Base):
         self.version = version
         self.channel_balance = None
 
-        self.safe_address = None
-        self.safe_balance = 0
-        self.safe_allowance = 0
+        self.safe: SafeEntry = None
 
         self._safe_address_count = None
 
@@ -94,7 +93,7 @@ class Peer(Base):
 
     @property
     def split_stake(self) -> float:
-        if self.safe_balance is None:
+        if self.safe.balance is None:
             raise ValueError("Safe balance not set")
         if self.channel_balance is None:
             raise ValueError("Channel balance not set")
@@ -103,9 +102,9 @@ class Peer(Base):
         if self.yearly_message_count is None:
             return 0
 
-        split_stake = float(self.safe_balance) / float(self.safe_address_count) + float(
-            self.channel_balance
-        )
+        split_stake = float(self.safe.total_balance) / float(
+            self.safe_address_count
+        ) + float(self.channel_balance)
         STAKE.labels(self.address.id, "split").set(split_stake)
 
         return split_stake
@@ -131,14 +130,14 @@ class Peer(Base):
         nft_threshold: float,
     ) -> bool:
         try:
-            if self.safe_allowance < min_allowance:
+            if self.safe.allowance < min_allowance:
                 return False
 
             if self.address in ct_nodes:
                 return False
 
             if (
-                self.safe_address not in nft_holders
+                self.safe.address not in nft_holders
                 and nft_threshold
                 and self.split_stake < nft_threshold
             ):
@@ -208,7 +207,7 @@ class Peer(Base):
         self.running = False
 
     def __repr__(self):
-        return f"Peer(address: {self.address})"
+        return f"Peer(address: {self.address}, safe: {self.safe})"
 
     def __eq__(self, other):
         return self.address == other.address

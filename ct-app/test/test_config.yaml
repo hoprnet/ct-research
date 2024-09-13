@@ -116,15 +116,28 @@ channel:
 # 
 # =============================================================================
 subgraph:
-  safesBalance:
-    queryID: query-id-safes
-    URLBackup: safes_backup_url
+  type: auto # auto | default | backup
+  userID: 1000
 
-  staking:
-    queryID: query-id-staking
-    URLBackup: staking_backup_url
-  
+  mainnetAllocations:
+    queryID: ~
+    slug: hopr-allocations
+  gnosisAllocations:
+    queryID: ~
+    slug: hopr-allocations-gnosis
+  hoprOnMainet:
+    queryID: ~
+    slug: hopr-on-mainnet
+  hoprOnGnosis:
+    queryID: ~
+    slug: hopr-on-gnosis
   rewards:
     queryID: ~
-    URLBackup: URLBackup_backup_url
+    slug: rewards_backup_url
+  safesBalance:
+    queryID: query-id-safes
+    slug: safes_backup_url
+  staking:
+    queryID: query-id-staking
+    slug: staking_backup_url
 ...

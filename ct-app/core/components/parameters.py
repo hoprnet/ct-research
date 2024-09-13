@@ -10,10 +10,10 @@ class Parameters(Base):
     def __init__(self):
         super().__init__()
 
-    def parse(self, data: dict):
+    def parse(self, data: dict, entrypoint=False):
         for key, value in data.items():
             subparams = type(self)()
-            key: str = key.replace("-", "_")
+            key = key.replace("-", "_")
 
             setattr(self, key, subparams)
             if isinstance(value, dict):
@@ -21,10 +21,12 @@ class Parameters(Base):
             else:
                 setattr(self, key, value)
 
+        if entrypoint:
+            self.info(f"Loaded config: {self}")
+
     def overrides(self, prefix: str):
         for key, value in Utils.envvarWithPrefix(prefix).items():
             path = key.replace(prefix, "").lower().split("_")
-
             parent = self
 
             for p in path:

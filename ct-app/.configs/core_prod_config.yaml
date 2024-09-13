@@ -11,6 +11,8 @@ flags:
     connectedPeers: 300
     registeredNodes: 300
     topology: 300
+    allocations: 300
+    EOABalances: 300
     NFTHolders: 300
     
     applyEconomicModel: 120
@@ -47,6 +49,7 @@ economicModel:
 
   legacy:
     proportion: 1.0
+
     apr: 12.5
 
     coefficients:
@@ -110,15 +113,37 @@ channel:
 # 
 # =============================================================================
 subgraph:
-  safesBalance:
-    queryID: GP2abJCarirMJCanuk4SBmnadiobEWH9ME2MNRAHbBTp
-    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-nodes-dufour/version/latest
+  type: auto # auto | default | backup
+  userID: 78696
 
-  staking:
-    queryID: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
-    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-stake-all-seasons/version/latest
-  
+  mainnetAllocations:
+    queryID: FhU1GxUovoP1zphNbWFEQHwpabLGELQBdWWyFX1yjBkf
+    slug: hopr-allocations
+    inputs:
+      schedule_in:
+        - investor-node-remainder-2024-01
+  gnosisAllocations:
+    queryID: DXy4UwhNms3zm7abYeSYaD3hTkuaWYyNvozrXSXejMbS
+    slug: hopr-allocations---gnosis
+    inputs:
+      schedule_in:
+        - investor-node-remainder-2024-01
+  hoprOnMainet:
+    queryID: 4GZdwVtPcQp95RF77W27GK2ezgGLB1iintG6mYZQ1w33
+    slug: hopr---mainnet
+  hoprOnGnosis:
+    queryID: 2wMRp1AW1ghxoFiM6WeRD93djHNvNGhXsuQyadmwCyqE
+    slug: hopr-on-gnosis
   rewards:
     queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
-    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-channels/version/latest
+    slug: hopr-channels
+  safesBalance:
+    queryID: GP2abJCarirMJCanuk4SBmnadiobEWH9ME2MNRAHbBTp
+    slug: hopr-nodes-dufour
+  staking:
+    queryID: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
+    slug: hopr-stake-all-seasons
+  allBalances:
+    queryID: 2wMRp1AW1ghxoFiM6WeRD93djHNvNGhXsuQyadmwCyqE
+    slug: hopr-on-gnosis
 ...

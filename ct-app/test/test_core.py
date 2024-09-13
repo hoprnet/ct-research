@@ -2,25 +2,8 @@ import inspect
 
 import pytest
 from core.model import Peer
-from core.model.subgraph import SubgraphType
 
 from .conftest import Core
-
-
-def test_safe_subgraph_url(core: Core):
-    core.subgraph_type = SubgraphType.DEFAULT
-    assert "query-id-safes" in core.safe_subgraph_url
-
-    core.subgraph_type = SubgraphType.BACKUP
-    assert core.safe_subgraph_url == "safes_backup_url"
-
-    core.subgraph_type = SubgraphType.NONE
-    assert core.safe_subgraph_url is None
-
-
-@pytest.mark.asyncio
-async def test_check_subgraph_urls(core: Core):
-    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
 
 
 @pytest.mark.asyncio
@@ -90,11 +73,6 @@ async def test_connected_peers(core: Core, peers: list[Peer]):
         sum([(await peer.yearly_message_count.get()) is not None for peer in all_peers])
         == 0
     )
-
-
-@pytest.mark.asyncio
-async def test_get_subgraph_data(core: Core):
-    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
 
 
 @pytest.mark.asyncio

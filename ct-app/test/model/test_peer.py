@@ -46,7 +46,7 @@ def test_peer_version():
     "exc_time,min_range,max_range",
     [
         (
-            random.randint(5, 20),
+            random.randint(5, 10),
             round(random.random() * 0.1 + 0.1, 1),
             round(random.random() * 0.3 + 0.2, 1),
         )
