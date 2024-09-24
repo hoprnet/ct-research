@@ -215,8 +215,9 @@ async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
     setattr(params.pg, "database", "database")
 
     core = Core(nodes, params)
-    core.legacy_model.budget.ticket_price = 0.1
-    core.sigmoid_model.budget.ticket_price = 0.1
+
+    for model in core.models.values():
+        model.budget.ticket_price = 0.1
 
     return core
 

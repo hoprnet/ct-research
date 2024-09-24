@@ -52,7 +52,7 @@ class Utils(Base):
             if topo is not None:
                 peer.channel_balance = topo.channels_balance
             else:
-                await peer.yearly_message_count.set(None)
+                peer.yearly_message_count = None
 
         cls().info("Merged topology, peers, and safes data.")
 

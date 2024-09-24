@@ -22,6 +22,13 @@ class LockedVar(Base):
         self.lock = asyncio.Lock()
         self.type = type(value) if infer_type else None
 
+    async def __aenter__(self):
+        await self.lock.acquire()
+        return self.value
+
+    async def __aexit__(self, exc_type, exc, tb):
+        self.lock.release()
+
     async def get(self) -> Any:
         """
         Asynchronously get the value of the variable in a locked manner.
@@ -45,34 +52,6 @@ class LockedVar(Base):
         async with self.lock:
             self.value = value
 
-    async def inc(self, value: Any):
-        """
-        Asyncronously increment the value of the variable by the specified value in a locked manner. If the type of the value is different from the type of the variable, a TypeError will be raised.
-
-        :param value: The value to increment the variable by.
-        """
-        if self.type and not isinstance(value, self.type):
-            self.warning(
-                f"Trying to change value of type {type(value)} to {self.type}, ignoring"
-            )
-
-        async with self.lock:
-            self.value += value
-
-    async def sub(self, value: Any):
-        """
-        Asyncronously decrement the value of the variable by the specified value in a locked manner. If the type of the value is different from the type of the variable, a TypeError will be raised.
-
-        :param value: The value to decrement the variable by.
-        """
-        if self.type and not isinstance(value, self.type):
-            self.warning(
-                f"Trying to change value of type {type(value)} to {self.type}, ignoring"
-            )
-
-        async with self.lock:
-            self.value -= value
-
     async def update(self, value: Any):
         """
         Asynchronously update the value of the variable with the specified value in a locked manner. If the type of the value is different from the type of the variable, a TypeError will be raised.
@@ -87,22 +66,6 @@ class LockedVar(Base):
                 self.value.update(value)
             except AttributeError as e:
                 raise AttributeError("Trying to call 'update' on non-dict value") from e
-
-    async def replace_value(self, old: Any, new: Any):
-        """
-        Asynchronously replace the old value with the new value in a locked manner. If the type of the value is different from the type of the variable, a TypeError will be raised.
-
-        :param old: The old value to replace.
-        :param new: The new value to replace with.
-        """
-        if self.type and not isinstance(new, self.type):
-            self.warning(
-                f"Trying to change value of type {type(new)} to {self.type}, ignoring"
-            )
-
-        async with self.lock:
-            if self.value == old:
-                self.value = new
 
     @property
     def log_prefix(self):

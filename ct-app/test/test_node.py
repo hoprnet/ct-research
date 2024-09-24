@@ -9,17 +9,15 @@ from .conftest import Node, Peer
 @pytest.mark.asyncio
 async def test_retrieve_address(node: Node, addresses: dict):
     await node.retrieve_address()
-    address = await node.address.get()
 
-    assert address.address in [addr["native"] for addr in addresses]
-    assert address.id in [addr["hopr"] for addr in addresses]
+    assert node.address.address in [addr["native"] for addr in addresses]
+    assert node.address.id in [addr["hopr"] for addr in addresses]
 
 
 @pytest.mark.asyncio
 async def test_node_healthcheck(node: Node):
     await node.healthcheck()
-
-    assert await node.connected.get()
+    assert node.connected
 
 
 @pytest.mark.asyncio
@@ -71,34 +69,30 @@ async def test_retrieve_peers(node: Node, peers: list[Peer]):
 
 @pytest.mark.asyncio
 async def test_retrieve_outgoing_channels(node: Node, channels: NodeChannelsResponse):
-    assert await node.outgoings.get() == []
+    assert node.outgoings == []
 
     await node.retrieve_outgoing_channels()
 
-    outgoings_from_node = await node.outgoings.get()
     outgoings_from_fixture = [
-        c for c in channels.all if c.source_peer_id == (await node.address.get()).id
+        c for c in channels.all if c.source_peer_id == node.address.id
     ]
 
-    assert [c.channel_id for c in outgoings_from_node] == [
+    assert [c.channel_id for c in node.outgoings] == [
         c.channel_id for c in outgoings_from_fixture
     ]
 
 
 @pytest.mark.asyncio
 async def test_retrieve_incoming_channels(node: Node, channels: NodeChannelsResponse):
-    assert await node.incomings.get() == []
+    assert node.incomings == []
 
     await node.retrieve_incoming_channels()
 
-    incomings_from_node = await node.incomings.get()
     incomings_from_fixture = [
-        c
-        for c in channels.all
-        if c.destination_peer_id == (await node.address.get()).id
+        c for c in channels.all if c.destination_peer_id == node.address.id
     ]
 
-    assert [c.channel_id for c in incomings_from_node] == [
+    assert [c.channel_id for c in node.incomings] == [
         c.channel_id for c in incomings_from_fixture
     ]
 
@@ -109,11 +103,7 @@ async def test_get_total_channel_funds(node: Node, channels: NodeChannelsRespons
 
     total_funds_from_node = await node.get_total_channel_funds()
     total_funds_from_fixture = sum(
-        [
-            int(c.balance)
-            for c in channels.all
-            if c.source_peer_id == (await node.address.get()).id
-        ]
+        [int(c.balance) for c in channels.all if c.source_peer_id == node.address.id]
     )
 
     assert total_funds_from_fixture / 1e18 == total_funds_from_node
