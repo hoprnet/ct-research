@@ -125,8 +125,10 @@ class Core(Base):
             for peer in current_peers:
                 # if peer is still visible
                 if peer in visible_peers:
-                    await peer.yearly_message_count.replace_value(None, 0)
-                    peer.running = True
+                    if await peer.yearly_message_count.replace_value(None, 0):
+                        # peer was already known, but distribution stopped for him because he was set in the `unreachable` state.
+                        peer.running = True
+                        peer.start_async_processes()
                     counts["known"] += 1
 
                 # if peer is not visible anymore
