@@ -133,7 +133,7 @@ class Core(Base):
                 if peer in visible_peers:
                     if peer.yearly_message_count is None:
                         peer.yearly_message_count = 0
-                    peer.running = True
+                        peer.start_async_processes()
                     counts["known"] += 1
 
                 # if peer is not visible anymore
