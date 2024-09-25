@@ -49,8 +49,7 @@ class Node(Base):
         self.peer_history = LockedVar("peer_history", dict[str, datetime]())
 
         self.address = None
-        self.outgoings = []
-        self.incomings = []
+        self.channels = None
         self.connected = False
 
         self.params = Parameters()
@@ -123,7 +122,10 @@ class Node(Base):
         """
         Open channels to discovered_peers.
         """
-        out_opens = [c for c in self.outgoings if not c.status.isClosed]
+        if self.channels is None:
+            return
+
+        out_opens = [c for c in self.channels.outgoing if not c.status.isClosed]
 
         addresses_with_channels = {c.destination_address for c in out_opens}
         all_addresses = {
@@ -155,7 +157,10 @@ class Node(Base):
         """
         Close incoming channels
         """
-        in_opens = [c for c in self.incomings if c.status.isOpen]
+        if self.channels is None:
+            return
+
+        in_opens = [c for c in self.channels.incoming if c.status.isOpen]
 
         for channel in in_opens:
             self.debug(f"Closing incoming channel {channel.channel_id}")
@@ -174,7 +179,10 @@ class Node(Base):
         """
         Close channels in PendingToClose state.
         """
-        out_pendings = [c for c in self.outgoings if c.status.isPending]
+        if self.channels is None:
+            return
+
+        out_pendings = [c for c in self.channels.outgoing if c.status.isPending]
 
         self.info(f"Pending channels: {len(out_pendings)}")
 
@@ -201,7 +209,7 @@ class Node(Base):
 
         address_to_channel_id = {
             c.destination_address: c.channel_id
-            for c in self.outgoings
+            for c in self.channels.outgoing
             if c.status.isOpen
         }
 
@@ -241,7 +249,10 @@ class Node(Base):
         """
         Fund channels that are below minimum threshold.
         """
-        out_opens = [c for c in self.outgoings if c.status.isOpen]
+        if self.channels is None:
+            return
+
+        out_opens = [c for c in self.channel.outgoing if c.status.isOpen]
 
         low_balances = [
             c
@@ -295,48 +306,35 @@ class Node(Base):
     @flagguard
     @formalin
     @connectguard
-    async def retrieve_outgoing_channels(self):
+    async def retrieve_channels(self):
         """
-        Retrieve all outgoing channels.
+        Retrieve all channels.
         """
-        channels = await self.api.all_channels(False)
+        channels = await self.api.channels(False)
 
-        if not hasattr(channels, "all"):
-            self.warning("No outgoing channels found")
+        if channels is None:
+            self.warning("No channels found")
+            return
+
+        if not hasattr(channels, "incoming") or not hasattr(channels, "outgoing"):
+            self.warning("No channels found")
             return
 
         if addr := self.address:
-            self.outgoings = [
-                c
-                for c in channels.all
-                if c.source_peer_id == addr.id and not c.status.isClosed
+            channels.outgoing = [
+                c for c in channels.all if c.source_peer_id == self.address.id
+            ]
+            channels.incoming = [
+                c for c in channels.all if c.destination_peer_id == self.address.id
             ]
 
-            self.info(f"Outgoing channels: {len(self.outgoings)}")
-            CHANNELS.labels(addr.id, "outgoing").set(len(self.outgoings))
+            self.channels = channels
 
-    @flagguard
-    @formalin
-    @connectguard
-    async def retrieve_incoming_channels(self):
-        """
-        Retrieve all incoming channels.
-        """
-        channels = await self.api.all_channels(False)
-
-        if not hasattr(channels, "all"):
-            self.warning("No incoming channels found")
-            return
-
-        if addr := self.address:
-            self.incomings = [
-                c
-                for c in channels.all
-                if c.destination_peer_id == addr.id and not c.status.isClosed
-            ]
-
-            self.info(f"Incoming channels: {len(self.incomings)}")
-            CHANNELS.labels(addr.id, "incoming").set(len(self.incomings))
+            self.info(
+                f"Channels: {len(channels.incoming)} in and {len(channels.outgoing)} out"
+            )
+            CHANNELS.labels(addr.id, "outgoing").set(len(channels.outgoing))
+            CHANNELS.labels(addr.id, "incoming").set(len(channels.incoming))
 
     @flagguard
     @formalin
@@ -348,7 +346,10 @@ class Node(Base):
         if self.address is None:
             return
 
-        results = await Utils.balanceInChannels(self.outgoings)
+        if self.channels is None:
+            return
+
+        results = await Utils.balanceInChannels(self.channels.outgoing)
 
         if self.address.id not in results:
             self.warning("Funding info not found")
@@ -418,9 +419,8 @@ class Node(Base):
         callbacks = [
             self.healthcheck,
             self.retrieve_peers,
-            self.retrieve_outgoing_channels,
-            self.retrieve_incoming_channels,
             self.retrieve_balances,
+            self.retrieve_channels,
             self.open_channels,
             self.fund_channels,
             self.close_old_channels,

@@ -24,7 +24,6 @@ from pytest_mock import MockerFixture
 class SideEffect:
     def __init__(self):
         self.it_send_message_success = self.generator_send_message_success()
-        self.it_channel_balance = self.generator_channel_balance()
         self.it_node_balance = self.generator_node_balance()
         self.it_inbox_messages = self.generator_inbox_messages()
 
@@ -35,11 +34,6 @@ class SideEffect:
         zeros = int(100 * (1 - rate))
         ones = int(100 * rate)
         yield from repeat(choice([0] * zeros + [1] * ones))
-
-    @staticmethod
-    def generator_channel_balance():
-        # yields a random integer between 50 and 100
-        yield from repeat(randint(50, 100))
 
     @staticmethod
     def generator_node_balance():
@@ -58,9 +52,6 @@ class SideEffect:
 
     def send_message_success(self, *args, **kwargs):
         return next(self.it_send_message_success)
-
-    def channel_balance(self, *args, **kwargs):
-        return next(self.it_channel_balance)
 
     def node_balance(self, *args, **kwargs):
         return next(self.it_node_balance)
@@ -146,11 +137,7 @@ async def nodes(
     ]
     for idx, node in enumerate(nodes):
         mocker.patch.object(node.api, "get_address", return_value=addresses[idx])
-        mocker.patch.object(node.api, "all_channels", return_value=channels)
-        mocker.patch.object(
-            node.api, "channel_balance", side_effect=SideEffect().channel_balance
-        )
-
+        mocker.patch.object(node.api, "channels", return_value=channels)
         mocker.patch.object(
             node.api, "send_message", side_effect=SideEffect().send_message_success
         )
@@ -171,7 +158,7 @@ async def nodes(
 
 @pytest.fixture
 def channels(peers: set[Peer]) -> NodeChannelsResponse:
-    channels = list[ChannelInfoResponse]()
+    all_channels = list[ChannelInfoResponse]()
     index = 0
 
     for src in peers:
@@ -179,7 +166,7 @@ def channels(peers: set[Peer]) -> NodeChannelsResponse:
             if src.address == dest.address:
                 continue
 
-            channels.append(
+            all_channels.append(
                 ChannelInfoResponse(
                     f"{1*1e18:.0f}",
                     1,
@@ -196,7 +183,7 @@ def channels(peers: set[Peer]) -> NodeChannelsResponse:
 
             index += 1
 
-    return NodeChannelsResponse(all=channels, incoming=[], outgoing=[])
+    return NodeChannelsResponse(all=all_channels, incoming=[], outgoing=[])
 
 
 @pytest.fixture
@@ -232,13 +219,10 @@ async def node(
 ) -> Node:
     node = Node("localhost", "random_key")
 
-    mocker.patch.object(node.api, "all_channels", return_value=channels)
+    mocker.patch.object(node.api, "channels", return_value=channels)
     mocker.patch.object(node.api, "peers", return_value=peers_raw[1:])
     mocker.patch.object(node.api, "get_address", return_value=addresses[0])
     mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
-    mocker.patch.object(
-        node.api, "channel_balance", side_effect=SideEffect().channel_balance
-    )
     mocker.patch.object(node.api, "send_message", return_value=1)
     mocker.patch.object(node.api, "healthyz", return_value=True)
 

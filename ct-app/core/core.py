@@ -98,6 +98,10 @@ class Core(Base):
         return random.choice(self.nodes).api
 
     @property
+    def channels(self):
+        return random.choice(self.nodes).channels
+
+    @property
     def ct_nodes_addresses(self) -> list[Address]:
         return [node.address for node in self.nodes]
 
@@ -257,16 +261,20 @@ class Core(Base):
         Gets a dictionary containing all unique source_peerId-source_address links
         including the aggregated balance of "Open" outgoing payment channels.
         """
-        channels = await self.api.all_channels(False)
 
-        if channels is None:
+        if self.channels is None:
             self.warning("Topology data not available")
             return
 
         self.topology_data = [
             TopologyEntry.fromDict(*arg)
-            for arg in (await Utils.balanceInChannels(channels.all)).items()
+            for arg in (
+                await Utils.balanceInChannels(
+                    self.channels.outgoing + self.channels.incoming
+                )
+            ).items()
         ]
+
         TOPOLOGY_SIZE.set(len(self.topology_data))
         self.debug(f"Fetched topology links ({len(self.topology_data)} entries).")
 

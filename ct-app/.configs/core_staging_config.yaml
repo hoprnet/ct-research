@@ -22,8 +22,7 @@ flags:
   node:
     healthcheck: 60
     retrievePeers: 120
-    retrieveIncomingChannels: 120
-    retrieveOutgoingChannels: 120
+    retrieveChannels: 120
     retrieveBalances: 120
 
     openChannels: 120

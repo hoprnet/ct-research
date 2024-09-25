@@ -68,43 +68,20 @@ async def test_retrieve_peers(node: Node, peers: list[Peer]):
 
 
 @pytest.mark.asyncio
-async def test_retrieve_outgoing_channels(node: Node, channels: NodeChannelsResponse):
-    assert node.outgoings == []
+async def test_retrieve_channels(node: Node, channels: NodeChannelsResponse):
+    assert node.channels is None
 
-    await node.retrieve_outgoing_channels()
+    await node.retrieve_channels()
 
-    outgoings_from_fixture = [
-        c for c in channels.all if c.source_peer_id == node.address.id
-    ]
-
-    assert [c.channel_id for c in node.outgoings] == [
-        c.channel_id for c in outgoings_from_fixture
-    ]
-
-
-@pytest.mark.asyncio
-async def test_retrieve_incoming_channels(node: Node, channels: NodeChannelsResponse):
-    assert node.incomings == []
-
-    await node.retrieve_incoming_channels()
-
-    incomings_from_fixture = [
-        c for c in channels.all if c.destination_peer_id == node.address.id
-    ]
-
-    assert [c.channel_id for c in node.incomings] == [
-        c.channel_id for c in incomings_from_fixture
-    ]
+    assert node.channels == channels
 
 
 @pytest.mark.asyncio
 async def test_get_total_channel_funds(node: Node, channels: NodeChannelsResponse):
-    await node.retrieve_outgoing_channels()
+    await node.retrieve_channels()
 
     total_funds_from_node = await node.get_total_channel_funds()
-    total_funds_from_fixture = sum(
-        [int(c.balance) for c in channels.all if c.source_peer_id == node.address.id]
-    )
+    total_funds_from_fixture = sum([int(c.balance) for c in channels.outgoing])
 
     assert total_funds_from_fixture / 1e18 == total_funds_from_node
 

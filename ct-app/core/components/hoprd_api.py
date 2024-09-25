@@ -167,62 +167,7 @@ class HoprdAPI(Base):
         )
         return is_ok
 
-    async def incoming_channels(self, only_id: bool = False) -> list:
-        """
-        Returns all open incoming channels.
-        :return: channels: list
-        """
-
-        is_ok, response = await self.__call_api(
-            ChannelsApi,
-            "list_channels",
-            full_topology=False,
-            including_closed=False,
-        )
-        if is_ok:
-            if not hasattr(response, "incoming"):
-                self.warning("Response does not contain 'incoming'")
-                return []
-
-            if len(response.incoming) == 0:
-                self.warning("No incoming channels")
-                return []
-
-            if only_id:
-                return [channel.id for channel in response.incoming]
-            else:
-                return response.incoming
-        else:
-            return []
-
-    async def outgoing_channels(self, only_id: bool = False):
-        """
-        Returns all open outgoing channels.
-        :return: channels: list
-        """
-        is_ok, response = await self.__call_api(
-            ChannelsApi,
-            "list_channels",
-            full_topology=False,
-            including_closed=False,
-        )
-        if is_ok:
-            if not hasattr(response, "outgoing"):
-                self.warning("Response does not contain 'outgoing'")
-                return []
-
-            if len(response.outgoing) == 0:
-                self.warning("No outgoing channels")
-                return []
-
-            if only_id:
-                return [channel.id for channel in response.outgoing]
-            else:
-                return response.outgoing
-        else:
-            return []
-
-    async def all_channels(self, include_closed: bool):
+    async def channels(self, include_closed: bool):
         """
         Returns all channels.
         :param: include_closed: bool
@@ -236,9 +181,12 @@ class HoprdAPI(Base):
         )
 
         if not is_ok:
-            return []
+            return None
 
-        for channel in response.all:
+        for channel in response.outgoing:
+            channel.status = ChannelStatus.fromString(channel.status)
+
+        for channel in response.incoming:
             channel.status = ChannelStatus.fromString(channel.status)
 
         return response
@@ -329,17 +277,6 @@ class HoprdAPI(Base):
 
         return is_ok
 
-    async def messages_pop(self, tag: int = MESSAGE_TAG) -> bool:
-        """
-        Pop next message from the inbox
-        :param: tag = 0x0320
-        :return: dict
-        """
-        body = TagQueryRequest() if tag is None else TagQueryRequest(tag=tag)
-        _, response = await self.__call_api(MessagesApi, "pop", body=body)
-
-        return response
-
     async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
         """
         Pop all messages from the inbox
@@ -359,26 +296,6 @@ class HoprdAPI(Base):
         _, response = await self.__call_api(NetworkApi, "price")
 
         return float(response.price) / 1e18 if hasattr(response, "price") else None
-
-    async def channel_balance(self, src_peer_id: str, dest_peer_id: str) -> float:
-        """
-        Get the channel balance of a given address.
-        :param api: API helper instance.
-        :param src_peer_id: Source channel peer id.
-        :param dest_peer_id: Destination channel peer id.
-        :return: Channel balance of the address.
-        """
-        channels = await self.all_channels(False)
-
-        channel = [
-            c
-            for c in channels.all
-            if c.destination_peer_id == dest_peer_id
-            and c.source_peer_id == src_peer_id
-            and c.status == "Open"
-        ]
-
-        return 0 if len(channel) == 0 else int(channel[0].balance) / 1e18
 
     async def healthyz(self, timeout: int = 20):
         """
