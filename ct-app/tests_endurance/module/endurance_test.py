@@ -5,11 +5,11 @@ import time
 from datetime import timedelta
 from logging import getLogger
 
-from core.components.utils import Utils
+from core.components import EnvironmentUtils
 
 from .metric import Metric
 
-log = getLogger()
+log = getLogger("ct-app")
 
 
 class EnduranceTest(object):
@@ -26,10 +26,16 @@ class EnduranceTest(object):
         self.results = None
         self.execution_time = None
         self.metric_list: list[Metric] = []
-        self._progress_bar_length = 45
+        self._progress_bar_length = EnvironmentUtils.envvar(
+            "PROGRESS_BAR_LENGTH", type=int, default=50
+        )
 
-        log.setLevel(getattr(logging, Utils.envvar("LOG_LEVEL", default="INFO")))
-        log.disabled = not Utils.envvar("LOG_ENABLED", type=bool, default=True)
+        log.setLevel(
+            getattr(logging, EnvironmentUtils.envvar("LOG_LEVEL", default="INFO"))
+        )
+        log.disabled = not EnvironmentUtils.envvar(
+            "LOG_ENABLED", type=bool, default=True
+        )
 
     async def progress_bar(self):
         """
@@ -77,17 +83,18 @@ class EnduranceTest(object):
         Run the test.
         """
 
-        for it in range(self.iterations):
-            self.tasks.add(
-                asyncio.create_task(self.delayed_task(getattr(self, "task"), it))
-            )
-        self.tasks.add(asyncio.create_task(self.progress_bar()))
-
         Metric("Test duration", self.duration, "s").print_line()
         Metric("Test rate", self.rate, "/s").print_line()
         print("")
 
         await self.on_start()
+
+        self.tasks.add(asyncio.create_task(self.progress_bar()))
+
+        for it in range(self.iterations):
+            self.tasks.add(
+                asyncio.create_task(self.delayed_task(getattr(self, "task"), it))
+            )
 
         self.start_time = time.time()
         await asyncio.gather(*self.tasks)
