@@ -1,0 +1,21 @@
+safes(first: $first, skip: $skip, where: {registeredNodesInNetworkRegistry_: {node_not: ""}}) {
+    registeredNodesInNetworkRegistry { 
+        node { 
+            id 
+        } 
+        safe {
+            id
+            balance { 
+                wxHoprBalance 
+            } 
+            allowance {
+                wxHoprAllowance 
+            }
+            owners {
+                owner {
+                    id
+                }
+            }
+        }
+    }
+}

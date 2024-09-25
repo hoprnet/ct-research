@@ -4,19 +4,23 @@
 # =============================================================================
 flags:
   core: 
-    rotateSubgraphs: 120
+    rotateSubgraphs: 300
     peersRewards: 120
     ticketParameters: 120
 
     connectedPeers: 120
-    registeredNodes: 120
-    topology: 120
-    NFTHolders: 120
+    registeredNodes: 600
+    topology: 600
+    allocations: 600
+    EOABalances: 600
+    NFTHolders: 600
     
     applyEconomicModel: 120
     
+    safeFundings: 600
+
   node:
-    healthcheck: 10
+    healthcheck: 60
     retrievePeers: 120
     retrieveIncomingChannels: 120
     retrieveOutgoingChannels: 120
@@ -29,13 +33,13 @@ flags:
     closeIncomingChannels: Off
 
     getTotalChannelFunds: 300
-    
-    watchMessageQueue: On  # should only be On / Off
-    relayedMessagesToDB: 120
+
+    watchMessageQueue: Off  # should only be On / Off
+    relayedMessagesToDB: Off
 
   peer:
-    messageRelayRequest: On # should only be On / Off
-    sentMessagesToDB: 30
+    messageRelayRequest: Off # should only be On / Off
+    sentMessagesToDB: Off
     
 # =============================================================================
 # 
@@ -65,6 +69,7 @@ economicModel:
 
   sigmoid:
     proportion: 0
+
     maxAPR: 0.0000001
     networkCapacity: 100
     totalTokenSupply: 200
@@ -110,16 +115,46 @@ channel:
 # =============================================================================
 # 
 # =============================================================================
+fundings:
+  constant: 0
+
+# =============================================================================
+# 
+# =============================================================================
 subgraph:
-  safesBalance:
-    queryID: GmbJTpa1o4baeStDT48TfQu4ditJmQwwXYPG1DvEiufB
-    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-nodes-rotsee/version/latest
+  type: auto # auto | default | backup
+  userID: 78696
 
-  staking:
-    queryID: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
-    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-stake-all-seasons/version/latest
-
+  mainnetAllocations:
+    queryID: FhU1GxUovoP1zphNbWFEQHwpabLGELQBdWWyFX1yjBkf
+    slug: hopr-allocations
+    inputs:
+      schedule_in:
+        - investor-node-remainder-2024-01
+  gnosisAllocations:
+    queryID: DXy4UwhNms3zm7abYeSYaD3hTkuaWYyNvozrXSXejMbS
+    slug: hopr-allocations---gnosis
+    inputs:
+      schedule_in:
+        - investor-node-remainder-2024-01
+  hoprOnMainet:
+    queryID: 4GZdwVtPcQp95RF77W27GK2ezgGLB1iintG6mYZQ1w33
+    slug: hopr---mainnet
+  hoprOnGnosis:
+    queryID: 2wMRp1AW1ghxoFiM6WeRD93djHNvNGhXsuQyadmwCyqE
+    slug: hopr-on-gnosis
+  fundings:
+    queryID: EpAdSFzDLT7N5RhA3UxtqGUwkFxmMunSE2yGLb8juQjC
+    slug: subgraph-wxhopr-txs
+    inputs:
+      from: '0xd9a00176cf49dfb9ca3ef61805a2850f45cb1d05'
   rewards:
     queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
-    URLBackup: https://api.studio.thegraph.com/query/78696/hopr-channels/version/latest
+    slug: hopr-channels
+  safesBalance:
+    queryID: GmbJTpa1o4baeStDT48TfQu4ditJmQwwXYPG1DvEiufB
+    slug: hopr-nodes-rotsee
+  staking:
+    queryID: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
+    slug: hopr-stake-all-seasons
 ...

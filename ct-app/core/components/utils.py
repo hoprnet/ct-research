@@ -1,4 +1,4 @@
-from core.model import NodeSafeEntry
+from core.model.subgraph import SafeEntry
 
 from .baseclass import Base
 from .channelstatus import ChannelStatus
@@ -26,27 +26,47 @@ class Utils(Base):
         cls,
         topology: list,
         peers: list,
-        safes: list,
+        nodes: list,
+        allocations: list,
+        eoa_balances: dict,
     ):
         for peer in peers:
-            address = peer.address.address
-            topo = next(filter(lambda t: t.node_address == address, topology), None)
-            safe = next(filter(lambda s: s.node_address == address, safes), None)
+            address = peer.node_address
+            topo = next(filter(lambda t: t.address == address, topology), None)
+            node = next(filter(lambda n: n.address == address, nodes), None)
 
-            if safe is None:
-                safe = NodeSafeEntry(address, "0", "0x0", "0")
+            peer.safe = getattr(node, "safe", SafeEntry.default())
 
-            if topo is not None and safe is not None and peer is not None:
+            for allocation in allocations:
+                if peer.safe.address in allocation.linked_safes:
+                    peer.safe.additional_balance += (
+                        allocation.unclaimed_amount / allocation.num_linked_safes
+                    )
+
+            for eoa_balance in eoa_balances:
+                if peer.safe.address in eoa_balance.linked_safes:
+                    peer.safe.additional_balance += (
+                        eoa_balance.balance / eoa_balance.num_linked_safes
+                    )
+
+            if topo is not None:
                 peer.channel_balance = topo.channels_balance
-                peer.safe_address = safe.safe_address
-                peer.safe_balance = (
-                    safe.wxHoprBalance if safe.wxHoprBalance is not None else 0
-                )
-                peer.safe_allowance = float(safe.safe_allowance)
             else:
                 await peer.yearly_message_count.set(None)
 
         cls().info("Merged topology, peers, and safes data.")
+
+    @classmethod
+    def associateEntitiesToNodes(cls, entities, nodes):
+        entity_addresses = [e.address for e in entities]
+        for n in nodes:
+            for owner in n.safe.owners:
+                try:
+                    index = entity_addresses.index(owner)
+                except ValueError:
+                    continue
+
+                entities[index].linked_safes.add(n.safe.address)
 
     @classmethod
     def allowManyNodePerSafe(cls, peers: list):
@@ -56,15 +76,15 @@ class Utils(Base):
         :param peer: list of peers
         :returns: nothing.
         """
-        safe_counts = {peer.safe_address: 0 for peer in peers}
+        safe_counts = {peer.safe.address: 0 for peer in peers}
 
         # Calculate the number of safe_addresses related to a node address
         for peer in peers:
-            safe_counts[peer.safe_address] += 1
+            safe_counts[peer.safe.address] += 1
 
         # Update the input_dict with the calculated splitted_stake
         for peer in peers:
-            peer.safe_address_count = safe_counts[peer.safe_address]
+            peer.safe_address_count = safe_counts[peer.safe.address]
 
     @classmethod
     def exclude(cls, source_data: list, blacklist: list, text: str = "") -> list:

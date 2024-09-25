@@ -11,9 +11,12 @@ flags:
     connectedPeers: 30
     registeredNodes: 30
     topology: 30
+    allocations: 30
     NFTHolders: 30
     
     applyEconomicModel: 30
+
+    fundings: 30
     
   node:
     healthcheck: 10
@@ -86,14 +89,6 @@ economicModel:
 # =============================================================================
 # 
 # =============================================================================
-distribution:
-  minEligiblePeers: 500
-  messageDeliveryDelay: 0.2
-  maxIterations: 4
-
-# =============================================================================
-# 
-# =============================================================================
 storage:
   value: 5 # wxHOPR
   timeout: 43200 # seconds
@@ -115,16 +110,38 @@ channel:
 # =============================================================================
 # 
 # =============================================================================
-subgraph:
-  safesBalance:
-    queryID: query-id-safes
-    URLBackup: safes_backup_url
+fundings:
+  constant: 0
 
-  staking:
-    queryID: query-id-staking
-    URLBackup: staking_backup_url
-  
+# =============================================================================
+# 
+# =============================================================================
+subgraph:
+  type: auto # auto | default | backup
+  userID: 1000
+
+  mainnetAllocations:
+    queryID: ~
+    slug: hopr-allocations
+  gnosisAllocations:
+    queryID: ~
+    slug: hopr-allocations-gnosis
+  hoprOnMainet:
+    queryID: ~
+    slug: hopr-on-mainnet
+  hoprOnGnosis:
+    queryID: ~
+    slug: hopr-on-gnosis
+  fundings:
+    queryID: ~
+    slug: subgraph-wxhopr-txs
   rewards:
     queryID: ~
-    URLBackup: URLBackup_backup_url
+    slug: rewards_backup_url
+  safesBalance:
+    queryID: query-id-safes
+    slug: safes_backup_url
+  staking:
+    queryID: query-id-staking
+    slug: staking_backup_url
 ...

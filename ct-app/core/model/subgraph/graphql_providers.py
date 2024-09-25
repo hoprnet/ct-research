@@ -3,8 +3,14 @@ from pathlib import Path
 from typing import Union
 
 import aiohttp
+from core.components.baseclass import Base
+from prometheus_client import Gauge
 
-from .baseclass import Base
+from .subgraph_type import SubgraphType
+from .subgraph_url import SubgraphURL
+
+SUBGRAPH_CALLS = Gauge("ct_subgraph_calls", "# of subgraph calls", ["slug", "type"])
+SUBGRAPH_IN_USE = Gauge("ct_subgraph_in_use", "Subgraph in use", ["slug"])
 
 
 class ProviderError(Exception):
@@ -12,20 +18,26 @@ class ProviderError(Exception):
 
 
 class GraphQLProvider(Base):
-    def __init__(self, url: str):
+    def __init__(self, url: SubgraphURL):
         self.url = url
-        self.pwd = Path(__file__).parent
+        self.pwd = Path(__file__).parent.joinpath("queries")
         self._default_key = None
 
     #### PRIVATE METHODS ####
-    def _load_query(self, path: Union[str, Path]) -> str:
+    def _load_query(self, path: Union[str, Path], extra_inputs: list[str] = []) -> str:
         """
         Loads a graphql query from a file.
         :param path: Path to the file. The path must be relative to the ct-app folder.
         :return: The query as a string.
         """
+        inputs = ["$first: Int!", "$skip: Int!", *extra_inputs]
+
+        header = "query (" + ",".join(inputs) + ") {"
+        footer = "}"
         with open(self.pwd.joinpath(path)) as f:
-            return f.read()
+            body = f.read()
+
+        return body.split("(")[0], ("\n".join([header, body, footer]))
 
     async def _execute(self, query: str, variable_values: dict) -> tuple[dict, dict]:
         """
@@ -35,8 +47,9 @@ class GraphQLProvider(Base):
 
         try:
             async with aiohttp.ClientSession() as session, session.post(
-                self.url, json={"query": query, "variables": variable_values}
+                self.url.url, json={"query": query, "variables": variable_values}
             ) as response:
+                SUBGRAPH_CALLS.labels(self.url.params.slug, self.url.type).inc()
                 return await response.json(), response.headers
         except TimeoutError as err:
             self.error(f"Timeout error: {err}")
@@ -51,12 +64,11 @@ class GraphQLProvider(Base):
         :param kwargs: The variables to use in the query (dict).
         :return: True if the query is successful, False otherwise.
         """
-        vars = {"first": 1, "skip": 0}
-        vars.update(kwargs)
+        kwargs.update({"first": 1, "skip": 0})
 
         try:
             response, _ = await asyncio.wait_for(
-                self._execute(self._sku_query, vars), timeout=30
+                self._execute(self._sku_query, kwargs), timeout=30
             )
         except asyncio.TimeoutError:
             self.error("Query timeout occurred")
@@ -94,6 +106,9 @@ class GraphQLProvider(Base):
 
             if response is None:
                 break
+
+            if "errors" in response:
+                self.error(f"Internal error: {response['errors']}")
 
             try:
                 content = response.get("data", dict()).get(key, [])
@@ -136,9 +151,11 @@ class GraphQLProvider(Base):
             )
             return []
 
+        if inputs := getattr(self.url.params, "inputs", None):
+            kwargs.update(vars(inputs))
         return await self._get(key, **kwargs)
 
-    async def test(self, **kwargs):
+    async def test(self, method: str, **kwargs):
         """
         Tests a subgraph query using the default key.
         :param kwargs: The variables to use in the query (dict).
@@ -150,34 +167,70 @@ class GraphQLProvider(Base):
             )
             return False
 
-        try:
-            result = await self._test_query(self._default_key, **kwargs)
-        except ProviderError as err:
-            self.error(f"ProviderError error: {err}")
-            result = None
+        if method != "auto":
+            self.url.type = SubgraphType.fromString(method)
+        else:
+            for type in SubgraphType.callables():
+                self.url.type = type
+                try:
+                    result = await self._test_query(self._default_key, **kwargs)
+                except ProviderError as err:
+                    self.error(f"ProviderError error: {err}")
 
-        if result is None:
-            return False
+                if result is True:
+                    break
+            else:
+                self.url.type = SubgraphType.NONE
 
-        return result
+        if self.url.type == SubgraphType.NONE:
+            self.warning(f"No subgraph available for '{self.url.params.slug}'")
+
+        # self.info(f"Using {self.url.type} for {self.url.params.slug}")
+
+        SUBGRAPH_IN_USE.labels(self.url.params.slug).set(self.url.type.toInt())
+        return self.url.type
 
 
 class SafesProvider(GraphQLProvider):
-    def __init__(self, url: str):
+    def __init__(self, url: SubgraphURL):
         super().__init__(url)
-        self._default_key = "safes"
-        self._sku_query = self._load_query("./subgraph_queries/safes_balance.graphql")
+        self._default_key, self._sku_query = self._load_query("safes_balance.graphql")
 
 
 class StakingProvider(GraphQLProvider):
-    def __init__(self, url: str):
+    def __init__(self, url: SubgraphURL):
         super().__init__(url)
-        self._default_key = "boosts"
-        self._sku_query = self._load_query("./subgraph_queries/staking.graphql")
+        self._default_key, self._sku_query = self._load_query("staking.graphql")
 
 
 class RewardsProvider(GraphQLProvider):
-    def __init__(self, url: str):
+    def __init__(self, url: SubgraphURL):
         super().__init__(url)
-        self._default_key = "accounts"
-        self._sku_query = self._load_query("./subgraph_queries/rewards.graphql")
+        self._default_key, self._sku_query = self._load_query("rewards.graphql")
+
+
+class AllocationsProvider(GraphQLProvider):
+    def __init__(self, url: SubgraphURL):
+        super().__init__(url)
+        self._default_key, self._sku_query = self._load_query(
+            "allocations.graphql",
+            extra_inputs=['$schedule_in: [String!] = [""]'],
+        )
+
+
+class FundingsProvider(GraphQLProvider):
+    def __init__(self, url: SubgraphURL):
+        super().__init__(url)
+        self._default_key, self._sku_query = self._load_query(
+            "fundings.graphql",
+            extra_inputs=['$from: String = ""', '$to_in: [String!] = [""]'],
+        )
+
+
+class EOABalanceProvider(GraphQLProvider):
+    def __init__(self, url: SubgraphURL):
+        super().__init__(url)
+        self._default_key, self._sku_query = self._load_query(
+            "eoa_balance.graphql",
+            extra_inputs=['$id_in: [Bytes!] = [""]'],
+        )

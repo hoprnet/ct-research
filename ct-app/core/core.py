@@ -6,23 +6,29 @@ from prometheus_client import Gauge
 
 from .components import AsyncLoop, Base, HoprdAPI, LockedVar, Parameters, Utils
 from .components.decorators import flagguard, formalin
-from .components.graphql_providers import (
+from .model import Address, Peer
+from .model.economic_model import EconomicModelLegacy, EconomicModelSigmoid
+from .model.subgraph import (
+    AllocationEntry,
+    AllocationsProvider,
+    BalanceEntry,
+    EOABalanceProvider,
+    FundingsProvider,
+    GraphQLProvider,
+    NodeEntry,
     ProviderError,
     RewardsProvider,
     SafesProvider,
     StakingProvider,
+    SubgraphURL,
+    TopologyEntry,
 )
-from .model import Address, NodeSafeEntry, Peer, TopologyEntry
-from .model.economic_model import EconomicModelLegacy, EconomicModelSigmoid
-from .model.subgraph import SubgraphType, SubgraphURL
 from .node import Node
 
 # endregion
 
 # region Metrics
 UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers", ["type"])
-SUBGRAPH_IN_USE = Gauge("ct_subgraph_in_use", "Subgraph in use")
-SUBGRAPH_CALLS = Gauge("ct_subgraph_calls", "# of subgraph calls", ["type"])
 SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
 TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
 NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
@@ -56,15 +62,32 @@ class Core(Base):
 
         self.tasks = set[asyncio.Task]()
 
-        self.connected = LockedVar("connected", False)
-
         self.all_peers = LockedVar("all_peers", set[Peer]())
         self.topology_list = LockedVar("topology_list", list[TopologyEntry]())
-        self.registered_nodes_list = LockedVar("subgraph_list", list[NodeSafeEntry]())
-        self.nft_holders_list = LockedVar("nft_holders", list[str]())
+        self.registered_nodes_list = LockedVar("subgraph_list", list[NodeEntry]())
+        self.nft_holders_list = LockedVar("nft_holders_list", list[str]())
+        self.allocations_data = LockedVar("allocations_data", list[AllocationEntry]())
+        self.eoa_balances_data = LockedVar("eoa_balances_data", list[BalanceEntry]())
         self.peer_rewards = LockedVar("peer_rewards", dict[str, float]())
 
-        self.subgraph_type = SubgraphType.DEFAULT
+        self.subgraph_providers: dict[str, GraphQLProvider] = {
+            "safes": SafesProvider(SubgraphURL(self.params.subgraph, "safesBalance")),
+            "staking": StakingProvider(SubgraphURL(self.params.subgraph, "staking")),
+            "rewards": RewardsProvider(SubgraphURL(self.params.subgraph, "rewards")),
+            "mainnet_allocations": AllocationsProvider(
+                SubgraphURL(self.params.subgraph, "mainnetAllocations")
+            ),
+            "gnosis_allocations": AllocationsProvider(
+                SubgraphURL(self.params.subgraph, "gnosisAllocations")
+            ),
+            "mainnet_balances": EOABalanceProvider(
+                SubgraphURL(self.params.subgraph, "hoprOnMainet")
+            ),
+            "gnosis_balances": EOABalanceProvider(
+                SubgraphURL(self.params.subgraph, "hoprOnGnosis")
+            ),
+            "fundings": FundingsProvider(SubgraphURL(self.params.subgraph, "fundings")),
+        }
 
         self.running = False
 
@@ -76,39 +99,14 @@ class Core(Base):
     async def ct_nodes_addresses(self) -> list[Address]:
         return await asyncio.gather(*[node.address.get() for node in self.nodes])
 
-    @property
-    def subgraph_type(self) -> SubgraphType:
-        return self._subgraph_type
-
-    @subgraph_type.setter
-    def subgraph_type(self, value: SubgraphType):
-        if not hasattr(self, "_subgraph_type") or value != self._subgraph_type:
-            self.info(f"Now using '{value.value}' subgraph.")
-
-        subgraph_params = self.params.subgraph
-        key = subgraph_params.apiKey
-
-        self.safe_subgraph_url = SubgraphURL(key, subgraph_params.safesBalance)(value)
-        self.staking_subgraph_url = SubgraphURL(key, subgraph_params.staking)(value)
-        self.rewards_subgraph_url = SubgraphURL(key, subgraph_params.rewards)(value)
-
-        SUBGRAPH_IN_USE.set(value.toInt())
-        self._subgraph_type = value
-
     @flagguard
     @formalin
     async def rotate_subgraphs(self):
         """
         Checks the subgraph URLs and sets the subgraph type in use (default, backup or none)
         """
-        for type in SubgraphType.callables():
-            self.subgraph_type = type
-            if await SafesProvider(self.safe_subgraph_url).test():
-                break
-        else:
-            self.subgraph_type = SubgraphType.NONE
-
-        SUBGRAPH_CALLS.labels(type.value).inc()
+        for provider in self.subgraph_providers.values():
+            await provider.test(self.params.subgraph.type)
 
     @flagguard
     @formalin
@@ -127,8 +125,9 @@ class Core(Base):
             for peer in current_peers:
                 # if peer is still visible
                 if peer in visible_peers:
-                    await peer.yearly_message_count.replace_value(None, 0)
-                    peer.running = True
+                    if await peer.yearly_message_count.replace_value(None, 0):
+                        # peer was already known, but distribution stopped for him because he was set in the `unreachable` state.
+                        peer.start_async_processes()
                     counts["known"] += 1
 
                 # if peer is not visible anymore
@@ -160,16 +159,13 @@ class Core(Base):
         """
         Gets the subgraph data and sets the subgraph_list LockedVar.
         """
-        if self.subgraph_type == SubgraphType.NONE:
-            self.warning("No subgraph URL available.")
-            return
+        provider = self.subgraph_providers["safes"]
 
-        provider = SafesProvider(self.safe_subgraph_url)
-        results = list[NodeSafeEntry]()
+        results = list[NodeEntry]()
         try:
             for safe in await provider.get():
                 entries = [
-                    NodeSafeEntry.fromSubgraphResult(node)
+                    NodeEntry.fromSubgraphResult(node)
                     for node in safe["registeredNodesInNetworkRegistry"]
                 ]
                 results.extend(entries)
@@ -185,11 +181,7 @@ class Core(Base):
     @flagguard
     @formalin
     async def nft_holders(self):
-        if self.subgraph_type == SubgraphType.NONE:
-            self.warning("No subgraph URL available.")
-            return
-
-        provider = StakingProvider(self.staking_subgraph_url)
+        provider = self.subgraph_providers["staking"]
 
         results = list[str]()
         try:
@@ -198,12 +190,64 @@ class Core(Base):
                     results.append(owner)
 
         except ProviderError as err:
-            self.error(f"get_nft_holders: {err}")
+            self.error(f"nft_holders: {err}")
 
         await self.nft_holders_list.set(results)
 
         NFT_HOLDERS.set(len(results))
         self.debug(f"Fetched NFT holders ({len(results)} entries).")
+
+    @flagguard
+    @formalin
+    async def allocations(self):
+        mainnet_provider = self.subgraph_providers["mainnet_allocations"]
+        gnosis_provider = self.subgraph_providers["gnosis_allocations"]
+
+        results = list[AllocationEntry]()
+        try:
+            for account in await mainnet_provider.get():
+                results.append(AllocationEntry(**account["account"]))
+        except ProviderError as err:
+            self.error(f"allocations: {err}")
+
+        try:
+            for account in await gnosis_provider.get():
+                results.append(AllocationEntry(**account["account"]))
+        except ProviderError as err:
+            self.error(f"allocations: {err}")
+
+        await self.allocations_data.set(results)
+        self.debug(f"Fetched allocations ({len(results)} entries).")
+
+    @flagguard
+    @formalin
+    async def eoa_balances(self):
+        mainnet_provider = self.subgraph_providers["mainnet_balances"]
+        gnosis_provider = self.subgraph_providers["gnosis_balances"]
+
+        addresses = [alloc.address for alloc in await self.allocations_data.get()]
+        if len(addresses) == 0:
+            self.info("No investors addresses found.")
+            return
+        else:
+            balances = {address: 0 for address in addresses}
+
+        try:
+            for account in await mainnet_provider.get(id_in=list(balances.keys())):
+                balances[account["id"]] += float(account["totalBalance"]) / 1e18
+        except ProviderError as err:
+            self.error(f"eoa_balances: {err}")
+
+        try:
+            for account in await gnosis_provider.get(id_in=list(balances.keys())):
+                balances[account["id"]] += float(account["totalBalance"]) / 1e18
+        except ProviderError as err:
+            self.error(f"eoa_balances: {err}")
+
+        eoa_balances = [BalanceEntry(key, value) for key, value in balances.items()]
+
+        await self.eoa_balances_data.set(eoa_balances)
+        self.debug(f"Fetched EOA balances ({len(balances)} entries).")
 
     @flagguard
     @formalin
@@ -232,22 +276,27 @@ class Core(Base):
         """
         Applies the economic model to the eligible peers (after multiple filtering layers).
         """
-        registered_nodes = await self.registered_nodes_list.get()
+        nodes = await self.registered_nodes_list.get()
         nft_holders = await self.nft_holders_list.get()
         topology = await self.topology_list.get()
         ct_nodes = await self.ct_nodes_addresses
         redeemed_rewards = await self.peer_rewards.get()
+        eoa_balances = await self.eoa_balances_data.get()
+        allocations = await self.allocations_data.get()
 
         async with self.all_peers.lock:
             peers = self.all_peers.value
 
-            if not all(
-                [len(topology), len(registered_nodes), len(peers), len(nft_holders)]
-            ):
+            if not all([len(topology), len(nodes), len(peers)]):
                 self.warning("Not enough data to apply economic model.")
                 return
 
-            await Utils.mergeDataSources(topology, peers, registered_nodes)
+            Utils.associateEntitiesToNodes(allocations, nodes)
+            Utils.associateEntitiesToNodes(eoa_balances, nodes)
+
+            await Utils.mergeDataSources(
+                topology, peers, nodes, allocations, eoa_balances
+            )
 
             for p in peers:
                 if p.is_old(self.params.peer.minVersion):
@@ -308,22 +357,18 @@ class Core(Base):
                     sigmoid_message_count
                 )
 
-            eligibles = [
-                p for p in peers if await p.yearly_message_count.get() is not None
-            ]
-            self.info(f"Eligible nodes: {len(eligibles)} entries.")
-            ELIGIBLE_PEERS.set(len(eligibles))
+            eligibles = sum(
+                [(await p.yearly_message_count.get() is not None) for p in peers]
+            )
+            self.info(f"Eligible nodes: {eligibles} entries.")
+            ELIGIBLE_PEERS.set(eligibles)
 
             self.all_peers.value = set(peers)
 
     @flagguard
     @formalin
     async def peers_rewards(self):
-        if self.subgraph_type == SubgraphType.NONE:
-            self.warning("No subgraph URL available.")
-            return
-
-        provider = RewardsProvider(self.rewards_subgraph_url)
+        provider = self.subgraph_providers["rewards"]
 
         results = dict()
         try:
@@ -361,6 +406,27 @@ class Core(Base):
         self.sigmoid_model.budget.ticket_price = price
         self.sigmoid_model.budget.winning_probability = win_probabilty
 
+    @flagguard
+    @formalin
+    async def safe_fundings(self):
+        """
+        Gets the total amount that was sent to CT safes.
+        """
+        provider = self.subgraph_providers["fundings"]
+
+        addresses = list(
+            set([(await node.api.node_info()).hopr_node_safe for node in self.nodes])
+        )
+        try:
+            entries = await provider.get(to_in=addresses)
+        except ProviderError as err:
+            self.error(f"get_peers_rewards: {err}")
+            entries = []
+        amount = sum([float(item["amount"]) for item in entries])
+
+        TOTAL_FUNDING.set(amount + self.params.fundings.constant)
+        self.debug(f"Safe fundings: {amount} + {self.params.fundings.constant}")
+
     async def start(self):
         """
         Start the node.
@@ -386,7 +452,10 @@ class Core(Base):
                 self.registered_nodes,
                 self.topology,
                 self.nft_holders,
+                self.allocations,
+                self.eoa_balances,
                 self.apply_economic_model,
+                self.safe_fundings,
             ]
         )
 
