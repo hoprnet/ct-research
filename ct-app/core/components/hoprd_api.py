@@ -183,10 +183,7 @@ class HoprdAPI(Base):
         if not is_ok:
             return None
 
-        for channel in response.outgoing:
-            channel.status = ChannelStatus.fromString(channel.status)
-
-        for channel in response.incoming:
+        for channel in response.all:
             channel.status = ChannelStatus.fromString(channel.status)
 
         return response
