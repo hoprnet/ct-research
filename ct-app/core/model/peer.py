@@ -193,7 +193,7 @@ class Peer(Base):
         except Exception as err:
             self.error(f"Database error while storing sent messages entries: {err}")
         else:
-            await self.message_count - count
+            self.message_count -= count
             self.last_db_storage = now
 
     def start_async_processes(self):
