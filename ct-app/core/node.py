@@ -252,7 +252,7 @@ class Node(Base):
         if self.channels is None:
             return
 
-        out_opens = [c for c in self.channel.outgoing if c.status.isOpen]
+        out_opens = [c for c in self.channels.outgoing if c.status.isOpen]
 
         low_balances = [
             c

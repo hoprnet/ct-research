@@ -294,7 +294,7 @@ class HoprdAPI(Base):
 
         return float(response.price) / 1e18 if hasattr(response, "price") else None
 
-    async def healthyz(self, timeout: int = 20):
+    async def healthyz(self, timeout: int = 20) -> bool:
         """
         Checks if the node is healthy. Return True if `healthyz` returns 200 after max `timeout` seconds.
         """
@@ -303,7 +303,7 @@ class HoprdAPI(Base):
         )
 
     @classmethod
-    async def checkStatus(cls, url: str, target: int, timeout: int = 20) -> int:
+    async def checkStatus(cls, url: str, target: int, timeout: int = 20) -> bool:
         """
         Checks if the given URL is returning 200 after max `timeout` seconds.
         """

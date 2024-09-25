@@ -149,6 +149,9 @@ class Peer(Base):
     @flagguard
     @formalin
     async def message_relay_request(self):
+        if self.address is None:
+            return
+
         if delay := await self.message_delay:
             message = MessageFormat(self.address.id, datetime.now())
             await MessageQueue().buffer.put(message)
