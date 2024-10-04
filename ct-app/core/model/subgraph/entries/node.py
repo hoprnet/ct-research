@@ -11,7 +11,6 @@ class Node(SubgraphEntry):
         """
         Create a new Node.
         :param address: The address of the node.
-        :param wxHoprBalance: The wxHoprBalance of the node.
         :param safe: A Safe object.
         """
 

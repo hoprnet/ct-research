@@ -20,6 +20,3 @@ class Balance(SubgraphEntry):
     @property
     def num_linked_safes(self):
         return len(self.linked_safes)
-
-    def __str__(self):
-        return f"Balance({self.address}, {self.balance})"

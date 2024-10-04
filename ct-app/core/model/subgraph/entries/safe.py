@@ -44,6 +44,3 @@ class Safe(SubgraphEntry):
         Create a new Safe with default values.
         """
         return cls("", "0", "0", [])
-
-    def __str__(self):
-        return f"Safe({self.address}, {self.balance}, {self.additional_balance}, {self.allowance}, {self.owners})"
