@@ -1,13 +1,13 @@
 from enum import Enum
 
 
-class SubgraphType(Enum):
+class Mode(Enum):
     DEFAULT = "default"
     BACKUP = "backup"
     NONE = "None"
 
     def toInt(self):
-        return {SubgraphType.DEFAULT: 0, SubgraphType.BACKUP: 1}.get(self, -1)
+        return {Mode.DEFAULT: 0, Mode.BACKUP: 1}.get(self, -1)
 
     @classmethod
     def callables(cls):

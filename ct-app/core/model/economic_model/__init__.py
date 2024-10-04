@@ -6,6 +6,7 @@ from .economic_model_legacy import (
     Equations,
 )
 from .economic_model_sigmoid import Bucket, EconomicModelSigmoid
+from .model_types import EconomicModelTypes
 
 __all__ = [
     "Budget",
@@ -15,4 +16,5 @@ __all__ = [
     "Equation",
     "Equations",
     "EconomicModelSigmoid",
+    "EconomicModelTypes",
 ]

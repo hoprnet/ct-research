@@ -10,7 +10,7 @@ from prometheus_client import Gauge
 
 from .address import Address
 from .database import DatabaseConnection, SentMessages
-from .subgraph.entries import SafeEntry
+from .subgraph.entries import Safe
 
 STAKE = Gauge("ct_peer_stake", "Stake", ["peer_id", "type"])
 SAFE_COUNT = Gauge("ct_peer_safe_count", "Number of safes", ["peer_id"])
@@ -36,7 +36,7 @@ class Peer(Base):
         self.version = version
         self.channel_balance = None
 
-        self.safe: SafeEntry = None
+        self.safe: Safe = None
 
         self._safe_address_count = None
 

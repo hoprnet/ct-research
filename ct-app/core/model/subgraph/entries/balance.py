@@ -1,25 +1,25 @@
 from .entry import SubgraphEntry
-from .safe_entry import SafeEntry
+from .safe import Safe
 
 
-class BalanceEntry(SubgraphEntry):
+class Balance(SubgraphEntry):
     """
-    A BalanceEntry represents a single EOA balance in the subgraph.
+    A Balance represents a single EOA balance in the subgraph.
     """
 
     def __init__(self, address: str, balance: str):
         """
-        Create a new BalanceEntry with the specified balance.
+        Create a new Balance with the specified balance.
         :param balance: The balance of the safe.
         :param allowance: The allowance of the safe.
         """
         self.address = address
         self.balance = float(balance) if balance else 0
-        self.linked_safes: set[SafeEntry] = set()
+        self.linked_safes: set[Safe] = set()
 
     @property
     def num_linked_safes(self):
         return len(self.linked_safes)
 
     def __str__(self):
-        return f"BalanceEntry({self.address}, {self.balance})"
+        return f"Balance({self.address}, {self.balance})"

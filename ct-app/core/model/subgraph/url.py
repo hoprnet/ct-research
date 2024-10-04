@@ -1,20 +1,20 @@
 from core.components.parameters import Parameters
 
-from .subgraph_type import SubgraphType
+from .mode import Mode
 
 
-class SubgraphURL:
+class URL:
     def __init__(self, params: Parameters, key: str):
         super().__init__()
         self.params = getattr(params, key)
         self.deployer_key = params.apiKey
         self.user_id = params.userID
-        self.type = SubgraphType.DEFAULT
+        self.type = Mode.DEFAULT
 
         self._urls = {
-            SubgraphType.DEFAULT: self._construct_default(),
-            SubgraphType.BACKUP: self._construct_backup(),
-            SubgraphType.NONE: None,
+            Mode.DEFAULT: self._construct_default(),
+            Mode.BACKUP: self._construct_backup(),
+            Mode.NONE: None,
         }
 
     def _construct_default(self):
@@ -23,7 +23,7 @@ class SubgraphURL:
     def _construct_backup(self):
         return f"https://api.studio.thegraph.com/query/{self.user_id}/{self.params.slug}/{getattr(self.params, 'version','version/latest')}"
 
-    def __getitem__(self, index: SubgraphType) -> str:
+    def __getitem__(self, index: Mode) -> str:
         return self._urls.get(index, None)
 
     @property

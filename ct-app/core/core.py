@@ -7,22 +7,9 @@ from prometheus_client import Gauge
 from .components import AsyncLoop, Base, HoprdAPI, LockedVar, Parameters, Utils
 from .components.decorators import flagguard, formalin
 from .model import Address, Peer
-from .model.economic_model import EconomicModelLegacy, EconomicModelSigmoid
-from .model.subgraph import (
-    AllocationEntry,
-    AllocationsProvider,
-    BalanceEntry,
-    EOABalanceProvider,
-    FundingsProvider,
-    GraphQLProvider,
-    NodeEntry,
-    ProviderError,
-    RewardsProvider,
-    SafesProvider,
-    StakingProvider,
-    SubgraphURL,
-    TopologyEntry,
-)
+from .model.economic_model import EconomicModelTypes
+from .model.subgraph import URL, entries
+from .model.subgraph import graphql_providers as providers
 from .node import Node
 
 # endregion
@@ -54,41 +41,37 @@ class Core(Base):
             node.params = params
 
         self.models = {
-            "legacy": EconomicModelLegacy.fromParameters(
-                self.params.economicModel.legacy
-            ),
-            "sigmoid": EconomicModelSigmoid.fromParameters(
-                self.params.economicModel.sigmoid
-            ),
+            m: m().fromParameters(getattr(self.params.economicModel, m.value))
+            for m in EconomicModelTypes
         }
 
         self.tasks = set[asyncio.Task]()
 
         self.all_peers = LockedVar("all_peers", set[Peer]())
-        self.topology_data = list[TopologyEntry]()
-        self.registered_nodes_data = list[NodeEntry]()
+        self.topology_data = list[entries.Topology]()
+        self.registered_nodes_data = list[entries.Node]()
         self.nft_holders_data = list[str]()
-        self.allocations_data = list[AllocationEntry]()
-        self.eoa_balances_data = list[BalanceEntry]()
+        self.allocations_data = list[entries.Allocation]()
+        self.eoa_balances_data = list[entries.Balance]()
         self.peers_rewards_data = dict[str, float]()
 
-        self.subgraph_providers: dict[str, GraphQLProvider] = {
-            "safes": SafesProvider(SubgraphURL(self.params.subgraph, "safesBalance")),
-            "staking": StakingProvider(SubgraphURL(self.params.subgraph, "staking")),
-            "rewards": RewardsProvider(SubgraphURL(self.params.subgraph, "rewards")),
-            "mainnet_allocations": AllocationsProvider(
-                SubgraphURL(self.params.subgraph, "mainnetAllocations")
+        self.subgraph_providers: dict[str, providers.GraphQLProvider] = {
+            "safes": providers.Safes(URL(self.params.subgraph, "safesBalance")),
+            "staking": providers.Staking(URL(self.params.subgraph, "staking")),
+            "rewards": providers.Rewards(URL(self.params.subgraph, "rewards")),
+            "mainnet_allocations": providers.Allocations(
+                URL(self.params.subgraph, "mainnetAllocations")
             ),
-            "gnosis_allocations": AllocationsProvider(
-                SubgraphURL(self.params.subgraph, "gnosisAllocations")
+            "gnosis_allocations": providers.Allocations(
+                URL(self.params.subgraph, "gnosisAllocations")
             ),
-            "mainnet_balances": EOABalanceProvider(
-                SubgraphURL(self.params.subgraph, "hoprOnMainet")
+            "mainnet_balances": providers.EOABalance(
+                URL(self.params.subgraph, "hoprOnMainet")
             ),
-            "gnosis_balances": EOABalanceProvider(
-                SubgraphURL(self.params.subgraph, "hoprOnGnosis")
+            "gnosis_balances": providers.EOABalance(
+                URL(self.params.subgraph, "hoprOnGnosis")
             ),
-            "fundings": FundingsProvider(SubgraphURL(self.params.subgraph, "fundings")),
+            "fundings": providers.Fundings(URL(self.params.subgraph, "fundings")),
         }
 
         self.running = False
@@ -123,7 +106,6 @@ class Core(Base):
 
         counts = {"new": 0, "known": 0, "unreachable": 0}
 
-        # TODO: does this work ?
         async with self.all_peers as current_peers:
             visible_peers: set[Peer] = set()
             visible_peers.update(*[await node.peers.get() for node in self.nodes])
@@ -164,16 +146,17 @@ class Core(Base):
         Gets all registered nodes in the Network Registry.
         """
 
-        results = list[NodeEntry]()
+        results = list[entries.Node]()
         try:
             for safe in await self.subgraph_providers["safes"].get():
-                entries = [
-                    NodeEntry.fromSubgraphResult(node)
-                    for node in safe["registeredNodesInNetworkRegistry"]
-                ]
-                results.extend(entries)
+                results.extend(
+                    [
+                        entries.Node.fromSubgraphResult(node)
+                        for node in safe["registeredNodesInNetworkRegistry"]
+                    ]
+                )
 
-        except ProviderError as err:
+        except providers.ProviderError as err:
             self.error(f"get_registered_nodes: {err}")
 
         self.registered_nodes_data = results
@@ -192,7 +175,7 @@ class Core(Base):
                 if owner := nft.get("owner", {}).get("id", None):
                     results.append(owner)
 
-        except ProviderError as err:
+        except providers.ProviderError as err:
             self.error(f"nft_holders: {err}")
 
         self.nft_holders_data = results
@@ -206,17 +189,17 @@ class Core(Base):
         Gets all allocations for the investors.
         The amount per investor is then added to their stake before dividing it by the number of nodes they are running.
         """
-        results = list[AllocationEntry]()
+        results = list[entries.Allocation]()
         try:
             for account in await self.subgraph_providers["mainnet_allocations"].get():
-                results.append(AllocationEntry(**account["account"]))
-        except ProviderError as err:
+                results.append(entries.Allocation(**account["account"]))
+        except providers.ProviderError as err:
             self.error(f"allocations: {err}")
 
         try:
             for account in await self.subgraph_providers["gnosis_allocations"].get():
-                results.append(AllocationEntry(**account["account"]))
-        except ProviderError as err:
+                results.append(entries.Allocation(**account["account"]))
+        except providers.ProviderError as err:
             self.error(f"allocations: {err}")
 
         self.allocations_data = results
@@ -238,7 +221,7 @@ class Core(Base):
                 id_in=list(balances.keys())
             ):
                 balances[account["id"]] += float(account["totalBalance"]) / 1e18
-        except ProviderError as err:
+        except providers.ProviderError as err:
             self.error(f"eoa_balances: {err}")
 
         try:
@@ -246,11 +229,11 @@ class Core(Base):
                 id_in=list(balances.keys())
             ):
                 balances[account["id"]] += float(account["totalBalance"]) / 1e18
-        except ProviderError as err:
+        except providers.ProviderError as err:
             self.error(f"eoa_balances: {err}")
 
         self.eoa_balances_data = [
-            BalanceEntry(key, value) for key, value in balances.items()
+            entries.Balance(key, value) for key, value in balances.items()
         ]
         self.debug(f"Fetched EOA balances ({len(balances)} entries).")
 
@@ -267,7 +250,7 @@ class Core(Base):
             return
 
         self.topology_data = [
-            TopologyEntry.fromDict(*arg)
+            entries.Topology.fromDict(*arg)
             for arg in (
                 await Utils.balanceInChannels(
                     self.channels.outgoing + self.channels.incoming
@@ -315,7 +298,7 @@ class Core(Base):
             for p in peers:
                 if not p.is_eligible(
                     self.params.economicModel.minSafeAllowance,
-                    self.models["legacy"].coefficients.l,
+                    self.models[EconomicModelTypes.LEGACY].coefficients.l,
                     self.ct_nodes_addresses,
                     self.nft_holders_data,
                     self.params.economicModel.NFTThreshold,
@@ -338,20 +321,22 @@ class Core(Base):
                 if peer.yearly_message_count is None:
                     continue
 
-                legacy_message_count = self.models["legacy"].yearly_message_count(
+                legacy_message_count = self.models[
+                    EconomicModelTypes.LEGACY
+                ].yearly_message_count(
                     peer.split_stake,
                     self.peers_rewards_data.get(peer.address.address, 0.0),
                 )
-                sigmoid_message_count = self.models["sigmoid"].yearly_message_count(
-                    peer.split_stake, sigmoid_model_input
-                )
+                sigmoid_message_count = self.models[
+                    EconomicModelTypes.SIGMOID
+                ].yearly_message_count(peer.split_stake, sigmoid_model_input)
 
                 peer.yearly_message_count = legacy_message_count + sigmoid_message_count
 
-                MESSAGE_COUNT.labels(peer.address.id, "legacy").set(
+                MESSAGE_COUNT.labels(peer.address.id, EconomicModelTypes.LEGACY).set(
                     legacy_message_count
                 )
-                MESSAGE_COUNT.labels(peer.address.id, "sigmoid").set(
+                MESSAGE_COUNT.labels(peer.address.id, EconomicModelTypes.SIGMOID).set(
                     sigmoid_message_count
                 )
 
@@ -367,7 +352,7 @@ class Core(Base):
             for account in await self.subgraph_providers["rewards"].get():
                 results[account["id"]] = float(account["redeemedValue"])
 
-        except ProviderError as err:
+        except providers.ProviderError as err:
             self.error(f"get_peers_rewards: {err}")
 
         self.peers_rewards_data = results
@@ -409,7 +394,7 @@ class Core(Base):
         )
         try:
             entries = await provider.get(to_in=addresses)
-        except ProviderError as err:
+        except providers.ProviderError as err:
             self.error(f"get_peers_rewards: {err}")
             entries = []
         amount = sum([float(item["amount"]) for item in entries])

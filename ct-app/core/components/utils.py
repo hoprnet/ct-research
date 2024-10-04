@@ -1,4 +1,4 @@
-from core.model.subgraph import SafeEntry
+from core.model.subgraph.entries import Safe
 
 from .baseclass import Base
 from .channelstatus import ChannelStatus
@@ -35,7 +35,7 @@ class Utils(Base):
             topo = next(filter(lambda t: t.address == address, topology), None)
             node = next(filter(lambda n: n.address == address, nodes), None)
 
-            peer.safe = getattr(node, "safe", SafeEntry.default())
+            peer.safe = getattr(node, "safe", Safe.default())
 
             for allocation in allocations:
                 if peer.safe.address in allocation.linked_safes:

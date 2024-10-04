@@ -6,8 +6,8 @@ import aiohttp
 from core.components.baseclass import Base
 from prometheus_client import Gauge
 
-from .subgraph_type import SubgraphType
-from .subgraph_url import SubgraphURL
+from .mode import Mode
+from .url import URL
 
 SUBGRAPH_CALLS = Gauge("ct_subgraph_calls", "# of subgraph calls", ["slug", "type"])
 SUBGRAPH_IN_USE = Gauge("ct_subgraph_in_use", "Subgraph in use", ["slug"])
@@ -18,7 +18,7 @@ class ProviderError(Exception):
 
 
 class GraphQLProvider(Base):
-    def __init__(self, url: SubgraphURL):
+    def __init__(self, url: URL):
         self.url = url
         self.pwd = Path(__file__).parent.joinpath("queries")
         self._default_key = None
@@ -168,9 +168,9 @@ class GraphQLProvider(Base):
             return False
 
         if method != "auto":
-            self.url.type = SubgraphType.fromString(method)
+            self.url.type = Mode.fromString(method)
         else:
-            for type in SubgraphType.callables():
+            for type in Mode.callables():
                 self.url.type = type
                 try:
                     result = await self._test_query(self._default_key, **kwargs)
@@ -180,9 +180,9 @@ class GraphQLProvider(Base):
                 if result is True:
                     break
             else:
-                self.url.type = SubgraphType.NONE
+                self.url.type = Mode.NONE
 
-        if self.url.type == SubgraphType.NONE:
+        if self.url.type == Mode.NONE:
             self.warning(f"No subgraph available for '{self.url.params.slug}'")
 
         # self.info(f"Using {self.url.type} for {self.url.params.slug}")
@@ -191,26 +191,26 @@ class GraphQLProvider(Base):
         return self.url.type
 
 
-class SafesProvider(GraphQLProvider):
-    def __init__(self, url: SubgraphURL):
+class Safes(GraphQLProvider):
+    def __init__(self, url: URL):
         super().__init__(url)
         self._default_key, self._sku_query = self._load_query("safes_balance.graphql")
 
 
-class StakingProvider(GraphQLProvider):
-    def __init__(self, url: SubgraphURL):
+class Staking(GraphQLProvider):
+    def __init__(self, url: URL):
         super().__init__(url)
         self._default_key, self._sku_query = self._load_query("staking.graphql")
 
 
-class RewardsProvider(GraphQLProvider):
-    def __init__(self, url: SubgraphURL):
+class Rewards(GraphQLProvider):
+    def __init__(self, url: URL):
         super().__init__(url)
         self._default_key, self._sku_query = self._load_query("rewards.graphql")
 
 
-class AllocationsProvider(GraphQLProvider):
-    def __init__(self, url: SubgraphURL):
+class Allocations(GraphQLProvider):
+    def __init__(self, url: URL):
         super().__init__(url)
         self._default_key, self._sku_query = self._load_query(
             "allocations.graphql",
@@ -218,8 +218,8 @@ class AllocationsProvider(GraphQLProvider):
         )
 
 
-class FundingsProvider(GraphQLProvider):
-    def __init__(self, url: SubgraphURL):
+class Fundings(GraphQLProvider):
+    def __init__(self, url: URL):
         super().__init__(url)
         self._default_key, self._sku_query = self._load_query(
             "fundings.graphql",
@@ -227,8 +227,8 @@ class FundingsProvider(GraphQLProvider):
         )
 
 
-class EOABalanceProvider(GraphQLProvider):
-    def __init__(self, url: SubgraphURL):
+class EOABalance(GraphQLProvider):
+    def __init__(self, url: URL):
         super().__init__(url)
         self._default_key, self._sku_query = self._load_query(
             "eoa_balance.graphql",
