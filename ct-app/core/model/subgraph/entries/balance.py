@@ -10,8 +10,8 @@ class Balance(SubgraphEntry):
     def __init__(self, address: str, balance: str):
         """
         Create a new Balance with the specified balance.
-        :param balance: The balance of the safe.
-        :param allowance: The allowance of the safe.
+        :param address: The address of the EOA.
+        :param balance: The balance of the EOA.
         """
         self.address = address
         self.balance = float(balance) if balance else 0
