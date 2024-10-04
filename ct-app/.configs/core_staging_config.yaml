@@ -34,11 +34,11 @@ flags:
     getTotalChannelFunds: 300
 
     watchMessageQueue: On  # should only be On / Off
-    relayedMessagesToDB: On
+    relayedMessagesToDB: Off
 
   peer:
     messageRelayRequest: On # should only be On / Off
-    sentMessagesToDB: On
+    sentMessagesToDB: Off
     
 # =============================================================================
 # 
@@ -91,7 +91,7 @@ economicModel:
 # 
 # =============================================================================
 storage:
-  count: 1000
+  count: 100000
   timeout: 43200 # seconds
 
 # =============================================================================
