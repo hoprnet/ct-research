@@ -27,18 +27,18 @@ flags:
 
     openChannels: 120
     fundChannels: 120
-    closeOldChannels: Off
-    closePendingChannels: Off
+    closeOldChannels: 120
+    closePendingChannels: 120
     closeIncomingChannels: Off
 
     getTotalChannelFunds: 300
 
-    watchMessageQueue: Off  # should only be On / Off
-    relayedMessagesToDB: Off
+    watchMessageQueue: On  # should only be On / Off
+    relayedMessagesToDB: On
 
   peer:
-    messageRelayRequest: Off # should only be On / Off
-    sentMessagesToDB: Off
+    messageRelayRequest: On # should only be On / Off
+    sentMessagesToDB: On
     
 # =============================================================================
 # 

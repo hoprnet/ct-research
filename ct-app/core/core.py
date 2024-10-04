@@ -315,7 +315,7 @@ class Core(Base):
             for p in peers:
                 if not p.is_eligible(
                     self.params.economicModel.minSafeAllowance,
-                    self.legacy_model.coefficients.l,
+                    self.models["legacy"].coefficients.l,
                     self.ct_nodes_addresses,
                     self.nft_holders_data,
                     self.params.economicModel.NFTThreshold,

@@ -203,6 +203,9 @@ class Node(Base):
         """
         Close channels that have been open for too long.
         """
+        if self.channels is None:
+            return
+
         peer_history: dict[str, datetime] = await self.peer_history.get()
         to_peer_history = dict[str, datetime]()
         channels_to_close: list[str] = []
