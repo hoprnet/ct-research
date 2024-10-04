@@ -8,7 +8,8 @@ class EconomicModelTypes(Enum):
     LEGACY = "legacy"
     SIGMOID = "sigmoid"
 
-    def __call__(self):
+    @property
+    def model(self):
         return {
             EconomicModelTypes.LEGACY: EconomicModelLegacy,
             EconomicModelTypes.SIGMOID: EconomicModelSigmoid,

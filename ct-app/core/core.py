@@ -39,11 +39,6 @@ class Core(Base):
         for node in self.nodes:
             node.params = params
 
-        self.models = {
-            m: m().fromParameters(getattr(self.params.economicModel, m.value))
-            for m in EconomicModelTypes
-        }
-
         self.tasks = set[asyncio.Task]()
 
         self.all_peers = LockedVar("all_peers", set[Peer]())
@@ -54,8 +49,13 @@ class Core(Base):
         self.eoa_balances_data = list[entries.Balance]()
         self.peers_rewards_data = dict[str, float]()
 
+        self.models = {
+            m: m.model.fromParameters(getattr(self.params.economicModel, m.value))
+            for m in EconomicModelTypes
+        }
+
         self.providers = {
-            s: s()(URL(self.params.subgraph, s.value)) for s in SubgraphTypes
+            s: s.provider(URL(self.params.subgraph, s.value)) for s in SubgraphTypes
         }
 
         self.running = False
@@ -355,7 +355,7 @@ class Core(Base):
             self.warning("Ticket price not available.")
             return
 
-        # should be replaced by await self.api.winning_probability()
+        # TODO: replace by await self.api.winning_probability() once the endpoint is available
         win_probabilty = self.params.economicModel.winningProbability
         if win_probabilty is None:
             self.warning("Winning probability not available.")
@@ -376,8 +376,12 @@ class Core(Base):
         provider = self.providers[SubgraphTypes.FUNDINGS]
 
         addresses = list(
-            set([(await node.api.node_info()).hopr_node_safe for node in self.nodes])
+            filter(
+                lambda x: x is not None,
+                {await node.safe_address for node in self.nodes},
+            )
         )
+
         try:
             entries = await provider.get(to_in=addresses)
         except ProviderError as err:

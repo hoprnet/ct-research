@@ -13,7 +13,8 @@ class SubgraphTypes(Enum):
     GNOSIS_BALANCES = "hoprOnGnosis"
     FUNDINGS = "fundings"
 
-    def __call__(self):
+    @property
+    def provider(self):
         return {
             SubgraphTypes.SAFES: graphql_providers.Safes,
             SubgraphTypes.STAKING: graphql_providers.Staking,

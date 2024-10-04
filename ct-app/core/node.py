@@ -50,12 +50,21 @@ class Node(Base):
 
         self.address = None
         self.channels = None
-        self.connected = False
+        self._safe_address = None
 
         self.params = Parameters()
         self.messages_distributed = dict[str, int]()
 
+        self.connected = False
         self.running = False
+
+    @property
+    async def safe_address(self):
+        if self._safe_address is None:
+            if info := await self.api.node_info():
+                self._safe_address = info.hopr_node_safe
+
+        return self._safe_address
 
     @property
     def log_prefix(self):
