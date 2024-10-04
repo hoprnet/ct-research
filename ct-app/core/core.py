@@ -8,8 +8,7 @@ from .components import AsyncLoop, Base, HoprdAPI, LockedVar, Parameters, Utils
 from .components.decorators import flagguard, formalin
 from .model import Address, Peer
 from .model.economic_model import EconomicModelTypes
-from .model.subgraph import URL, entries
-from .model.subgraph import graphql_providers as providers
+from .model.subgraph import URL, ProviderError, SubgraphTypes, entries
 from .node import Node
 
 # endregion
@@ -55,23 +54,8 @@ class Core(Base):
         self.eoa_balances_data = list[entries.Balance]()
         self.peers_rewards_data = dict[str, float]()
 
-        self.subgraph_providers: dict[str, providers.GraphQLProvider] = {
-            "safes": providers.Safes(URL(self.params.subgraph, "safesBalance")),
-            "staking": providers.Staking(URL(self.params.subgraph, "staking")),
-            "rewards": providers.Rewards(URL(self.params.subgraph, "rewards")),
-            "mainnet_allocations": providers.Allocations(
-                URL(self.params.subgraph, "mainnetAllocations")
-            ),
-            "gnosis_allocations": providers.Allocations(
-                URL(self.params.subgraph, "gnosisAllocations")
-            ),
-            "mainnet_balances": providers.EOABalance(
-                URL(self.params.subgraph, "hoprOnMainet")
-            ),
-            "gnosis_balances": providers.EOABalance(
-                URL(self.params.subgraph, "hoprOnGnosis")
-            ),
-            "fundings": providers.Fundings(URL(self.params.subgraph, "fundings")),
+        self.providers = {
+            s: s()(URL(self.params.subgraph, s.value)) for s in SubgraphTypes
         }
 
         self.running = False
@@ -94,7 +78,7 @@ class Core(Base):
         """
         Checks the subgraph URLs and sets the subgraph type in use (default, backup or none).
         """
-        for provider in self.subgraph_providers.values():
+        for provider in self.providers.values():
             await provider.test(self.params.subgraph.type)
 
     @flagguard
@@ -148,7 +132,7 @@ class Core(Base):
 
         results = list[entries.Node]()
         try:
-            for safe in await self.subgraph_providers["safes"].get():
+            for safe in await self.providers[SubgraphTypes.SAFES].get():
                 results.extend(
                     [
                         entries.Node.fromSubgraphResult(node)
@@ -156,7 +140,7 @@ class Core(Base):
                     ]
                 )
 
-        except providers.ProviderError as err:
+        except ProviderError as err:
             self.error(f"get_registered_nodes: {err}")
 
         self.registered_nodes_data = results
@@ -171,11 +155,11 @@ class Core(Base):
         """
         results = list[str]()
         try:
-            for nft in await self.subgraph_providers["staking"].get():
+            for nft in await self.providers[SubgraphTypes.STAKING].get():
                 if owner := nft.get("owner", {}).get("id", None):
                     results.append(owner)
 
-        except providers.ProviderError as err:
+        except ProviderError as err:
             self.error(f"nft_holders: {err}")
 
         self.nft_holders_data = results
@@ -191,15 +175,17 @@ class Core(Base):
         """
         results = list[entries.Allocation]()
         try:
-            for account in await self.subgraph_providers["mainnet_allocations"].get():
+            for account in await self.providers[
+                SubgraphTypes.MAINNET_ALLOCATIONS
+            ].get():
                 results.append(entries.Allocation(**account["account"]))
-        except providers.ProviderError as err:
+        except ProviderError as err:
             self.error(f"allocations: {err}")
 
         try:
-            for account in await self.subgraph_providers["gnosis_allocations"].get():
+            for account in await self.providers[SubgraphTypes.GNOSIS_ALLOCATIONS].get():
                 results.append(entries.Allocation(**account["account"]))
-        except providers.ProviderError as err:
+        except ProviderError as err:
             self.error(f"allocations: {err}")
 
         self.allocations_data = results
@@ -217,19 +203,19 @@ class Core(Base):
             return
 
         try:
-            for account in await self.subgraph_providers["mainnet_balances"].get(
+            for account in await self.providers[SubgraphTypes.MAINNET_BALANCES].get(
                 id_in=list(balances.keys())
             ):
                 balances[account["id"]] += float(account["totalBalance"]) / 1e18
-        except providers.ProviderError as err:
+        except ProviderError as err:
             self.error(f"eoa_balances: {err}")
 
         try:
-            for account in await self.subgraph_providers["gnosis_balances"].get(
+            for account in await self.providers[SubgraphTypes.GNOSIS_BALANCES].get(
                 id_in=list(balances.keys())
             ):
                 balances[account["id"]] += float(account["totalBalance"]) / 1e18
-        except providers.ProviderError as err:
+        except ProviderError as err:
             self.error(f"eoa_balances: {err}")
 
         self.eoa_balances_data = [
@@ -349,10 +335,10 @@ class Core(Base):
     async def peers_rewards(self):
         results = dict()
         try:
-            for account in await self.subgraph_providers["rewards"].get():
+            for account in await self.providers[SubgraphTypes.REWARDS].get():
                 results[account["id"]] = float(account["redeemedValue"])
 
-        except providers.ProviderError as err:
+        except ProviderError as err:
             self.error(f"get_peers_rewards: {err}")
 
         self.peers_rewards_data = results
@@ -387,14 +373,14 @@ class Core(Base):
         """
         Gets the total amount that was sent to CT safes.
         """
-        provider = self.subgraph_providers["fundings"]
+        provider = self.providers[SubgraphTypes.FUNDINGS]
 
         addresses = list(
             set([(await node.api.node_info()).hopr_node_safe for node in self.nodes])
         )
         try:
             entries = await provider.get(to_in=addresses)
-        except providers.ProviderError as err:
+        except ProviderError as err:
             self.error(f"get_peers_rewards: {err}")
             entries = []
         amount = sum([float(item["amount"]) for item in entries])
