@@ -9,7 +9,7 @@ class URL:
         self.params = getattr(params, key)
         self.deployer_key = params.apiKey
         self.user_id = params.userID
-        self.type = Mode.DEFAULT
+        self.mode = Mode.DEFAULT
 
         self._urls = {
             Mode.DEFAULT: self._construct_default(),
@@ -28,4 +28,4 @@ class URL:
 
     @property
     def url(self) -> str:
-        return self[self.type]
+        return self[self.mode]

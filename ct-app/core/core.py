@@ -76,7 +76,7 @@ class Core(Base):
     @formalin
     async def rotate_subgraphs(self):
         """
-        Checks the subgraph URLs and sets the subgraph type in use (default, backup or none).
+        Checks the subgraph URLs and sets the subgraph mode in use (default, backup or none).
         """
         for provider in self.providers.values():
             await provider.test(self.params.subgraph.type)

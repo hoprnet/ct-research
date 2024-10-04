@@ -14,5 +14,5 @@ class Mode(Enum):
         return [item for item in cls if item != cls.NONE]
 
     @classmethod
-    def fromString(cls, type: str):
-        return {"default": cls.DEFAULT, "backup": cls.BACKUP}.get(type, cls.NONE)
+    def fromString(cls, mode: str):
+        return {"default": cls.DEFAULT, "backup": cls.BACKUP}.get(mode, cls.NONE)

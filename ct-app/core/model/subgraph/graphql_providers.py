@@ -24,6 +24,9 @@ class GraphQLProvider(Base):
         self._default_key = None
 
     #### PRIVATE METHODS ####
+    def _initialize_query(self, query_file: str, extra_inputs: list[str] = []):
+        self._default_key, self._sku_query = self._load_query(query_file, extra_inputs)
+
     def _load_query(self, path: Union[str, Path], extra_inputs: list[str] = []) -> str:
         """
         Loads a graphql query from a file.
@@ -49,7 +52,7 @@ class GraphQLProvider(Base):
             async with aiohttp.ClientSession() as session, session.post(
                 self.url.url, json={"query": query, "variables": variable_values}
             ) as response:
-                SUBGRAPH_CALLS.labels(self.url.params.slug, self.url.type).inc()
+                SUBGRAPH_CALLS.labels(self.url.params.slug, self.url.mode).inc()
                 return await response.json(), response.headers
         except TimeoutError as err:
             self.error(f"Timeout error: {err}")
@@ -168,10 +171,10 @@ class GraphQLProvider(Base):
             return False
 
         if method != "auto":
-            self.url.type = Mode.fromString(method)
+            self.url.mode = Mode.fromString(method)
         else:
-            for type in Mode.callables():
-                self.url.type = type
+            for mode in Mode.callables():
+                self.url.mode = mode
                 try:
                     result = await self._test_query(self._default_key, **kwargs)
                 except ProviderError as err:
@@ -180,57 +183,50 @@ class GraphQLProvider(Base):
                 if result is True:
                     break
             else:
-                self.url.type = Mode.NONE
+                self.url.mode = Mode.NONE
 
-        if self.url.type == Mode.NONE:
+        if self.url.mode == Mode.NONE:
             self.warning(f"No subgraph available for '{self.url.params.slug}'")
 
-        # self.info(f"Using {self.url.type} for {self.url.params.slug}")
-
-        SUBGRAPH_IN_USE.labels(self.url.params.slug).set(self.url.type.toInt())
-        return self.url.type
+        SUBGRAPH_IN_USE.labels(self.url.params.slug).set(self.url.mode.toInt())
+        return self.url.mode
 
 
 class Safes(GraphQLProvider):
     def __init__(self, url: URL):
         super().__init__(url)
-        self._default_key, self._sku_query = self._load_query("safes_balance.graphql")
+        self._initialize_query("safes_balance.graphql")
 
 
 class Staking(GraphQLProvider):
     def __init__(self, url: URL):
         super().__init__(url)
-        self._default_key, self._sku_query = self._load_query("staking.graphql")
+        self._initialize_query("staking.graphql")
 
 
 class Rewards(GraphQLProvider):
     def __init__(self, url: URL):
         super().__init__(url)
-        self._default_key, self._sku_query = self._load_query("rewards.graphql")
+        self._initialize_query("rewards.graphql")
 
 
 class Allocations(GraphQLProvider):
     def __init__(self, url: URL):
         super().__init__(url)
-        self._default_key, self._sku_query = self._load_query(
-            "allocations.graphql",
-            extra_inputs=['$schedule_in: [String!] = [""]'],
+        self._initialize_query(
+            "allocations.graphql", ['$schedule_in: [String!] = [""]']
         )
 
 
 class Fundings(GraphQLProvider):
     def __init__(self, url: URL):
         super().__init__(url)
-        self._default_key, self._sku_query = self._load_query(
-            "fundings.graphql",
-            extra_inputs=['$from: String = ""', '$to_in: [String!] = [""]'],
+        self._initialize_query(
+            "fundings.graphql", ['$from: String = ""', '$to_in: [String!] = [""]']
         )
 
 
 class EOABalance(GraphQLProvider):
     def __init__(self, url: URL):
         super().__init__(url)
-        self._default_key, self._sku_query = self._load_query(
-            "eoa_balance.graphql",
-            extra_inputs=['$id_in: [Bytes!] = [""]'],
-        )
+        self._initialize_query("eoa_balance.graphql", ['$id_in: [Bytes!] = [""]'])
