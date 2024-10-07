@@ -2,16 +2,7 @@ import asyncio
 from typing import Callable, Optional, Union
 
 import aiohttp
-from hoprd_sdk import (
-    ApiClient,
-    Configuration,
-    FundBodyRequest,
-    OpenChannelBodyRequest,
-    SendMessageBodyRequest,
-    TagQueryRequest,
-)
-from hoprd_sdk.api import AccountApi, ChannelsApi, MessagesApi, NetworkApi, NodeApi
-from hoprd_sdk.rest import ApiException
+import hoprd_sdk as sdk
 from urllib3.exceptions import MaxRetryError
 
 from .baseclass import Base
@@ -29,13 +20,50 @@ class HoprdAPI(Base):
         def _refresh_token_hook(self):
             self.api_key["X-Auth-Token"] = token
 
-        self.configuration = Configuration()
-        self.configuration.host = f"{url}"
+        self.configuration = sdk.Configuration()
+        self.configuration.host = url
         self.configuration.refresh_api_key_hook = _refresh_token_hook
 
     @property
     def log_prefix(cls) -> str:
         return "api"
+
+    async def __call(
+        self,
+        obj: Callable[..., object],
+        method: str,
+        *args,
+        **kwargs,
+    ):
+        kwargs["async_req"] = True
+        try:
+            with sdk.ApiClient(self.configuration) as client:
+                thread = getattr(obj(client), method)(*args, **kwargs)
+                response = thread.get()
+        except sdk.rest.ApiException as e:
+            self.error(
+                f"ApiException calling {obj.__name__}.{method} "
+                + f"with kwargs: {kwargs}, args: {args}, error is: {e}"
+            )
+        except OSError:
+            self.error(
+                f"OSError calling {obj.__name__}.{method} "
+                + f"with kwargs: {kwargs}, args: {args}:"
+            )
+        except MaxRetryError:
+            self.error(
+                f"MaxRetryError calling {obj.__name__}.{method} "
+                + f"with kwargs: {kwargs}, args: {args}"
+            )
+        except Exception as e:
+            self.error(
+                f"Exception calling {obj.__name__}.{method} "
+                + f"with kwargs: {kwargs}, args: {args}, error is: {e}"
+            )
+        else:
+            return (True, response)
+
+        return (False, None)
 
     async def __call_api(
         self,
@@ -50,47 +78,9 @@ class HoprdAPI(Base):
                 f"Calling {obj.__name__}.{method} with kwargs: {kwargs}, args: {args}"
             )
 
-        async def __call(
-            obj: Callable[..., object],
-            method: str,
-            *args,
-            **kwargs,
-        ):
-            try:
-                with ApiClient(self.configuration) as client:
-                    api_callback = getattr(obj(client), method)
-                    kwargs["async_req"] = True
-                    thread = api_callback(*args, **kwargs)
-                    response = thread.get()
-
-            except ApiException as e:
-                self.error(
-                    f"ApiException calling {obj.__name__}.{method} "
-                    + f"with kwargs: {kwargs}, args: {args}, error is: {e}"
-                )
-            except OSError:
-                self.error(
-                    f"OSError calling {obj.__name__}.{method} "
-                    + f"with kwargs: {kwargs}, args: {args}:"
-                )
-            except MaxRetryError:
-                self.error(
-                    f"MaxRetryError calling {obj.__name__}.{method} "
-                    + f"with kwargs: {kwargs}, args: {args}"
-                )
-            except Exception as e:
-                self.error(
-                    f"Exception calling {obj.__name__}.{method} "
-                    + f"with kwargs: {kwargs}, args: {args}, error is: {e}"
-                )
-            else:
-                return (True, response)
-
-            return (False, None)
-
         try:
             return await asyncio.wait_for(
-                asyncio.create_task(__call(obj, method, *args, **kwargs)),
+                asyncio.create_task(self.__call(obj, method, *args, **kwargs)),
                 timeout=60,
             )
         except asyncio.TimeoutError:
@@ -113,7 +103,7 @@ class HoprdAPI(Base):
         elif isinstance(type, str):
             type = [type]
 
-        is_ok, response = await self.__call_api(AccountApi, "balances")
+        is_ok, response = await self.__call_api(sdk.api.AccountApi, "balances")
 
         if not is_ok:
             return {}
@@ -136,9 +126,11 @@ class HoprdAPI(Base):
         :param: amount: str
         :return: channel id: str | undefined
         """
-        body = OpenChannelBodyRequest(amount, peer_address)
+        body = sdk.OpenChannelBodyRequest(amount, peer_address)
 
-        is_ok, response = await self.__call_api(ChannelsApi, "open_channel", body=body)
+        is_ok, response = await self.__call_api(
+            sdk.api.ChannelsApi, "open_channel", body=body
+        )
 
         return response.channel_id if is_ok else None
 
@@ -149,9 +141,9 @@ class HoprdAPI(Base):
         :param: amount: float
         :return: bool
         """
-        body = FundBodyRequest(amount=f"{amount:.0f}")
+        body = sdk.FundBodyRequest(amount=f"{amount:.0f}")
         is_ok, _ = await self.__call_api(
-            ChannelsApi, "fund_channel", channel_id=channel_id, body=body
+            sdk.api.ChannelsApi, "fund_channel", channel_id=channel_id, body=body
         )
 
         return is_ok
@@ -163,7 +155,7 @@ class HoprdAPI(Base):
         :return: bool
         """
         is_ok, _ = await self.__call_api(
-            ChannelsApi, "close_channel", channel_id=channel_id
+            sdk.api.ChannelsApi, "close_channel", channel_id=channel_id
         )
         return is_ok
 
@@ -174,7 +166,7 @@ class HoprdAPI(Base):
         :return: channels: list
         """
         is_ok, response = await self.__call_api(
-            ChannelsApi,
+            sdk.api.ChannelsApi,
             "list_channels",
             full_topology="true",
             including_closed="true" if include_closed else "false",
@@ -201,7 +193,9 @@ class HoprdAPI(Base):
         :param: quality: int = 0..1
         :return: peers: list
         """
-        is_ok, response = await self.__call_api(NodeApi, "peers", quality=quality)
+        is_ok, response = await self.__call_api(
+            sdk.api.NodeApi, "peers", quality=quality
+        )
 
         if not is_ok:
             return []
@@ -241,7 +235,9 @@ class HoprdAPI(Base):
         elif isinstance(address, str):
             address = [address]
 
-        is_ok, response = await self.__call_api(AccountApi, "addresses", call_log=False)
+        is_ok, response = await self.__call_api(
+            sdk.api.AccountApi, "addresses", call_log=False
+        )
 
         if not is_ok:
             return None
@@ -267,9 +263,9 @@ class HoprdAPI(Base):
         :param: tag: int = 0x0320
         :return: bool
         """
-        body = SendMessageBodyRequest(message, None, hops, destination, tag)
+        body = sdk.SendMessageBodyRequest(message, None, hops, destination, tag)
         is_ok, _ = await self.__call_api(
-            MessagesApi, "send_message", call_log=False, body=body
+            sdk.api.MessagesApi, "send_message", call_log=False, body=body
         )
 
         return is_ok
@@ -280,17 +276,17 @@ class HoprdAPI(Base):
         :param: tag = 0x0320
         :return: list
         """
-        body = TagQueryRequest() if tag is None else TagQueryRequest(tag=tag)
-        _, response = await self.__call_api(MessagesApi, "pop_all", body=body)
+        body = sdk.TagQueryRequest() if tag is None else sdk.TagQueryRequest(tag=tag)
+        _, response = await self.__call_api(sdk.api.MessagesApi, "pop_all", body=body)
         return response.messages if hasattr(response, "messages") else []
 
     async def node_info(self):
-        _, response = await self.__call_api(NodeApi, "info")
+        _, response = await self.__call_api(sdk.api.NodeApi, "info")
 
         return response
 
     async def ticket_price(self) -> int:
-        _, response = await self.__call_api(NetworkApi, "price")
+        _, response = await self.__call_api(sdk.api.NetworkApi, "price")
 
         return float(response.price) / 1e18 if hasattr(response, "price") else None
 

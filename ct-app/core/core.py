@@ -8,7 +8,7 @@ from .components import AsyncLoop, Base, HoprdAPI, LockedVar, Parameters, Utils
 from .components.decorators import flagguard, formalin
 from .model import Address, Peer
 from .model.economic_model import EconomicModelTypes
-from .model.subgraph import URL, ProviderError, SubgraphTypes, entries
+from .model.subgraph import URL, ProviderError, Type, entries
 from .node import Node
 
 # endregion
@@ -55,7 +55,7 @@ class Core(Base):
         }
 
         self.providers = {
-            s: s.provider(URL(self.params.subgraph, s.value)) for s in SubgraphTypes
+            s: s.provider(URL(self.params.subgraph, s.value)) for s in Type
         }
 
         self.running = False
@@ -132,7 +132,7 @@ class Core(Base):
 
         results = list[entries.Node]()
         try:
-            for safe in await self.providers[SubgraphTypes.SAFES].get():
+            for safe in await self.providers[Type.SAFES].get():
                 results.extend(
                     [
                         entries.Node.fromSubgraphResult(node)
@@ -155,7 +155,7 @@ class Core(Base):
         """
         results = list[str]()
         try:
-            for nft in await self.providers[SubgraphTypes.STAKING].get():
+            for nft in await self.providers[Type.STAKING].get():
                 if owner := nft.get("owner", {}).get("id", None):
                     results.append(owner)
 
@@ -175,15 +175,13 @@ class Core(Base):
         """
         results = list[entries.Allocation]()
         try:
-            for account in await self.providers[
-                SubgraphTypes.MAINNET_ALLOCATIONS
-            ].get():
+            for account in await self.providers[Type.MAINNET_ALLOCATIONS].get():
                 results.append(entries.Allocation(**account["account"]))
         except ProviderError as err:
             self.error(f"allocations: {err}")
 
         try:
-            for account in await self.providers[SubgraphTypes.GNOSIS_ALLOCATIONS].get():
+            for account in await self.providers[Type.GNOSIS_ALLOCATIONS].get():
                 results.append(entries.Allocation(**account["account"]))
         except ProviderError as err:
             self.error(f"allocations: {err}")
@@ -203,7 +201,7 @@ class Core(Base):
             return
 
         try:
-            for account in await self.providers[SubgraphTypes.MAINNET_BALANCES].get(
+            for account in await self.providers[Type.MAINNET_BALANCES].get(
                 id_in=list(balances.keys())
             ):
                 balances[account["id"]] += float(account["totalBalance"]) / 1e18
@@ -211,7 +209,7 @@ class Core(Base):
             self.error(f"eoa_balances: {err}")
 
         try:
-            for account in await self.providers[SubgraphTypes.GNOSIS_BALANCES].get(
+            for account in await self.providers[Type.GNOSIS_BALANCES].get(
                 id_in=list(balances.keys())
             ):
                 balances[account["id"]] += float(account["totalBalance"]) / 1e18
@@ -335,7 +333,7 @@ class Core(Base):
     async def peers_rewards(self):
         results = dict()
         try:
-            for account in await self.providers[SubgraphTypes.REWARDS].get():
+            for account in await self.providers[Type.REWARDS].get():
                 results[account["id"]] = float(account["redeemedValue"])
 
         except ProviderError as err:
@@ -373,7 +371,7 @@ class Core(Base):
         """
         Gets the total amount that was sent to CT safes.
         """
-        provider = self.providers[SubgraphTypes.FUNDINGS]
+        provider = self.providers[Type.FUNDINGS]
 
         addresses = list(
             filter(

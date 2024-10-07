@@ -3,14 +3,14 @@ import random
 from datetime import datetime
 from typing import Union
 
-from core.components import AsyncLoop, Base, MessageFormat, MessageQueue
-from core.components.decorators import flagguard, formalin
 from packaging.version import Version
 from prometheus_client import Gauge
 
+from core.components import AsyncLoop, Base, MessageFormat, MessageQueue
+from core.components.decorators import flagguard, formalin
+
 from .address import Address
 from .database import DatabaseConnection, SentMessages
-from .subgraph.entries import Safe
 
 STAKE = Gauge("ct_peer_stake", "Stake", ["peer_id", "type"])
 SAFE_COUNT = Gauge("ct_peer_safe_count", "Number of safes", ["peer_id"])
@@ -36,8 +36,7 @@ class Peer(Base):
         self.version = version
         self.channel_balance = None
 
-        self.safe: Safe = None
-
+        self.safe = None
         self._safe_address_count = None
 
         self.yearly_message_count = 0

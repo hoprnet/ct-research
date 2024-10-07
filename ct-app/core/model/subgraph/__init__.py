@@ -1,7 +1,7 @@
 from . import entries
-from .graphql_providers import ProviderError
 from .mode import Mode
-from .subgraph_types import SubgraphTypes
+from .providers import ProviderError
+from .type import Type
 from .url import URL
 
 __all__ = [
@@ -9,5 +9,5 @@ __all__ = [
     "URL",
     "entries",
     "ProviderError",
-    "SubgraphTypes",
+    "Type",
 ]
