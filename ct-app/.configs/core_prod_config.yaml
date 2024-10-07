@@ -9,11 +9,11 @@ flags:
     ticketParameters: 120
 
     connectedPeers: 300
-    registeredNodes: 300
-    topology: 300
-    allocations: 300
-    EOABalances: 300
-    NFTHolders: 300
+    registeredNodes: 600
+    topology: 600
+    allocations: 600
+    EOABalances: 600
+    NFTHolders: 600
     
     applyEconomicModel: 120
 
