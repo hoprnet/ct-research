@@ -285,7 +285,7 @@ class HoprdAPI(Base):
 
         return response
 
-    async def ticket_price(self) -> int:
+    async def ticket_price(self) -> float:
         _, response = await self.__call_api(sdk.api.NetworkApi, "price")
 
         return float(response.price) / 1e18 if hasattr(response, "price") else None

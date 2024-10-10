@@ -354,16 +354,16 @@ class Core(Base):
             return
 
         # TODO: replace by await self.api.winning_probability() once the endpoint is available
-        win_probabilty = self.params.economicModel.winningProbability
-        if win_probabilty is None:
+        win_probability = self.params.economicModel.winningProbability
+        if win_probability is None:
             self.warning("Winning probability not available.")
             return
 
-        self.debug(f"Ticket price: {price}, winning probability: {win_probabilty}")
+        self.debug(f"Ticket price: {price}, winning probability: {win_probability}")
 
         for model in self.models.values():
             model.budget.ticket_price = price
-            model.budget.winning_probability = win_probabilty
+            model.budget.winning_probability = win_probability
 
     @flagguard
     @formalin

@@ -1,11 +1,10 @@
 import asyncio
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import aiohttp
-from prometheus_client import Gauge
-
 from core.components.baseclass import Base
+from prometheus_client import Gauge
 
 from .mode import Mode
 from .url import URL
@@ -25,7 +24,12 @@ class GraphQLProvider(Base):
         self._default_key = None
 
     #### PRIVATE METHODS ####
-    def _initialize_query(self, query_file: str, extra_inputs: list[str] = []):
+    def _initialize_query(
+        self, query_file: str, extra_inputs: Optional[list[str]] = None
+    ):
+        if extra_inputs is None:
+            extra_inputs = []
+
         self._default_key, self._sku_query = self._load_query(query_file, extra_inputs)
 
     def _load_query(self, path: Union[str, Path], extra_inputs: list[str] = []) -> str:

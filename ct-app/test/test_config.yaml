@@ -126,7 +126,7 @@ subgraph:
   gnosisAllocations:
     queryID: ~
     slug: hopr-allocations-gnosis
-  hoprOnMainet:
+  hoprOnMainnet:
     queryID: ~
     slug: hopr-on-mainnet
   hoprOnGnosis:

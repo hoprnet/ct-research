@@ -135,7 +135,7 @@ subgraph:
     inputs:
       schedule_in:
         - investor-node-remainder-2024-01
-  hoprOnMainet:
+  hoprOnMainnet:
     queryID: 4GZdwVtPcQp95RF77W27GK2ezgGLB1iintG6mYZQ1w33
     slug: hopr---mainnet
   hoprOnGnosis:

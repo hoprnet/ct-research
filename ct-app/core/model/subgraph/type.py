@@ -9,7 +9,7 @@ class Type(Enum):
     REWARDS = "rewards"
     MAINNET_ALLOCATIONS = "mainnetAllocations"
     GNOSIS_ALLOCATIONS = "gnosisAllocations"
-    MAINNET_BALANCES = "hoprOnMainet"
+    MAINNET_BALANCES = "hoprOnMainnet"
     GNOSIS_BALANCES = "hoprOnGnosis"
     FUNDINGS = "fundings"
 
