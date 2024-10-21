@@ -1,15 +1,13 @@
-from .allocation_entry import AllocationEntry
-from .balance_entry import BalanceEntry
-from .entry import SubgraphEntry
-from .node_entry import NodeEntry
-from .safe_entry import SafeEntry
-from .topology_entry import TopologyEntry
+from .allocation import Allocation
+from .balance import Balance
+from .node import Node
+from .safe import Safe
+from .topology import Topology
 
 __all__ = [
-    "SubgraphEntry",
-    "BalanceEntry",
-    "AllocationEntry",
-    "NodeEntry",
-    "SafeEntry",
-    "TopologyEntry",
+    "Balance",
+    "Allocation",
+    "Node",
+    "Safe",
+    "Topology",
 ]

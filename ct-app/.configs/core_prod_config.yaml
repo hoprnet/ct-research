@@ -9,11 +9,11 @@ flags:
     ticketParameters: 120
 
     connectedPeers: 300
-    registeredNodes: 300
-    topology: 300
-    allocations: 300
-    EOABalances: 300
-    NFTHolders: 300
+    registeredNodes: 600
+    topology: 600
+    allocations: 600
+    EOABalances: 600
+    NFTHolders: 600
     
     applyEconomicModel: 120
 
@@ -22,8 +22,7 @@ flags:
   node:
     healthcheck: 60
     retrievePeers: 300
-    retrieveIncomingChannels: 600
-    retrieveOutgoingChannels: 600
+    retrieveChannels: 600
     retrieveBalances: 900
 
     openChannels: 300
@@ -136,7 +135,7 @@ subgraph:
     inputs:
       schedule_in:
         - investor-node-remainder-2024-01
-  hoprOnMainet:
+  hoprOnMainnet:
     queryID: 4GZdwVtPcQp95RF77W27GK2ezgGLB1iintG6mYZQ1w33
     slug: hopr---mainnet
   hoprOnGnosis:

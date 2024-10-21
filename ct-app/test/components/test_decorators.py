@@ -40,11 +40,11 @@ def foo_class():
 
 @pytest.mark.asyncio
 async def test_connectguard(foo_class: FooClass):
-    await foo_class.connected.set(False)
+    foo_class.connected = False
     res = await foo_class.foo_connectguard_func()
     assert res is None
 
-    await foo_class.connected.set(True)
+    foo_class.connected = True
     res = await foo_class.foo_connectguard_func()
     assert res is True
 
