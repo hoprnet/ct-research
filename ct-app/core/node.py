@@ -74,15 +74,15 @@ class Node(Base):
         """
         Retrieve the address of the node.
         """
-        address = await self.api.get_address("all")
+        address = await self.api.get_address()
 
-        if not isinstance(address, dict):
+        if address is None:
             return
 
-        if "hopr" not in address or "native" not in address:
+        if address.hopr is None or address.native is None:
             return
 
-        self.address = Address(address["hopr"], address["native"])
+        self.address = Address(address.hopr, address.native)
 
         return self.address
 
@@ -114,12 +114,10 @@ class Node(Base):
         """
         balances = await self.api.balances()
 
-        if balances is None:
-            self.warning("Failed to retrieve balances")
-            return
-
         if addr := self.address:
-            for token, balance in balances.items():
+            for token, balance in vars(balances).items():
+                if balance is None:
+                    continue
                 BALANCE.labels(addr.id, token).set(balance)
 
         return balances
@@ -196,14 +194,14 @@ class Node(Base):
         self.info(f"Pending channels: {len(out_pendings)}")
 
         for channel in out_pendings:
-            self.debug(f"Closing pending channel {channel.channel_id}")
-            ok = await self.api.close_channel(channel.channel_id)
+            self.debug(f"Closing pending channel {channel.id}")
+            ok = await self.api.close_channel(channel.id)
             if ok:
-                self.info(f"Closed pending channel {channel.channel_id}")
+                self.info(f"Closed pending channel {channel.id}")
                 if addr := self.address:
                     CHANNELS_OPS.labels(addr.id, "pending_closed").inc()
             else:
-                self.warning(f"Failed to close pending channel {channel.channel_id}")
+                self.warning(f"Failed to close pending channel {channel.id}")
 
     @flagguard
     @formalin
@@ -220,7 +218,7 @@ class Node(Base):
         channels_to_close: list[str] = []
 
         address_to_channel_id = {
-            c.destination_address: c.channel_id
+            c.destination_address: c.id
             for c in self.channels.outgoing
             if c.status.isOpen
         }
@@ -278,16 +276,16 @@ class Node(Base):
 
         for channel in low_balances:
             if channel.destination_peer_id in peer_ids:
-                self.debug(f"Funding channel {channel.channel_id}")
+                self.debug(f"Funding channel {channel.id}")
                 ok = await self.api.fund_channel(
-                    channel.channel_id, self.params.channel.fundingAmount * 1e18
+                    channel.id, self.params.channel.fundingAmount * 1e18
                 )
                 if ok:
-                    self.info(f"Funded channel {channel.channel_id}")
+                    self.info(f"Funded channel {channel.id}")
                     if addr := self.address:
                         CHANNELS_OPS.labels(addr.id, "fund").inc()
                 else:
-                    self.warning(f"Failed to fund channel {channel.channel_id}")
+                    self.warning(f"Failed to fund channel {channel.id}")
 
     @flagguard
     @formalin
@@ -296,15 +294,8 @@ class Node(Base):
         """
         Retrieve real peers from the network.
         """
-        results = await self.api.peers(
-            params=["peer_id", "peer_address", "reported_version"]
-        )
-
-        peers = {
-            Peer(item["peer_id"], item["peer_address"], item["reported_version"])
-            for item in results
-        }
-
+        results = await self.api.peers()
+        peers = {Peer(item.peer_id, item.address, item.version) for item in results}
         addresses_w_timestamp = {p.address.address: datetime.now() for p in peers}
 
         await self.peers.set(peers)
@@ -322,7 +313,7 @@ class Node(Base):
         """
         Retrieve all channels.
         """
-        channels = await self.api.channels(False)
+        channels = await self.api.channels()
 
         if channels is None:
             self.warning("No channels found")

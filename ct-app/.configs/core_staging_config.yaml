@@ -8,30 +8,30 @@ flags:
     peersRewards: 120
     ticketParameters: 120
 
-    connectedPeers: 120
-    registeredNodes: 600
-    topology: 600
+    connectedPeers: 30
+    registeredNodes: 30
+    topology: 30
     allocations: 600
     EOABalances: 600
     NFTHolders: 600
     
-    applyEconomicModel: 120
+    applyEconomicModel: 30
     
     safeFundings: 600
 
   node:
     healthcheck: 60
-    retrievePeers: 120
-    retrieveChannels: 600
+    retrievePeers: 30
+    retrieveChannels: 120
     retrieveBalances: 120
 
     openChannels: 120
     fundChannels: 120
     closeOldChannels: 120
-    closePendingChannels: 120
+    closePendingChannels: 300
     closeIncomingChannels: Off
 
-    getTotalChannelFunds: 300
+    getTotalChannelFunds: 120
 
     watchMessageQueue: On  # should only be On / Off
     relayedMessagesToDB: Off

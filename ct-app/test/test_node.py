@@ -1,7 +1,7 @@
 import inspect
 
 import pytest
-from hoprd_sdk.models import NodeChannelsResponse
+from core.components.api_types import Channels
 
 from .conftest import Node, Peer
 
@@ -26,10 +26,10 @@ async def test_retrieve_balances(node: Node):
 
     balances = await node.retrieve_balances()
 
-    assert balances.get("hopr", None) is not None
-    assert balances.get("native", None) is not None
-    assert isinstance(balances.get("hopr"), int)
-    assert isinstance(balances.get("native"), int)
+    assert balances.hopr is not None
+    assert balances.native is not None
+    assert isinstance(balances.hopr, int)
+    assert isinstance(balances.native, int)
 
 
 @pytest.mark.asyncio
@@ -68,7 +68,7 @@ async def test_retrieve_peers(node: Node, peers: list[Peer]):
 
 
 @pytest.mark.asyncio
-async def test_retrieve_channels(node: Node, channels: NodeChannelsResponse):
+async def test_retrieve_channels(node: Node, channels: Channels):
     assert node.channels is None
 
     await node.retrieve_channels()
@@ -77,7 +77,7 @@ async def test_retrieve_channels(node: Node, channels: NodeChannelsResponse):
 
 
 @pytest.mark.asyncio
-async def test_get_total_channel_funds(node: Node, channels: NodeChannelsResponse):
+async def test_get_total_channel_funds(node: Node, channels: Channels):
     await node.retrieve_channels()
 
     total_funds_from_node = await node.get_total_channel_funds()

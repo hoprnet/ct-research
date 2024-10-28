@@ -388,7 +388,9 @@ class Core(Base):
         amount = sum([float(item["amount"]) for item in entries])
 
         TOTAL_FUNDING.set(amount + self.params.fundings.constant)
-        self.debug(f"Safe fundings: {amount} + {self.params.fundings.constant}")
+        self.debug(
+            f"Fetched safe fundings ({amount} + {self.params.fundings.constant})"
+        )
 
     async def start(self):
         """

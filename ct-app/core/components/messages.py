@@ -19,6 +19,14 @@ class MessageQueue(metaclass=Singleton):
         queue_size.set(self._buffer.qsize())
         return self._buffer
 
+    @classmethod
+    def clear(cls):
+        instance = cls()
+
+        while not instance._buffer.empty():
+            instance._buffer.get_nowait()
+            instance._buffer.task_done()
+
 
 class MessageFormat:
     pattern = "{relayer} at {timestamp}"
