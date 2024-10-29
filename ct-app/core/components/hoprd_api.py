@@ -89,7 +89,7 @@ class HoprdAPI(Base):
         }
 
         is_ok, response = await self.__call_api(
-            Method.POST, "channels/open_channel", data=data
+            Method.POST, "channels/open_channel", data=data,
         )
 
         return response["channel_id"] if is_ok else None
@@ -119,9 +119,9 @@ class HoprdAPI(Base):
         return is_ok
 
     async def channels(self) -> Channels:
+
         """
         Returns all channels.
-        :param: include_closed: bool
         :return: channels: list
         """
         params = {"fullTopology": "true", "includingClosed": "false"}
@@ -142,9 +142,7 @@ class HoprdAPI(Base):
         :param: quality: int = 0..1
         :return: peers: list
         """
-        is_ok, response = await self.__call_api(
-            Method.GET, f"node/peers?quality={quality}"
-        )
+        is_ok, response = await self.__call_api(Method.GET, f"node/peers?quality={quality}")
 
         if not is_ok:
             return []
@@ -196,9 +194,10 @@ class HoprdAPI(Base):
         _, response = await self.__call_api(Method.POST, "messages/pop_all", data=data)
         return response.get("messages", [])
 
-    async def node_info(self):
+    async def node_info(self) -> Infos:
         _, response = await self.__call_api(Method.GET, "node/info")
         return Infos(response)
+
 
     async def ticket_price(self) -> float:
         _, response = await self.__call_api(Method.GET, "network/price")

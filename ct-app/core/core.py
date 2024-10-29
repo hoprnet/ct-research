@@ -235,11 +235,7 @@ class Core(Base):
 
         self.topology_data = [
             entries.Topology.fromDict(*arg)
-            for arg in (
-                await Utils.balanceInChannels(
-                    self.channels.outgoing + self.channels.incoming
-                )
-            ).items()
+            for arg in (await Utils.balanceInChannels(self.channels.all)).items()
         ]
 
         TOPOLOGY_SIZE.set(len(self.topology_data))
