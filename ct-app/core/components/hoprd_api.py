@@ -194,8 +194,11 @@ class HoprdAPI(Base):
         :return: list
         """
         data = {} if tag is None else {"tag": tag}
-        _, response = await self.__call_api(Method.POST, "messages/pop_all", data=data)
-        return response.get("messages", [])
+        is_ok, response = await self.__call_api(
+            Method.POST, "messages/pop_all", data=data
+        )
+
+        return response.get("messages", []) if is_ok else []
 
     async def node_info(self) -> Infos:
         _, response = await self.__call_api(Method.GET, "node/info")
