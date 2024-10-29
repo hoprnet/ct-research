@@ -159,17 +159,16 @@ class HoprdAPI(Base):
         )
         return is_ok
 
-    async def channels(self, include_closed: bool):
+    async def channels(self):
         """
         Returns all channels.
-        :param: include_closed: bool
         :return: channels: list
         """
         is_ok, response = await self.__call_api(
             sdk.api.ChannelsApi,
             "list_channels",
             full_topology="true",
-            including_closed="true" if include_closed else "false",
+            including_closed="false",
         )
 
         if not is_ok:

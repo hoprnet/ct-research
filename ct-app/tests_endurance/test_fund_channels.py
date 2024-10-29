@@ -16,7 +16,7 @@ class FundChannels(EnduranceTest):
         self.info(f"Connected to node '...{self.address[-10:]}'")
 
         # get channel
-        channels = await self.api.channels(False)
+        channels = await self.api.channels()
         open_channels = [
             c
             for c in channels
@@ -42,7 +42,7 @@ class FundChannels(EnduranceTest):
     async def on_end(self):
         async def balance_changed(id: str, balance: str):
             while True:
-                channels = await self.api.channels(False)
+                channels = await self.api.channels()
                 channel = channels[
                     [c.id for c in channels if c.source_peer_id == self.address].index(
                         id

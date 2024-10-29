@@ -322,7 +322,7 @@ class Node(Base):
         """
         Retrieve all channels.
         """
-        channels = await self.api.channels(False)
+        channels = await self.api.channels()
 
         if channels is None:
             self.warning("No channels found")
@@ -334,10 +334,14 @@ class Node(Base):
 
         if addr := self.address:
             channels.outgoing = [
-                c for c in channels.all if c.source_peer_id == self.address.id
+                c
+                for c in channels.all
+                if c.source_peer_id == self.address.id and c.status.isOpen
             ]
             channels.incoming = [
-                c for c in channels.all if c.destination_peer_id == self.address.id
+                c
+                for c in channels.all
+                if c.destination_peer_id == self.address.id and c.status.isOpen
             ]
 
             self.channels = channels
