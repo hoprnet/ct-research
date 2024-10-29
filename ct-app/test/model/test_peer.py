@@ -60,7 +60,7 @@ async def test_request_relay(exc_time: int, min_range: float, max_range: float):
 
     for peer in peers:
         rand_delay = round(random.random() * (max_range - min_range) + min_range, 1)
-        await peer.yearly_message_count.set(SECONDS_IN_YEAR / rand_delay)
+        peer.yearly_message_count = SECONDS_IN_YEAR / rand_delay
 
         peer.params = params
         peer.running = True

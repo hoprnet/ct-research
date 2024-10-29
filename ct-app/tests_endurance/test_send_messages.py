@@ -15,7 +15,7 @@ class SendMessages(EnduranceTest):
         self.api = HoprdAPI(Utils.envvar("API_URL"), Utils.envvar("API_KEY"))
         self.recipient = await self.api.get_address("hopr")
 
-        channels = await self.api.all_channels(False)
+        channels = await self.api.channels()
         open_channels = [
             c
             for c in channels.all
