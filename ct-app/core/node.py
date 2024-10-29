@@ -325,13 +325,13 @@ class Node(Base):
 
         if addr := self.address:
             channels.outgoing = [
-                c 
-                for c in channels.all 
+                c
+                for c in channels.all
                 if c.source_peer_id == self.address.id and c.status.isOpen
             ]
             channels.incoming = [
-                c 
-                for c in channels.all 
+                c
+                for c in channels.all
                 if c.destination_peer_id == self.address.id and c.status.isOpen
             ]
 

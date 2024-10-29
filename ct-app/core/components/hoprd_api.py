@@ -55,12 +55,12 @@ class HoprdAPI(Base):
         return (False, None)
 
     async def __call_api(
-        self, method: Method, endpoint: str, data: dict = {}
+        self, method: Method, endpoint: str, data: dict = {}, timeout: int = 60
     ) -> tuple[bool, Optional[object]]:
         try:
             return await asyncio.wait_for(
                 asyncio.create_task(self.__call(method, endpoint, data)),
-                timeout=60,
+                timeout=timeout,
             )
 
         except asyncio.TimeoutError:
@@ -89,7 +89,9 @@ class HoprdAPI(Base):
         }
 
         is_ok, response = await self.__call_api(
-            Method.POST, "channels/open_channel", data=data,
+            Method.POST,
+            "channels/open_channel",
+            data=data,
         )
 
         return response["channel_id"] if is_ok else None
@@ -119,7 +121,6 @@ class HoprdAPI(Base):
         return is_ok
 
     async def channels(self) -> Channels:
-
         """
         Returns all channels.
         :return: channels: list
@@ -142,7 +143,9 @@ class HoprdAPI(Base):
         :param: quality: int = 0..1
         :return: peers: list
         """
-        is_ok, response = await self.__call_api(Method.GET, f"node/peers?quality={quality}")
+        is_ok, response = await self.__call_api(
+            Method.GET, f"node/peers?quality={quality}"
+        )
 
         if not is_ok:
             return []
@@ -197,7 +200,6 @@ class HoprdAPI(Base):
     async def node_info(self) -> Infos:
         _, response = await self.__call_api(Method.GET, "node/info")
         return Infos(response)
-
 
     async def ticket_price(self) -> float:
         _, response = await self.__call_api(Method.GET, "network/price")
