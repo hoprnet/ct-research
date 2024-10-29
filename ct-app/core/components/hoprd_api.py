@@ -70,6 +70,7 @@ class HoprdAPI(Base):
         obj: Callable[..., object],
         method: str,
         call_log: bool = True,
+        timeout: int = 60,
         *args,
         **kwargs,
     ) -> tuple[bool, Optional[object]]:
@@ -81,7 +82,7 @@ class HoprdAPI(Base):
         try:
             return await asyncio.wait_for(
                 asyncio.create_task(self.__call(obj, method, *args, **kwargs)),
-                timeout=60,
+                timeout=timeout,
             )
         except asyncio.TimeoutError:
             self.error(
@@ -284,7 +285,7 @@ class HoprdAPI(Base):
 
         return response
 
-    async def ticket_price(self) -> float:
+    async def ticket_price(self) -> Optional[float]:
         _, response = await self.__call_api(sdk.api.NetworkApi, "price")
 
         return float(response.price) / 1e18 if hasattr(response, "price") else None
