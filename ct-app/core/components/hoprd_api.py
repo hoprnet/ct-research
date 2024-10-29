@@ -195,9 +195,8 @@ class HoprdAPI(Base):
         """
         data = {} if tag is None else {"tag": tag}
         is_ok, response = await self.__call_api(
-            Method.POST, "messages/pop_all", data=data
+            Method.POST, "messages/pop-all", data=data
         )
-
         return response.get("messages", []) if is_ok else []
 
     async def node_info(self) -> Infos:
