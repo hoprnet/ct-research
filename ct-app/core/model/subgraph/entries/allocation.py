@@ -1,13 +1,13 @@
 from .entry import SubgraphEntry
-from .safe_entry import SafeEntry
+from .safe import Safe
 
 
-class AllocationEntry(SubgraphEntry):
+class Allocation(SubgraphEntry):
     def __init__(self, id: str, claimedAmount: str, allocatedAmount: str):
         self.address = id
         self.claimed_amount = float(claimedAmount) / 1e18
         self.allocated_amount = float(allocatedAmount) / 1e18
-        self.linked_safes: set[SafeEntry] = set()
+        self.linked_safes: set[Safe] = set()
 
     @property
     def unclaimed_amount(self):

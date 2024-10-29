@@ -1,15 +1,15 @@
-from core.model.subgraph import SubgraphType
+from core.model.subgraph import Mode
 
 
 def test_callables():
-    types = SubgraphType.callables()
+    types = Mode.callables()
 
-    assert SubgraphType.NONE not in types
-    assert SubgraphType.DEFAULT in types
-    assert SubgraphType.BACKUP in types
+    assert Mode.NONE not in types
+    assert Mode.DEFAULT in types
+    assert Mode.BACKUP in types
 
 
 def test_toInt():
-    assert SubgraphType.toInt(SubgraphType.NONE) == -1
-    assert SubgraphType.toInt(SubgraphType.DEFAULT) == 0
-    assert SubgraphType.toInt(SubgraphType.BACKUP) == 1
+    assert Mode.toInt(Mode.NONE) == -1
+    assert Mode.toInt(Mode.DEFAULT) == 0
+    assert Mode.toInt(Mode.BACKUP) == 1

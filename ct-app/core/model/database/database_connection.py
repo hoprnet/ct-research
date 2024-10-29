@@ -1,10 +1,11 @@
 import logging
 
-from core.components.parameters import Parameters
-from core.components.singleton import Singleton
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm import Session
+
+from core.components.parameters import Parameters
+from core.components.singleton import Singleton
 
 from .models import Base
 
