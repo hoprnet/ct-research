@@ -8,14 +8,14 @@ flags:
     peersRewards: 120
     ticketParameters: 120
 
-    connectedPeers: 30
-    registeredNodes: 30
-    topology: 30
+    connectedPeers: 120
+    registeredNodes: 600
+    topology: 600
     allocations: 600
     EOABalances: 600
     NFTHolders: 600
     
-    applyEconomicModel: 30
+    applyEconomicModel: 120
     
     safeFundings: 600
 
@@ -31,14 +31,14 @@ flags:
     closePendingChannels: 300
     closeIncomingChannels: Off
 
-    getTotalChannelFunds: 120
+    getTotalChannelFunds: 300
 
     watchMessageQueue: On  # should only be On / Off
-    relayedMessagesToDB: Off
+    relayedMessagesToDB: 120
 
   peer:
     messageRelayRequest: On # should only be On / Off
-    sentMessagesToDB: Off
+    sentMessagesToDB: 120
     
 # =============================================================================
 # 
