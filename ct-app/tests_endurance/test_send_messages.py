@@ -17,7 +17,7 @@ class SendMessages(EnduranceTest):
         )
         self.recipient = await self.api.get_address("hopr")
 
-        channels = await self.api.all_channels(False)
+        channels = await self.api.channels()
         open_channels = [
             c
             for c in channels.all

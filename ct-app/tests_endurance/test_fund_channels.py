@@ -14,12 +14,16 @@ class FundChannels(EnduranceTest):
             EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY")
         )
 
-        address = await self.api.get_address("hopr")
-        self.info(f"Connected to node '...{address[-10:]}'")
+        self.address = await self.api.get_address("hopr")
+        self.info(f"Connected to node '...{self.address[-10:]}'")
 
         # get channel
-        channels = await self.api.outgoing_channels(False)
-        open_channels = [c for c in channels if c.status.isOpen]
+        channels = await self.api.channels()
+        open_channels = [
+            c
+            for c in channels
+            if c.status.isOpen and c.source_peer_id == self.address
+        ]
 
         if len(open_channels) == 0:
             raise RuntimeError("No open channels found")
@@ -40,8 +44,12 @@ class FundChannels(EnduranceTest):
     async def on_end(self):
         async def balance_changed(id: str, balance: str):
             while True:
-                channels = await self.api.outgoing_channels(False)
-                channel = channels[[c.id for c in channels].index(id)]
+                channels = await self.api.channels()
+                channel = channels[
+                    [c.id for c in channels if c.source_peer_id == self.address].index(
+                        id
+                    )
+                ]
                 if channel.balance != balance:
                     break
 

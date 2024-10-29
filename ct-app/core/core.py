@@ -7,22 +7,8 @@ from prometheus_client import Gauge
 from .components import AsyncLoop, Base, HoprdAPI, LockedVar, Parameters, Utils
 from .components.decorators import flagguard, formalin
 from .model import Address, Peer
-from .model.economic_model import EconomicModelLegacy, EconomicModelSigmoid
-from .model.subgraph import (
-    AllocationEntry,
-    AllocationsProvider,
-    BalanceEntry,
-    EOABalanceProvider,
-    FundingsProvider,
-    GraphQLProvider,
-    NodeEntry,
-    ProviderError,
-    RewardsProvider,
-    SafesProvider,
-    StakingProvider,
-    SubgraphURL,
-    TopologyEntry,
-)
+from .model.economic_model import EconomicModelTypes
+from .model.subgraph import URL, ProviderError, Type, entries
 from .node import Node
 
 # endregion
@@ -53,40 +39,23 @@ class Core(Base):
         for node in self.nodes:
             node.params = params
 
-        self.legacy_model = EconomicModelLegacy.fromParameters(
-            self.params.economicModel.legacy
-        )
-        self.sigmoid_model = EconomicModelSigmoid.fromParameters(
-            self.params.economicModel.sigmoid
-        )
-
         self.tasks = set[asyncio.Task]()
 
         self.all_peers = LockedVar("all_peers", set[Peer]())
-        self.topology_list = LockedVar("topology_list", list[TopologyEntry]())
-        self.registered_nodes_list = LockedVar("subgraph_list", list[NodeEntry]())
-        self.nft_holders_list = LockedVar("nft_holders_list", list[str]())
-        self.allocations_data = LockedVar("allocations_data", list[AllocationEntry]())
-        self.eoa_balances_data = LockedVar("eoa_balances_data", list[BalanceEntry]())
-        self.peer_rewards = LockedVar("peer_rewards", dict[str, float]())
+        self.topology_data = list[entries.Topology]()
+        self.registered_nodes_data = list[entries.Node]()
+        self.nft_holders_data = list[str]()
+        self.allocations_data = list[entries.Allocation]()
+        self.eoa_balances_data = list[entries.Balance]()
+        self.peers_rewards_data = dict[str, float]()
 
-        self.subgraph_providers: dict[str, GraphQLProvider] = {
-            "safes": SafesProvider(SubgraphURL(self.params.subgraph, "safesBalance")),
-            "staking": StakingProvider(SubgraphURL(self.params.subgraph, "staking")),
-            "rewards": RewardsProvider(SubgraphURL(self.params.subgraph, "rewards")),
-            "mainnet_allocations": AllocationsProvider(
-                SubgraphURL(self.params.subgraph, "mainnetAllocations")
-            ),
-            "gnosis_allocations": AllocationsProvider(
-                SubgraphURL(self.params.subgraph, "gnosisAllocations")
-            ),
-            "mainnet_balances": EOABalanceProvider(
-                SubgraphURL(self.params.subgraph, "hoprOnMainet")
-            ),
-            "gnosis_balances": EOABalanceProvider(
-                SubgraphURL(self.params.subgraph, "hoprOnGnosis")
-            ),
-            "fundings": FundingsProvider(SubgraphURL(self.params.subgraph, "fundings")),
+        self.models = {
+            m: m.model.fromParameters(getattr(self.params.economicModel, m.value))
+            for m in EconomicModelTypes
+        }
+
+        self.providers = {
+            s: s.provider(URL(self.params.subgraph, s.value)) for s in Type
         }
 
         self.running = False
@@ -96,16 +65,20 @@ class Core(Base):
         return random.choice(self.nodes).api
 
     @property
-    async def ct_nodes_addresses(self) -> list[Address]:
-        return await asyncio.gather(*[node.address.get() for node in self.nodes])
+    def channels(self):
+        return random.choice(self.nodes).channels
+
+    @property
+    def ct_nodes_addresses(self) -> list[Address]:
+        return [node.address for node in self.nodes]
 
     @flagguard
     @formalin
     async def rotate_subgraphs(self):
         """
-        Checks the subgraph URLs and sets the subgraph type in use (default, backup or none)
+        Checks the subgraph URLs and sets the subgraph mode in use (default, backup or none).
         """
-        for provider in self.subgraph_providers.values():
+        for provider in self.providers.values():
             await provider.test(self.params.subgraph.type)
 
     @flagguard
@@ -117,22 +90,21 @@ class Core(Base):
 
         counts = {"new": 0, "known": 0, "unreachable": 0}
 
-        async with self.all_peers.lock:
+        async with self.all_peers as current_peers:
             visible_peers: set[Peer] = set()
             visible_peers.update(*[await node.peers.get() for node in self.nodes])
-            current_peers: set[Peer] = self.all_peers.value
 
             for peer in current_peers:
                 # if peer is still visible
                 if peer in visible_peers:
-                    if await peer.yearly_message_count.replace_value(None, 0):
-                        # peer was already known, but distribution stopped for him because he was set in the `unreachable` state.
+                    if peer.yearly_message_count is None:
+                        peer.yearly_message_count = 0
                         peer.start_async_processes()
                     counts["known"] += 1
 
                 # if peer is not visible anymore
                 else:
-                    await peer.yearly_message_count.set(None)
+                    peer.yearly_message_count = None
                     peer.running = False
                     counts["unreachable"] += 1
 
@@ -140,15 +112,13 @@ class Core(Base):
             for peer in visible_peers:
                 if peer not in current_peers:
                     peer.params = self.params
-                    await peer.yearly_message_count.set(0)
+                    peer.yearly_message_count = 0
                     peer.start_async_processes()
                     current_peers.add(peer)
                     counts["new"] += 1
 
-            self.all_peers.value = current_peers
-
             self.debug(
-                f"Aggregated peers ({len(self.all_peers.value)} entries) ({', '.join([f'{value} {key}' for key, value in counts.items() ] )})."
+                f"Aggregated peers ({len(current_peers)} entries) ({', '.join([f'{value} {key}' for key, value in counts.items() ] )})."
             )
             for key, value in counts.items():
                 UNIQUE_PEERS.labels(key).set(value)
@@ -157,96 +127,98 @@ class Core(Base):
     @formalin
     async def registered_nodes(self):
         """
-        Gets the subgraph data and sets the subgraph_list LockedVar.
+        Gets all registered nodes in the Network Registry.
         """
-        provider = self.subgraph_providers["safes"]
 
-        results = list[NodeEntry]()
+        results = list[entries.Node]()
         try:
-            for safe in await provider.get():
-                entries = [
-                    NodeEntry.fromSubgraphResult(node)
-                    for node in safe["registeredNodesInNetworkRegistry"]
-                ]
-                results.extend(entries)
+            for safe in await self.providers[Type.SAFES].get():
+                results.extend(
+                    [
+                        entries.Node.fromSubgraphResult(node)
+                        for node in safe["registeredNodesInNetworkRegistry"]
+                    ]
+                )
 
         except ProviderError as err:
             self.error(f"get_registered_nodes: {err}")
 
-        await self.registered_nodes_list.set(results)
-
+        self.registered_nodes_data = results
         SUBGRAPH_SIZE.set(len(results))
         self.debug(f"Fetched registered nodes ({len(results)} entries).")
 
     @flagguard
     @formalin
     async def nft_holders(self):
-        provider = self.subgraph_providers["staking"]
-
+        """
+        Gets all NFT holders.
+        """
         results = list[str]()
         try:
-            for nft in await provider.get():
+            for nft in await self.providers[Type.STAKING].get():
                 if owner := nft.get("owner", {}).get("id", None):
                     results.append(owner)
 
         except ProviderError as err:
             self.error(f"nft_holders: {err}")
 
-        await self.nft_holders_list.set(results)
-
+        self.nft_holders_data = results
         NFT_HOLDERS.set(len(results))
         self.debug(f"Fetched NFT holders ({len(results)} entries).")
 
     @flagguard
     @formalin
     async def allocations(self):
-        mainnet_provider = self.subgraph_providers["mainnet_allocations"]
-        gnosis_provider = self.subgraph_providers["gnosis_allocations"]
-
-        results = list[AllocationEntry]()
+        """
+        Gets all allocations for the investors.
+        The amount per investor is then added to their stake before dividing it by the number of nodes they are running.
+        """
+        results = list[entries.Allocation]()
         try:
-            for account in await mainnet_provider.get():
-                results.append(AllocationEntry(**account["account"]))
+            for account in await self.providers[Type.MAINNET_ALLOCATIONS].get():
+                results.append(entries.Allocation(**account["account"]))
         except ProviderError as err:
             self.error(f"allocations: {err}")
 
         try:
-            for account in await gnosis_provider.get():
-                results.append(AllocationEntry(**account["account"]))
+            for account in await self.providers[Type.GNOSIS_ALLOCATIONS].get():
+                results.append(entries.Allocation(**account["account"]))
         except ProviderError as err:
             self.error(f"allocations: {err}")
 
-        await self.allocations_data.set(results)
+        self.allocations_data = results
         self.debug(f"Fetched allocations ({len(results)} entries).")
 
     @flagguard
     @formalin
     async def eoa_balances(self):
-        mainnet_provider = self.subgraph_providers["mainnet_balances"]
-        gnosis_provider = self.subgraph_providers["gnosis_balances"]
-
-        addresses = [alloc.address for alloc in await self.allocations_data.get()]
-        if len(addresses) == 0:
+        """
+        Gets the EOA balances on Gnosis and Mainnet for the investors.
+        """
+        balances = {alloc.address: 0 for alloc in self.allocations_data}
+        if len(balances) == 0:
             self.info("No investors addresses found.")
             return
-        else:
-            balances = {address: 0 for address in addresses}
 
         try:
-            for account in await mainnet_provider.get(id_in=list(balances.keys())):
+            for account in await self.providers[Type.MAINNET_BALANCES].get(
+                id_in=list(balances.keys())
+            ):
                 balances[account["id"]] += float(account["totalBalance"]) / 1e18
         except ProviderError as err:
             self.error(f"eoa_balances: {err}")
 
         try:
-            for account in await gnosis_provider.get(id_in=list(balances.keys())):
+            for account in await self.providers[Type.GNOSIS_BALANCES].get(
+                id_in=list(balances.keys())
+            ):
                 balances[account["id"]] += float(account["totalBalance"]) / 1e18
         except ProviderError as err:
             self.error(f"eoa_balances: {err}")
 
-        eoa_balances = [BalanceEntry(key, value) for key, value in balances.items()]
-
-        await self.eoa_balances_data.set(eoa_balances)
+        self.eoa_balances_data = [
+            entries.Balance(key, value) for key, value in balances.items()
+        ]
         self.debug(f"Fetched EOA balances ({len(balances)} entries).")
 
     @flagguard
@@ -256,19 +228,18 @@ class Core(Base):
         Gets a dictionary containing all unique source_peerId-source_address links
         including the aggregated balance of "Open" outgoing payment channels.
         """
-        channels = await self.api.all_channels(False)
 
-        if channels is None:
+        if self.channels is None:
             self.warning("Topology data not available")
             return
 
-        results = await Utils.balanceInChannels(channels.all)
-        topology_list = [TopologyEntry.fromDict(*arg) for arg in results.items()]
+        self.topology_data = [
+            entries.Topology.fromDict(*arg)
+            for arg in (await Utils.balanceInChannels(self.channels.all)).items()
+        ]
 
-        await self.topology_list.set(topology_list)
-
-        TOPOLOGY_SIZE.set(len(topology_list))
-        self.debug(f"Fetched topology links ({len(topology_list)} entries).")
+        TOPOLOGY_SIZE.set(len(self.topology_data))
+        self.debug(f"Fetched topology links ({len(self.topology_data)} entries).")
 
     @flagguard
     @formalin
@@ -276,110 +247,95 @@ class Core(Base):
         """
         Applies the economic model to the eligible peers (after multiple filtering layers).
         """
-        nodes = await self.registered_nodes_list.get()
-        nft_holders = await self.nft_holders_list.get()
-        topology = await self.topology_list.get()
-        ct_nodes = await self.ct_nodes_addresses
-        redeemed_rewards = await self.peer_rewards.get()
-        eoa_balances = await self.eoa_balances_data.get()
-        allocations = await self.allocations_data.get()
-
-        async with self.all_peers.lock:
-            peers = self.all_peers.value
-
-            if not all([len(topology), len(nodes), len(peers)]):
+        async with self.all_peers as peers:
+            if not all(
+                [len(self.topology_data), len(self.registered_nodes_data), len(peers)]
+            ):
                 self.warning("Not enough data to apply economic model.")
                 return
 
-            Utils.associateEntitiesToNodes(allocations, nodes)
-            Utils.associateEntitiesToNodes(eoa_balances, nodes)
+            Utils.associateEntitiesToNodes(
+                self.allocations_data, self.registered_nodes_data
+            )
+            Utils.associateEntitiesToNodes(
+                self.eoa_balances_data, self.registered_nodes_data
+            )
 
             await Utils.mergeDataSources(
-                topology, peers, nodes, allocations, eoa_balances
+                self.topology_data,
+                peers,
+                self.registered_nodes_data,
+                self.allocations_data,
+                self.eoa_balances_data,
             )
 
             for p in peers:
                 if p.is_old(self.params.peer.minVersion):
-                    await p.yearly_message_count.set(None)
+                    p.yearly_message_count = None
 
             Utils.allowManyNodePerSafe(peers)
 
             for p in peers:
                 if not p.is_eligible(
                     self.params.economicModel.minSafeAllowance,
-                    self.legacy_model.coefficients.l,
-                    ct_nodes,
-                    nft_holders,
+                    self.models[EconomicModelTypes.LEGACY].coefficients.l,
+                    self.ct_nodes_addresses,
+                    self.nft_holders_data,
                     self.params.economicModel.NFTThreshold,
                 ):
-                    await p.yearly_message_count.set(None)
+                    p.yearly_message_count = None
 
             economic_security = (
                 sum(
-                    [
-                        p.split_stake
-                        for p in peers
-                        if (await p.yearly_message_count.get()) is not None
-                    ]
+                    [p.split_stake for p in peers if p.yearly_message_count is not None]
                 )
                 / self.params.economicModel.sigmoid.totalTokenSupply
             )
             network_capacity = (
-                len(
-                    [
-                        p
-                        for p in peers
-                        if (await p.yearly_message_count.get()) is not None
-                    ]
-                )
+                len([p for p in peers if p.yearly_message_count is not None])
                 / self.params.economicModel.sigmoid.networkCapacity
             )
             sigmoid_model_input = [economic_security, network_capacity]
 
             for peer in peers:
-                if await peer.yearly_message_count.get() is None:
+                if peer.yearly_message_count is None:
                     continue
 
-                legacy_message_count = self.legacy_model.yearly_message_count(
-                    peer.split_stake, redeemed_rewards.get(peer.address.address, 0.0)
+                legacy_message_count = self.models[
+                    EconomicModelTypes.LEGACY
+                ].yearly_message_count(
+                    peer.split_stake,
+                    self.peers_rewards_data.get(peer.address.address, 0.0),
                 )
-                sigmoid_message_count = self.sigmoid_model.yearly_message_count(
-                    peer.split_stake, sigmoid_model_input
-                )
+                sigmoid_message_count = self.models[
+                    EconomicModelTypes.SIGMOID
+                ].yearly_message_count(peer.split_stake, sigmoid_model_input)
 
-                await peer.yearly_message_count.set(
-                    legacy_message_count + sigmoid_message_count
-                )
-                MESSAGE_COUNT.labels(peer.address.id, "legacy").set(
+                peer.yearly_message_count = legacy_message_count + sigmoid_message_count
+
+                MESSAGE_COUNT.labels(peer.address.id, EconomicModelTypes.LEGACY).set(
                     legacy_message_count
                 )
-                MESSAGE_COUNT.labels(peer.address.id, "sigmoid").set(
+                MESSAGE_COUNT.labels(peer.address.id, EconomicModelTypes.SIGMOID).set(
                     sigmoid_message_count
                 )
 
-            eligibles = sum(
-                [(await p.yearly_message_count.get() is not None) for p in peers]
-            )
+            eligibles = sum([p.yearly_message_count is not None for p in peers])
             self.info(f"Eligible nodes: {eligibles} entries.")
             ELIGIBLE_PEERS.set(eligibles)
-
-            self.all_peers.value = set(peers)
 
     @flagguard
     @formalin
     async def peers_rewards(self):
-        provider = self.subgraph_providers["rewards"]
-
         results = dict()
         try:
-            for account in await provider.get():
+            for account in await self.providers[Type.REWARDS].get():
                 results[account["id"]] = float(account["redeemedValue"])
 
         except ProviderError as err:
             self.error(f"get_peers_rewards: {err}")
 
-        await self.peer_rewards.set(results)
-
+        self.peers_rewards_data = results
         self.debug(f"Fetched peers rewards amounts ({len(results)} entries).")
 
     @flagguard
@@ -393,18 +349,17 @@ class Core(Base):
             self.warning("Ticket price not available.")
             return
 
-        # should be replaced by await self.api.winning_probability()
-        win_probabilty = self.params.economicModel.winningProbability
-        if win_probabilty is None:
+        # TODO: replace by await self.api.winning_probability() once the endpoint is available
+        win_probability = self.params.economicModel.winningProbability
+        if win_probability is None:
             self.warning("Winning probability not available.")
             return
 
-        self.debug(f"Ticket price: {price}, winning probability: {win_probabilty}")
+        self.debug(f"Ticket price: {price}, winning probability: {win_probability}")
 
-        self.legacy_model.budget.ticket_price = price
-        self.legacy_model.budget.winning_probability = win_probabilty
-        self.sigmoid_model.budget.ticket_price = price
-        self.sigmoid_model.budget.winning_probability = win_probabilty
+        for model in self.models.values():
+            model.budget.ticket_price = price
+            model.budget.winning_probability = win_probability
 
     @flagguard
     @formalin
@@ -412,11 +367,15 @@ class Core(Base):
         """
         Gets the total amount that was sent to CT safes.
         """
-        provider = self.subgraph_providers["fundings"]
+        provider = self.providers[Type.FUNDINGS]
 
         addresses = list(
-            set([(await node.api.node_info()).hopr_node_safe for node in self.nodes])
+            filter(
+                lambda x: x is not None,
+                {await node.safe_address for node in self.nodes},
+            )
         )
+
         try:
             entries = await provider.get(to_in=addresses)
         except ProviderError as err:
