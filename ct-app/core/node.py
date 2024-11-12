@@ -378,9 +378,8 @@ class Node(Base):
         """
         messages = []
         for m in await self.api.messages_pop_all():
-            print(f"{m=}")
             try:
-                message = MessageFormat.parse(m.body)
+                message = MessageFormat.parse(m["body"])
             except ValueError as err:
                 self.error(f"Error while parsing message: {err}")
                 continue
@@ -419,7 +418,9 @@ class Node(Base):
     async def watch_message_queue(self):
         message: MessageFormat = await MessageQueue().buffer.get()
 
-        if message.relayer not in (await self.peers.get()):
+        available_peers = [peer.address.id for peer in await self.peers.get()]
+        if message.relayer not in available_peers:
+            print(f"{message.relayer} not found")
             return
 
         asyncio.create_task(

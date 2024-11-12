@@ -39,7 +39,7 @@ class MessageFormat:
             self.timestamp = timestamp
 
     @classmethod
-    def parse(cls, input_string):
+    def parse(cls, input_string: str):
         re_pattern = "^" + cls.pattern.replace("{", "(?P<").replace("}", ">.+)") + "$"
 
         match = re.compile(re_pattern).match(input_string)

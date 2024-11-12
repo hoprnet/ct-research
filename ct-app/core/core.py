@@ -229,7 +229,7 @@ class Core(Base):
         including the aggregated balance of "Open" outgoing payment channels.
         """
 
-        if self.channels is None:
+        if self.channels is None or self.channels.all is None:
             self.warning("Topology data not available")
             return
 
