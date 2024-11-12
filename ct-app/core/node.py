@@ -420,7 +420,6 @@ class Node(Base):
 
         available_peers = [peer.address.id for peer in await self.peers.get()]
         if message.relayer not in available_peers:
-            print(f"{message.relayer} not found")
             return
 
         asyncio.create_task(
