@@ -426,9 +426,12 @@ class Node(Base):
     @formalin
     async def watch_message_queue(self):
         message: MessageFormat = await MessageQueue().buffer.get()
-        sender = self.address.id
+
+        if message.relayer not in (await self.peers.get()):
+            return
+          
         asyncio.create_task(
-            self.api.send_message(sender, message.format(), [message.relayer])
+            self.api.send_message(self.address.id, message.format(), [message.relayer])
         )
 
     async def tasks(self):
