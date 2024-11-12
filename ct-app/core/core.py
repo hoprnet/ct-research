@@ -295,30 +295,34 @@ class Core(Base):
                 len([p for p in peers if p.yearly_message_count is not None])
                 / self.params.economicModel.sigmoid.networkCapacity
             )
-            sigmoid_model_input = [economic_security, network_capacity]
 
+            model_input = {
+                EconomicModelTypes.LEGACY: 0,
+                EconomicModelTypes.SIGMOID: [economic_security, network_capacity],
+            }
+            message_count = {
+                EconomicModelTypes.LEGACY: 0,
+                EconomicModelTypes.SIGMOID: 0,
+            }
             for peer in peers:
                 if peer.yearly_message_count is None:
                     continue
 
-                legacy_message_count = self.models[
-                    EconomicModelTypes.LEGACY
-                ].yearly_message_count(
-                    peer.split_stake,
+                model_input[EconomicModelTypes.LEGACY] = (
                     self.peers_rewards_data.get(peer.address.address, 0.0),
                 )
-                sigmoid_message_count = self.models[
-                    EconomicModelTypes.SIGMOID
-                ].yearly_message_count(peer.split_stake, sigmoid_model_input)
 
-                peer.yearly_message_count = legacy_message_count + sigmoid_message_count
+                for model in self.models:
+                    message_count[model] = self.models[model].yearly_message_count(
+                        peer.split_stake,
+                        model_input[model],
+                    )
 
-                MESSAGE_COUNT.labels(peer.address.id, EconomicModelTypes.LEGACY).set(
-                    legacy_message_count
-                )
-                MESSAGE_COUNT.labels(peer.address.id, EconomicModelTypes.SIGMOID).set(
-                    sigmoid_message_count
-                )
+                    MESSAGE_COUNT.labels(peer.address.id, model.name).set(
+                        message_count[model]
+                    )
+
+                peer.yearly_message_count = sum(message_count.values())
 
             eligibles = sum([p.yearly_message_count is not None for p in peers])
             self.info(f"Eligible nodes: {eligibles} entries.")
