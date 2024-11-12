@@ -427,8 +427,12 @@ class Node(Base):
     async def watch_message_queue(self):
         message: MessageFormat = await MessageQueue().buffer.get()
 
-        available_peers = [peer.address.id for peer in await self.peers.get()]
-        if message.relayer not in available_peers:
+        destination_peers = [
+            channel.destination_peer_id for channel in self.channels.outgoing
+        ]
+
+        if message.relayer not in destination_peers:
+            self.warning(f"No channel to {message.relayer}")
             return
 
         asyncio.create_task(
