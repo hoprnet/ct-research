@@ -70,6 +70,17 @@ class Channel(ApiObject):
         self.status = ChannelStatus.fromString(self.status)
 
 
+class TicketPrice(ApiObject):
+    keys = {"value": "price"}
+
+    def post_init(self):
+        self.value = float(self.value) / 1e18
+
+
+class OpenedChannel(ApiObject):
+    keys = {"channel_id": "channelId", "receipt": "transactionReceipt"}
+
+
 class Channels:
     def __init__(self, data: dict):
         self.all = [Channel(channel) for channel in data.get("all", [])]

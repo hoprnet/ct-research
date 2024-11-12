@@ -344,8 +344,8 @@ class Core(Base):
         """
         Gets the ticket price and winning probability from the api. They are used in the economic model to calculate the number of messages to send to a peer.
         """
-        price = await self.api.ticket_price()
-        if price is None:
+        ticket_price = await self.api.ticket_price()
+        if ticket_price is None:
             self.warning("Ticket price not available.")
             return
 
@@ -355,10 +355,12 @@ class Core(Base):
             self.warning("Winning probability not available.")
             return
 
-        self.debug(f"Ticket price: {price}, winning probability: {win_probability}")
+        self.debug(
+            f"Ticket price: {ticket_price.value}, winning probability: {win_probability}"
+        )
 
         for model in self.models.values():
-            model.budget.ticket_price = price
+            model.budget.ticket_price = ticket_price.value
             model.budget.winning_probability = win_probability
 
     @flagguard

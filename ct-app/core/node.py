@@ -150,7 +150,7 @@ class Node(Base):
                 address,
                 f"{int(self.params.channel.fundingAmount*1e18):d}",
             )
-            if ok:
+            if ok is not None:
                 self.info(f"Opened channel to {address}")
                 if addr := self.address:
                     CHANNELS_OPS.labels(addr.id, "opened").inc()
@@ -378,6 +378,7 @@ class Node(Base):
         """
         messages = []
         for m in await self.api.messages_pop_all():
+            print(f"{m=}")
             try:
                 message = MessageFormat.parse(m.body)
             except ValueError as err:
@@ -420,7 +421,7 @@ class Node(Base):
 
         if message.relayer not in (await self.peers.get()):
             return
-          
+
         asyncio.create_task(
             self.api.send_message(self.address.id, message.format(), [message.relayer])
         )

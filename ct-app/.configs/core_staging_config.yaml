@@ -25,10 +25,10 @@ flags:
     retrieveChannels: 600
     retrieveBalances: 120
 
-    openChannels: 120
-    fundChannels: 120
-    closeOldChannels: 120
-    closePendingChannels: 300
+    openChannels: 900
+    fundChannels: 900
+    closeOldChannels: 900
+    closePendingChannels: 900
     closeIncomingChannels: Off
 
     getTotalChannelFunds: 300

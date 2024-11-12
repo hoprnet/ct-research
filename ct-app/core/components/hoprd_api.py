@@ -4,7 +4,15 @@ from typing import Optional
 
 import aiohttp
 
-from .api_types import Addresses, Balances, Channels, ConnectedPeer, Infos
+from .api_types import (
+    Addresses,
+    Balances,
+    Channels,
+    ConnectedPeer,
+    Infos,
+    OpenedChannel,
+    TicketPrice,
+)
 from .baseclass import Base
 
 MESSAGE_TAG = 0x1245
@@ -76,7 +84,9 @@ class HoprdAPI(Base):
 
         return Balances(response) if is_ok else None
 
-    async def open_channel(self, peer_address: str, amount: str) -> Optional[str]:
+    async def open_channel(
+        self, peer_address: str, amount: str
+    ) -> Optional[OpenedChannel]:
         """
         Opens a channel with the given peer_address and amount.
         :param: peer_address: str
@@ -85,16 +95,15 @@ class HoprdAPI(Base):
         """
         data = {
             "amount": amount,
-            "peer_address": peer_address,
+            "peerAddress": peer_address,
         }
 
         is_ok, response = await self.__call_api(
             Method.POST,
-            "channels/open_channel",
+            "channels",
             data=data,
         )
-
-        return response["channel_id"] if is_ok else None
+        return OpenedChannel(response) if is_ok else None
 
     async def fund_channel(self, channel_id: str, amount: float) -> bool:
         """
@@ -203,9 +212,9 @@ class HoprdAPI(Base):
         _, response = await self.__call_api(Method.GET, "node/info")
         return Infos(response)
 
-    async def ticket_price(self) -> float:
-        _, response = await self.__call_api(Method.GET, "network/price")
-        return float(response["price"]) / 1e18 if "price" in response else None
+    async def ticket_price(self) -> Optional[TicketPrice]:
+        is_ok, response = await self.__call_api(Method.GET, "network/price")
+        return TicketPrice(response) if is_ok else None
 
     async def healthyz(self, timeout: int = 20) -> bool:
         """
