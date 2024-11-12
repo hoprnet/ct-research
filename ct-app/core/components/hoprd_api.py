@@ -238,7 +238,7 @@ class HoprdAPI(Base):
 
         try:
             response = await asyncio.wait_for(_check_url(url), timeout=timeout)
-        except TimeoutError:
+        except asyncio.TimeoutError:
             return False
         except Exception:
             return False

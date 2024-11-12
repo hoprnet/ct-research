@@ -170,14 +170,14 @@ class Node(Base):
         in_opens = [c for c in self.channels.incoming if c.status.isOpen]
 
         for channel in in_opens:
-            self.debug(f"Closing incoming channel {channel.channel_id}")
-            ok = await self.api.close_channel(channel.channel_id)
+            self.debug(f"Closing incoming channel {channel.id}")
+            ok = await self.api.close_channel(channel.id)
             if ok:
-                self.info(f"Closed channel {channel.channel_id}")
+                self.info(f"Closed channel {channel.id}")
                 if addr := self.address:
                     CHANNELS_OPS.labels(addr.id, "incoming_closed").inc()
             else:
-                self.warning(f"Failed to close channel {channel.channel_id}")
+                self.warning(f"Failed to close channel {channel.id}")
 
     @flagguard
     @formalin
