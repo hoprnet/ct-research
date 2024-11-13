@@ -3,18 +3,16 @@ import random
 from datetime import datetime
 from typing import Union
 
-from packaging.version import Version
-from prometheus_client import Gauge
-
 from core.components import AsyncLoop, Base, MessageFormat, MessageQueue
 from core.components.decorators import flagguard, formalin
+from packaging.version import Version
+from prometheus_client import Gauge
 
 from .address import Address
 from .database import DatabaseConnection, SentMessages
 
 STAKE = Gauge("ct_peer_stake", "Stake", ["peer_id", "type"])
 SAFE_COUNT = Gauge("ct_peer_safe_count", "Number of safes", ["peer_id"])
-VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
 DELAY = Gauge("ct_peer_delay", "Delay between two messages", ["peer_id"])
 
 SECONDS_IN_A_NON_LEAP_YEAR = 365 * 24 * 60 * 60
@@ -67,10 +65,9 @@ class Peer(Base):
             try:
                 value = Version(value)
             except Exception:
-                value = Version("0.0.0")
+                value = Version("0")
 
         self._version = value
-        VERSION.labels(self.address.id, str(value)).set(1)
 
     @property
     def node_address(self) -> str:

@@ -305,6 +305,8 @@ class Node(Base):
             for item in results
         }
 
+        peers = {p for p in peers if not p.is_old(self.params.peer.minVersion)}
+
         addresses_w_timestamp = {p.address.address: datetime.now() for p in peers}
 
         await self.peers.set(peers)
