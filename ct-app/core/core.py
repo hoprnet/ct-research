@@ -93,9 +93,8 @@ class Core(Base):
 
         async with self.all_peers as current_peers:
             visible_peers: set[Peer] = set()
-            visible_peers.update(
-                *[await node.peers.get() for node in self.nodes]
-            )  # TODO: if two ct nodes see the peer and one of them doesn't get the peer's version (gets None instead), there's a chance that the peer's version will be None in the final list, instead of the correct version
+            visible_peers.update(*[await node.peers.get() for node in self.nodes])
+            visible_peers = list(visible_peers)
 
             for peer in current_peers:
                 # if peer is still visible
@@ -105,6 +104,7 @@ class Core(Base):
                         peer.start_async_processes()
                     counts["known"] += 1
 
+                    # update peer version if it has been succesfully retrieved
                     new_version = visible_peers[visible_peers.index(peer)].version
                     if new_version.major != 0:
                         peer.version = new_version

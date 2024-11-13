@@ -85,14 +85,14 @@ def economic_model(budget: Budget) -> EconomicModelLegacy:
 def peers_raw() -> list[dict]:
     return [
         {"peer_id": "id_0", "peer_address": "address_0", "reported_version": "2.0.0"},
-        {"peer_id": "id_1", "peer_address": "address_1", "reported_version": "1.7.0"},
-        {"peer_id": "id_2", "peer_address": "address_2", "reported_version": "1.0.3"},
+        {"peer_id": "id_1", "peer_address": "address_1", "reported_version": "2.7.0"},
+        {"peer_id": "id_2", "peer_address": "address_2", "reported_version": "2.0.8"},
         {
             "peer_id": "id_3",
             "peer_address": "address_3",
-            "reported_version": "1.0.0-rc.3",
+            "reported_version": "2.1.0-rc.3",
         },
-        {"peer_id": "id_4", "peer_address": "address_4", "reported_version": "1.0.0"},
+        {"peer_id": "id_4", "peer_address": "address_4", "reported_version": "2.0.9"},
     ]
 
 
