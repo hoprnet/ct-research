@@ -14,15 +14,15 @@ class FundChannels(EnduranceTest):
             EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY")
         )
 
-        self.address = await self.api.get_address("hopr")
-        self.info(f"Connected to node '...{self.address[-10:]}'")
+        self.address = await self.api.get_address()
+        self.info(f"Connected to node '...{self.address.hopr[-10:]}'")
 
         # get channel
         channels = await self.api.channels()
         open_channels = [
             c
             for c in channels
-            if c.status.isOpen and c.source_peer_id == self.address
+            if c.status.isOpen and c.source_peer_id == self.address.hopr
         ]
 
         if len(open_channels) == 0:
@@ -46,9 +46,9 @@ class FundChannels(EnduranceTest):
             while True:
                 channels = await self.api.channels()
                 channel = channels[
-                    [c.id for c in channels if c.source_peer_id == self.address].index(
-                        id
-                    )
+                    [
+                        c.id for c in channels if c.source_peer_id == self.address.hopr
+                    ].index(id)
                 ]
                 if channel.balance != balance:
                     break

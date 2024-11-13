@@ -15,13 +15,13 @@ class SendMessages(EnduranceTest):
         self.api = HoprdAPI(
             EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY")
         )
-        self.recipient = await self.api.get_address("hopr")
+        self.recipient = await self.api.get_address()
 
         channels = await self.api.channels()
         open_channels = [
             c
             for c in channels.all
-            if c.source_peer_id == self.recipient and c.status.isOpen
+            if c.source_peer_id == self.recipient.hopr and c.status.isOpen
         ]
 
         if len(open_channels) == 0:
@@ -39,9 +39,9 @@ class SendMessages(EnduranceTest):
         self.relayer = channel.destination_peer_id
         self.message_tag = random.randint(1024, 32768)
 
-        self.info(f"Connected to node {self.recipient}")
+        self.info(f"Connected to node {self.recipient.hopr}")
         self.info(f"relayer: {self.relayer}", prefix="\t")
-        self.info(f"channel: {channel.channel_id}", prefix="\t")
+        self.info(f"channel: {channel.id}", prefix="\t")
         self.info(f"status : {channel.status}", prefix="\t")
         self.info(f"balance: {channel.balance}HOPR", prefix="\t")
         self.info(f"tag    : {self.tag}", prefix="\t")
@@ -50,13 +50,13 @@ class SendMessages(EnduranceTest):
 
     async def task(self) -> bool:
         success = await self.api.send_message(
-            self.recipient,
+            self.recipient.hopr,
             "Load testing",
             [self.relayer],
             self.message_tag,
         )
 
-        self.results.append(success)
+        self.results.append(success // 200 == 1)
 
     async def on_end(self):
         sleep_time = EnvironmentUtils.envvar("DELAY_BEFORE_INBOX_CHECK", type=float)
