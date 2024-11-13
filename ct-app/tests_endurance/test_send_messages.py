@@ -6,6 +6,8 @@ from core.components.hoprd_api import HoprdAPI
 
 from . import EnduranceTest, Metric
 
+CHARS = "0123456789abcdefghijklmnopqrstuvwxyz "
+
 
 class SendMessages(EnduranceTest):
     async def on_start(self):
@@ -51,7 +53,7 @@ class SendMessages(EnduranceTest):
     async def task(self) -> bool:
         success = await self.api.send_message(
             self.recipient.hopr,
-            "Load testing",
+            "".join(random.choices(CHARS, k=random.randint(10, 30))),
             [self.relayer],
             self.message_tag,
         )
