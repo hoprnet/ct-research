@@ -46,7 +46,6 @@ flags:
 economicModel:
   minSafeAllowance: -1
   NFTThreshold: 30000
-  winningProbability: 1
 
   legacy:
     proportion: 1.0
