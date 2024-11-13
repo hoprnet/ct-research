@@ -65,7 +65,7 @@ class Peer(Base):
             try:
                 value = Version(value)
             except Exception:
-                value = Version("0")
+                value = Version("0.0.0")
 
         self._version = value
 
