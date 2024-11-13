@@ -58,7 +58,7 @@ class SendMessages(EnduranceTest):
             self.message_tag,
         )
 
-        self.results.append(success // 200 == 1)
+        self.results.append(200 <= success < 300)
 
     async def on_end(self):
         sleep_time = EnvironmentUtils.envvar("DELAY_BEFORE_INBOX_CHECK", type=float)
