@@ -34,11 +34,11 @@ flags:
     getTotalChannelFunds: 300
 
     watchMessageQueue: On  # should only be On / Off
-    relayedMessagesToDB: On
+    relayedMessagesToDB: 120
 
   peer:
     messageRelayRequest: On # should only be On / Off
-    sentMessagesToDB: On
+    sentMessagesToDB: 120
     
 # =============================================================================
 # 
