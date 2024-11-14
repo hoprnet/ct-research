@@ -33,6 +33,12 @@ class ApiObject:
     def post_init(self):
         pass
 
+    def __str__(self):
+        return str(self.__dict__)
+
+    def __repr__(self):
+        return str(self)
+
 
 class Addresses(ApiObject):
     keys = {"hopr": "hopr", "native": "native"}
@@ -86,3 +92,9 @@ class Channels:
         self.all = [Channel(channel) for channel in data.get("all", [])]
         self.incoming = []
         self.outgoing = []
+
+    def __str__(self):
+        return str(self.__dict__)
+
+    def __repr__(self):
+        return str(self)

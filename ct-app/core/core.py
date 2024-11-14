@@ -229,13 +229,14 @@ class Core(Base):
         including the aggregated balance of "Open" outgoing payment channels.
         """
 
-        if self.channels is None or self.channels.all is None:
+        channels = self.channels
+        if channels is None or channels.all is None:
             self.warning("Topology data not available")
             return
 
         self.topology_data = [
             entries.Topology.fromDict(*arg)
-            for arg in (await Utils.balanceInChannels(self.channels.all)).items()
+            for arg in (await Utils.balanceInChannels(channels.all)).items()
         ]
 
         TOPOLOGY_SIZE.set(len(self.topology_data))
@@ -308,8 +309,8 @@ class Core(Base):
                 if peer.yearly_message_count is None:
                     continue
 
-                model_input[EconomicModelTypes.LEGACY] = (
-                    self.peers_rewards_data.get(peer.address.address, 0.0),
+                model_input[EconomicModelTypes.LEGACY] = self.peers_rewards_data.get(
+                    peer.address.address, 0.0
                 )
 
                 for model in self.models:
