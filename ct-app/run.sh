@@ -26,4 +26,4 @@ for i in $(seq 1 $count); do
 done
 
 echo "Starting core in $env mode"
-python -m core --configfile ./.configs/core_${env}_config.yaml
+python -m core --configfile ./.configs/core_${env}_config.yaml 2>&1 | tee logs_core.log
