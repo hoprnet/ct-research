@@ -1,6 +1,6 @@
-replicas: 0
+replicas: 5
 network: rotsee
-version: saint-louis
+version: singapore-latest
 
 config: |
   hopr:
