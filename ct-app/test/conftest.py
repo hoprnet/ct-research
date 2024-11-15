@@ -5,7 +5,7 @@ from test.decorators_patches import patches
 import pytest
 import yaml
 from core.components import Parameters
-from core.components.api_types import (
+from core.components.api_returned_objects import (
     Addresses,
     Balances,
     Channel,

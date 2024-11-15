@@ -4,13 +4,25 @@ from typing import Optional
 
 import aiohttp
 
-from .api_types import (
+from .api_request_objects import (
+    ApiRequestObject,
+    CreateSessionBody,
+    DeleteSessionBody,
+    FundChannelBody,
+    GetChannelsBody,
+    GetPeersBody,
+    OpenChannelBody,
+    PopAllMessagesBody,
+    SendMessageBody,
+)
+from .api_returned_objects import (
     Addresses,
     Balances,
     Channels,
     ConnectedPeer,
     Infos,
     OpenedChannel,
+    Session,
     TicketPrice,
     TicketProbability,
 )
@@ -23,6 +35,11 @@ class Method(Enum):
     GET = "get"
     POST = "post"
     DELETE = "delete"
+
+
+class SessionsProtocol(Enum):
+    TCP = "tcp"
+    UDP = "udp"
 
 
 class HoprdAPI(Base):
@@ -43,14 +60,14 @@ class HoprdAPI(Base):
         self,
         method: Method,
         endpoint: str,
-        data: dict = {},
+        data: ApiRequestObject = None,
     ):
         try:
             headers = {"Content-Type": "application/json"}
             async with aiohttp.ClientSession(headers=self.headers) as s:
                 async with getattr(s, method.value)(
                     url=f"{self.host}{self.prefix}{endpoint}",
-                    json=data,
+                    json={} if data is None else data.as_dict,
                     headers=headers,
                 ) as res:
                     return res.status, await res.json()
@@ -64,7 +81,11 @@ class HoprdAPI(Base):
         return (False, None)
 
     async def __call_api(
-        self, method: Method, endpoint: str, data: dict = {}, timeout: int = 60
+        self,
+        method: Method,
+        endpoint: str,
+        data: ApiRequestObject = None,
+        timeout: int = 60,
     ) -> tuple[bool, Optional[object]]:
         try:
             return await asyncio.wait_for(
@@ -82,7 +103,6 @@ class HoprdAPI(Base):
         :return: balances: Balances | undefined
         """
         is_ok, response = await self.__call_api(Method.GET, "account/balances")
-
         return Balances(response) if is_ok else None
 
     async def open_channel(
@@ -94,16 +114,10 @@ class HoprdAPI(Base):
         :param: amount: str
         :return: channel id: str | undefined
         """
-        data = {
-            "amount": amount,
-            "peerAddress": peer_address,
-        }
 
-        is_ok, response = await self.__call_api(
-            Method.POST,
-            "channels",
-            data=data,
-        )
+        data = OpenChannelBody(amount, peer_address)
+
+        is_ok, response = await self.__call_api(Method.POST, "channels", data)
         return OpenedChannel(response) if is_ok else None
 
     async def fund_channel(self, channel_id: str, amount: float) -> bool:
@@ -113,12 +127,11 @@ class HoprdAPI(Base):
         :param: amount: float
         :return: bool
         """
-        data = {"amount": f"{amount:.0f}"}
+        data = FundChannelBody(amount)
 
         is_ok, _ = await self.__call_api(
-            Method.POST, f"channels/{channel_id}/fund", data=data
+            Method.POST, f"channels/{channel_id}/fund", data
         )
-
         return is_ok
 
     async def close_channel(self, channel_id: str) -> bool:
@@ -135,11 +148,11 @@ class HoprdAPI(Base):
         Returns all channels.
         :return: channels: list
         """
-        params = {"fullTopology": "true", "includingClosed": "false"}
-        params_str = "&".join([f"{k}={v}" for k, v in params.items()])
+        params = GetChannelsBody("true", "false")
 
-        is_ok, response = await self.__call_api(Method.GET, f"channels?{params_str}")
-
+        is_ok, response = await self.__call_api(
+            Method.GET, f"channels?{params.as_header_string}"
+        )
         return Channels(response) if is_ok else None
 
     async def peers(
@@ -153,8 +166,10 @@ class HoprdAPI(Base):
         :param: quality: int = 0..1
         :return: peers: list
         """
+        params = GetPeersBody(quality)
+
         is_ok, response = await self.__call_api(
-            Method.GET, f"node/peers?quality={quality}"
+            Method.GET, f"node/peers?{params.as_header_string}"
         )
 
         if not is_ok:
@@ -186,40 +201,105 @@ class HoprdAPI(Base):
         :param: tag: int = 0x0320
         :return: bool
         """
-        data = {
-            "body": message,
-            "path": hops,
-            "peerId": destination,
-            "tag": tag,
-        }
+        data = SendMessageBody(message, hops, destination, tag)
 
-        is_ok, _ = await self.__call_api(Method.POST, "messages", data=data)
-
+        is_ok, _ = await self.__call_api(Method.POST, "messages", data)
         return is_ok
 
     async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
         """
-        Pop all messages from the inbox
+        Pops all messages from the inbox.
         :param: tag = 0x0320
         :return: list
         """
-        data = {} if tag is None else {"tag": tag}
-        is_ok, response = await self.__call_api(
-            Method.POST, "messages/pop-all", data=data
-        )
+        data = PopAllMessagesBody(tag)
+
+        is_ok, response = await self.__call_api(Method.POST, "messages/pop-all", data)
         return response.get("messages", []) if is_ok else []
 
     async def node_info(self) -> Infos:
+        """
+        Gets informations about the HOPRd node.
+        :return: Infos
+        """
         _, response = await self.__call_api(Method.GET, "node/info")
         return Infos(response)
 
     async def ticket_price(self) -> Optional[TicketPrice]:
+        """
+        Gets the ticket price set by the oracle.
+        :return: TicketPrice
+        """
         is_ok, response = await self.__call_api(Method.GET, "network/price")
         return TicketPrice(response) if is_ok else None
 
-    async def winning_probability(self) -> Optional[float]:
+    async def winning_probability(self) -> Optional[TicketProbability]:
+        """
+        Gets the winning probability set by the oracle.
+        :return: TicketProbability
+        """
         is_ok, response = await self.__call_api(Method.GET, "network/probability")
         return TicketProbability(response) if is_ok else None
+
+    async def get_sessions(
+        self, protocol: SessionsProtocol = SessionsProtocol.TCP
+    ) -> list[Session]:
+        """
+        Lists existing Session listeners for the given IP protocol
+        :param: protocol: SessionsProtocol
+        :return: list[Session]
+        """
+        is_ok, response = await self.__call_api(
+            Method.GET, f"sessions/{protocol.value}"
+        )
+        return [Session(s) for s in response] if is_ok else None
+
+    async def post_session(
+        self,
+        destination: str,
+        listen_host: str,
+        relayer: str,
+        target: str,
+        protocol: SessionsProtocol = SessionsProtocol.TCP,
+    ) -> Session:
+        """
+        Creates a new client session returning the given session listening host & port over TCP or UDP.
+        :param: destination: str
+        :param: listen_host: str
+        :param: relayer: str
+        :param: target: str
+        :param: protocol: SessionsProtocol
+        :return: Session
+        """
+        data = CreateSessionBody(
+            ["Retransmission", "Segmentation"],
+            destination,
+            listen_host,
+            {"relayer": relayer},
+            {"Plain": target},
+        )
+
+        is_ok, response = await self.__call_api(
+            Method.POST, f"sessions/{protocol.value}", data
+        )
+        return Session(response) if is_ok else None
+
+    async def close_session(
+        self, ip: str, port: int, protocol: SessionsProtocol = SessionsProtocol.TCP
+    ) -> bool:
+        """
+        Closes an existing Sessino listener for the given IP protocol, IP and port.
+        :param: ip: str
+        :param: port: int
+        :param: protocol: SessionsProtocol
+        """
+        data = DeleteSessionBody(ip, port)
+
+        is_ok, _ = await self.__call_api(
+            Method.DELETE, f"sessions/{protocol.value}", data
+        )
+
+        return is_ok
 
     async def healthyz(self, timeout: int = 20) -> bool:
         """

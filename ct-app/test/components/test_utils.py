@@ -1,6 +1,6 @@
 import pytest
 from core.components import Utils
-from core.components.api_types import Channel
+from core.components.api_returned_objects import Channel
 from core.model import Address, Peer
 from core.model.subgraph import entries
 

@@ -23,7 +23,7 @@ def _convert(value: Any):
     return value
 
 
-class ApiObject:
+class ApiReturnedObject:
     def __init__(self, data: dict):
         for key, value in self.keys.items():
             setattr(self, key, _convert(data.get(value, None)))
@@ -40,11 +40,11 @@ class ApiObject:
         return str(self)
 
 
-class Addresses(ApiObject):
+class Addresses(ApiReturnedObject):
     keys = {"hopr": "hopr", "native": "native"}
 
 
-class Balances(ApiObject):
+class Balances(ApiReturnedObject):
     keys = {
         "hopr": "hopr",
         "native": "native",
@@ -53,15 +53,15 @@ class Balances(ApiObject):
     }
 
 
-class Infos(ApiObject):
+class Infos(ApiReturnedObject):
     keys = {"hopr_node_safe": "hoprNodeSafe"}
 
 
-class ConnectedPeer(ApiObject):
+class ConnectedPeer(ApiReturnedObject):
     keys = {"address": "peerAddress", "peer_id": "peerId", "version": "reportedVersion"}
 
 
-class Channel(ApiObject):
+class Channel(ApiReturnedObject):
     keys = {
         "balance": "balance",
         "id": "channelId",
@@ -76,21 +76,21 @@ class Channel(ApiObject):
         self.status = ChannelStatus.fromString(self.status)
 
 
-class TicketPrice(ApiObject):
+class TicketPrice(ApiReturnedObject):
     keys = {"value": "price"}
 
     def post_init(self):
         self.value = float(self.value) / 1e18
 
 
-class TicketProbability(ApiObject):
+class TicketProbability(ApiReturnedObject):
     keys = {"value": "probability"}
 
     def post_init(self):
         self.value = float(self.value)
 
 
-class OpenedChannel(ApiObject):
+class OpenedChannel(ApiReturnedObject):
     keys = {"channel_id": "channelId", "receipt": "transactionReceipt"}
 
 
@@ -105,3 +105,12 @@ class Channels:
 
     def __repr__(self):
         return str(self)
+
+
+class Session(ApiReturnedObject):
+    keys = {
+        "ip": "ip",
+        "port": "port",
+        "protocol": "protocol",
+        "target": "target",
+    }
