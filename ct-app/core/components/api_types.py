@@ -83,6 +83,13 @@ class TicketPrice(ApiObject):
         self.value = float(self.value) / 1e18
 
 
+class TicketProbability(ApiObject):
+    keys = {"value": "probability"}
+
+    def post_init(self):
+        self.value = float(self.value)
+
+
 class OpenedChannel(ApiObject):
     keys = {"channel_id": "channelId", "receipt": "transactionReceipt"}
 

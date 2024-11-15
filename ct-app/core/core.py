@@ -366,12 +366,12 @@ class Core(Base):
             return
 
         self.debug(
-            f"Ticket price: {ticket_price.value}, winning probability: {win_probability}"
+            f"Ticket price: {ticket_price.value}, winning probability: {win_probability.value}"
         )
 
         for model in self.models.values():
             model.budget.ticket_price = ticket_price.value
-            model.budget.winning_probability = win_probability
+            model.budget.winning_probability = win_probability.value
 
     @flagguard
     @formalin

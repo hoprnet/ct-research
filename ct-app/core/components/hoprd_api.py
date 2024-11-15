@@ -12,6 +12,7 @@ from .api_types import (
     Infos,
     OpenedChannel,
     TicketPrice,
+    TicketProbability,
 )
 from .baseclass import Base
 
@@ -217,8 +218,8 @@ class HoprdAPI(Base):
         return TicketPrice(response) if is_ok else None
 
     async def winning_probability(self) -> Optional[float]:
-        # TODO: update to an API call once the endpoint is available
-        return 1
+        is_ok, response = await self.__call_api(Method.GET, "network/probability")
+        return TicketProbability(response) if is_ok else None
 
     async def healthyz(self, timeout: int = 20) -> bool:
         """
