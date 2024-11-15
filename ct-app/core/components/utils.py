@@ -1,7 +1,7 @@
-from core.model.subgraph.entries import Safe
+from core.api.channelstatus import ChannelStatus
+from core.baseclass import Base
+from core.subgraph.entries import Safe
 
-from .baseclass import Base
-from .channelstatus import ChannelStatus
 from .environment_utils import EnvironmentUtils
 
 

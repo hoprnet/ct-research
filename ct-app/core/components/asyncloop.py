@@ -2,7 +2,8 @@ import asyncio
 from signal import SIGINT, SIGTERM
 from typing import Callable
 
-from .baseclass import Base
+from core.baseclass import Base
+
 from .singleton import Singleton
 
 

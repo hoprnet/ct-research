@@ -1,7 +1,7 @@
 import os
 from typing import Any
 
-from .baseclass import Base
+from core.baseclass import Base
 
 
 class EnvironmentUtils(Base):

@@ -1,7 +1,7 @@
 import asyncio
 from typing import Any
 
-from .baseclass import Base
+from core.baseclass import Base
 
 
 class LockedVar(Base):

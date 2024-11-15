@@ -4,12 +4,13 @@ import random
 
 from prometheus_client import Gauge
 
-from .components import AsyncLoop, Base, HoprdAPI, LockedVar, Parameters, Utils
+from .api import HoprdAPI
+from .baseclass import Base
+from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
 from .components.decorators import flagguard, formalin
-from .model import Address, Peer
-from .model.economic_model import EconomicModelTypes
-from .model.subgraph import URL, ProviderError, Type, entries
+from .economic_model import EconomicModelTypes
 from .node import Node
+from .subgraph import URL, ProviderError, Type, entries
 
 # endregion
 

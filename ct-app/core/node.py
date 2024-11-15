@@ -4,18 +4,12 @@ from datetime import datetime
 
 from prometheus_client import Gauge
 
-from .components import (
-    Base,
-    HoprdAPI,
-    LockedVar,
-    MessageFormat,
-    MessageQueue,
-    Parameters,
-    Utils,
-)
+from .api import HoprdAPI
+from .baseclass import Base
+from .components import Address, LockedVar, Parameters, Peer, Utils
 from .components.decorators import connectguard, flagguard, formalin
-from .model import Address, Peer
-from .model.database import DatabaseConnection, RelayedMessages
+from .components.messages import MessageFormat, MessageQueue
+from .database import DatabaseConnection, RelayedMessages
 
 # endregion
 

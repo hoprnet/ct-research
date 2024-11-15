@@ -4,19 +4,18 @@ from test.decorators_patches import patches
 
 import pytest
 import yaml
-from core.components import Parameters
-from core.components.api_returned_objects import (
+from core.api.api_returned_objects import (
     Addresses,
     Balances,
     Channel,
     Channels,
     ConnectedPeer,
 )
+from core.components import Parameters, Peer
 
 # needs to be imported after the patches are applied
 from core.core import Core
-from core.model import Peer
-from core.model.economic_model import (
+from core.economic_model import (
     Budget,
     Coefficients,
     EconomicModelLegacy,

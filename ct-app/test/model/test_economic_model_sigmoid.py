@@ -1,6 +1,6 @@
 import pytest
 from core.components import Parameters
-from core.model.economic_model import Bucket, Budget, EconomicModelSigmoid
+from core.economic_model import Bucket, Budget, EconomicModelSigmoid
 
 
 def test_init_class():

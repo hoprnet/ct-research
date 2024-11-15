@@ -2,8 +2,7 @@ import asyncio
 import random
 
 import pytest
-from core.components import MessageQueue, Parameters
-from core.model import Peer
+from core.components import MessageQueue, Parameters, Peer
 from packaging.version import Version
 
 SECONDS_IN_YEAR = 365 * 24 * 60 * 60

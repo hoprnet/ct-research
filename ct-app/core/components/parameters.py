@@ -1,4 +1,5 @@
-from .baseclass import Base
+from core.baseclass import Base
+
 from .environment_utils import EnvironmentUtils as Utils
 
 

@@ -1,7 +1,7 @@
 import inspect
 
 import pytest
-from core.components.api_returned_objects import Channels
+from core.api.api_returned_objects import Channels
 
 from .conftest import Node, Peer
 

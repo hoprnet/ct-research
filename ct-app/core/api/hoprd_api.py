@@ -4,6 +4,8 @@ from typing import Optional
 
 import aiohttp
 
+from core.baseclass import Base
+
 from .api_request_objects import (
     ApiRequestObject,
     CreateSessionBody,
@@ -26,7 +28,6 @@ from .api_returned_objects import (
     TicketPrice,
     TicketProbability,
 )
-from .baseclass import Base
 
 MESSAGE_TAG = 0x1245
 
