@@ -216,6 +216,10 @@ class HoprdAPI(Base):
         is_ok, response = await self.__call_api(Method.GET, "network/price")
         return TicketPrice(response) if is_ok else None
 
+    async def winning_probability(self) -> Optional[float]:
+        # TODO: update to an API call once the endpoint is available
+        return 1
+
     async def healthyz(self, timeout: int = 20) -> bool:
         """
         Checks if the node is healthy. Return True if `healthyz` returns 200 after max `timeout` seconds.

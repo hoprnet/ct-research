@@ -14,6 +14,7 @@ from .node import Node
 # endregion
 
 # region Metrics
+PEER_VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
 UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers", ["type"])
 SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
 TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
@@ -93,6 +94,7 @@ class Core(Base):
         async with self.all_peers as current_peers:
             visible_peers: set[Peer] = set()
             visible_peers.update(*[await node.peers.get() for node in self.nodes])
+            visible_peers = list(visible_peers)
 
             for peer in current_peers:
                 # if peer is still visible
@@ -101,6 +103,11 @@ class Core(Base):
                         peer.yearly_message_count = 0
                         peer.start_async_processes()
                     counts["known"] += 1
+
+                    # update peer version if it has been succesfully retrieved
+                    new_version = visible_peers[visible_peers.index(peer)].version
+                    if new_version.major != 0:
+                        peer.version = new_version
 
                 # if peer is not visible anymore
                 else:
@@ -122,6 +129,9 @@ class Core(Base):
             )
             for key, value in counts.items():
                 UNIQUE_PEERS.labels(key).set(value)
+
+            for peer in current_peers:
+                PEER_VERSION.labels(peer.address.id, str(peer.version)).set(1)
 
     @flagguard
     @formalin
@@ -270,10 +280,6 @@ class Core(Base):
                 self.eoa_balances_data,
             )
 
-            for p in peers:
-                if p.is_old(self.params.peer.minVersion):
-                    p.yearly_message_count = None
-
             Utils.allowManyNodePerSafe(peers)
 
             for p in peers:
@@ -354,8 +360,7 @@ class Core(Base):
             self.warning("Ticket price not available.")
             return
 
-        # TODO: replace by await self.api.winning_probability() once the endpoint is available
-        win_probability = self.params.economicModel.winningProbability
+        win_probability = await self.api.winning_probability()
         if win_probability is None:
             self.warning("Winning probability not available.")
             return
