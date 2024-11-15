@@ -34,11 +34,11 @@ flags:
     getTotalChannelFunds: 300
 
     watchMessageQueue: On  # should only be On / Off
-    relayedMessagesToDB: Off
+    relayedMessagesToDB: 120
 
   peer:
     messageRelayRequest: On # should only be On / Off
-    sentMessagesToDB: Off
+    sentMessagesToDB: 120
     
 # =============================================================================
 # 
@@ -46,7 +46,6 @@ flags:
 economicModel:
   minSafeAllowance: -1
   NFTThreshold: ~
-  winningProbability: 1
 
   legacy:
     proportion: 1.0
@@ -91,8 +90,8 @@ economicModel:
 # 
 # =============================================================================
 storage:
-  count: 100000
-  timeout: 43200 # seconds
+  count: 1000
+  timeout: 3600 # seconds
 
 # =============================================================================
 # 
