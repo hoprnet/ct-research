@@ -32,9 +32,11 @@ def main(configfile: str):
     else:
         Base.logger.info("Prometheus client started on port 8080")
 
+    core = Core(nodes, params)
+
     DatabaseConnection.open(params.pg)
 
-    AsyncLoop.run(Core(nodes, params).start)
+    AsyncLoop.run(core.start, core.stop)
 
     MessageQueue.clear()
 

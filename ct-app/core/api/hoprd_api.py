@@ -3,7 +3,6 @@ from enum import Enum
 from typing import Optional
 
 import aiohttp
-
 from core.baseclass import Base
 
 from .api_request_objects import (
@@ -14,8 +13,9 @@ from .api_request_objects import (
     GetChannelsBody,
     GetPeersBody,
     OpenChannelBody,
-    PopAllMessagesBody,
-    SendMessageBody,
+    SessionCapabilitiesBody,
+    SessionPathBody,
+    SessionTargetBody,
 )
 from .api_returned_objects import (
     Addresses,
@@ -191,40 +191,13 @@ class HoprdAPI(Base):
 
         return Addresses(response) if is_ok else None
 
-    async def send_message(
-        self, destination: str, message: str, hops: list[str], tag: int = MESSAGE_TAG
-    ) -> bool:
-        """
-        Sends a message to the given destination.
-        :param: destination: str
-        :param: message: str
-        :param: hops: list[str]
-        :param: tag: int = 0x0320
-        :return: bool
-        """
-        data = SendMessageBody(message, hops, destination, tag)
-
-        is_ok, _ = await self.__call_api(Method.POST, "messages", data)
-        return is_ok
-
-    async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
-        """
-        Pops all messages from the inbox.
-        :param: tag = 0x0320
-        :return: list
-        """
-        data = PopAllMessagesBody(tag)
-
-        is_ok, response = await self.__call_api(Method.POST, "messages/pop-all", data)
-        return response.get("messages", []) if is_ok else []
-
-    async def node_info(self) -> Infos:
+    async def node_info(self) -> Optional[Infos]:
         """
         Gets informations about the HOPRd node.
         :return: Infos
         """
-        _, response = await self.__call_api(Method.GET, "node/info")
-        return Infos(response)
+        is_ok, response = await self.__call_api(Method.GET, "node/info")
+        return Infos(response) if is_ok else None
 
     async def ticket_price(self) -> Optional[TicketPrice]:
         """
@@ -262,22 +235,28 @@ class HoprdAPI(Base):
         relayer: str,
         target: str,
         protocol: SessionsProtocol = SessionsProtocol.TCP,
+        retransmission=False,
+        segmentation=False,
     ) -> Session:
         """
         Creates a new client session returning the given session listening host & port over TCP or UDP.
-        :param: destination: str
+        :param: destination: PeerID of the recipient
         :param: listen_host: str
         :param: relayer: str
         :param: target: str
         :param: protocol: SessionsProtocol
         :return: Session
         """
+        capabilities_body = SessionCapabilitiesBody(retransmission, segmentation)
+        path_body = SessionPathBody(relayer)
+        target_body = SessionTargetBody(target)
+
         data = CreateSessionBody(
-            ["Retransmission", "Segmentation"],
+            capabilities_body.as_array,
             destination,
             listen_host,
-            {"relayer": relayer},
-            {"Plain": target},
+            path_body.as_dict,
+            target_body.as_dict,
         )
 
         is_ok, response = await self.__call_api(

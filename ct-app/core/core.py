@@ -437,3 +437,14 @@ class Core(Base):
             AsyncLoop.add(node.watch_message_queue)
 
         await AsyncLoop.gather()
+
+    async def stop(self):
+        """
+        Stop the node.
+        """
+        self.info("CTCore stopped.")
+        self.running = False
+
+        for node in self.nodes:
+            for s in node.sockets.values():
+                s.close()

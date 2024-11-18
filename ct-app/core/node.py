@@ -1,5 +1,5 @@
 # region Imports
-import asyncio
+import socket
 from datetime import datetime
 
 from prometheus_client import Gauge
@@ -48,6 +48,7 @@ class Node(Base):
 
         self.params = Parameters()
         self.messages_distributed = dict[str, int]()
+        self.sockets = dict[str, socket.socket]()
 
         self.connected = False
         self.running = False
@@ -373,9 +374,18 @@ class Node(Base):
         Check the inbox for messages.
         """
         messages = []
-        for m in await self.api.messages_pop_all():
+
+        s: socket.socket = self.sockets.get(self.address.id, None)
+
+        if s is None:
+            self.warning(f"No socket for {self.address.id}")
+            return
+
+        for m in s.recv(
+            1024
+        ):  # TODO: check if this is the right way to read from socket and set chunk size wisely
             try:
-                message = MessageFormat.parse(m["body"])
+                message = MessageFormat.parse(m.decode())
             except ValueError as err:
                 self.error(f"Error while parsing message: {err}")
                 continue
@@ -424,9 +434,14 @@ class Node(Base):
             self.warning(f"No channel to {message.relayer}")
             return
 
-        asyncio.create_task(
-            self.api.send_message(self.address.id, message.format(), [message.relayer])
-        )
+        # Send data through the socket
+        s = self.sockets.get(message.relayer, None)
+        if s is None:
+            session = self.api.post_session(message.relayer)
+            # TODO: define what IP should be used here
+            self.sockets[message.relayer] = create_socket("127.0.0.1", session.port)
+
+        s.send(message.format().encode())
 
     async def tasks(self):
         callbacks = [
@@ -454,3 +469,10 @@ class Node(Base):
     @classmethod
     def fromCredentials(cls, addresses: list[str], keys: list[str]):
         return [cls(address, key) for address, key in zip(addresses, keys)]
+
+
+def create_socket(ip: str, port: int, timeout: int = 60):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((ip, port))
+    s.settimeout(timeout)
+    return s

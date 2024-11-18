@@ -145,12 +145,12 @@ async def nodes(
             node.api, "get_address", return_value=Addresses(addresses[idx])
         )
         mocker.patch.object(node.api, "channels", return_value=channels)
-        mocker.patch.object(
-            node.api, "send_message", side_effect=SideEffect().send_message_success
-        )
-        mocker.patch.object(
-            node.api, "messages_pop_all", side_effect=SideEffect().inbox_messages
-        )
+        # mocker.patch.object(
+        #     node.api, "send_message", side_effect=SideEffect().send_message_success
+        # )
+        # mocker.patch.object(
+        #     node.api, "messages_pop_all", side_effect=SideEffect().inbox_messages
+        # )
         mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
         mocker.patch.object(
             node.api,
@@ -238,7 +238,7 @@ async def node(
     )
     mocker.patch.object(node.api, "get_address", return_value=Addresses(addresses[0]))
     mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
-    mocker.patch.object(node.api, "send_message", return_value=1)
+    # mocker.patch.object(node.api, "send_message", return_value=1)
     mocker.patch.object(node.api, "healthyz", return_value=True)
 
     params = Parameters()

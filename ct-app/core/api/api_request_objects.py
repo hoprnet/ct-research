@@ -9,6 +9,11 @@ class ApiRequestObject:
             if key.startswith("__"):
                 kwargs.pop(key)
 
+        if set(kwargs.keys()) != set(self.keys.keys()):
+            raise ValueError(
+                f"Keys mismatch: {set(kwargs.keys())} != {set(self.keys.keys())}"
+            )
+
         for key, value in kwargs.items():
             setattr(self, key, value)
 
@@ -65,25 +70,6 @@ class GetPeersBody(ApiRequestObject):
         super().__init__(vars())
 
 
-class SendMessageBody(ApiRequestObject):
-    keys = {
-        "body": "body",
-        "path": "path",
-        "peer_id": "peerId",
-        "tag": "tag",
-    }
-
-    def __init__(self, body: str, path: str, peer_id: str, tag: str):
-        super().__init__(vars())
-
-
-class PopAllMessagesBody(ApiRequestObject):
-    keys = {"tag": "tag"}
-
-    def __init__(self, tag: str):
-        super().__init__(vars())
-
-
 class CreateSessionBody(ApiRequestObject):
     keys = {
         "capabilities": "capabilities",
@@ -101,6 +87,38 @@ class CreateSessionBody(ApiRequestObject):
         path: str,
         target: str,
     ):
+        super().__init__(vars())
+
+
+class SessionCapabilitiesBody(ApiRequestObject):
+    keys = {
+        "retransmission": "Retransmission",
+        "segmentation": "Segmentation",
+    }
+
+    def __init__(self, retransmission: bool, segmentation: bool):
+        super().__init__(vars())
+
+    @property
+    def as_array(self) -> list:
+        return [self.keys[var] for var in vars(self) if vars(self)[var]]
+
+
+class SessionPathBody(ApiRequestObject):
+    keys = {
+        "relayer": "relayer",
+    }
+
+    def __init__(self, relayer: str):
+        super().__init__(vars())
+
+
+class SessionTargetBody(ApiRequestObject):
+    keys = {
+        "plain_target": "Plain",
+    }
+
+    def __init__(self, plain_target: str):
         super().__init__(vars())
 
 

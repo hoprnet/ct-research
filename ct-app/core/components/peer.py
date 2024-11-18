@@ -3,11 +3,10 @@ import random
 from datetime import datetime
 from typing import Union
 
-from packaging.version import Version
-from prometheus_client import Gauge
-
 from core.baseclass import Base
 from core.database import DatabaseConnection, SentMessages
+from packaging.version import Version
+from prometheus_client import Gauge
 
 from . import AsyncLoop, MessageFormat, MessageQueue
 from .address import Address
