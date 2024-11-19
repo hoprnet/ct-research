@@ -40,6 +40,8 @@ def main(configfile: str):
 
     MessageQueue.clear()
 
+    MessageQueue.clear()
+
     DatabaseConnection.close()
 
 

@@ -3,9 +3,8 @@ from pathlib import Path
 from typing import Optional, Union
 
 import aiohttp
-from prometheus_client import Gauge
-
 from core.baseclass import Base
+from prometheus_client import Gauge
 
 from .mode import Mode
 from .url import URL
