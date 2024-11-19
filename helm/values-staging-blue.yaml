@@ -1,4 +1,4 @@
-replicas: 5
+replicas: 0
 network: rotsee
 version: saint-louis
 
