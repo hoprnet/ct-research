@@ -10,7 +10,7 @@ flags:
 
     connectedPeers: 120
     registeredNodes: 600
-    topology: 600
+    topology: 60
     allocations: 600
     EOABalances: 600
     NFTHolders: 600
@@ -22,13 +22,13 @@ flags:
   node:
     healthcheck: 60
     retrievePeers: 120
-    retrieveChannels: 600
+    retrieveChannels: 60
     retrieveBalances: 120
 
-    openChannels: 120
-    fundChannels: 120
-    closeOldChannels: 120
-    closePendingChannels: 120
+    openChannels: 900
+    fundChannels: 900
+    closeOldChannels: 900
+    closePendingChannels: 900
     closeIncomingChannels: Off
 
     getTotalChannelFunds: 300

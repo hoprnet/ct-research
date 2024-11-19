@@ -126,7 +126,7 @@ class Utils(Base):
             ):
                 continue
 
-            if ChannelStatus(c.status) != ChannelStatus.Open:
+            if c.status != ChannelStatus.Open:
                 continue
 
             if c.source_peer_id not in results:

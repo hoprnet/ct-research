@@ -239,13 +239,14 @@ class Core(Base):
         including the aggregated balance of "Open" outgoing payment channels.
         """
 
-        if self.channels is None:
+        channels = self.channels
+        if channels is None or channels.all is None:
             self.warning("Topology data not available")
             return
 
         self.topology_data = [
             entries.Topology.fromDict(*arg)
-            for arg in (await Utils.balanceInChannels(self.channels.all)).items()
+            for arg in (await Utils.balanceInChannels(channels.all)).items()
         ]
 
         TOPOLOGY_SIZE.set(len(self.topology_data))
@@ -301,30 +302,34 @@ class Core(Base):
                 len([p for p in peers if p.yearly_message_count is not None])
                 / self.params.economicModel.sigmoid.networkCapacity
             )
-            sigmoid_model_input = [economic_security, network_capacity]
 
+            model_input = {
+                EconomicModelTypes.LEGACY: 0,
+                EconomicModelTypes.SIGMOID: [economic_security, network_capacity],
+            }
+            message_count = {
+                EconomicModelTypes.LEGACY: 0,
+                EconomicModelTypes.SIGMOID: 0,
+            }
             for peer in peers:
                 if peer.yearly_message_count is None:
                     continue
 
-                legacy_message_count = self.models[
-                    EconomicModelTypes.LEGACY
-                ].yearly_message_count(
-                    peer.split_stake,
-                    self.peers_rewards_data.get(peer.address.address, 0.0),
+                model_input[EconomicModelTypes.LEGACY] = self.peers_rewards_data.get(
+                    peer.address.address, 0.0
                 )
-                sigmoid_message_count = self.models[
-                    EconomicModelTypes.SIGMOID
-                ].yearly_message_count(peer.split_stake, sigmoid_model_input)
 
-                peer.yearly_message_count = legacy_message_count + sigmoid_message_count
+                for model in self.models:
+                    message_count[model] = self.models[model].yearly_message_count(
+                        peer.split_stake,
+                        model_input[model],
+                    )
 
-                MESSAGE_COUNT.labels(peer.address.id, EconomicModelTypes.LEGACY).set(
-                    legacy_message_count
-                )
-                MESSAGE_COUNT.labels(peer.address.id, EconomicModelTypes.SIGMOID).set(
-                    sigmoid_message_count
-                )
+                    MESSAGE_COUNT.labels(peer.address.id, model.name).set(
+                        message_count[model]
+                    )
+
+                peer.yearly_message_count = sum(message_count.values())
 
             eligibles = sum([p.yearly_message_count is not None for p in peers])
             self.info(f"Eligible nodes: {eligibles} entries.")
@@ -350,8 +355,8 @@ class Core(Base):
         """
         Gets the ticket price and winning probability from the api. They are used in the economic model to calculate the number of messages to send to a peer.
         """
-        price = await self.api.ticket_price()
-        if price is None:
+        ticket_price = await self.api.ticket_price()
+        if ticket_price is None:
             self.warning("Ticket price not available.")
             return
 
@@ -360,10 +365,12 @@ class Core(Base):
             self.warning("Winning probability not available.")
             return
 
-        self.debug(f"Ticket price: {price}, winning probability: {win_probability}")
+        self.debug(
+            f"Ticket price: {ticket_price.value}, winning probability: {win_probability}"
+        )
 
         for model in self.models.values():
-            model.budget.ticket_price = price
+            model.budget.ticket_price = ticket_price.value
             model.budget.winning_probability = win_probability
 
     @flagguard
@@ -389,7 +396,9 @@ class Core(Base):
         amount = sum([float(item["amount"]) for item in entries])
 
         TOTAL_FUNDING.set(amount + self.params.fundings.constant)
-        self.debug(f"Safe fundings: {amount} + {self.params.fundings.constant}")
+        self.debug(
+            f"Fetched safe fundings ({amount} + {self.params.fundings.constant})"
+        )
 
     async def start(self):
         """

@@ -25,9 +25,9 @@ flags:
     retrieveChannels: 600
     retrieveBalances: 900
 
-    openChannels: 300
-    fundChannels: 300
-    closeOldChannels: 300
+    openChannels: 900
+    fundChannels: 1200
+    closeOldChannels: 900
     closePendingChannels: 1800
     closeIncomingChannels: Off
 
@@ -90,8 +90,8 @@ economicModel:
 # 
 # =============================================================================
 storage:
-  count: 25
-  timeout: 3600 # seconds
+  count: 100
+  timeout: 900 # seconds
 
 # =============================================================================
 # 

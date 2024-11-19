@@ -11,8 +11,8 @@ class GetChannels(EnduranceTest):
         self.api = HoprdAPI(
             EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY")
         )
-        self.recipient = await self.api.get_address("hopr")
-        self.info(f"Connected to node {self.recipient}")
+        self.recipient = await self.api.get_address()
+        self.info(f"Connected to node {self.recipient.hopr}")
 
     async def task(self) -> bool:
         success = await self.api.all_channels(False) is not None

@@ -1,8 +1,8 @@
 import pytest
 from core.components import Utils
+from core.components.api_types import Channel
 from core.model import Address, Peer
 from core.model.subgraph import entries
-from hoprd_sdk.models import ChannelInfoResponse
 
 from .utils import handle_envvars
 
@@ -10,65 +10,60 @@ from .utils import handle_envvars
 @pytest.fixture
 def channel_topology():
     return [
-        ChannelInfoResponse(
-            f"{1*1e18:.0f}",
-            1,
-            "channel_1",
-            5,
-            "dst_addr_1",
-            "dst_1",
-            "src_addr_1",
-            "src_1",
-            "Open",
-            0,
+        Channel(
+            {
+                "balance": f"{1*1e18:.0f}",
+                "channelId": "channel_1",
+                "destinationAddress": "dst_addr_1",
+                "destinationPeerId": "dst_1",
+                "sourceAddress": "src_addr_1",
+                "sourcePeerId": "src_1",
+                "status": "Open",
+            }
         ),
-        ChannelInfoResponse(
-            f"{2*1e18:.0f}",
-            1,
-            "channel_2",
-            5,
-            "dst_addr_2",
-            "dst_2",
-            "src_addr_1",
-            "src_1",
-            "Open",
-            0,
+        Channel(
+            {
+                "balance": f"{2*1e18:.0f}",
+                "channelId": "channel_2",
+                "destinationAddress": "dst_addr_2",
+                "destinationPeerId": "dst_2",
+                "sourceAddress": "src_addr_1",
+                "sourcePeerId": "src_1",
+                "status": "Open",
+            }
         ),
-        ChannelInfoResponse(
-            f"{3*1e18:.0f}",
-            1,
-            "channel_3",
-            5,
-            "dst_addr_3",
-            "dst_3",
-            "src_addr_1",
-            "src_1",
-            "Closed",
-            0,
+        Channel(
+            {
+                "balance": f"{3*1e18:.0f}",
+                "channelId": "channel_3",
+                "destinationAddress": "dst_addr_3",
+                "destinationPeerId": "dst_3",
+                "sourceAddress": "src_addr_1",
+                "sourcePeerId": "src_1",
+                "status": "Closed",
+            }
         ),
-        ChannelInfoResponse(
-            f"{4*1e18:.0f}",
-            1,
-            "channel_4",
-            5,
-            "dst_addr_1",
-            "dst_1",
-            "src_addr_2",
-            "src_2",
-            "Open",
-            0,
+        Channel(
+            {
+                "balance": f"{4*1e18:.0f}",
+                "channelId": "channel_4",
+                "destinationAddress": "dst_addr_1",
+                "destinationPeerId": "dst_1",
+                "sourceAddress": "src_addr_2",
+                "sourcePeerId": "src_2",
+                "status": "Open",
+            }
         ),
-        ChannelInfoResponse(
-            f"{1*1e18:.0f}",
-            1,
-            "channel_5",
-            5,
-            "dst_addr_2",
-            "dst_2",
-            "src_addr_2",
-            "src_2",
-            "Open",
-            0,
+        Channel(
+            {
+                "balance": f"{1*1e18:.0f}",
+                "channelId": "channel_5",
+                "destinationAddress": "dst_addr_2",
+                "destinationPeerId": "dst_2",
+                "sourceAddress": "src_addr_2",
+                "sourcePeerId": "src_2",
+                "status": "Open",
+            }
         ),
     ]
 

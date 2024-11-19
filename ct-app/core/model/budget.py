@@ -1,5 +1,6 @@
-from core.components.parameters import Parameters
 from prometheus_client import Gauge
+
+from core.components.parameters import Parameters
 
 TICKET_PRICE = Gauge("ticket_price", "Ticket price")
 TICKET_WINNING_PROB = Gauge("ticket_winning_prob", "Ticket winning probability")

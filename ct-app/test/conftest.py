@@ -4,7 +4,14 @@ from test.decorators_patches import patches
 
 import pytest
 import yaml
-from core.components import ChannelStatus, Parameters
+from core.components import Parameters
+from core.components.api_types import (
+    Addresses,
+    Balances,
+    Channel,
+    Channels,
+    ConnectedPeer,
+)
 
 # needs to be imported after the patches are applied
 from core.core import Core
@@ -17,7 +24,6 @@ from core.model.economic_model import (
     Equations,
 )
 from core.node import Node
-from hoprd_sdk.models import ChannelInfoResponse, NodeChannelsResponse
 from pytest_mock import MockerFixture
 
 
@@ -38,7 +44,7 @@ class SideEffect:
     @staticmethod
     def generator_node_balance():
         # yields a dict with 2 random integers between 1 and 10
-        yield from repeat({"hopr": randint(1, 10), "native": randint(1, 10)})
+        yield from repeat(Balances({"hopr": randint(1, 10), "native": randint(1, 10)}))
 
     @staticmethod
     def generator_inbox_messages():
@@ -84,22 +90,22 @@ def economic_model(budget: Budget) -> EconomicModelLegacy:
 @pytest.fixture
 def peers_raw() -> list[dict]:
     return [
-        {"peer_id": "id_0", "peer_address": "address_0", "reported_version": "2.0.0"},
-        {"peer_id": "id_1", "peer_address": "address_1", "reported_version": "2.7.0"},
-        {"peer_id": "id_2", "peer_address": "address_2", "reported_version": "2.0.8"},
+        {"peerId": "id_0", "peerAddress": "address_0", "reportedVersion": "2.0.0"},
+        {"peerId": "id_1", "peerAddress": "address_1", "reportedVersion": "2.7.0"},
+        {"peerId": "id_2", "peerAddress": "address_2", "reportedVersion": "2.0.8"},
         {
-            "peer_id": "id_3",
-            "peer_address": "address_3",
-            "reported_version": "2.1.0-rc.3",
+            "peerId": "id_3",
+            "peerAddress": "address_3",
+            "reportedVersion": "2.1.0-rc.3",
         },
-        {"peer_id": "id_4", "peer_address": "address_4", "reported_version": "2.0.9"},
+        {"peerId": "id_4", "peerAddress": "address_4", "reportedVersion": "2.0.9"},
     ]
 
 
 @pytest.fixture
 def peers(peers_raw: list[dict]) -> set[Peer]:
     peers = [
-        Peer(peer["peer_id"], peer["peer_address"], peer["reported_version"])
+        Peer(peer["peerId"], peer["peerAddress"], peer["reportedVersion"])
         for peer in peers_raw
     ]
     for peer in peers:
@@ -126,7 +132,7 @@ async def nodes(
     peers: set[Peer],
     addresses: list[dict],
     peers_raw: list[dict],
-    channels: NodeChannelsResponse,
+    channels: Channels,
 ) -> list[Node]:
     nodes = [
         Node("localhost:9000", "random_key"),
@@ -136,7 +142,9 @@ async def nodes(
         Node("localhost:9004", "random_key"),
     ]
     for idx, node in enumerate(nodes):
-        mocker.patch.object(node.api, "get_address", return_value=addresses[idx])
+        mocker.patch.object(
+            node.api, "get_address", return_value=Addresses(addresses[idx])
+        )
         mocker.patch.object(node.api, "channels", return_value=channels)
         mocker.patch.object(
             node.api, "send_message", side_effect=SideEffect().send_message_success
@@ -146,7 +154,11 @@ async def nodes(
         )
         mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
         mocker.patch.object(
-            node.api, "peers", return_value=peers_raw[:idx] + peers_raw[idx + 1 :]
+            node.api,
+            "peers",
+            return_value=[
+                ConnectedPeer(peer) for peer in peers_raw[:idx] + peers_raw[idx + 1 :]
+            ],
         )
 
         mocker.patch.object(node.api, "healthyz", return_value=True)
@@ -157,8 +169,8 @@ async def nodes(
 
 
 @pytest.fixture
-def channels(peers: set[Peer]) -> NodeChannelsResponse:
-    all_channels = list[ChannelInfoResponse]()
+def channels(peers: set[Peer]) -> Channels:
+    all_channels = list[Channel]()
     index = 0
 
     for src in peers:
@@ -167,23 +179,25 @@ def channels(peers: set[Peer]) -> NodeChannelsResponse:
                 continue
 
             all_channels.append(
-                ChannelInfoResponse(
-                    f"{1*1e18:.0f}",
-                    1,
-                    f"channel_{index}",
-                    5,
-                    dest.address.address,
-                    dest.address.id,
-                    src.address.address,
-                    src.address.id,
-                    ChannelStatus.Open,
-                    0,
+                Channel(
+                    {
+                        "balance": f"{1*1e18:.0f}",
+                        "id": f"channel_{index}",
+                        "destinationAddress": dest.address.address,
+                        "destinationPeerId": dest.address.id,
+                        "sourceAddress": src.address.address,
+                        "sourcePeerId": src.address.id,
+                        "status": "Open",
+                    }
                 )
             )
 
             index += 1
 
-    return NodeChannelsResponse(all=all_channels, incoming=[], outgoing=[])
+    channels = Channels({})
+    channels.all = all_channels
+
+    return channels
 
 
 @pytest.fixture
@@ -214,14 +228,16 @@ async def node(
     nodes: list[Node],
     mocker: MockerFixture,
     peers_raw: list[dict],
-    channels: NodeChannelsResponse,
+    channels: Channels,
     addresses: dict,
 ) -> Node:
     node = Node("localhost", "random_key")
 
     mocker.patch.object(node.api, "channels", return_value=channels)
-    mocker.patch.object(node.api, "peers", return_value=peers_raw[1:])
-    mocker.patch.object(node.api, "get_address", return_value=addresses[0])
+    mocker.patch.object(
+        node.api, "peers", return_value=[ConnectedPeer(peer) for peer in peers_raw[1:]]
+    )
+    mocker.patch.object(node.api, "get_address", return_value=Addresses(addresses[0]))
     mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
     mocker.patch.object(node.api, "send_message", return_value=1)
     mocker.patch.object(node.api, "healthyz", return_value=True)
