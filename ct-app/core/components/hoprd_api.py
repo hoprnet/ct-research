@@ -208,9 +208,9 @@ class HoprdAPI(Base):
         )
         return response.get("messages", []) if is_ok else []
 
-    async def node_info(self) -> Infos:
-        _, response = await self.__call_api(Method.GET, "node/info")
-        return Infos(response)
+    async def node_info(self) -> Optional[Infos]:
+        is_ok, response = await self.__call_api(Method.GET, "node/info")
+        return Infos(response) if is_ok else None
 
     async def ticket_price(self) -> Optional[TicketPrice]:
         is_ok, response = await self.__call_api(Method.GET, "network/price")
