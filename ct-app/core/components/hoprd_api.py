@@ -95,7 +95,7 @@ class HoprdAPI(Base):
         """
         data = {
             "amount": amount,
-            "peerAddress": peer_address,
+            "destination": peer_address,
         }
 
         is_ok, response = await self.__call_api(
@@ -103,6 +103,7 @@ class HoprdAPI(Base):
             "channels",
             data=data,
         )
+
         return OpenedChannel(response) if is_ok else None
 
     async def fund_channel(self, channel_id: str, amount: float) -> bool:
