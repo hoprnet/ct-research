@@ -6,7 +6,6 @@ from .baseclass import Base
 from .components import AsyncLoop, Parameters, Utils
 from .components.messages import MessageQueue
 from .core import Core
-from .database import DatabaseConnection
 from .node import Node
 
 
@@ -34,15 +33,9 @@ def main(configfile: str):
 
     core = Core(nodes, params)
 
-    DatabaseConnection.open(params.pg)
-
     AsyncLoop.run(core.start, core.stop)
 
     MessageQueue.clear()
-
-    MessageQueue.clear()
-
-    DatabaseConnection.close()
 
 
 if __name__ == "__main__":

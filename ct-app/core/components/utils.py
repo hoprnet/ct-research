@@ -1,4 +1,3 @@
-from core.api.channelstatus import ChannelStatus
 from core.baseclass import Base
 from core.subgraph.entries import Safe
 
@@ -126,7 +125,7 @@ class Utils(Base):
             ):
                 continue
 
-            if c.status != ChannelStatus.Open:
+            if not c.status.isOpen:
                 continue
 
             if c.source_peer_id not in results:

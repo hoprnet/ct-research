@@ -66,7 +66,6 @@ class GetPeersBody(ApiRequestObject):
     keys = {"quality": "quality"}
 
     def __init__(self, quality: float):
-        print(f"{vars()=}")
         super().__init__(vars())
 
 
@@ -104,21 +103,33 @@ class SessionCapabilitiesBody(ApiRequestObject):
         return [self.keys[var] for var in vars(self) if vars(self)[var]]
 
 
-class SessionPathBody(ApiRequestObject):
+class SessionPathBodyRelayers(ApiRequestObject):
     keys = {
-        "relayer": "relayer",
+        "relayers": "IntermediatePath",
     }
 
-    def __init__(self, relayer: str):
+    def __init__(self, relayers: str):
         super().__init__(vars())
+
+
+class SessionPathBodyHops(ApiRequestObject):
+    keys = {
+        "hops": "Hops",
+    }
+
+    def __init__(self, hops: int):
+        super().__init__(vars())
+
+    def post_init(self):
+        self.hops = int(self.hops)
 
 
 class SessionTargetBody(ApiRequestObject):
     keys = {
-        "plain_target": "Plain",
+        "plain": "Plain",
     }
 
-    def __init__(self, plain_target: str):
+    def __init__(self, plain: str):
         super().__init__(vars())
 
 

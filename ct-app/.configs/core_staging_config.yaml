@@ -33,12 +33,17 @@ flags:
 
     getTotalChannelFunds: 300
 
-    watchMessageQueue: On  # should only be On / Off
-    relayedMessagesToDB: 120
+    observeMessageQueue: On  # should only be On / Off
+    observeRelayedMessages: On # should only be On / Off
+    observeSessions: 60
 
   peer:
     messageRelayRequest: On # should only be On / Off
-    sentMessagesToDB: 120
+
+  tcpudpserver:
+    listenToUDPSocket: On # should only be On / Off
+    listenToTCPSocket: Off # should only be On / Off
+
     
 # =============================================================================
 # 
@@ -109,6 +114,14 @@ channel:
   minBalance: 0.05
   fundingAmount: 0.2
   maxAgeSeconds: 86400
+
+# =============================================================================
+# 
+# =============================================================================
+sessions:
+  packetSize: 462
+  numPackets: 10
+  port: 1234  # TODO: specify the port after talking with @Ausias
 
 # =============================================================================
 # 

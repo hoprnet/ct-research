@@ -33,12 +33,12 @@ flags:
 
     getTotalChannelFunds: Off
     
-    watchMessageQueue: On
-    relayedMessagesToDB: 120
+    observeMessageQueue: On # should only be On / Off
+    observeRelayedMessages: On # should only be On / Off
+    observeSessions: 60
 
   peer:
     messageRelayRequest: Off
-    sentMessagesToDB: Off
 
 # =============================================================================
 # 
@@ -97,6 +97,9 @@ storage:
 # =============================================================================
 peer:
   minVersion: '2.0.7'
+  initialSleep:
+    mean: 30
+    std: 2
 
 # =============================================================================
 # 
@@ -106,6 +109,14 @@ channel:
   fundingAmount: 0.2
   maxAgeSeconds: 60
 
+# =============================================================================
+# 
+# =============================================================================
+sessions:
+  packetSize: 472
+  numPackets: 3
+  port: 1234
+  
 # =============================================================================
 # 
 # =============================================================================

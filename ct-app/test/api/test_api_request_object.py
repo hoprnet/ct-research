@@ -1,4 +1,4 @@
-from core.api.api_request_objects import ApiRequestObject
+from core.api.request_objects import ApiRequestObject
 
 
 class FooRequestObject(ApiRequestObject):

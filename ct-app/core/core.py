@@ -5,9 +5,11 @@ import random
 from prometheus_client import Gauge
 
 from .api import HoprdAPI
+from .api.protocol import Protocol
 from .baseclass import Base
 from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
 from .components.decorators import flagguard, formalin
+from .components.tcpudp_server import TCPUDPServer
 from .economic_model import EconomicModelTypes
 from .node import Node
 from .subgraph import URL, ProviderError, Type, entries
@@ -59,6 +61,12 @@ class Core(Base):
         self.providers = {
             s: s.provider(URL(self.params.subgraph, s.value)) for s in Type
         }
+        self.server = TCPUDPServer(
+            Protocol.UDP,
+            self.params.sessions.packetSize,
+            self.params.sessions.numPackets,
+        )
+        self.server.params = params
 
         self.running = False
 
@@ -434,11 +442,14 @@ class Core(Base):
         )
 
         for node in self.nodes:
-            AsyncLoop.add(node.watch_message_queue)
+            AsyncLoop.add(node.observe_message_queue)
+
+        AsyncLoop.add(self.server.listen_to_tcp_socket)
+        AsyncLoop.add(self.server.listen_to_udp_socket)
 
         await AsyncLoop.gather()
 
-    async def stop(self):
+    def stop(self):
         """
         Stop the node.
         """
@@ -446,5 +457,7 @@ class Core(Base):
         self.running = False
 
         for node in self.nodes:
-            for s in node.sockets.values():
-                s.close()
+            for s in node.session_management.values():
+                s.socket.close()
+
+        self.server.stop()

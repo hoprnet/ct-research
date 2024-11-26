@@ -4,7 +4,7 @@ from test.decorators_patches import patches
 
 import pytest
 import yaml
-from core.api.api_returned_objects import (
+from core.api.response_objects import (
     Addresses,
     Balances,
     Channel,

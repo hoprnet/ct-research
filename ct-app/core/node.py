@@ -4,22 +4,24 @@ from datetime import datetime
 
 from prometheus_client import Gauge
 
-from .api import HoprdAPI
+from .api import HoprdAPI, Protocol
+from .api.response_objects import Session
 from .baseclass import Base
 from .components import Address, LockedVar, Parameters, Peer, Utils
 from .components.decorators import connectguard, flagguard, formalin
 from .components.messages import MessageFormat, MessageQueue
-from .database import DatabaseConnection, RelayedMessages
+from .components.peer_session_management import PeerSessionManagement
 
 # endregion
 
 # region Metrics
 BALANCE = Gauge("ct_balance", "Node balance", ["peer_id", "token"])
-PEERS_COUNT = Gauge("ct_peers_count", "Node peers", ["peer_id"])
-HEALTH = Gauge("ct_node_health", "Node health", ["peer_id"])
 CHANNELS = Gauge("ct_channels", "Node channels", ["peer_id", "direction"])
 CHANNELS_OPS = Gauge("ct_channel_operation", "Channel operation", ["peer_id", "op"])
 CHANNEL_FUNDS = Gauge("ct_channel_funds", "Total funds in out. channels", ["peer_id"])
+HEALTH = Gauge("ct_node_health", "Node health", ["peer_id"])
+MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer"])
+PEERS_COUNT = Gauge("ct_peers_count", "Node peers", ["peer_id"])
 # endregion
 
 
@@ -47,9 +49,7 @@ class Node(Base):
         self._safe_address = None
 
         self.params = Parameters()
-        self.messages_distributed = dict[str, int]()
-        self.sockets = dict[str, socket.socket]()
-
+        self.session_management = dict[str, PeerSessionManagement]()
         self.connected = False
         self.running = False
 
@@ -366,62 +366,25 @@ class Node(Base):
 
         return funds
 
-    @flagguard
     @formalin
-    @connectguard
-    async def relayed_messages_to_db(self):
+    async def observe_relayed_messages(self):
         """
         Check the inbox for messages.
         """
-        messages = []
-
-        s: socket.socket = self.sockets.get(self.address.id, None)
-
-        if s is None:
-            self.warning(f"No socket for {self.address.id}")
+        if self.address is None:
             return
 
-        for m in s.recv(
-            1024
-        ):  # TODO: check if this is the right way to read from socket and set chunk size wisely
-            try:
-                message = MessageFormat.parse(m.decode())
-            except ValueError as err:
-                self.error(f"Error while parsing message: {err}")
-                continue
-            messages.append(message)
-
-        for message in messages:
-            relayer = message.relayer
-            if relayer not in self.messages_distributed:
-                self.messages_distributed[relayer] = 0
-            self.messages_distributed[relayer] += 1
-
-        entries = []
-        for peer, count in self.messages_distributed.items():
-            if count < self.params.storage.count:
-                continue
-
-            entries.append(
-                RelayedMessages(
-                    relayer=peer,
-                    sender=self.address.id,
-                    count=count,
-                    timestamp=datetime.now(),
-                )
+        for relayer, s in self.session_management.items():
+            buffer_size = (
+                self.params.sessions.packetSize * self.params.sessions.numPackets
+            )
+            messages = s.socket.recv(buffer_size).decode().split("\n")
+            MESSAGES_STATS.labels("relayed", self.address.id, relayer).inc(
+                len(messages)
             )
 
-        try:
-            DatabaseConnection.session().add_all(entries)
-            DatabaseConnection.session().commit()
-        except Exception as err:
-            self.error(f"Database error while storing relayed messages entries: {err}")
-        else:
-            for entry in entries:
-                self.messages_distributed[entry.relayer] -= entry.count
-
     @formalin
-    async def watch_message_queue(self):
+    async def observe_message_queue(self):
         message: MessageFormat = await MessageQueue().buffer.get()
 
         peers = [peer.address.id for peer in await self.peers.get()]
@@ -433,13 +396,47 @@ class Node(Base):
             return
 
         # Send data through the socket
-        s = self.sockets.get(message.relayer, None)
-        if s is None:
-            session = self.api.post_session(message.relayer)
-            # TODO: define what IP should be used here
-            self.sockets[message.relayer] = create_socket("127.0.0.1", session.port)
+        # TODO: consider moving this somewhere else
+        if message.relayer not in self.session_management:
+            if 0:
+                session = await self.api.post_session(
+                    destination=self.address.id,
+                    listen_host="<host>:0",  # TODO: host should be IP of entry node. SET entry node with the environment variable to restrict port range for UDP (reachable ports)
+                    relayer=message.relayer,
+                    target=f"<host>:{self.params.sessions.port}",
+                    protocol=Protocol.TCP,
+                    do_retransmission=False,
+                    do_segmentation=False,
+                )
+            else:
+                session = Session(
+                    {
+                        "ip": "127.0.0.1",
+                        "port": 1234,
+                        "protocol": "udp",
+                        "target": "0.0.0.0",
+                    }
+                )
 
-        s.send(message.format().encode())
+            self.session_management[message.relayer] = PeerSessionManagement(
+                session=session
+            )
+
+        sess_management = self.session_management[message.relayer]
+
+        sess_management.socket.send(message.bytes)
+        MESSAGES_STATS.labels("sent", self.address.id, message.relayer).inc()
+
+    @formalin
+    @connectguard
+    async def observe_sessions(self):
+        active_sessions = await self.api.get_sessions(Protocol.UDP)
+
+        for peer, s in self.session_management.items():
+            if s.session in active_sessions:
+                continue
+            s.socket.close()
+            self.session_management.pop(peer)
 
     async def tasks(self):
         callbacks = [
@@ -453,7 +450,8 @@ class Node(Base):
             self.close_incoming_channels,
             self.close_pending_channels,
             self.get_total_channel_funds,
-            self.relayed_messages_to_db,
+            self.observe_relayed_messages,
+            self.observe_sessions,
         ]
 
         return callbacks
@@ -467,10 +465,3 @@ class Node(Base):
     @classmethod
     def fromCredentials(cls, addresses: list[str], keys: list[str]):
         return [cls(address, key) for address, key in zip(addresses, keys)]
-
-
-def create_socket(ip: str, port: int, timeout: int = 60):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((ip, port))
-    s.settimeout(timeout)
-    return s
