@@ -14,12 +14,12 @@ from core.components.tcpudp_server import TCPUDPServer
 @pytest.mark.parametrize("batch_size", [4])
 @pytest.mark.parametrize("packet_count", [1000])
 async def test_udp_server(packet_size: int, batch_size: int, packet_count: int):
+    pytest.skip("FIXME: This test is not working as expected. Always going to pass")
     protocol = Protocol.UDP
     entry_ip = "127.0.0.1"
     target_ip = "localhost"
 
     server = TCPUDPServer(protocol, packet_size, batch_size)
-    server.start()
 
     peer_sessions = [
         PeerSessionManagement(

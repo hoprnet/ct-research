@@ -1,4 +1,3 @@
-import os
 from asyncio import Queue
 
 from prometheus_client import Gauge

@@ -51,7 +51,6 @@ class TCPUDPServer(Base, metaclass=Singleton):
     @flagguard
     @formalin
     async def listen_to_tcp_socket(self):
-
         data = self.conn.recv(self.recv_buffer)
         if len(data) == 0:
             return
@@ -60,7 +59,6 @@ class TCPUDPServer(Base, metaclass=Singleton):
     @flagguard
     @formalin
     async def listen_to_udp_socket(self):
-        print(f"Doing it")
         try:
             data = self.socket.recv(self.recv_buffer)
         except socket.timeout:

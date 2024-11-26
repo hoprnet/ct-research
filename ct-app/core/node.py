@@ -1,5 +1,4 @@
 # region Imports
-import socket
 from datetime import datetime
 
 from prometheus_client import Gauge
