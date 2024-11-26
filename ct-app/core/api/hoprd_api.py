@@ -67,7 +67,7 @@ class HoprdAPI(Base):
                     except Exception:
                         data = await res.text()
 
-                    return res.status, await data
+                    return res.status, data
 
         except OSError as e:
             self.error(f"OSError calling {method.value} {endpoint}: {e}")

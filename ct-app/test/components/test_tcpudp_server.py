@@ -1,5 +1,6 @@
 import asyncio
 import random
+import socket
 
 import pytest
 from core.api.protocol import Protocol
@@ -7,6 +8,13 @@ from core.api.response_objects import Session
 from core.components.messages import MessageFormat
 from core.components.peer_session_management import PeerSessionManagement
 from core.components.tcpudp_server import TCPUDPServer
+
+
+# Use dynamic port allocation
+def get_free_port():
+    with socket.socket() as s:
+        s.bind(("", 0))
+        return s.getsockname()[1]
 
 
 @pytest.mark.asyncio
@@ -26,7 +34,7 @@ async def test_udp_server(packet_size: int, batch_size: int, packet_count: int):
             Session(
                 {
                     "ip": entry_ip,
-                    "port": 1412,
+                    "port": get_free_port(),
                     "protocol": protocol.value,
                     "target": f"{target_ip}:{server.port}",
                 }
@@ -37,7 +45,7 @@ async def test_udp_server(packet_size: int, batch_size: int, packet_count: int):
             Session(
                 {
                     "ip": entry_ip,
-                    "port": 1413,
+                    "port": get_free_port(),
                     "protocol": protocol.value,
                     "target": f"{target_ip}:{server.port}",
                 }

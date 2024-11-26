@@ -5,17 +5,27 @@ from core.api.response_objects import Session
 
 
 class PeerSessionManagement:
+
     def __init__(self, session: Session, ip: str):
         self.session = session
         self.ip = ip
-        self.socket = self.create_socket()
+        try:
+            self.socket = self.create_socket()
+        except (socket.error, ValueError) as e:
+            raise ValueError(f"Error while creating socket: {e}")
 
     @property
-    def port(self):
+    def port(self) -> int:
+        """
+        Returns the session port number.
+        """
         return self.session.port
 
     @property
     def address(self):
+        """
+        Returns the socket address tuple.
+        """
         return (self.ip, self.session.port)
 
     def create_socket(self, timeout: int = 60):
@@ -31,3 +41,7 @@ class PeerSessionManagement:
         s.settimeout(timeout)
 
         return s
+
+    def __del__(self):
+        if hasattr(self, "socket"):
+            self.socket.close()

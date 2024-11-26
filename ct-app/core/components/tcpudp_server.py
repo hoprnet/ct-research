@@ -39,10 +39,14 @@ class TCPUDPServer(Base, metaclass=Singleton):
 
         if self.protocol is Protocol.TCP:
             self.socket.listen()
-            self.conn = self.socket.accept()[0]
+            try:
+                self.conn = self.socket.accept()[0]
+            except socket.error as e:
+                self.error(f"Failed to accept connection: {e}")
+                self.conn = None
 
     def stop(self):
-        if self.protocol is Protocol.TCP:
+        if self.protocol is Protocol.TCP and self.conn:
             self.conn.close()
             self.conn = None
         self.socket.close()
@@ -51,10 +55,14 @@ class TCPUDPServer(Base, metaclass=Singleton):
     @flagguard
     @formalin
     async def listen_to_tcp_socket(self):
-        data = self.conn.recv(self.recv_buffer)
-        if len(data) == 0:
+        try:
+            data = self.conn.recv(self.recv_buffer)
+            if len(data) == 0:
+                return
+            self.server_data(data)
+        except socket.error as e:
+            self.error(f"Socket error occurred: {e}")
             return
-        self.server_data(data)
 
     @flagguard
     @formalin

@@ -1,13 +1,13 @@
 class ApiRequestObject:
     def __init__(self, *args, **kwargs):
-        kwargs.update(args[0])
+        if not hasattr(self, "keys"):
+            self.keys = {}
 
+        if args:
+            kwargs.update(args[0])
+
+        kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}
         kwargs.pop("self", None)
-
-        # pop all field starting with __ from kwargs
-        for key in list(kwargs.keys()):
-            if key.startswith("__"):
-                kwargs.pop(key)
 
         if set(kwargs.keys()) != set(self.keys.keys()):
             raise ValueError(
@@ -100,7 +100,9 @@ class SessionCapabilitiesBody(ApiRequestObject):
 
     @property
     def as_array(self) -> list:
-        return [self.keys[var] for var in vars(self) if vars(self)[var]]
+        return [
+            self.keys[var] for var in vars(self) if var in self.keys and vars(self)[var]
+        ]
 
 
 class SessionPathBodyRelayers(ApiRequestObject):

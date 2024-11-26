@@ -7,5 +7,10 @@ class Protocol(Enum):
     UDP = "udp"
 
     @classmethod
-    def fromStr(cls, protocol: str):
-        return getattr(cls, protocol.upper())
+    def fromString(cls, protocol: str):
+        try:
+            return getattr(cls, protocol.upper())
+        except AttributeError:
+            raise ValueError(
+                f"Invalid protocol: {protocol}. Valid values are: {[p.name for p in cls]}"
+            )

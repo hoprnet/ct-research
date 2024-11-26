@@ -27,10 +27,14 @@ class MessageQueue(metaclass=Singleton):
 
 class MessageFormat:
     def __init__(self, relayer: str, size: int):
+        if size < 0:
+            raise ValueError("Size must be a positive integer")
         self.relayer = relayer
         self.size = size
 
     @property
     def bytes(self):
         message_as_bytes = self.relayer.encode()
+        if len(message_as_bytes) > self.size:
+            raise ValueError("Encoded relayer length exceeds specified size")
         return message_as_bytes + b"\0" * (self.size - len(message_as_bytes))
