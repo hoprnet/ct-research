@@ -111,7 +111,6 @@ class HoprdAPI(Base):
         :param: amount: str
         :return: channel id: str | undefined
         """
-
         data = OpenChannelBody(amount, peer_address)
 
         is_ok, response = await self.__call_api(HTTPMethod.POST, "channels", data)
