@@ -95,7 +95,7 @@ class HoprdAPI(Base):
         """
         data = {
             "amount": amount,
-            "destination": peer_address,
+            "peerAddress": peer_address,
         }
 
         is_ok, response = await self.__call_api(
