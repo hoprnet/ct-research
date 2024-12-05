@@ -16,8 +16,10 @@ from .components.peer_session_management import PeerSessionManagement
 # region Metrics
 BALANCE = Gauge("ct_balance", "Node balance", ["peer_id", "token"])
 CHANNELS = Gauge("ct_channels", "Node channels", ["peer_id", "direction"])
-CHANNELS_OPS = Gauge("ct_channel_operation", "Channel operation", ["peer_id", "op"])
-CHANNEL_FUNDS = Gauge("ct_channel_funds", "Total funds in out. channels", ["peer_id"])
+CHANNELS_OPS = Gauge("ct_channel_operation",
+                     "Channel operation", ["peer_id", "op"])
+CHANNEL_FUNDS = Gauge("ct_channel_funds",
+                      "Total funds in out. channels", ["peer_id"])
 HEALTH = Gauge("ct_node_health", "Node health", ["peer_id"])
 MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer"])
 PEERS_COUNT = Gauge("ct_peers_count", "Node peers", ["peer_id"])
@@ -126,7 +128,8 @@ class Node(Base):
         if self.channels is None:
             return
 
-        out_opens = [c for c in self.channels.outgoing if not c.status.isClosed]
+        out_opens = [
+            c for c in self.channels.outgoing if not c.status.isClosed]
 
         addresses_with_channels = {c.destination_address for c in out_opens}
         all_addresses = {
@@ -136,7 +139,8 @@ class Node(Base):
         }
         addresses_without_channels = all_addresses - addresses_with_channels
 
-        self.info(f"Addresses without channels: {len(addresses_without_channels)}")
+        self.info(
+            f"Addresses without channels: {len(addresses_without_channels)}")
 
         for address in addresses_without_channels:
             self.debug(f"Opening channel to {address}")
@@ -183,7 +187,8 @@ class Node(Base):
         if self.channels is None:
             return
 
-        out_pendings = [c for c in self.channels.outgoing if c.status.isPending]
+        out_pendings = [
+            c for c in self.channels.outgoing if c.status.isPending]
 
         self.info(f"Pending channels: {len(out_pendings)}")
 
@@ -232,7 +237,8 @@ class Node(Base):
             channels_to_close.append(channel_id)
 
         await self.peer_history.update(to_peer_history)
-        self.debug(f"Updated peer history with {len(to_peer_history)} new entries")
+        self.debug(
+            f"Updated peer history with {len(to_peer_history)} new entries")
 
         self.info(f"Closing {len(channels_to_close)} old channels")
         for channel in channels_to_close:
@@ -289,10 +295,12 @@ class Node(Base):
         Retrieve real peers from the network.
         """
         results = await self.api.peers()
-        peers = {Peer(item.peer_id, item.address, item.version) for item in results}
+        peers = {Peer(item.peer_id, item.address, item.version)
+                 for item in results}
         peers = {p for p in peers if not p.is_old(self.params.peer.minVersion)}
 
-        addresses_w_timestamp = {p.address.address: datetime.now() for p in peers}
+        addresses_w_timestamp = {
+            p.address.address: datetime.now() for p in peers}
 
         await self.peers.set(peers)
         await self.peer_history.update(addresses_w_timestamp)
@@ -323,12 +331,12 @@ class Node(Base):
             channels.outgoing = [
                 c
                 for c in channels.all
-                if c.source_peer_id == self.address.id and c.status.isOpen
+                if c.source_peer_id == self.address.id and c.status.is_open
             ]
             channels.incoming = [
                 c
                 for c in channels.all
-                if c.destination_peer_id == self.address.id and c.status.isOpen
+                if c.destination_peer_id == self.address.id and c.status.is_open
             ]
 
             self.channels = channels
@@ -390,35 +398,27 @@ class Node(Base):
         if message.relayer not in peers:
             return
 
-        channels = [channel.destination_peer_id for channel in self.channels.outgoing]
+        channels = [
+            channel.destination_peer_id for channel in self.channels.outgoing]
         if message.relayer not in channels:
             return
 
         # Send data through the socket
         # TODO: consider moving this somewhere else
         if message.relayer not in self.session_management:
-            if 0:
-                session = await self.api.post_session(
-                    destination=self.address.id,
-                    listen_host="<host>:0",  # TODO: host should be IP of entry node. SET entry node with the environment variable to restrict port range for UDP (reachable ports)
-                    relayer=message.relayer,
-                    target=f"<host>:{self.params.sessions.port}",
-                    protocol=Protocol.TCP,
-                    do_retransmission=False,
-                    do_segmentation=False,
-                )
-            else:
-                session = Session(
-                    {
-                        "ip": "127.0.0.1",
-                        "port": 1234,
-                        "protocol": "udp",
-                        "target": "0.0.0.0",
-                    }
-                )
+            session = await self.api.post_session(
+                destination=self.address.id,
+                # TODO: host should be IP of entry node. SET entry node with the environment variable to restrict port range for UDP (reachable ports)
+                listen_host="<host>:0",
+                relayer=message.relayer,
+                target=f"<server-ip>:{self.params.sessions.port}",
+                protocol=Protocol.TCP,
+                do_retransmission=False,
+                do_segmentation=False,
+            )
 
             self.session_management[message.relayer] = PeerSessionManagement(
-                session=session
+                session
             )
 
         sess_management = self.session_management[message.relayer]

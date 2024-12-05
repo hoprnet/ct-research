@@ -6,9 +6,8 @@ from core.api.response_objects import Session
 
 class PeerSessionManagement:
 
-    def __init__(self, session: Session, ip: str):
+    def __init__(self, session: Session):
         self.session = session
-        self.ip = ip
         try:
             self.socket = self.create_socket()
         except (socket.error, ValueError) as e:
@@ -26,7 +25,7 @@ class PeerSessionManagement:
         """
         Returns the socket address tuple.
         """
-        return (self.ip, self.session.port)
+        return (self.session.ip, self.session.port)
 
     def create_socket(self, timeout: int = 60):
         if self.session.protocol == Protocol.TCP.value:

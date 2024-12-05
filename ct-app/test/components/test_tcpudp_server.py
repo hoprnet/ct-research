@@ -22,7 +22,8 @@ def get_free_port():
 @pytest.mark.parametrize("batch_size", [4])
 @pytest.mark.parametrize("packet_count", [1000])
 async def test_udp_server(packet_size: int, batch_size: int, packet_count: int):
-    pytest.skip("FIXME: This test is not working as expected. Always going to pass")
+    pytest.skip(
+        "FIXME: This test is not working as expected. Always going to pass")
     protocol = Protocol.UDP
     entry_ip = "127.0.0.1"
     target_ip = "localhost"
@@ -38,8 +39,7 @@ async def test_udp_server(packet_size: int, batch_size: int, packet_count: int):
                     "protocol": protocol.value,
                     "target": f"{target_ip}:{server.port}",
                 }
-            ),
-            entry_ip,
+            )
         ),
         PeerSessionManagement(
             Session(
@@ -49,8 +49,7 @@ async def test_udp_server(packet_size: int, batch_size: int, packet_count: int):
                     "protocol": protocol.value,
                     "target": f"{target_ip}:{server.port}",
                 }
-            ),
-            entry_ip,
+            )
         ),
     ]
 
