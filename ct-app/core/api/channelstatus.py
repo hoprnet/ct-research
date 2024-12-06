@@ -7,15 +7,15 @@ class ChannelStatus(Enum):
     Closed = "Closed"
 
     @property
-    def isPending(self):
+    def is_pending(self):
         return self == self.PendingToClose
 
     @property
-    def isOpen(self):
+    def is_open(self):
         return self == self.Open
 
     @property
-    def isClosed(self):
+    def is_closed(self):
         return self == self.Closed
 
     @classmethod

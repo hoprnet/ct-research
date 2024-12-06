@@ -2,7 +2,8 @@ import asyncio
 from signal import SIGINT, SIGTERM
 from typing import Callable
 
-from .baseclass import Base
+from core.baseclass import Base
+
 from .singleton import Singleton
 
 
@@ -19,12 +20,13 @@ class AsyncLoop(Base, metaclass=Singleton):
         return bool(cls().tasks)
 
     @classmethod
-    def run(cls, process: Callable):
+    def run(cls, process: Callable, stop_callback: Callable):
         try:
             cls().loop.run_until_complete(process())
         except asyncio.CancelledError:
             cls().error("Stopping the instance...")
         finally:
+            stop_callback()
             cls().stop()
 
     @classmethod

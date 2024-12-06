@@ -1,8 +1,8 @@
 import asyncio
 import random
 
+from core.api import HoprdAPI
 from core.components import EnvironmentUtils
-from core.components.hoprd_api import HoprdAPI
 
 from . import EnduranceTest, Metric
 
