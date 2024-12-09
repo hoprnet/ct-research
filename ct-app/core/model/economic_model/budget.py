@@ -5,8 +5,8 @@ TICKET_STATS = Gauge("ct_ticket_stats", "Ticket stats", ["type"])
 
 class Budget:
     def __init__(self):
-        self.ticket_price = 1
-        self.winning_probability = 1
+        self.ticket_price = None
+        self.winning_probability = None
 
     @property
     def ticket_price(self):

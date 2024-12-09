@@ -46,7 +46,6 @@ flags:
 economicModel:
   minSafeAllowance: -1
   NFTThreshold: ~
-  winningProbability: 1
 
   legacy:
     proportion: 0.9
@@ -126,7 +125,7 @@ subgraph:
   gnosisAllocations:
     queryID: ~
     slug: hopr-allocations-gnosis
-  hoprOnMainet:
+  hoprOnMainnet:
     queryID: ~
     slug: hopr-on-mainnet
   hoprOnGnosis:

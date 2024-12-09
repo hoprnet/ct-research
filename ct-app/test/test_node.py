@@ -1,7 +1,7 @@
 import inspect
 
 import pytest
-from hoprd_sdk.models import NodeChannelsResponse
+from core.components.api_types import Channels
 
 from .conftest import Node, Peer
 
@@ -9,17 +9,15 @@ from .conftest import Node, Peer
 @pytest.mark.asyncio
 async def test_retrieve_address(node: Node, addresses: dict):
     await node.retrieve_address()
-    address = await node.address.get()
 
-    assert address.address in [addr["native"] for addr in addresses]
-    assert address.id in [addr["hopr"] for addr in addresses]
+    assert node.address.address in [addr["native"] for addr in addresses]
+    assert node.address.id in [addr["hopr"] for addr in addresses]
 
 
 @pytest.mark.asyncio
 async def test_node_healthcheck(node: Node):
     await node.healthcheck()
-
-    assert await node.connected.get()
+    assert node.connected
 
 
 @pytest.mark.asyncio
@@ -28,10 +26,10 @@ async def test_retrieve_balances(node: Node):
 
     balances = await node.retrieve_balances()
 
-    assert balances.get("hopr", None) is not None
-    assert balances.get("native", None) is not None
-    assert isinstance(balances.get("hopr"), int)
-    assert isinstance(balances.get("native"), int)
+    assert balances.hopr is not None
+    assert balances.native is not None
+    assert isinstance(balances.hopr, int)
+    assert isinstance(balances.native, int)
 
 
 @pytest.mark.asyncio
@@ -70,51 +68,20 @@ async def test_retrieve_peers(node: Node, peers: list[Peer]):
 
 
 @pytest.mark.asyncio
-async def test_retrieve_outgoing_channels(node: Node, channels: NodeChannelsResponse):
-    assert await node.outgoings.get() == []
+async def test_retrieve_channels(node: Node, channels: Channels):
+    assert node.channels is None
 
-    await node.retrieve_outgoing_channels()
+    await node.retrieve_channels()
 
-    outgoings_from_node = await node.outgoings.get()
-    outgoings_from_fixture = [
-        c for c in channels.all if c.source_peer_id == (await node.address.get()).id
-    ]
-
-    assert [c.channel_id for c in outgoings_from_node] == [
-        c.channel_id for c in outgoings_from_fixture
-    ]
+    assert node.channels == channels
 
 
 @pytest.mark.asyncio
-async def test_retrieve_incoming_channels(node: Node, channels: NodeChannelsResponse):
-    assert await node.incomings.get() == []
-
-    await node.retrieve_incoming_channels()
-
-    incomings_from_node = await node.incomings.get()
-    incomings_from_fixture = [
-        c
-        for c in channels.all
-        if c.destination_peer_id == (await node.address.get()).id
-    ]
-
-    assert [c.channel_id for c in incomings_from_node] == [
-        c.channel_id for c in incomings_from_fixture
-    ]
-
-
-@pytest.mark.asyncio
-async def test_get_total_channel_funds(node: Node, channels: NodeChannelsResponse):
-    await node.retrieve_outgoing_channels()
+async def test_get_total_channel_funds(node: Node, channels: Channels):
+    await node.retrieve_channels()
 
     total_funds_from_node = await node.get_total_channel_funds()
-    total_funds_from_fixture = sum(
-        [
-            int(c.balance)
-            for c in channels.all
-            if c.source_peer_id == (await node.address.get()).id
-        ]
-    )
+    total_funds_from_fixture = sum([int(c.balance) for c in channels.outgoing])
 
     assert total_funds_from_fixture / 1e18 == total_funds_from_node
 

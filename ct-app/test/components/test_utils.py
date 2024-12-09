@@ -1,14 +1,8 @@
 import pytest
 from core.components import Utils
+from core.components.api_types import Channel
 from core.model import Address, Peer
-from core.model.subgraph import (
-    AllocationEntry,
-    BalanceEntry,
-    NodeEntry,
-    SafeEntry,
-    TopologyEntry,
-)
-from hoprd_sdk.models import ChannelInfoResponse
+from core.model.subgraph import entries
 
 from .utils import handle_envvars
 
@@ -16,65 +10,60 @@ from .utils import handle_envvars
 @pytest.fixture
 def channel_topology():
     return [
-        ChannelInfoResponse(
-            f"{1*1e18:.0f}",
-            1,
-            "channel_1",
-            5,
-            "dst_addr_1",
-            "dst_1",
-            "src_addr_1",
-            "src_1",
-            "Open",
-            0,
+        Channel(
+            {
+                "balance": f"{1*1e18:.0f}",
+                "channelId": "channel_1",
+                "destinationAddress": "dst_addr_1",
+                "destinationPeerId": "dst_1",
+                "sourceAddress": "src_addr_1",
+                "sourcePeerId": "src_1",
+                "status": "Open",
+            }
         ),
-        ChannelInfoResponse(
-            f"{2*1e18:.0f}",
-            1,
-            "channel_2",
-            5,
-            "dst_addr_2",
-            "dst_2",
-            "src_addr_1",
-            "src_1",
-            "Open",
-            0,
+        Channel(
+            {
+                "balance": f"{2*1e18:.0f}",
+                "channelId": "channel_2",
+                "destinationAddress": "dst_addr_2",
+                "destinationPeerId": "dst_2",
+                "sourceAddress": "src_addr_1",
+                "sourcePeerId": "src_1",
+                "status": "Open",
+            }
         ),
-        ChannelInfoResponse(
-            f"{3*1e18:.0f}",
-            1,
-            "channel_3",
-            5,
-            "dst_addr_3",
-            "dst_3",
-            "src_addr_1",
-            "src_1",
-            "Closed",
-            0,
+        Channel(
+            {
+                "balance": f"{3*1e18:.0f}",
+                "channelId": "channel_3",
+                "destinationAddress": "dst_addr_3",
+                "destinationPeerId": "dst_3",
+                "sourceAddress": "src_addr_1",
+                "sourcePeerId": "src_1",
+                "status": "Closed",
+            }
         ),
-        ChannelInfoResponse(
-            f"{4*1e18:.0f}",
-            1,
-            "channel_4",
-            5,
-            "dst_addr_1",
-            "dst_1",
-            "src_addr_2",
-            "src_2",
-            "Open",
-            0,
+        Channel(
+            {
+                "balance": f"{4*1e18:.0f}",
+                "channelId": "channel_4",
+                "destinationAddress": "dst_addr_1",
+                "destinationPeerId": "dst_1",
+                "sourceAddress": "src_addr_2",
+                "sourcePeerId": "src_2",
+                "status": "Open",
+            }
         ),
-        ChannelInfoResponse(
-            f"{1*1e18:.0f}",
-            1,
-            "channel_5",
-            5,
-            "dst_addr_2",
-            "dst_2",
-            "src_addr_2",
-            "src_2",
-            "Open",
-            0,
+        Channel(
+            {
+                "balance": f"{1*1e18:.0f}",
+                "channelId": "channel_5",
+                "destinationAddress": "dst_addr_2",
+                "destinationPeerId": "dst_2",
+                "sourceAddress": "src_addr_2",
+                "sourcePeerId": "src_2",
+                "status": "Open",
+            }
         ),
     ]
 
@@ -95,10 +84,10 @@ def test_nodesCredentials():
 async def test_mergeDataSources():
 
     topology_list = [
-        TopologyEntry("peer_id_1", "address_1", 1),
-        TopologyEntry("peer_id_2", "address_2", 2),
-        TopologyEntry(None, None, 3),
-        TopologyEntry("peer_id_4", "address_4", 4),
+        entries.Topology("peer_id_1", "address_1", 1),
+        entries.Topology("peer_id_2", "address_2", 2),
+        entries.Topology(None, None, 3),
+        entries.Topology("peer_id_4", "address_4", 4),
     ]
     peers_list = [
         Peer("peer_id_1", "address_1", "1.0.0"),
@@ -106,15 +95,20 @@ async def test_mergeDataSources():
         Peer("peer_id_3", "address_3", "1.0.2"),
     ]
     nodes_list = [
-        NodeEntry("address_1", SafeEntry("safe_address_1", "10", "1", ["owner_1"])),
-        NodeEntry(
-            "address_2", SafeEntry("safe_address_2", "10", "2", ["owner_1", "owner_2"])
+        entries.Node(
+            "address_1", entries.Safe("safe_address_1", "10", "1", ["owner_1"])
         ),
-        NodeEntry("address_3", SafeEntry("safe_address_3", None, "3", ["owner_3"])),
+        entries.Node(
+            "address_2",
+            entries.Safe("safe_address_2", "10", "2", ["owner_1", "owner_2"]),
+        ),
+        entries.Node(
+            "address_3", entries.Safe("safe_address_3", None, "3", ["owner_3"])
+        ),
     ]
     allocation_list = [
-        AllocationEntry("owner_1", "0", f"{100*1e18:.0f}"),
-        AllocationEntry("owner_2", "0", f"{250*1e18:.0f}"),
+        entries.Allocation("owner_1", "0", f"{100*1e18:.0f}"),
+        entries.Allocation("owner_2", "0", f"{250*1e18:.0f}"),
     ]
 
     allocation_list[0].linked_safes = ["safe_address_1", "safe_address_2"]
@@ -137,15 +131,20 @@ async def test_mergeDataSources():
 
 def test_associateEntitiesToNodes_with_allocations():
     allocations = [
-        AllocationEntry("owner_1", "0", f"{100*1e18:.0f}"),
-        AllocationEntry("owner_2", "0", f"{250*1e18:.0f}"),
+        entries.Allocation("owner_1", "0", f"{100*1e18:.0f}"),
+        entries.Allocation("owner_2", "0", f"{250*1e18:.0f}"),
     ]
     nodes = [
-        NodeEntry("address_1", SafeEntry("safe_address_1", "10", "1", ["owner_1"])),
-        NodeEntry(
-            "address_2", SafeEntry("safe_address_2", "10", "2", ["owner_1", "owner_2"])
+        entries.Node(
+            "address_1", entries.Safe("safe_address_1", "10", "1", ["owner_1"])
         ),
-        NodeEntry("address_3", SafeEntry("safe_address_3", None, "3", ["owner_3"])),
+        entries.Node(
+            "address_2",
+            entries.Safe("safe_address_2", "10", "2", ["owner_1", "owner_2"]),
+        ),
+        entries.Node(
+            "address_3", entries.Safe("safe_address_3", None, "3", ["owner_3"])
+        ),
     ]
 
     Utils.associateEntitiesToNodes(allocations, nodes)
@@ -156,15 +155,20 @@ def test_associateEntitiesToNodes_with_allocations():
 
 def test_associateEntitiesToNodes_with_eoa_balances():
     balances = [
-        BalanceEntry("owner_1", f"{100*1e18:.0f}"),
-        BalanceEntry("owner_2", f"{250*1e18:.0f}"),
+        entries.Balance("owner_1", f"{100*1e18:.0f}"),
+        entries.Balance("owner_2", f"{250*1e18:.0f}"),
     ]
     nodes = [
-        NodeEntry("address_1", SafeEntry("safe_address_1", "10", "1", ["owner_1"])),
-        NodeEntry(
-            "address_2", SafeEntry("safe_address_2", "10", "2", ["owner_1", "owner_2"])
+        entries.Node(
+            "address_1", entries.Safe("safe_address_1", "10", "1", ["owner_1"])
         ),
-        NodeEntry("address_3", SafeEntry("safe_address_3", None, "3", ["owner_3"])),
+        entries.Node(
+            "address_2",
+            entries.Safe("safe_address_2", "10", "2", ["owner_1", "owner_2"]),
+        ),
+        entries.Node(
+            "address_3", entries.Safe("safe_address_3", None, "3", ["owner_3"])
+        ),
     ]
 
     Utils.associateEntitiesToNodes(balances, nodes)
@@ -179,10 +183,10 @@ def test_allowManyNodePerSafe():
     peer_3 = Peer("id_3", "address_3", "v1.0.2")
     peer_4 = Peer("id_4", "address_4", "v1.0.0")
 
-    peer_1.safe = SafeEntry("safe_address_1", "10", "1", [])
-    peer_2.safe = SafeEntry("safe_address_2", "10", "1", [])
-    peer_3.safe = SafeEntry("safe_address_3", "10", "1", [])
-    peer_4.safe = SafeEntry("safe_address_2", "10", "1", [])
+    peer_1.safe = entries.Safe("safe_address_1", "10", "1", [])
+    peer_2.safe = entries.Safe("safe_address_2", "10", "1", [])
+    peer_3.safe = entries.Safe("safe_address_3", "10", "1", [])
+    peer_4.safe = entries.Safe("safe_address_2", "10", "1", [])
 
     source_data = [peer_1, peer_2, peer_3, peer_4]
 

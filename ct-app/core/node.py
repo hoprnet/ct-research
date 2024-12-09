@@ -45,18 +45,26 @@ class Node(Base):
         self.api: HoprdAPI = HoprdAPI(url, key)
         self.url = url
 
-        self.address = LockedVar("address", None, infer_type=False)
         self.peers = LockedVar("peers", set[Peer]())
-        self.outgoings = LockedVar("outgoings", [])
-        self.incomings = LockedVar("incomings", [])
-        self.connected = LockedVar("connected", False)
-
         self.peer_history = LockedVar("peer_history", dict[str, datetime]())
 
-        self.params = Parameters()
-        self.message_distributed = dict[str, int]()
+        self.address = None
+        self.channels = None
+        self._safe_address = None
 
+        self.params = Parameters()
+        self.messages_distributed = dict[str, int]()
+
+        self.connected = False
         self.running = False
+
+    @property
+    async def safe_address(self):
+        if self._safe_address is None:
+            if info := await self.api.node_info():
+                self._safe_address = info.hopr_node_safe
+
+        return self._safe_address
 
     @property
     def log_prefix(self):
@@ -66,25 +74,24 @@ class Node(Base):
         """
         Retrieve the address of the node.
         """
-        address = await self.api.get_address("all")
+        address = await self.api.get_address()
 
-        if not isinstance(address, dict):
+        if address is None:
             return
 
-        if "hopr" not in address or "native" not in address:
+        if address.hopr is None or address.native is None:
             return
 
-        address = Address(address["hopr"], address["native"])
-        await self.address.set(address)
+        self.address = Address(address.hopr, address.native)
 
-        return address
+        return self.address
 
     async def _healthcheck(self):
         """
         Perform a healthcheck on the node.
         """
         health = await self.api.healthyz()
-        await self.connected.set(health)
+        self.connected = health
 
         if addr := await self.retrieve_address():
             HEALTH.labels(addr.id).set(int(health))
@@ -106,14 +113,11 @@ class Node(Base):
         Retrieve the balances of the node.
         """
         balances = await self.api.balances()
-        node_address = await self.address.get()
 
-        if balances is None:
-            self.warning("Failed to retrieve balances")
-            return
-
-        if addr := node_address:
-            for token, balance in balances.items():
+        if addr := self.address:
+            for token, balance in vars(balances).items():
+                if balance is None:
+                    continue
                 BALANCE.labels(addr.id, token).set(balance)
 
         return balances
@@ -125,9 +129,10 @@ class Node(Base):
         """
         Open channels to discovered_peers.
         """
-        node_address = await self.address.get()
+        if self.channels is None:
+            return
 
-        out_opens = [c for c in await self.outgoings.get() if not c.status.isClosed]
+        out_opens = [c for c in self.channels.outgoing if not c.status.isClosed]
 
         addresses_with_channels = {c.destination_address for c in out_opens}
         all_addresses = {
@@ -145,9 +150,9 @@ class Node(Base):
                 address,
                 f"{int(self.params.channel.fundingAmount*1e18):d}",
             )
-            if ok:
+            if ok is not None:
                 self.info(f"Opened channel to {address}")
-                if addr := node_address:
+                if addr := self.address:
                     CHANNELS_OPS.labels(addr.id, "opened").inc()
             else:
                 self.warning(f"Failed to open channel to {address}")
@@ -159,19 +164,20 @@ class Node(Base):
         """
         Close incoming channels
         """
-        node_address = await self.address.get()
+        if self.channels is None:
+            return
 
-        in_opens = [c for c in await self.incomings.get() if c.status.isOpen]
+        in_opens = [c for c in self.channels.incoming if c.status.isOpen]
 
         for channel in in_opens:
-            self.debug(f"Closing incoming channel {channel.channel_id}")
-            ok = await self.api.close_channel(channel.channel_id)
+            self.debug(f"Closing incoming channel {channel.id}")
+            ok = await self.api.close_channel(channel.id)
             if ok:
-                self.info(f"Closed channel {channel.channel_id}")
-                if addr := node_address:
+                self.info(f"Closed channel {channel.id}")
+                if addr := self.address:
                     CHANNELS_OPS.labels(addr.id, "incoming_closed").inc()
             else:
-                self.warning(f"Failed to close channel {channel.channel_id}")
+                self.warning(f"Failed to close channel {channel.id}")
 
     @flagguard
     @formalin
@@ -180,21 +186,22 @@ class Node(Base):
         """
         Close channels in PendingToClose state.
         """
-        node_address = await self.address.get()
-        outgoing_channels = await self.outgoings.get()
-        out_pendings = [c for c in outgoing_channels if c.status.isPending]
+        if self.channels is None:
+            return
+
+        out_pendings = [c for c in self.channels.outgoing if c.status.isPending]
 
         self.info(f"Pending channels: {len(out_pendings)}")
 
         for channel in out_pendings:
-            self.debug(f"Closing pending channel {channel.channel_id}")
-            ok = await self.api.close_channel(channel.channel_id)
+            self.debug(f"Closing pending channel {channel.id}")
+            ok = await self.api.close_channel(channel.id)
             if ok:
-                self.info(f"Closed pending channel {channel.channel_id}")
-                if addr := node_address:
+                self.info(f"Closed pending channel {channel.id}")
+                if addr := self.address:
                     CHANNELS_OPS.labels(addr.id, "pending_closed").inc()
             else:
-                self.warning(f"Failed to close pending channel {channel.channel_id}")
+                self.warning(f"Failed to close pending channel {channel.id}")
 
     @flagguard
     @formalin
@@ -203,15 +210,17 @@ class Node(Base):
         """
         Close channels that have been open for too long.
         """
-        node_address = await self.address.get()
+        if self.channels is None:
+            return
 
-        outgoings = await self.outgoings.get()
         peer_history: dict[str, datetime] = await self.peer_history.get()
         to_peer_history = dict[str, datetime]()
         channels_to_close: list[str] = []
 
         address_to_channel_id = {
-            c.destination_address: c.channel_id for c in outgoings if c.status.isOpen
+            c.destination_address: c.id
+            for c in self.channels.outgoing
+            if c.status.isOpen
         }
 
         for address, channel_id in address_to_channel_id.items():
@@ -238,7 +247,7 @@ class Node(Base):
 
             if ok:
                 self.info(f"Channel {channel} closed")
-                if addr := node_address:
+                if addr := self.address:
                     CHANNELS_OPS.labels(addr.id, "old_closed").inc()
             else:
                 self.warning(f"Failed to close channel {channel_id}")
@@ -250,9 +259,10 @@ class Node(Base):
         """
         Fund channels that are below minimum threshold.
         """
-        node_address = await self.address.get()
+        if self.channels is None:
+            return
 
-        out_opens = [c for c in await self.outgoings.get() if c.status.isOpen]
+        out_opens = [c for c in self.channels.outgoing if c.status.isOpen]
 
         low_balances = [
             c
@@ -266,16 +276,16 @@ class Node(Base):
 
         for channel in low_balances:
             if channel.destination_peer_id in peer_ids:
-                self.debug(f"Funding channel {channel.channel_id}")
+                self.debug(f"Funding channel {channel.id}")
                 ok = await self.api.fund_channel(
-                    channel.channel_id, self.params.channel.fundingAmount * 1e18
+                    channel.id, self.params.channel.fundingAmount * 1e18
                 )
                 if ok:
-                    self.info(f"Funded channel {channel.channel_id}")
-                    if addr := node_address:
+                    self.info(f"Funded channel {channel.id}")
+                    if addr := self.address:
                         CHANNELS_OPS.labels(addr.id, "fund").inc()
                 else:
-                    self.warning(f"Failed to fund channel {channel.channel_id}")
+                    self.warning(f"Failed to fund channel {channel.id}")
 
     @flagguard
     @formalin
@@ -284,16 +294,9 @@ class Node(Base):
         """
         Retrieve real peers from the network.
         """
-        node_address = await self.address.get()
-
-        results = await self.api.peers(
-            params=["peer_id", "peer_address", "reported_version"], quality=0.5
-        )
-
-        peers = {
-            Peer(item["peer_id"], item["peer_address"], item["reported_version"])
-            for item in results
-        }
+        results = await self.api.peers()
+        peers = {Peer(item.peer_id, item.address, item.version) for item in results}
+        peers = {p for p in peers if not p.is_old(self.params.peer.minVersion)}
 
         addresses_w_timestamp = {p.address.address: datetime.now() for p in peers}
 
@@ -302,58 +305,45 @@ class Node(Base):
 
         self.info(f"Peers: {len(peers)}")
 
-        if addr := node_address:
+        if addr := self.address:
             PEERS_COUNT.labels(addr.id).set(len(peers))
 
     @flagguard
     @formalin
     @connectguard
-    async def retrieve_outgoing_channels(self):
+    async def retrieve_channels(self):
         """
-        Retrieve all outgoing channels.
+        Retrieve all channels.
         """
-        channels = await self.api.all_channels(False)
-        node_address = await self.address.get()
+        channels = await self.api.channels()
 
-        if not hasattr(channels, "all"):
-            self.warning("No outgoing channels found")
+        if channels is None:
+            self.warning("No channels found")
             return
 
-        if addr := node_address:
-            outgoings = [
-                c
-                for c in channels.all
-                if c.source_peer_id == addr.id and not c.status.isClosed
-            ]
-
-            await self.outgoings.set(outgoings)
-            self.info(f"Outgoing channels: {len(outgoings)}")
-            CHANNELS.labels(addr.id, "outgoing").set(len(outgoings))
-
-    @flagguard
-    @formalin
-    @connectguard
-    async def retrieve_incoming_channels(self):
-        """
-        Retrieve all incoming channels.
-        """
-        channels = await self.api.all_channels(False)
-        node_address = await self.address.get()
-
-        if not hasattr(channels, "all"):
-            self.warning("No incoming channels found")
+        if not hasattr(channels, "incoming") or not hasattr(channels, "outgoing"):
+            self.warning("No channels found")
             return
 
-        if addr := node_address:
-            incomings = [
+        if addr := self.address:
+            channels.outgoing = [
                 c
                 for c in channels.all
-                if c.destination_peer_id == addr.id and not c.status.isClosed
+                if c.source_peer_id == self.address.id and c.status.isOpen
+            ]
+            channels.incoming = [
+                c
+                for c in channels.all
+                if c.destination_peer_id == self.address.id and c.status.isOpen
             ]
 
-            await self.incomings.set(incomings)
-            self.info(f"Incoming channels: {len(incomings)}")
-            CHANNELS.labels(addr.id, "incoming").set(len(incomings))
+            self.channels = channels
+
+            self.info(
+                f"Channels: {len(channels.incoming)} in and {len(channels.outgoing)} out"
+            )
+            CHANNELS.labels(addr.id, "outgoing").set(len(channels.outgoing))
+            CHANNELS.labels(addr.id, "incoming").set(len(channels.incoming))
 
     @flagguard
     @formalin
@@ -362,22 +352,22 @@ class Node(Base):
         """
         Retrieve total funds.
         """
-        channels = await self.outgoings.get()
-        node_address = await self.address.get()
-
-        if node_address is None:
+        if self.address is None:
             return
 
-        results = await Utils.balanceInChannels(channels)
+        if self.channels is None:
+            return
 
-        if node_address.id not in results:
+        results = await Utils.balanceInChannels(self.channels.outgoing)
+
+        if self.address.id not in results:
             self.warning("Funding info not found")
             return
 
-        funds = results[node_address.id].get("channels_balance", 0)
+        funds = results[self.address.id].get("channels_balance", 0)
 
         self.info(f"Channels funds: {funds}")
-        CHANNEL_FUNDS.labels(node_address.id).set(funds)
+        CHANNEL_FUNDS.labels(self.address.id).set(funds)
 
         return funds
 
@@ -388,12 +378,10 @@ class Node(Base):
         """
         Check the inbox for messages.
         """
-        address = await self.address.get()
-
         messages = []
         for m in await self.api.messages_pop_all():
             try:
-                message = MessageFormat.parse(m.body)
+                message = MessageFormat.parse(m["body"])
             except ValueError as err:
                 self.error(f"Error while parsing message: {err}")
                 continue
@@ -401,19 +389,19 @@ class Node(Base):
 
         for message in messages:
             relayer = message.relayer
-            if relayer not in self.message_distributed:
-                self.message_distributed[relayer] = 0
-            self.message_distributed[relayer] += 1
+            if relayer not in self.messages_distributed:
+                self.messages_distributed[relayer] = 0
+            self.messages_distributed[relayer] += 1
 
         entries = []
-        for peer, count in self.message_distributed.items():
+        for peer, count in self.messages_distributed.items():
             if count < self.params.storage.count:
                 continue
 
             entries.append(
                 RelayedMessages(
                     relayer=peer,
-                    sender=address.id,
+                    sender=self.address.id,
                     count=count,
                     timestamp=datetime.now(),
                 )
@@ -426,23 +414,30 @@ class Node(Base):
             self.error(f"Database error while storing relayed messages entries: {err}")
         else:
             for entry in entries:
-                self.message_distributed[entry.relayer] -= entry.count
+                self.messages_distributed[entry.relayer] -= entry.count
 
     @formalin
     async def watch_message_queue(self):
         message: MessageFormat = await MessageQueue().buffer.get()
-        sender = (await self.address.get()).id
+
+        peers = [peer.address.id for peer in await self.peers.get()]
+        if message.relayer not in peers:
+            return
+
+        channels = [channel.destination_peer_id for channel in self.channels.outgoing]
+        if message.relayer not in channels:
+            return
+
         asyncio.create_task(
-            self.api.send_message(sender, message.format(), [message.relayer])
+            self.api.send_message(self.address.id, message.format(), [message.relayer])
         )
 
     async def tasks(self):
         callbacks = [
             self.healthcheck,
             self.retrieve_peers,
-            self.retrieve_outgoing_channels,
-            self.retrieve_incoming_channels,
             self.retrieve_balances,
+            self.retrieve_channels,
             self.open_channels,
             self.fund_channels,
             self.close_old_channels,

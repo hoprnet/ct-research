@@ -10,7 +10,7 @@ flags:
 
     connectedPeers: 120
     registeredNodes: 600
-    topology: 600
+    topology: 60
     allocations: 600
     EOABalances: 600
     NFTHolders: 600
@@ -22,24 +22,23 @@ flags:
   node:
     healthcheck: 60
     retrievePeers: 120
-    retrieveIncomingChannels: 120
-    retrieveOutgoingChannels: 120
+    retrieveChannels: 60
     retrieveBalances: 120
 
-    openChannels: 120
-    fundChannels: 120
-    closeOldChannels: Off
-    closePendingChannels: Off
+    openChannels: 900
+    fundChannels: 900
+    closeOldChannels: 900
+    closePendingChannels: 900
     closeIncomingChannels: Off
 
     getTotalChannelFunds: 300
 
-    watchMessageQueue: Off  # should only be On / Off
-    relayedMessagesToDB: Off
+    watchMessageQueue: On  # should only be On / Off
+    relayedMessagesToDB: 120
 
   peer:
-    messageRelayRequest: Off # should only be On / Off
-    sentMessagesToDB: Off
+    messageRelayRequest: On # should only be On / Off
+    sentMessagesToDB: 120
     
 # =============================================================================
 # 
@@ -47,7 +46,6 @@ flags:
 economicModel:
   minSafeAllowance: -1
   NFTThreshold: ~
-  winningProbability: 1
 
   legacy:
     proportion: 1.0
@@ -93,7 +91,7 @@ economicModel:
 # =============================================================================
 storage:
   count: 1000
-  timeout: 43200 # seconds
+  timeout: 3600 # seconds
 
 # =============================================================================
 # 
@@ -137,7 +135,7 @@ subgraph:
     inputs:
       schedule_in:
         - investor-node-remainder-2024-01
-  hoprOnMainet:
+  hoprOnMainnet:
     queryID: 4GZdwVtPcQp95RF77W27GK2ezgGLB1iintG6mYZQ1w33
     slug: hopr---mainnet
   hoprOnGnosis:

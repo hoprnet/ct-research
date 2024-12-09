@@ -1,23 +1,27 @@
 import asyncio
-from typing import Callable, Optional, Union
+from enum import Enum
+from typing import Optional
 
 import aiohttp
-from hoprd_sdk import (
-    ApiClient,
-    Configuration,
-    FundBodyRequest,
-    OpenChannelBodyRequest,
-    SendMessageBodyRequest,
-    TagQueryRequest,
-)
-from hoprd_sdk.api import AccountApi, ChannelsApi, MessagesApi, NetworkApi, NodeApi
-from hoprd_sdk.rest import ApiException
-from urllib3.exceptions import MaxRetryError
 
+from .api_types import (
+    Addresses,
+    Balances,
+    Channels,
+    ConnectedPeer,
+    Infos,
+    OpenedChannel,
+    TicketPrice,
+)
 from .baseclass import Base
-from .channelstatus import ChannelStatus
 
 MESSAGE_TAG = 0x1245
+
+
+class Method(Enum):
+    GET = "get"
+    POST = "post"
+    DELETE = "delete"
 
 
 class HoprdAPI(Base):
@@ -26,290 +30,150 @@ class HoprdAPI(Base):
     """
 
     def __init__(self, url: str, token: str):
-        def _refresh_token_hook(self):
-            self.api_key["X-Auth-Token"] = token
-
-        self.configuration = Configuration()
-        self.configuration.host = f"{url}"
-        self.configuration.refresh_api_key_hook = _refresh_token_hook
+        self.host = url
+        self.headers = {"Authorization": f"Bearer {token}"}
+        self.prefix = "/api/v3/"
 
     @property
     def log_prefix(cls) -> str:
         return "api"
 
-    async def __call_api(
+    async def __call(
         self,
-        obj: Callable[..., object],
-        method: str,
-        call_log: bool = True,
-        *args,
-        **kwargs,
+        method: Method,
+        endpoint: str,
+        data: dict = {},
+    ):
+        try:
+            headers = {"Content-Type": "application/json"}
+            async with aiohttp.ClientSession(headers=self.headers) as s:
+                async with getattr(s, method.value)(
+                    url=f"{self.host}{self.prefix}{endpoint}",
+                    json=data,
+                    headers=headers,
+                ) as res:
+                    return res.status, await res.json()
+
+        except OSError as e:
+            self.error(f"OSError calling {method.value} {endpoint}: {e}")
+
+        except Exception as e:
+            self.error(f"Exception calling {method.value} {endpoint}. error is: {e}")
+
+        return (False, None)
+
+    async def __call_api(
+        self, method: Method, endpoint: str, data: dict = {}, timeout: int = 60
     ) -> tuple[bool, Optional[object]]:
-        if call_log:
-            self.debug(
-                f"Calling {obj.__name__}.{method} with kwargs: {kwargs}, args: {args}"
-            )
-
-        async def __call(
-            obj: Callable[..., object],
-            method: str,
-            *args,
-            **kwargs,
-        ):
-            try:
-                with ApiClient(self.configuration) as client:
-                    api_callback = getattr(obj(client), method)
-                    kwargs["async_req"] = True
-                    thread = api_callback(*args, **kwargs)
-                    response = thread.get()
-
-            except ApiException as e:
-                self.error(
-                    f"ApiException calling {obj.__name__}.{method} "
-                    + f"with kwargs: {kwargs}, args: {args}, error is: {e}"
-                )
-            except OSError:
-                self.error(
-                    f"OSError calling {obj.__name__}.{method} "
-                    + f"with kwargs: {kwargs}, args: {args}:"
-                )
-            except MaxRetryError:
-                self.error(
-                    f"MaxRetryError calling {obj.__name__}.{method} "
-                    + f"with kwargs: {kwargs}, args: {args}"
-                )
-            except Exception as e:
-                self.error(
-                    f"Exception calling {obj.__name__}.{method} "
-                    + f"with kwargs: {kwargs}, args: {args}, error is: {e}"
-                )
-            else:
-                return (True, response)
-
-            return (False, None)
-
         try:
             return await asyncio.wait_for(
-                asyncio.create_task(__call(obj, method, *args, **kwargs)),
-                timeout=60,
+                asyncio.create_task(self.__call(method, endpoint, data)),
+                timeout=timeout,
             )
+
         except asyncio.TimeoutError:
-            self.error(
-                f"TimeoutError calling {obj.__name__}.{method} "
-                + f"with kwargs: {kwargs}, args: {args}"
-            )
+            self.error(f"TimeoutError calling {method} {endpoint}")
             return (False, None)
 
-    async def balances(self, type: Union[str, list[str]] = "all"):
+    async def balances(self) -> Optional[Balances]:
         """
         Returns the balance of the node.
-        :param: type: str =  "all" | "hopr" | "native" | "safe_native" | "safe_hopr"
-        :return: balances: dict | int
+        :return: balances: Balances | undefined
         """
-        all_types = ["hopr", "native", "safe_native", "safe_hopr"]
-        if type == "all":
-            type = all_types
+        is_ok, response = await self.__call_api(Method.GET, "account/balances")
 
-        elif isinstance(type, str):
-            type = [type]
+        return Balances(response) if is_ok else None
 
-        is_ok, response = await self.__call_api(AccountApi, "balances")
-
-        if not is_ok:
-            return {}
-
-        return_dict = {}
-
-        for t in type:
-            if not hasattr(response, t):
-                self.warning(f"No '{t}' type returned from the API")
-                return None
-
-            return_dict[t] = int(getattr(response, t))
-
-        return return_dict if len(return_dict) > 1 else return_dict[type[0]]
-
-    async def open_channel(self, peer_address: str, amount: str):
+    async def open_channel(
+        self, peer_address: str, amount: str
+    ) -> Optional[OpenedChannel]:
         """
         Opens a channel with the given peer_address and amount.
         :param: peer_address: str
         :param: amount: str
         :return: channel id: str | undefined
         """
-        body = OpenChannelBodyRequest(amount, peer_address)
+        data = {
+            "amount": amount,
+            "peerAddress": peer_address,
+        }
 
-        is_ok, response = await self.__call_api(ChannelsApi, "open_channel", body=body)
+        is_ok, response = await self.__call_api(
+            Method.POST,
+            "channels",
+            data=data,
+        )
 
-        return response.channel_id if is_ok else None
+        return OpenedChannel(response) if is_ok else None
 
-    async def fund_channel(self, channel_id: str, amount: float):
+    async def fund_channel(self, channel_id: str, amount: float) -> bool:
         """
         Funds a given channel.
         :param: channel_id: str
         :param: amount: float
         :return: bool
         """
-        body = FundBodyRequest(amount=f"{amount:.0f}")
+        data = {"amount": f"{amount:.0f}"}
+
         is_ok, _ = await self.__call_api(
-            ChannelsApi, "fund_channel", channel_id=channel_id, body=body
+            Method.POST, f"channels/{channel_id}/fund", data=data
         )
 
         return is_ok
 
-    async def close_channel(self, channel_id: str):
+    async def close_channel(self, channel_id: str) -> bool:
         """
         Closes a given channel.
         :param: channel_id: str
         :return: bool
         """
-        is_ok, _ = await self.__call_api(
-            ChannelsApi, "close_channel", channel_id=channel_id
-        )
+        is_ok, _ = await self.__call_api(Method.DELETE, f"channels/{channel_id}")
         return is_ok
 
-    async def incoming_channels(self, only_id: bool = False) -> list:
-        """
-        Returns all open incoming channels.
-        :return: channels: list
-        """
-
-        is_ok, response = await self.__call_api(
-            ChannelsApi,
-            "list_channels",
-            full_topology=False,
-            including_closed=False,
-        )
-        if is_ok:
-            if not hasattr(response, "incoming"):
-                self.warning("Response does not contain 'incoming'")
-                return []
-
-            if len(response.incoming) == 0:
-                self.warning("No incoming channels")
-                return []
-
-            if only_id:
-                return [channel.id for channel in response.incoming]
-            else:
-                return response.incoming
-        else:
-            return []
-
-    async def outgoing_channels(self, only_id: bool = False):
-        """
-        Returns all open outgoing channels.
-        :return: channels: list
-        """
-        is_ok, response = await self.__call_api(
-            ChannelsApi,
-            "list_channels",
-            full_topology=False,
-            including_closed=False,
-        )
-        if is_ok:
-            if not hasattr(response, "outgoing"):
-                self.warning("Response does not contain 'outgoing'")
-                return []
-
-            if len(response.outgoing) == 0:
-                self.warning("No outgoing channels")
-                return []
-
-            if only_id:
-                return [channel.id for channel in response.outgoing]
-            else:
-                return response.outgoing
-        else:
-            return []
-
-    async def all_channels(self, include_closed: bool):
+    async def channels(self) -> Channels:
         """
         Returns all channels.
-        :param: include_closed: bool
         :return: channels: list
         """
-        is_ok, response = await self.__call_api(
-            ChannelsApi,
-            "list_channels",
-            full_topology="true",
-            including_closed="true" if include_closed else "false",
-        )
+        params = {"fullTopology": "true", "includingClosed": "false"}
+        params_str = "&".join([f"{k}={v}" for k, v in params.items()])
 
-        if not is_ok:
-            return []
+        is_ok, response = await self.__call_api(Method.GET, f"channels?{params_str}")
 
-        for channel in response.all:
-            channel.status = ChannelStatus.fromString(channel.status)
-
-        return response
+        return Channels(response) if is_ok else None
 
     async def peers(
         self,
-        params: Union[list, str] = "peer_id",
-        status: str = "connected",
         quality: float = 0.5,
-    ) -> list[dict]:
+    ) -> list[ConnectedPeer]:
         """
         Returns a list of peers.
-        :param: param: list or str = "peer_id"
+        :param: param: list or str = "peerId"
         :param: status: str = "connected"
         :param: quality: int = 0..1
         :return: peers: list
         """
-        is_ok, response = await self.__call_api(NodeApi, "peers", quality=quality)
+        is_ok, response = await self.__call_api(
+            Method.GET, f"node/peers?quality={quality}"
+        )
 
         if not is_ok:
             return []
 
-        if not hasattr(response, status):
-            self.warning(f"No '{status}' field returned from the API")
+        if "connected" not in response:
+            self.warning("No 'connected' field returned from the API")
             return []
 
-        if len(getattr(response, status)) == 0:
-            self.warning(f"No peer with state '{status}'")
-            return []
+        return [ConnectedPeer(peer) for peer in response["connected"]]
 
-        params = [params] if isinstance(params, str) else params
-        for param in params:
-            if not hasattr(getattr(response, status)[0], param):
-                self.warning(f"No param '{param}' found for peers")
-                return []
-
-        output_list = []
-        for peer in getattr(response, status):
-            output_list.append({param: getattr(peer, param) for param in params})
-
-        return output_list
-
-    async def get_address(
-        self, address: Union[str, list[str]] = "hopr"
-    ) -> Optional[Union[dict[str, str], str]]:
+    async def get_address(self) -> Optional[Addresses]:
         """
         Returns the address of the node.
-        :param: address: str = "hopr" | "native"
         :return: address: str | undefined
         """
-        all_types = ["hopr", "native"]
+        is_ok, response = await self.__call_api(Method.GET, "account/addresses")
 
-        if address == "all":
-            address = all_types
-        elif isinstance(address, str):
-            address = [address]
-
-        is_ok, response = await self.__call_api(AccountApi, "addresses", call_log=False)
-
-        if not is_ok:
-            return None
-
-        return_dict: dict[str, str] = {}
-        for item in address:
-            if not hasattr(response, item):
-                self.warning(f"No '{item}' address returned from the API")
-                return None
-
-            return_dict[item] = getattr(response, item)
-
-        return return_dict if len(return_dict) > 1 else return_dict[address[0]]
+        return Addresses(response) if is_ok else None
 
     async def send_message(
         self, destination: str, message: str, hops: list[str], tag: int = MESSAGE_TAG
@@ -322,23 +186,16 @@ class HoprdAPI(Base):
         :param: tag: int = 0x0320
         :return: bool
         """
-        body = SendMessageBodyRequest(message, None, hops, destination, tag)
-        is_ok, _ = await self.__call_api(
-            MessagesApi, "send_message", call_log=False, body=body
-        )
+        data = {
+            "body": message,
+            "path": hops,
+            "peerId": destination,
+            "tag": tag,
+        }
+
+        is_ok, _ = await self.__call_api(Method.POST, "messages", data=data)
 
         return is_ok
-
-    async def messages_pop(self, tag: int = MESSAGE_TAG) -> bool:
-        """
-        Pop next message from the inbox
-        :param: tag = 0x0320
-        :return: dict
-        """
-        body = TagQueryRequest() if tag is None else TagQueryRequest(tag=tag)
-        _, response = await self.__call_api(MessagesApi, "pop", body=body)
-
-        return response
 
     async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
         """
@@ -346,50 +203,32 @@ class HoprdAPI(Base):
         :param: tag = 0x0320
         :return: list
         """
-        body = TagQueryRequest() if tag is None else TagQueryRequest(tag=tag)
-        _, response = await self.__call_api(MessagesApi, "pop_all", body=body)
-        return response.messages if hasattr(response, "messages") else []
+        data = {} if tag is None else {"tag": tag}
+        is_ok, response = await self.__call_api(
+            Method.POST, "messages/pop-all", data=data
+        )
+        return response.get("messages", []) if is_ok else []
 
-    async def node_info(self):
-        _, response = await self.__call_api(NodeApi, "info")
+    async def node_info(self) -> Optional[Infos]:
+        is_ok, response = await self.__call_api(Method.GET, "node/info")
+        return Infos(response) if is_ok else None
 
-        return response
+    async def ticket_price(self) -> Optional[TicketPrice]:
+        is_ok, response = await self.__call_api(Method.GET, "network/price")
+        return TicketPrice(response) if is_ok else None
 
-    async def ticket_price(self) -> int:
-        _, response = await self.__call_api(NetworkApi, "price")
+    async def winning_probability(self) -> Optional[float]:
+        # TODO: update to an API call once the endpoint is available
+        return 1
 
-        return float(response.price) / 1e18 if hasattr(response, "price") else None
-
-    async def channel_balance(self, src_peer_id: str, dest_peer_id: str) -> float:
-        """
-        Get the channel balance of a given address.
-        :param api: API helper instance.
-        :param src_peer_id: Source channel peer id.
-        :param dest_peer_id: Destination channel peer id.
-        :return: Channel balance of the address.
-        """
-        channels = await self.all_channels(False)
-
-        channel = [
-            c
-            for c in channels.all
-            if c.destination_peer_id == dest_peer_id
-            and c.source_peer_id == src_peer_id
-            and c.status == "Open"
-        ]
-
-        return 0 if len(channel) == 0 else int(channel[0].balance) / 1e18
-
-    async def healthyz(self, timeout: int = 20):
+    async def healthyz(self, timeout: int = 20) -> bool:
         """
         Checks if the node is healthy. Return True if `healthyz` returns 200 after max `timeout` seconds.
         """
-        return await HoprdAPI.checkStatus(
-            f"{self.configuration.host}/healthyz", 200, timeout
-        )
+        return await HoprdAPI.checkStatus(f"{self.host}/healthyz", 200, timeout)
 
     @classmethod
-    async def checkStatus(cls, url: str, target: int, timeout: int = 20) -> int:
+    async def checkStatus(cls, url: str, target: int, timeout: int = 20) -> bool:
         """
         Checks if the given URL is returning 200 after max `timeout` seconds.
         """
@@ -398,15 +237,15 @@ class HoprdAPI(Base):
             while True:
                 try:
                     async with aiohttp.ClientSession() as s, s.get(url) as response:
-                        return response.status
+                        return response
                 except Exception:
                     await asyncio.sleep(0.25)
 
         try:
-            status = await asyncio.wait_for(_check_url(url), timeout=timeout)
-        except TimeoutError:
+            response = await asyncio.wait_for(_check_url(url), timeout=timeout)
+        except asyncio.TimeoutError:
             return False
         except Exception:
             return False
         else:
-            return status == target
+            return response.status == target

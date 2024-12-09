@@ -3,18 +3,16 @@ import random
 from datetime import datetime
 from typing import Union
 
-from core.components import AsyncLoop, Base, LockedVar, MessageFormat, MessageQueue
+from core.components import AsyncLoop, Base, MessageFormat, MessageQueue
 from core.components.decorators import flagguard, formalin
 from packaging.version import Version
 from prometheus_client import Gauge
 
 from .address import Address
 from .database import DatabaseConnection, SentMessages
-from .subgraph.entries import SafeEntry
 
 STAKE = Gauge("ct_peer_stake", "Stake", ["peer_id", "type"])
 SAFE_COUNT = Gauge("ct_peer_safe_count", "Number of safes", ["peer_id"])
-VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
 DELAY = Gauge("ct_peer_delay", "Delay between two messages", ["peer_id"])
 
 SECONDS_IN_A_NON_LEAP_YEAR = 365 * 24 * 60 * 60
@@ -36,16 +34,13 @@ class Peer(Base):
         self.version = version
         self.channel_balance = None
 
-        self.safe: SafeEntry = None
-
+        self.safe = None
         self._safe_address_count = None
 
-        self.yearly_message_count = LockedVar(
-            "yearly_message_count", 0, infer_type=False
-        )
+        self.yearly_message_count = 0
 
         self.last_db_storage = datetime.now()
-        self.message_count = LockedVar("message_count", 0)
+        self.message_count = 0
 
         self.params = None
         self.running = False
@@ -73,7 +68,6 @@ class Peer(Base):
                 value = Version("0.0.0")
 
         self._version = value
-        VERSION.labels(self.address.id, str(value)).set(1)
 
     @property
     def node_address(self) -> str:
@@ -111,11 +105,9 @@ class Peer(Base):
 
     @property
     async def message_delay(self) -> float:
-        count = await self.yearly_message_count.get()
-
         value = None
-        if count is not None and count > 0:
-            value = SECONDS_IN_A_NON_LEAP_YEAR / count
+        if self.yearly_message_count is not None and self.yearly_message_count > 0:
+            value = SECONDS_IN_A_NON_LEAP_YEAR / self.yearly_message_count
 
         DELAY.labels(self.address.id).set(value if value is not None else 0)
 
@@ -153,10 +145,13 @@ class Peer(Base):
     @flagguard
     @formalin
     async def message_relay_request(self):
+        if self.address is None:
+            return
+
         if delay := await self.message_delay:
             message = MessageFormat(self.address.id, datetime.now())
             await MessageQueue().buffer.put(message)
-            await self.message_count.inc(1)
+            self.message_count += 1
             await asyncio.sleep(delay)
         else:
             await asyncio.sleep(
@@ -173,7 +168,7 @@ class Peer(Base):
         Stores the distribution data in the database, if available.
         """
         now = datetime.now()
-        count = await self.message_count.get()
+        count = self.message_count
 
         if (
             count < self.params.storage.count
@@ -194,7 +189,7 @@ class Peer(Base):
         except Exception as err:
             self.error(f"Database error while storing sent messages entries: {err}")
         else:
-            await self.message_count.sub(count)
+            self.message_count -= count
             self.last_db_storage = now
 
     def start_async_processes(self):

@@ -1,8 +1,8 @@
 import asyncio
 import random
 
+from core.components import EnvironmentUtils
 from core.components.hoprd_api import HoprdAPI
-from core.components.utils import Utils
 
 from . import EnduranceTest, Metric
 
@@ -10,14 +10,20 @@ from . import EnduranceTest, Metric
 class FundChannels(EnduranceTest):
     async def on_start(self):
         self.results = []
-        self.api = HoprdAPI(Utils.envvar("API_URL"), Utils.envvar("API_KEY"))
+        self.api = HoprdAPI(
+            EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY")
+        )
 
-        address = await self.api.get_address("hopr")
-        self.info(f"Connected to node '...{address[-10:]}'")
+        self.address = await self.api.get_address()
+        self.info(f"Connected to node '...{self.address.hopr[-10:]}'")
 
         # get channel
-        channels = await self.api.outgoing_channels(False)
-        open_channels = [c for c in channels if c.status == "Open"]
+        channels = await self.api.channels()
+        open_channels = [
+            c
+            for c in channels
+            if c.status.isOpen and c.source_peer_id == self.address.hopr
+        ]
 
         if len(open_channels) == 0:
             raise RuntimeError("No open channels found")
@@ -31,15 +37,19 @@ class FundChannels(EnduranceTest):
 
     async def task(self) -> bool:
         success = await self.api.fund_channel(
-            self.channel.id, Utils.envvar("FUND_AMOUNT")
+            self.channel.id, EnvironmentUtils.envvar("FUND_AMOUNT")
         )
         self.results.append(success)
 
     async def on_end(self):
         async def balance_changed(id: str, balance: str):
             while True:
-                channels = await self.api.outgoing_channels(False)
-                channel = channels[[c.id for c in channels].index(id)]
+                channels = await self.api.channels()
+                channel = channels[
+                    [
+                        c.id for c in channels if c.source_peer_id == self.address.hopr
+                    ].index(id)
+                ]
                 if channel.balance != balance:
                     break
 
@@ -47,7 +57,7 @@ class FundChannels(EnduranceTest):
 
             return channel.balance
 
-        timeout = Utils.envvar("BALANCE_CHANGE_TIMEOUT", float)
+        timeout = EnvironmentUtils.envvar("BALANCE_CHANGE_TIMEOUT", float)
         self.info(f"Waiting up to {timeout}s for the balance to change")
         try:
             self.final_balance = await asyncio.wait_for(

@@ -1,4 +1,4 @@
-replicas: 5
+replicas: 0
 network: rotsee
 version: saint-louis
 
@@ -11,6 +11,8 @@ config: |
       on_fail_continue: true
       allow_recursive: false
       strategies: []
+    protocol:
+      outgoing_ticket_winning_prob: 0.000125
   inbox:
     capacity: 16384
 

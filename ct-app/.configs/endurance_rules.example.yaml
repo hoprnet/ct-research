@@ -14,7 +14,6 @@ scenarios:
     env:
       DELAY_BEFORE_INBOX_CHECK: 2
       RELAYER_PEER_ID: <PEER_ID>
-      MESSAGE_TAG: 10000
 logs:
   level: INFO
   enabled: true

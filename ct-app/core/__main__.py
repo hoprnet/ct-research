@@ -3,6 +3,7 @@ import yaml
 from prometheus_client import start_http_server
 
 from .components import AsyncLoop, Base, Parameters, Utils
+from .components.messages import MessageQueue
 from .core import Core
 from .model.database import DatabaseConnection
 from .node import Node
@@ -33,6 +34,8 @@ def main(configfile: str):
     DatabaseConnection.open(params.pg)
 
     AsyncLoop.run(Core(nodes, params).start)
+
+    MessageQueue.clear()
 
     DatabaseConnection.close()
 

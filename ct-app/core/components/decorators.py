@@ -9,7 +9,7 @@ def connectguard(func):
 
     @functools.wraps(func)
     async def wrapper(self, *args, **kwargs):
-        if not await self.connected.get():
+        if not self.connected:
             self.warning("Node not connected, skipping")
             return
 
@@ -83,9 +83,9 @@ def formalin(func):
             delay = None
 
         if delay == 0:
-            self.info(f"Running `{params_raw[index]}` continuously")
+            self.info(f"Running `{func.__name__}` continuously")
         elif delay is not None:
-            self.info(f"Running `{params_raw[index]}` every {delay} seconds")
+            self.info(f"Running `{func.__name__}` every {delay} seconds")
 
         while self.running:
             await func(self, *args, **kwargs)
