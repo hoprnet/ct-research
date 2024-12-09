@@ -1,7 +1,6 @@
 import re
 from asyncio import Queue
 from datetime import datetime
-from typing import Union
 
 from prometheus_client import Gauge
 
@@ -31,7 +30,7 @@ class MessageQueue(metaclass=Singleton):
 class MessageFormat:
     pattern = "{relayer} at {timestamp}"
 
-    def __init__(self, relayer: str, timestamp: Union[str, datetime]):
+    def __init__(self, relayer: str, timestamp: str | datetime):
         self.relayer = relayer
         if isinstance(timestamp, str):
             self.timestamp = datetime.fromisoformat(timestamp)
@@ -40,7 +39,8 @@ class MessageFormat:
 
     @classmethod
     def parse(cls, input_string: str):
-        re_pattern = "^" + cls.pattern.replace("{", "(?P<").replace("}", ">.+)") + "$"
+        re_pattern = "^" + \
+            cls.pattern.replace("{", "(?P<").replace("}", ">.+)") + "$"
 
         match = re.compile(re_pattern).match(input_string)
         if not match:

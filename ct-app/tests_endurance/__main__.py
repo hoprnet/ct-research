@@ -15,7 +15,7 @@ def set_envvars(pairs: list[tuple[str, str]]):
         os.environ[name] = str(value)
 
 
-def del_envvars(names: str or list[str]):
+def del_envvars(names: str | list[str]):
     if isinstance(names, str):
         names = [names]
 
@@ -59,13 +59,15 @@ def main(configfile: str):
         num_stages = len(stages)
         stage_results = []
         for stage_idx, stage in enumerate(stages, 1):
-            EnduranceTest.bold(f"stage [{stage_idx}/{num_stages}]", prefix="\t")
+            EnduranceTest.bold(
+                f"stage [{stage_idx}/{num_stages}]", prefix="\t")
 
             try:
                 success = eval(value.get("executor"))(**stage)()
             except Exception as e:
-                EnduranceTest.error(f"{e.__class__.__name__}: {e}", prefix="\t")
-                success = False, "Exception raised"
+                EnduranceTest.error(
+                    f"{e.__class__.__name__}: {e}", prefix="\t")
+                success = (False, 'Exception raised')
 
             stage_results.append(success)
             display_success(success)
@@ -78,7 +80,7 @@ def main(configfile: str):
         del_envvars(env.keys())
 
     successful_scenarios = sum(scenarios_results)
-    print("." * 45)
+    print("." * int(os.get_terminal_size().columns * 3/4))
     display_results(successful_scenarios, num_scenarios, "scenario")
 
     del_envvars(["LOG_LEVEL", "LOG_ENABLED"])
@@ -86,24 +88,24 @@ def main(configfile: str):
 
 
 def display_success(result: tuple[bool, str]):
-    success, message = result
-    if success:
-        EnduranceTest.success("Test successful", prefix="\t", end="\n" * 2)
-    else:
-        EnduranceTest.error(f"Test failed: {message}", prefix="\t", end="\n" * 2)
+    match result:
+        case(True, _):
+            EnduranceTest.success("Test successful", prefix="\t", end="\n" * 2)
+        case(False, message):
+            EnduranceTest.error(
+                f"Test failed: {message}", prefix="\t", end="\n" * 2)
 
 
 def display_results(hit: int, total: int, element: str):
-    if hit == total:
-        method = EnduranceTest.success
-    elif hit > 0:
-        method = EnduranceTest.warning
-    else:
-        method = EnduranceTest.error
+    match hit / total:
+        case 0:
+            method = EnduranceTest.error
+        case 1:
+            method = EnduranceTest.success
+        case _:
+            method = EnduranceTest.warning
 
-    plural = "s" if hit > 1 else ""
-
-    method(f"{hit}/{total} {element}{plural} passed", end="\n" * 2)
+    method(f"{hit}/{total} {element}{['', 's'][hit > 1]} passed", end="\n" * 2)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 import asyncio
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 import aiohttp
 from prometheus_client import Gauge
@@ -10,7 +10,8 @@ from core.components.baseclass import Base
 from .mode import Mode
 from .url import URL
 
-SUBGRAPH_CALLS = Gauge("ct_subgraph_calls", "# of subgraph calls", ["slug", "type"])
+SUBGRAPH_CALLS = Gauge("ct_subgraph_calls",
+                       "# of subgraph calls", ["slug", "type"])
 SUBGRAPH_IN_USE = Gauge("ct_subgraph_in_use", "Subgraph in use", ["slug"])
 
 
@@ -31,9 +32,10 @@ class GraphQLProvider(Base):
         if extra_inputs is None:
             extra_inputs = []
 
-        self._default_key, self._sku_query = self._load_query(query_file, extra_inputs)
+        self._default_key, self._sku_query = self._load_query(
+            query_file, extra_inputs)
 
-    def _load_query(self, path: Union[str, Path], extra_inputs: list[str] = []) -> str:
+    def _load_query(self, path: str | Path, extra_inputs: list[str] = []) -> str:
         """
         Loads a graphql query from a file.
         :param path: Path to the file. The path must be relative to the ct-app folder.
@@ -56,9 +58,11 @@ class GraphQLProvider(Base):
 
         try:
             async with aiohttp.ClientSession() as session, session.post(
-                self.url.url, json={"query": query, "variables": variable_values}
+                self.url.url, json={"query": query,
+                                    "variables": variable_values}
             ) as response:
-                SUBGRAPH_CALLS.labels(self.url.params.slug, self.url.mode).inc()
+                SUBGRAPH_CALLS.labels(
+                    self.url.params.slug, self.url.mode).inc()
                 return await response.json(), response.headers
         except TimeoutError as err:
             self.error(f"Timeout error: {err}")
@@ -228,11 +232,13 @@ class Fundings(GraphQLProvider):
     def __init__(self, url: URL):
         super().__init__(url)
         self._initialize_query(
-            "fundings.graphql", ['$from: String = ""', '$to_in: [String!] = [""]']
+            "fundings.graphql", ['$from: String = ""',
+                                 '$to_in: [String!] = [""]']
         )
 
 
 class EOABalance(GraphQLProvider):
     def __init__(self, url: URL):
         super().__init__(url)
-        self._initialize_query("eoa_balance.graphql", ['$id_in: [Bytes!] = [""]'])
+        self._initialize_query("eoa_balance.graphql", [
+                               '$id_in: [Bytes!] = [""]'])
