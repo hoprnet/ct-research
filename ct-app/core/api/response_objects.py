@@ -23,7 +23,7 @@ def _convert(value: Any):
     return value
 
 
-class ApiObject:
+class ApiResponseObject:
     def __init__(self, data: dict):
         for key, value in self.keys.items():
             setattr(self, key, _convert(data.get(value, None)))
@@ -33,18 +33,31 @@ class ApiObject:
     def post_init(self):
         pass
 
+    @property
+    def is_null(self):
+        return all(getattr(self, key) is None for key in self.keys.keys())
+
+    @property
+    def as_dict(self) -> dict:
+        return {value: getattr(self, key) for key, value in self.keys.items()}
+
     def __str__(self):
         return str(self.__dict__)
 
     def __repr__(self):
         return str(self)
 
+    def __eq__(self, other):
+        return all(
+            getattr(self, key) == getattr(other, key) for key in self.keys.keys()
+        )
 
-class Addresses(ApiObject):
+
+class Addresses(ApiResponseObject):
     keys = {"hopr": "hopr", "native": "native"}
 
 
-class Balances(ApiObject):
+class Balances(ApiResponseObject):
     keys = {
         "hopr": "hopr",
         "native": "native",
@@ -53,15 +66,15 @@ class Balances(ApiObject):
     }
 
 
-class Infos(ApiObject):
+class Infos(ApiResponseObject):
     keys = {"hopr_node_safe": "hoprNodeSafe"}
 
 
-class ConnectedPeer(ApiObject):
+class ConnectedPeer(ApiResponseObject):
     keys = {"address": "peerAddress", "peer_id": "peerId", "version": "reportedVersion"}
 
 
-class Channel(ApiObject):
+class Channel(ApiResponseObject):
     keys = {
         "balance": "balance",
         "id": "channelId",
@@ -76,14 +89,21 @@ class Channel(ApiObject):
         self.status = ChannelStatus.fromString(self.status)
 
 
-class TicketPrice(ApiObject):
+class TicketPrice(ApiResponseObject):
     keys = {"value": "price"}
 
     def post_init(self):
         self.value = float(self.value) / 1e18
 
 
-class OpenedChannel(ApiObject):
+class TicketProbability(ApiResponseObject):
+    keys = {"value": "probability"}
+
+    def post_init(self):
+        self.value = float(self.value)
+
+
+class OpenedChannel(ApiResponseObject):
     keys = {"channel_id": "channelId", "receipt": "transactionReceipt"}
 
 
@@ -98,3 +118,12 @@ class Channels:
 
     def __repr__(self):
         return str(self)
+
+
+class Session(ApiResponseObject):
+    keys = {
+        "ip": "ip",
+        "port": "port",
+        "protocol": "protocol",
+        "target": "target",
+    }

@@ -1,7 +1,4 @@
-import re
 from asyncio import Queue
-from datetime import datetime
-from typing import Union
 
 from prometheus_client import Gauge
 
@@ -29,25 +26,15 @@ class MessageQueue(metaclass=Singleton):
 
 
 class MessageFormat:
-    pattern = "{relayer} at {timestamp}"
-
-    def __init__(self, relayer: str, timestamp: Union[str, datetime]):
+    def __init__(self, relayer: str, size: int):
+        if size < 0:
+            raise ValueError("Size must be a positive integer")
         self.relayer = relayer
-        if isinstance(timestamp, str):
-            self.timestamp = datetime.fromisoformat(timestamp)
-        else:
-            self.timestamp = timestamp
+        self.size = size
 
-    @classmethod
-    def parse(cls, input_string: str):
-        re_pattern = "^" + cls.pattern.replace("{", "(?P<").replace("}", ">.+)") + "$"
-
-        match = re.compile(re_pattern).match(input_string)
-        if not match:
-            raise ValueError(
-                f"Input string format is incorrect. {input_string} incompatible with format {cls.pattern}"
-            )
-        return cls(match.group("relayer"), match.group("timestamp"))
-
-    def format(self):
-        return self.pattern.format_map(self.__dict__)
+    @property
+    def bytes(self):
+        message_as_bytes = self.relayer.encode()
+        if len(message_as_bytes) > self.size:
+            raise ValueError("Encoded relayer length exceeds specified size")
+        return message_as_bytes + b"\0" * (self.size - len(message_as_bytes))

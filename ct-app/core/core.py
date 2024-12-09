@@ -4,12 +4,15 @@ import random
 
 from prometheus_client import Gauge
 
-from .components import AsyncLoop, Base, HoprdAPI, LockedVar, Parameters, Utils
+from .api import HoprdAPI
+from .api.protocol import Protocol
+from .baseclass import Base
+from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
 from .components.decorators import flagguard, formalin
-from .model import Address, Peer
-from .model.economic_model import EconomicModelTypes
-from .model.subgraph import URL, ProviderError, Type, entries
+from .components.tcpudp_server import TCPUDPServer
+from .economic_model import EconomicModelTypes
 from .node import Node
+from .subgraph import URL, ProviderError, Type, entries
 
 # endregion
 
@@ -58,6 +61,12 @@ class Core(Base):
         self.providers = {
             s: s.provider(URL(self.params.subgraph, s.value)) for s in Type
         }
+        self.server = TCPUDPServer(
+            Protocol.UDP,
+            self.params.sessions.packetSize,
+            self.params.sessions.numPackets,
+        )
+        self.server.params = params
 
         self.running = False
 
@@ -366,12 +375,12 @@ class Core(Base):
             return
 
         self.debug(
-            f"Ticket price: {ticket_price.value}, winning probability: {win_probability}"
+            f"Ticket price: {ticket_price.value}, winning probability: {win_probability.value}"
         )
 
         for model in self.models.values():
             model.budget.ticket_price = ticket_price.value
-            model.budget.winning_probability = win_probability
+            model.budget.winning_probability = win_probability.value
 
     @flagguard
     @formalin
@@ -433,6 +442,22 @@ class Core(Base):
         )
 
         for node in self.nodes:
-            AsyncLoop.add(node.watch_message_queue)
+            AsyncLoop.add(node.observe_message_queue)
+
+        AsyncLoop.add(self.server.listen_to_tcp_socket)
+        AsyncLoop.add(self.server.listen_to_udp_socket)
 
         await AsyncLoop.gather()
+
+    def stop(self):
+        """
+        Stop the node.
+        """
+        self.info("CTCore stopped.")
+        self.running = False
+
+        for node in self.nodes:
+            for s in node.session_management.values():
+                s.socket.close()
+
+        self.server.stop()

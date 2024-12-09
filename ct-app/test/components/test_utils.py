@@ -1,8 +1,7 @@
 import pytest
-from core.components import Utils
-from core.components.api_types import Channel
-from core.model import Address, Peer
-from core.model.subgraph import entries
+from core.api.response_objects import Channel
+from core.components import Address, Peer, Utils
+from core.subgraph import entries
 
 from .utils import handle_envvars
 
