@@ -1,6 +1,6 @@
 from math import log, pow, prod
 
-from core.components.baseclass import Base
+from core.baseclass import Base
 from core.components.parameters import Parameters
 
 from .budget import Budget

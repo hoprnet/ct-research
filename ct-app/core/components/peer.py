@@ -1,15 +1,14 @@
 import asyncio
 import random
-from datetime import datetime
 from typing import Union
 
-from core.components import AsyncLoop, Base, MessageFormat, MessageQueue
-from core.components.decorators import flagguard, formalin
+from core.baseclass import Base
 from packaging.version import Version
 from prometheus_client import Gauge
 
+from . import AsyncLoop, MessageFormat, MessageQueue
 from .address import Address
-from .database import DatabaseConnection, SentMessages
+from .decorators import flagguard, formalin
 
 STAKE = Gauge("ct_peer_stake", "Stake", ["peer_id", "type"])
 SAFE_COUNT = Gauge("ct_peer_safe_count", "Number of safes", ["peer_id"])
@@ -38,9 +37,6 @@ class Peer(Base):
         self._safe_address_count = None
 
         self.yearly_message_count = 0
-
-        self.last_db_storage = datetime.now()
-        self.message_count = 0
 
         self.params = None
         self.running = False
@@ -71,7 +67,7 @@ class Peer(Base):
 
     @property
     def node_address(self) -> str:
-        return self.address.address
+        return self.address.native
 
     @property
     def safe_address_count(self) -> int:
@@ -83,7 +79,7 @@ class Peer(Base):
     @safe_address_count.setter
     def safe_address_count(self, value: int):
         self._safe_address_count = value
-        SAFE_COUNT.labels(self.address.id).set(value)
+        SAFE_COUNT.labels(self.address.hopr).set(value)
 
     @property
     def split_stake(self) -> float:
@@ -99,7 +95,7 @@ class Peer(Base):
         split_stake = float(self.safe.total_balance) / float(
             self.safe_address_count
         ) + float(self.channel_balance)
-        STAKE.labels(self.address.id, "split").set(split_stake)
+        STAKE.labels(self.address.hopr, "split").set(split_stake)
 
         return split_stake
 
@@ -109,7 +105,7 @@ class Peer(Base):
         if self.yearly_message_count is not None and self.yearly_message_count > 0:
             value = SECONDS_IN_A_NON_LEAP_YEAR / self.yearly_message_count
 
-        DELAY.labels(self.address.id).set(value if value is not None else 0)
+        DELAY.labels(self.address.hopr).set(value if value is not None else 0)
 
         return value
 
@@ -149,10 +145,11 @@ class Peer(Base):
             return
 
         if delay := await self.message_delay:
-            message = MessageFormat(self.address.id, datetime.now())
+            message = MessageFormat(
+                self.address.hopr, self.params.sessions.packetSize)
             await MessageQueue().buffer.put(message)
-            self.message_count += 1
-            await asyncio.sleep(delay)
+            # 2x delay as the loopback session hops twice by the relay
+            await asyncio.sleep(delay * 2)
         else:
             await asyncio.sleep(
                 random.normalvariate(
@@ -161,42 +158,10 @@ class Peer(Base):
                 )
             )
 
-    @flagguard
-    @formalin
-    async def sent_messages_to_db(self):
-        """
-        Stores the distribution data in the database, if available.
-        """
-        now = datetime.now()
-        count = self.message_count
-
-        if (
-            count < self.params.storage.count
-            and (now - self.last_db_storage).total_seconds()
-            < self.params.storage.timeout
-        ):
-            return
-
-        entry = SentMessages(
-            relayer=self.address.id,
-            count=count,
-            timestamp=now,
-        )
-
-        try:
-            DatabaseConnection.session().add(entry)
-            DatabaseConnection.session().commit()
-        except Exception as err:
-            self.error(f"Database error while storing sent messages entries: {err}")
-        else:
-            self.message_count -= count
-            self.last_db_storage = now
-
     def start_async_processes(self):
         if self.running is False:
             self.running = True
             AsyncLoop.add(self.message_relay_request)
-            AsyncLoop.add(self.sent_messages_to_db)
 
     def stop_async_processes(self):
         self.running = False
@@ -212,4 +177,4 @@ class Peer(Base):
 
     @property
     def log_prefix(self) -> str:
-        return f"peer ..{self.address.id[-5:]}"
+        return f"peer ..{self.address.hopr[-5:]}"

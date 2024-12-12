@@ -1,8 +1,8 @@
 import asyncio
 import random
 
+from core.api import HoprdAPI
 from core.components import EnvironmentUtils
-from core.components.hoprd_api import HoprdAPI
 
 from . import EnduranceTest, Metric
 
@@ -11,7 +11,8 @@ class FundChannels(EnduranceTest):
     async def on_start(self):
         self.results = []
         self.api = HoprdAPI(
-            EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY")
+            EnvironmentUtils.envvar(
+                "API_URL"), EnvironmentUtils.envvar("API_KEY")
         )
 
         self.address = await self.api.get_address()
@@ -22,7 +23,7 @@ class FundChannels(EnduranceTest):
         open_channels = [
             c
             for c in channels
-            if c.status.isOpen and c.source_peer_id == self.address.hopr
+            if c.status.is_open and c.source_peer_id == self.address.hopr
         ]
 
         if len(open_channels) == 0:

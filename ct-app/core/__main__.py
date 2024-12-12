@@ -2,10 +2,10 @@ import click
 import yaml
 from prometheus_client import start_http_server
 
-from .components import AsyncLoop, Base, Parameters, Utils
+from .baseclass import Base
+from .components import AsyncLoop, Parameters, Utils
 from .components.messages import MessageQueue
 from .core import Core
-from .model.database import DatabaseConnection
 from .node import Node
 
 
@@ -31,13 +31,11 @@ def main(configfile: str):
     else:
         Base.logger.info("Prometheus client started on port 8080")
 
-    DatabaseConnection.open(params.pg)
+    core = Core(nodes, params)
 
-    AsyncLoop.run(Core(nodes, params).start)
+    AsyncLoop.run(core.start, core.stop)
 
     MessageQueue.clear()
-
-    DatabaseConnection.close()
 
 
 if __name__ == "__main__":

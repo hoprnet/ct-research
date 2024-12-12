@@ -4,12 +4,13 @@ import random
 
 from prometheus_client import Gauge
 
-from .components import AsyncLoop, Base, HoprdAPI, LockedVar, Parameters, Utils
+from .api import HoprdAPI
+from .baseclass import Base
+from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
 from .components.decorators import flagguard, formalin
-from .model import Address, Peer
-from .model.economic_model import EconomicModelTypes
-from .model.subgraph import URL, ProviderError, Type, entries
+from .economic_model import EconomicModelTypes
 from .node import Node
+from .subgraph import URL, ProviderError, Type, entries
 
 # endregion
 
@@ -21,7 +22,8 @@ TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
 NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
 ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
 MESSAGE_COUNT = Gauge(
-    "ct_message_count", "messages one should receive / year", ["peer_id", "model"]
+    "ct_message_count", "messages one should receive / year", [
+        "peer_id", "model"]
 )
 TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
 # endregion
@@ -51,7 +53,8 @@ class Core(Base):
         self.peers_rewards_data = dict[str, float]()
 
         self.models = {
-            m: m.model.fromParameters(getattr(self.params.economicModel, m.value))
+            m: m.model.fromParameters(
+                getattr(self.params.economicModel, m.value))
             for m in EconomicModelTypes
         }
 
@@ -105,7 +108,8 @@ class Core(Base):
                     counts["known"] += 1
 
                     # update peer version if it has been succesfully retrieved
-                    new_version = visible_peers[visible_peers.index(peer)].version
+                    new_version = visible_peers[visible_peers.index(
+                        peer)].version
                     if new_version.major != 0:
                         peer.version = new_version
 
@@ -131,7 +135,8 @@ class Core(Base):
                 UNIQUE_PEERS.labels(key).set(value)
 
             for peer in current_peers:
-                PEER_VERSION.labels(peer.address.id, str(peer.version)).set(1)
+                PEER_VERSION.labels(peer.address.hopr,
+                                    str(peer.version)).set(1)
 
     @flagguard
     @formalin
@@ -214,7 +219,8 @@ class Core(Base):
             for account in await self.providers[Type.MAINNET_BALANCES].get(
                 id_in=list(balances.keys())
             ):
-                balances[account["id"]] += float(account["totalBalance"]) / 1e18
+                balances[account["id"]
+                         ] += float(account["totalBalance"]) / 1e18
         except ProviderError as err:
             self.error(f"eoa_balances: {err}")
 
@@ -222,7 +228,8 @@ class Core(Base):
             for account in await self.providers[Type.GNOSIS_BALANCES].get(
                 id_in=list(balances.keys())
             ):
-                balances[account["id"]] += float(account["totalBalance"]) / 1e18
+                balances[account["id"]
+                         ] += float(account["totalBalance"]) / 1e18
         except ProviderError as err:
             self.error(f"eoa_balances: {err}")
 
@@ -250,7 +257,8 @@ class Core(Base):
         ]
 
         TOPOLOGY_SIZE.set(len(self.topology_data))
-        self.debug(f"Fetched topology links ({len(self.topology_data)} entries).")
+        self.debug(
+            f"Fetched topology links ({len(self.topology_data)} entries).")
 
     @flagguard
     @formalin
@@ -260,7 +268,8 @@ class Core(Base):
         """
         async with self.all_peers as peers:
             if not all(
-                [len(self.topology_data), len(self.registered_nodes_data), len(peers)]
+                [len(self.topology_data), len(
+                    self.registered_nodes_data), len(peers)]
             ):
                 self.warning("Not enough data to apply economic model.")
                 return
@@ -316,7 +325,7 @@ class Core(Base):
                     continue
 
                 model_input[EconomicModelTypes.LEGACY] = self.peers_rewards_data.get(
-                    peer.address.address, 0.0
+                    peer.address.native, 0.0
                 )
 
                 for model in self.models:
@@ -325,13 +334,14 @@ class Core(Base):
                         model_input[model],
                     )
 
-                    MESSAGE_COUNT.labels(peer.address.id, model.name).set(
+                    MESSAGE_COUNT.labels(peer.address.hopr, model.name).set(
                         message_count[model]
                     )
 
                 peer.yearly_message_count = sum(message_count.values())
 
-            eligibles = sum([p.yearly_message_count is not None for p in peers])
+            eligibles = sum(
+                [p.yearly_message_count is not None for p in peers])
             self.info(f"Eligible nodes: {eligibles} entries.")
             ELIGIBLE_PEERS.set(eligibles)
 
@@ -366,12 +376,12 @@ class Core(Base):
             return
 
         self.debug(
-            f"Ticket price: {ticket_price.value}, winning probability: {win_probability}"
+            f"Ticket price: {ticket_price.value}, winning probability: {win_probability.value}"
         )
 
         for model in self.models.values():
             model.budget.ticket_price = ticket_price.value
-            model.budget.winning_probability = win_probability
+            model.budget.winning_probability = win_probability.value
 
     @flagguard
     @formalin
@@ -433,6 +443,17 @@ class Core(Base):
         )
 
         for node in self.nodes:
-            AsyncLoop.add(node.watch_message_queue)
+            AsyncLoop.add(node.observe_message_queue)
 
         await AsyncLoop.gather()
+
+    def stop(self):
+        """
+        Stop the node.
+        """
+        self.info("CTCore stopped.")
+        self.running = False
+
+        for node in self.nodes:
+            for s in node.session_management.values():
+                s.socket.close()
