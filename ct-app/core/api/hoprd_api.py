@@ -15,7 +15,6 @@ from .request_objects import (
     GetPeersBody,
     OpenChannelBody,
     SessionCapabilitiesBody,
-    SessionPathBodyHops,
     SessionPathBodyRelayers,
     SessionTargetBody,
 )
@@ -67,13 +66,14 @@ class HoprdAPI(Base):
                     except Exception:
                         data = await res.text()
 
-                    return res.status, data
+                    return (res.status // 200) == 1, data
 
         except OSError as e:
             self.error(f"OSError calling {method.value} {endpoint}: {e}")
 
         except Exception as e:
-            self.error(f"Exception calling {method.value} {endpoint}. error is: {e}")
+            self.error(
+                f"Exception calling {method.value} {endpoint}. error is: {e}")
 
         return (False, None)
 
@@ -210,45 +210,38 @@ class HoprdAPI(Base):
         is_ok, response = await self.__call_api(HTTPMethod.GET, "network/probability")
         return TicketProbability(response) if is_ok else None
 
-    async def get_sessions(self, protocol: Protocol = Protocol.TCP) -> list[Session]:
+    async def get_sessions(self, protocol: Protocol = Protocol.UDP) -> list[Session]:
         """
         Lists existing Session listeners for the given IP protocol
         :param: protocol: Protocol
         :return: list[Session]
         """
         is_ok, response = await self.__call_api(
-            HTTPMethod.GET, f"session/{protocol.value}"
+            HTTPMethod.GET, f"session/{protocol.name}"
         )
+
         return [Session(s) for s in response] if is_ok else None
 
     async def post_session(
         self,
         destination: str,
-        listen_host: str,
         relayer: str,
-        target: str,
-        protocol: Protocol = Protocol.UDP,
-        do_retransmission=False,
-        do_segmentation=False,
-    ) -> Session:
+        listen_host: str = ":0",
+        protocol: Protocol = Protocol.UDP
+    ) -> Optional[Session]:
         """
         Creates a new client session returning the given session listening host & port over TCP or UDP.
         :param: destination: PeerID of the recipient
-        :param: listen_host: str
         :param: relayer: PeerID of the relayer
-        :param: target: Target (plain, not sealed)
+        :param: listen_host: str
         :param: protocol: Protocol (UDP or TCP)
-        :param: do_retransmission: Enables packet retransmission
-        :param: do_segmentation: Enables packet segmentation
         :return: Session
         """
-        capabilities_body = SessionCapabilitiesBody(do_retransmission, do_segmentation)
-        target_body = SessionTargetBody(plain=target)
-        path_body = (
-            SessionPathBodyRelayers(relayers=[relayer])
-            if isinstance(relayer, str)
-            else SessionPathBodyHops(hops=relayer)
-        )
+        capabilities_body = SessionCapabilitiesBody(
+            protocol.retransmit, protocol.segment)
+        target_body = SessionTargetBody()
+        path_body = SessionPathBodyRelayers([relayer])
+
         data = CreateSessionBody(
             capabilities_body.as_array,
             destination,
@@ -258,24 +251,20 @@ class HoprdAPI(Base):
         )
 
         is_ok, response = await self.__call_api(
-            HTTPMethod.POST, f"session/{protocol.value}", data
+            HTTPMethod.POST, f"session/{protocol.name}", data
         )
 
         return Session(response) if is_ok else None
 
-    async def close_session(
-        self, ip: str, port: int, protocol: Protocol = Protocol.TCP
-    ) -> bool:
+    async def close_session(self, session: Session) -> bool:
         """
         Closes an existing Sessino listener for the given IP protocol, IP and port.
-        :param: ip: str
-        :param: port: int
-        :param: protocol: Protocol
+        :param: session: Session
         """
-        data = DeleteSessionBody(ip, port)
+        data = DeleteSessionBody(session.ip, session.port)
 
         is_ok, _ = await self.__call_api(
-            HTTPMethod.DELETE, f"session/{protocol.value}", data
+            HTTPMethod.DELETE, f"session/{session.protocol}", data
         )
 
         return is_ok

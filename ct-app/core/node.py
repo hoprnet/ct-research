@@ -4,12 +4,11 @@ from datetime import datetime
 from prometheus_client import Gauge
 
 from .api import HoprdAPI, Protocol
-from .api.response_objects import Session
 from .baseclass import Base
 from .components import Address, LockedVar, Parameters, Peer, Utils
 from .components.decorators import connectguard, flagguard, formalin
 from .components.messages import MessageFormat, MessageQueue
-from .components.peer_session_management import PeerSessionManagement
+from .components.session_to_socket import SessionToSocket
 
 # endregion
 
@@ -50,7 +49,7 @@ class Node(Base):
         self._safe_address = None
 
         self.params = Parameters()
-        self.session_management = dict[str, PeerSessionManagement]()
+        self.session_management = dict[str, SessionToSocket]()
         self.connected = False
         self.running = False
 
@@ -129,7 +128,7 @@ class Node(Base):
             return
 
         out_opens = [
-            c for c in self.channels.outgoing if not c.status.isClosed]
+            c for c in self.channels.outgoing if not c.status.is_closed]
 
         addresses_with_channels = {c.destination_address for c in out_opens}
         all_addresses = {
@@ -165,7 +164,7 @@ class Node(Base):
         if self.channels is None:
             return
 
-        in_opens = [c for c in self.channels.incoming if c.status.isOpen]
+        in_opens = [c for c in self.channels.incoming if c.status.is_open]
 
         for channel in in_opens:
             self.debug(f"Closing incoming channel {channel.id}")
@@ -219,7 +218,7 @@ class Node(Base):
         address_to_channel_id = {
             c.destination_address: c.id
             for c in self.channels.outgoing
-            if c.status.isOpen
+            if c.status.is_open
         }
 
         for address, channel_id in address_to_channel_id.items():
@@ -262,7 +261,7 @@ class Node(Base):
         if self.channels is None:
             return
 
-        out_opens = [c for c in self.channels.outgoing if c.status.isOpen]
+        out_opens = [c for c in self.channels.outgoing if c.status.is_open]
 
         low_balances = [
             c
@@ -382,10 +381,10 @@ class Node(Base):
             return
 
         for relayer, s in self.session_management.items():
-            buffer_size = (
+            buffer_size: int = (
                 self.params.sessions.packetSize * self.params.sessions.numPackets
             )
-            messages = s.socket.recv(buffer_size).decode().split("\n")
+            messages = s.receive(buffer_size).decode().split("\n")
             MESSAGES_STATS.labels("relayed", self.address.id, relayer).inc(
                 len(messages)
             )
@@ -403,27 +402,16 @@ class Node(Base):
         if message.relayer not in channels:
             return
 
-        # Send data through the socket
         # TODO: consider moving this somewhere else
         if message.relayer not in self.session_management:
             session = await self.api.post_session(
-                destination=self.address.id,
-                # TODO: host should be IP of entry node. SET entry node with the environment variable to restrict port range for UDP (reachable ports)
-                listen_host="<host>:0",
-                relayer=message.relayer,
-                target=f"<server-ip>:{self.params.sessions.port}",
-                protocol=Protocol.TCP,
-                do_retransmission=False,
-                do_segmentation=False,
+                self.address.hopr, message.relayer
             )
-
-            self.session_management[message.relayer] = PeerSessionManagement(
+            self.session_management[message.relayer] = SessionToSocket(
                 session
             )
 
-        sess_management = self.session_management[message.relayer]
-
-        sess_management.socket.send(message.bytes)
+        self.session_management[message.relayer].send(message.bytes)
         MESSAGES_STATS.labels("sent", self.address.id, message.relayer).inc()
 
     @formalin
@@ -431,11 +419,15 @@ class Node(Base):
     async def observe_sessions(self):
         active_sessions = await self.api.get_sessions(Protocol.UDP)
 
+        to_remove = []
         for peer, s in self.session_management.items():
             if s.session in active_sessions:
                 continue
             s.socket.close()
-            self.session_management.pop(peer)
+            to_remove.append(peer)
+
+        for peer in to_remove:
+            await self.api.close_session(self.session_management.pop(peer).session)
 
     async def tasks(self):
         callbacks = [

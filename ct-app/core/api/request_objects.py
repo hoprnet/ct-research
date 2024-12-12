@@ -25,7 +25,8 @@ class ApiRequestObject:
 
     @property
     def as_header_string(self) -> str:
-        attrs_as_dict = {value: getattr(self, key) for key, value in self.keys.items()}
+        attrs_as_dict = {value: getattr(self, key)
+                         for key, value in self.keys.items()}
         return "&".join([f"{k}={v}" for k, v in attrs_as_dict.items()])
 
     def post_init(self):
@@ -110,7 +111,7 @@ class SessionPathBodyRelayers(ApiRequestObject):
         "relayers": "IntermediatePath",
     }
 
-    def __init__(self, relayers: str):
+    def __init__(self, relayers: list[str]):
         super().__init__(vars())
 
 
@@ -119,7 +120,7 @@ class SessionPathBodyHops(ApiRequestObject):
         "hops": "Hops",
     }
 
-    def __init__(self, hops: int):
+    def __init__(self, hops: int = 0):
         super().__init__(vars())
 
     def post_init(self):
@@ -128,10 +129,10 @@ class SessionPathBodyHops(ApiRequestObject):
 
 class SessionTargetBody(ApiRequestObject):
     keys = {
-        "plain": "Plain",
+        "service": "Service",
     }
 
-    def __init__(self, plain: str):
+    def __init__(self, service: int = 0):
         super().__init__(vars())
 
 

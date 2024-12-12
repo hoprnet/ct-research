@@ -5,11 +5,9 @@ import random
 from prometheus_client import Gauge
 
 from .api import HoprdAPI
-from .api.protocol import Protocol
 from .baseclass import Base
 from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
 from .components.decorators import flagguard, formalin
-from .components.tcpudp_server import TCPUDPServer
 from .economic_model import EconomicModelTypes
 from .node import Node
 from .subgraph import URL, ProviderError, Type, entries
@@ -24,7 +22,8 @@ TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
 NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
 ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
 MESSAGE_COUNT = Gauge(
-    "ct_message_count", "messages one should receive / year", ["peer_id", "model"]
+    "ct_message_count", "messages one should receive / year", [
+        "peer_id", "model"]
 )
 TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
 # endregion
@@ -54,19 +53,14 @@ class Core(Base):
         self.peers_rewards_data = dict[str, float]()
 
         self.models = {
-            m: m.model.fromParameters(getattr(self.params.economicModel, m.value))
+            m: m.model.fromParameters(
+                getattr(self.params.economicModel, m.value))
             for m in EconomicModelTypes
         }
 
         self.providers = {
             s: s.provider(URL(self.params.subgraph, s.value)) for s in Type
         }
-        self.server = TCPUDPServer(
-            Protocol.UDP,
-            self.params.sessions.packetSize,
-            self.params.sessions.numPackets,
-        )
-        self.server.params = params
 
         self.running = False
 
@@ -114,7 +108,8 @@ class Core(Base):
                     counts["known"] += 1
 
                     # update peer version if it has been succesfully retrieved
-                    new_version = visible_peers[visible_peers.index(peer)].version
+                    new_version = visible_peers[visible_peers.index(
+                        peer)].version
                     if new_version.major != 0:
                         peer.version = new_version
 
@@ -223,7 +218,8 @@ class Core(Base):
             for account in await self.providers[Type.MAINNET_BALANCES].get(
                 id_in=list(balances.keys())
             ):
-                balances[account["id"]] += float(account["totalBalance"]) / 1e18
+                balances[account["id"]
+                         ] += float(account["totalBalance"]) / 1e18
         except ProviderError as err:
             self.error(f"eoa_balances: {err}")
 
@@ -231,7 +227,8 @@ class Core(Base):
             for account in await self.providers[Type.GNOSIS_BALANCES].get(
                 id_in=list(balances.keys())
             ):
-                balances[account["id"]] += float(account["totalBalance"]) / 1e18
+                balances[account["id"]
+                         ] += float(account["totalBalance"]) / 1e18
         except ProviderError as err:
             self.error(f"eoa_balances: {err}")
 
@@ -259,7 +256,8 @@ class Core(Base):
         ]
 
         TOPOLOGY_SIZE.set(len(self.topology_data))
-        self.debug(f"Fetched topology links ({len(self.topology_data)} entries).")
+        self.debug(
+            f"Fetched topology links ({len(self.topology_data)} entries).")
 
     @flagguard
     @formalin
@@ -269,7 +267,8 @@ class Core(Base):
         """
         async with self.all_peers as peers:
             if not all(
-                [len(self.topology_data), len(self.registered_nodes_data), len(peers)]
+                [len(self.topology_data), len(
+                    self.registered_nodes_data), len(peers)]
             ):
                 self.warning("Not enough data to apply economic model.")
                 return
@@ -340,7 +339,8 @@ class Core(Base):
 
                 peer.yearly_message_count = sum(message_count.values())
 
-            eligibles = sum([p.yearly_message_count is not None for p in peers])
+            eligibles = sum(
+                [p.yearly_message_count is not None for p in peers])
             self.info(f"Eligible nodes: {eligibles} entries.")
             ELIGIBLE_PEERS.set(eligibles)
 

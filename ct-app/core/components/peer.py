@@ -145,9 +145,11 @@ class Peer(Base):
             return
 
         if delay := await self.message_delay:
-            message = MessageFormat(self.address.id, self.params.sessions.packetSize)
+            message = MessageFormat(
+                self.address.id, self.params.sessions.packetSize)
             await MessageQueue().buffer.put(message)
-            await asyncio.sleep(delay)
+            # 2x delay as the loopback session hops twice by the relay
+            await asyncio.sleep(delay * 2)
         else:
             await asyncio.sleep(
                 random.normalvariate(

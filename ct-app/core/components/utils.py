@@ -95,7 +95,8 @@ class Utils(Base):
         """
 
         addresses = [peer.address for peer in source_data]
-        indexes = [addresses.index(item) for item in blacklist if item in addresses]
+        indexes = [addresses.index(item)
+                   for item in blacklist if item in addresses]
 
         # Remove elements from the list
         excluded = []
@@ -125,7 +126,7 @@ class Utils(Base):
             ):
                 continue
 
-            if not c.status.isOpen:
+            if not c.status.is_open:
                 continue
 
             if c.source_peer_id not in results:
@@ -134,6 +135,7 @@ class Utils(Base):
                     "channels_balance": 0,
                 }
 
-            results[c.source_peer_id]["channels_balance"] += int(c.balance) / 1e18
+            results[c.source_peer_id]["channels_balance"] += int(
+                c.balance) / 1e18
 
         return results

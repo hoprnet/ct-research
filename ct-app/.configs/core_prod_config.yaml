@@ -40,10 +40,6 @@ flags:
   peer:
     messageRelayRequest: On # should only be On / Off
 
-  tcpudpserver:
-    listenToUDPSocket: On # should only be On / Off
-    listenToTCPSocket: Off # should only be On / Off
-
 # =============================================================================
 # 
 # =============================================================================
