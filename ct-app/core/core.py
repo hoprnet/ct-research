@@ -135,7 +135,8 @@ class Core(Base):
                 UNIQUE_PEERS.labels(key).set(value)
 
             for peer in current_peers:
-                PEER_VERSION.labels(peer.address.id, str(peer.version)).set(1)
+                PEER_VERSION.labels(peer.address.hopr,
+                                    str(peer.version)).set(1)
 
     @flagguard
     @formalin
@@ -324,7 +325,7 @@ class Core(Base):
                     continue
 
                 model_input[EconomicModelTypes.LEGACY] = self.peers_rewards_data.get(
-                    peer.address.address, 0.0
+                    peer.address.native, 0.0
                 )
 
                 for model in self.models:
@@ -333,7 +334,7 @@ class Core(Base):
                         model_input[model],
                     )
 
-                    MESSAGE_COUNT.labels(peer.address.id, model.name).set(
+                    MESSAGE_COUNT.labels(peer.address.hopr, model.name).set(
                         message_count[model]
                     )
 
@@ -444,9 +445,6 @@ class Core(Base):
         for node in self.nodes:
             AsyncLoop.add(node.observe_message_queue)
 
-        AsyncLoop.add(self.server.listen_to_tcp_socket)
-        AsyncLoop.add(self.server.listen_to_udp_socket)
-
         await AsyncLoop.gather()
 
     def stop(self):
@@ -459,5 +457,3 @@ class Core(Base):
         for node in self.nodes:
             for s in node.session_management.values():
                 s.socket.close()
-
-        self.server.stop()

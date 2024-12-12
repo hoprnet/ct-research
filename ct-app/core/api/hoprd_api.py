@@ -1,4 +1,5 @@
 import asyncio
+import json
 from typing import Optional
 
 import aiohttp
@@ -22,6 +23,7 @@ from .response_objects import (
     Addresses,
     Balances,
     Channels,
+    Configuration,
     ConnectedPeer,
     Infos,
     OpenedChannel,
@@ -204,11 +206,11 @@ class HoprdAPI(Base):
 
     async def winning_probability(self) -> Optional[TicketProbability]:
         """
-        Gets the winning probability set by the oracle.
+        Gets the winning probability set in the HOPRd node configuration file.
         :return: TicketProbability
         """
-        is_ok, response = await self.__call_api(HTTPMethod.GET, "network/probability")
-        return TicketProbability(response) if is_ok else None
+        is_ok, response = await self.__call_api(HTTPMethod.GET, "node/configuration")
+        return TicketProbability(Configuration(json.loads(response)).as_dict) if is_ok else None
 
     async def get_sessions(self, protocol: Protocol = Protocol.UDP) -> list[Session]:
         """
@@ -217,7 +219,7 @@ class HoprdAPI(Base):
         :return: list[Session]
         """
         is_ok, response = await self.__call_api(
-            HTTPMethod.GET, f"session/{protocol.name}"
+            HTTPMethod.GET, f"session/{protocol.name.lower()}"
         )
 
         return [Session(s) for s in response] if is_ok else None
@@ -251,7 +253,7 @@ class HoprdAPI(Base):
         )
 
         is_ok, response = await self.__call_api(
-            HTTPMethod.POST, f"session/{protocol.name}", data
+            HTTPMethod.POST, f"session/{protocol.name.lower()}", data
         )
 
         return Session(response) if is_ok else None

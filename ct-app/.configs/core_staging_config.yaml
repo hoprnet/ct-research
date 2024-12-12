@@ -116,7 +116,6 @@ channel:
 sessions:
   packetSize: 462
   numPackets: 10
-  port: 1234  # TODO: specify the port after talking with @Ausias
 
 # =============================================================================
 # 

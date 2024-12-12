@@ -31,10 +31,6 @@ class Protocol(Enum):
             )
 
     @property
-    def name(self):
-        return self.name.lower()
-
-    @property
     def segment(self):
         return self.value.segment
 

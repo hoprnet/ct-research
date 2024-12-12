@@ -67,7 +67,7 @@ class Peer(Base):
 
     @property
     def node_address(self) -> str:
-        return self.address.address
+        return self.address.native
 
     @property
     def safe_address_count(self) -> int:
@@ -79,7 +79,7 @@ class Peer(Base):
     @safe_address_count.setter
     def safe_address_count(self, value: int):
         self._safe_address_count = value
-        SAFE_COUNT.labels(self.address.id).set(value)
+        SAFE_COUNT.labels(self.address.hopr).set(value)
 
     @property
     def split_stake(self) -> float:
@@ -95,7 +95,7 @@ class Peer(Base):
         split_stake = float(self.safe.total_balance) / float(
             self.safe_address_count
         ) + float(self.channel_balance)
-        STAKE.labels(self.address.id, "split").set(split_stake)
+        STAKE.labels(self.address.hopr, "split").set(split_stake)
 
         return split_stake
 
@@ -105,7 +105,7 @@ class Peer(Base):
         if self.yearly_message_count is not None and self.yearly_message_count > 0:
             value = SECONDS_IN_A_NON_LEAP_YEAR / self.yearly_message_count
 
-        DELAY.labels(self.address.id).set(value if value is not None else 0)
+        DELAY.labels(self.address.hopr).set(value if value is not None else 0)
 
         return value
 
@@ -146,7 +146,7 @@ class Peer(Base):
 
         if delay := await self.message_delay:
             message = MessageFormat(
-                self.address.id, self.params.sessions.packetSize)
+                self.address.hopr, self.params.sessions.packetSize)
             await MessageQueue().buffer.put(message)
             # 2x delay as the loopback session hops twice by the relay
             await asyncio.sleep(delay * 2)
@@ -177,4 +177,4 @@ class Peer(Base):
 
     @property
     def log_prefix(self) -> str:
-        return f"peer ..{self.address.id[-5:]}"
+        return f"peer ..{self.address.hopr[-5:]}"

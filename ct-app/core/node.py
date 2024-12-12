@@ -5,7 +5,7 @@ from prometheus_client import Gauge
 
 from .api import HoprdAPI, Protocol
 from .baseclass import Base
-from .components import Address, LockedVar, Parameters, Peer, Utils
+from .components import LockedVar, Parameters, Peer, Utils
 from .components.decorators import connectguard, flagguard, formalin
 from .components.messages import MessageFormat, MessageQueue
 from .components.session_to_socket import SessionToSocket
@@ -69,16 +69,12 @@ class Node(Base):
         """
         Retrieve the address of the node.
         """
-        address = await self.api.get_address()
+        addresses = await self.api.get_address()
 
-        if address is None:
+        if addresses is None:
             return
 
-        if address.hopr is None or address.native is None:
-            return
-
-        self.address = Address(address.hopr, address.native)
-
+        self.address = addresses
         return self.address
 
     async def _healthcheck(self):
@@ -89,7 +85,7 @@ class Node(Base):
         self.connected = health
 
         if addr := await self.retrieve_address():
-            HEALTH.labels(addr.id).set(int(health))
+            HEALTH.labels(addr.hopr).set(int(health))
             if not health:
                 self.warning("Node is not reachable.")
         else:
@@ -113,7 +109,7 @@ class Node(Base):
             for token, balance in vars(balances).items():
                 if balance is None:
                     continue
-                BALANCE.labels(addr.id, token).set(balance)
+                BALANCE.labels(addr.hopr, token).set(balance)
 
         return balances
 
@@ -132,7 +128,7 @@ class Node(Base):
 
         addresses_with_channels = {c.destination_address for c in out_opens}
         all_addresses = {
-            p.address.address
+            p.address.native
             for p in await self.peers.get()
             if not p.is_old(self.params.peer.minVersion)
         }
@@ -150,7 +146,7 @@ class Node(Base):
             if ok is not None:
                 self.info(f"Opened channel to {address}")
                 if addr := self.address:
-                    CHANNELS_OPS.labels(addr.id, "opened").inc()
+                    CHANNELS_OPS.labels(addr.hopr, "opened").inc()
             else:
                 self.warning(f"Failed to open channel to {address}")
 
@@ -172,7 +168,7 @@ class Node(Base):
             if ok:
                 self.info(f"Closed channel {channel.id}")
                 if addr := self.address:
-                    CHANNELS_OPS.labels(addr.id, "incoming_closed").inc()
+                    CHANNELS_OPS.labels(addr.hopr, "incoming_closed").inc()
             else:
                 self.warning(f"Failed to close channel {channel.id}")
 
@@ -197,7 +193,7 @@ class Node(Base):
             if ok:
                 self.info(f"Closed pending channel {channel.id}")
                 if addr := self.address:
-                    CHANNELS_OPS.labels(addr.id, "pending_closed").inc()
+                    CHANNELS_OPS.labels(addr.hopr, "pending_closed").inc()
             else:
                 self.warning(f"Failed to close pending channel {channel.id}")
 
@@ -247,7 +243,7 @@ class Node(Base):
             if ok:
                 self.info(f"Channel {channel} closed")
                 if addr := self.address:
-                    CHANNELS_OPS.labels(addr.id, "old_closed").inc()
+                    CHANNELS_OPS.labels(addr.hopr, "old_closed").inc()
             else:
                 self.warning(f"Failed to close channel {channel_id}")
 
@@ -271,7 +267,7 @@ class Node(Base):
 
         self.info(f"Low balance channels: {len(low_balances)}")
 
-        peer_ids = [p.address.id for p in await self.peers.get()]
+        peer_ids = [p.address.hopr for p in await self.peers.get()]
 
         for channel in low_balances:
             if channel.destination_peer_id in peer_ids:
@@ -282,7 +278,7 @@ class Node(Base):
                 if ok:
                     self.info(f"Funded channel {channel.id}")
                     if addr := self.address:
-                        CHANNELS_OPS.labels(addr.id, "fund").inc()
+                        CHANNELS_OPS.labels(addr.hopr, "fund").inc()
                 else:
                     self.warning(f"Failed to fund channel {channel.id}")
 
@@ -299,7 +295,7 @@ class Node(Base):
         peers = {p for p in peers if not p.is_old(self.params.peer.minVersion)}
 
         addresses_w_timestamp = {
-            p.address.address: datetime.now() for p in peers}
+            p.address.hopr: datetime.now() for p in peers}
 
         await self.peers.set(peers)
         await self.peer_history.update(addresses_w_timestamp)
@@ -307,7 +303,7 @@ class Node(Base):
         self.info(f"Peers: {len(peers)}")
 
         if addr := self.address:
-            PEERS_COUNT.labels(addr.id).set(len(peers))
+            PEERS_COUNT.labels(addr.hopr).set(len(peers))
 
     @flagguard
     @formalin
@@ -330,12 +326,12 @@ class Node(Base):
             channels.outgoing = [
                 c
                 for c in channels.all
-                if c.source_peer_id == self.address.id and c.status.is_open
+                if c.source_peer_id == addr.hopr and c.status.is_open
             ]
             channels.incoming = [
                 c
                 for c in channels.all
-                if c.destination_peer_id == self.address.id and c.status.is_open
+                if c.destination_peer_id == addr.hopr and c.status.is_open
             ]
 
             self.channels = channels
@@ -343,8 +339,8 @@ class Node(Base):
             self.info(
                 f"Channels: {len(channels.incoming)} in and {len(channels.outgoing)} out"
             )
-            CHANNELS.labels(addr.id, "outgoing").set(len(channels.outgoing))
-            CHANNELS.labels(addr.id, "incoming").set(len(channels.incoming))
+            CHANNELS.labels(addr.hopr, "outgoing").set(len(channels.outgoing))
+            CHANNELS.labels(addr.hopr, "incoming").set(len(channels.incoming))
 
     @flagguard
     @formalin
@@ -361,14 +357,14 @@ class Node(Base):
 
         results = await Utils.balanceInChannels(self.channels.outgoing)
 
-        if self.address.id not in results:
+        if self.address.hopr not in results:
             self.warning("Funding info not found")
             return
 
-        funds = results[self.address.id].get("channels_balance", 0)
+        funds = results[self.address.hopr].get("channels_balance", 0)
 
         self.info(f"Channels funds: {funds}")
-        CHANNEL_FUNDS.labels(self.address.id).set(funds)
+        CHANNEL_FUNDS.labels(self.address.hopr).set(funds)
 
         return funds
 
@@ -385,7 +381,7 @@ class Node(Base):
                 self.params.sessions.packetSize * self.params.sessions.numPackets
             )
             messages = s.receive(buffer_size).decode().split("\n")
-            MESSAGES_STATS.labels("relayed", self.address.id, relayer).inc(
+            MESSAGES_STATS.labels("relayed", self.address.hopr, relayer).inc(
                 len(messages)
             )
 
@@ -393,7 +389,7 @@ class Node(Base):
     async def observe_message_queue(self):
         message: MessageFormat = await MessageQueue().buffer.get()
 
-        peers = [peer.address.id for peer in await self.peers.get()]
+        peers = [peer.address.hopr for peer in await self.peers.get()]
         if message.relayer not in peers:
             return
 
@@ -402,7 +398,6 @@ class Node(Base):
         if message.relayer not in channels:
             return
 
-        # TODO: consider moving this somewhere else
         if message.relayer not in self.session_management:
             session = await self.api.post_session(
                 self.address.hopr, message.relayer
@@ -412,7 +407,7 @@ class Node(Base):
             )
 
         self.session_management[message.relayer].send(message.bytes)
-        MESSAGES_STATS.labels("sent", self.address.id, message.relayer).inc()
+        MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer).inc()
 
     @formalin
     @connectguard
@@ -441,17 +436,12 @@ class Node(Base):
             self.close_incoming_channels,
             self.close_pending_channels,
             self.get_total_channel_funds,
+            self.observe_message_queue,
             self.observe_relayed_messages,
             self.observe_sessions,
         ]
 
         return callbacks
-
-    def __str__(self):
-        return f"Node(id='{self.url}')"
-
-    def __repr__(self):
-        return f"Node(id='{self.url}')"
 
     @classmethod
     def fromCredentials(cls, addresses: list[str], keys: list[str]):

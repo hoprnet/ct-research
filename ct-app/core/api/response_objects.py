@@ -26,7 +26,13 @@ def _convert(value: Any):
 class ApiResponseObject:
     def __init__(self, data: dict):
         for key, value in self.keys.items():
-            setattr(self, key, _convert(data.get(value, None)))
+            v = data
+            for subkey in value.split("/"):
+                v = v.get(subkey, None)
+                if v is None:
+                    continue
+
+            setattr(self, key, _convert(v))
 
         self.post_init()
 
@@ -39,7 +45,7 @@ class ApiResponseObject:
 
     @property
     def as_dict(self) -> dict:
-        return {value: getattr(self, key) for key, value in self.keys.items()}
+        return {key: getattr(self, key) for key in self.keys.keys()}
 
     def __str__(self):
         return str(self.__dict__)
@@ -71,7 +77,8 @@ class Infos(ApiResponseObject):
 
 
 class ConnectedPeer(ApiResponseObject):
-    keys = {"address": "peerAddress", "peer_id": "peerId", "version": "reportedVersion"}
+    keys = {"address": "peerAddress",
+            "peer_id": "peerId", "version": "reportedVersion"}
 
 
 class Channel(ApiResponseObject):
@@ -101,6 +108,10 @@ class TicketProbability(ApiResponseObject):
 
     def post_init(self):
         self.value = float(self.value)
+
+
+class Configuration(ApiResponseObject):
+    keys = {"probability": "hopr/protocol/outgoing_ticket_winning_prob"}
 
 
 class OpenedChannel(ApiResponseObject):

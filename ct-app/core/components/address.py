@@ -1,22 +1,22 @@
 class Address:
     """
-    Class that represents an address with an id and an address.
+    Class that represents an address with a native and native address.
     """
 
-    def __init__(self, id: str, address: str):
+    def __init__(self, hopr: str, native: str):
         """
-        Create a new Address with the specified id and address. The `id` refers the the peerId, and the `address` refers to the native address of a node.
+        Create a new Address with the specified id and address. The `hopr` refers the the peerId, and the `native` refers to the native address of a node.
         :param id: The id of the peer.
         :param address: The address of the peer.
         """
-        self.id = id
-        self.address = address
+        self.hopr = hopr
+        self.native = native
 
     def __eq__(self, other):
-        return self.id == other.id and self.address == other.address
+        return self.hopr == other.hopr and self.native == other.native
 
     def __hash__(self):
-        return hash((self.id, self.address))
+        return hash((self.hopr, self.native))
 
     def __repr__(self):
-        return f"Address({self.id}, {self.address})"
+        return f"Address({self.hopr}, {self.native})"

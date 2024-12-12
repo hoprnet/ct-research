@@ -145,18 +145,13 @@ async def nodes(
             node.api, "get_address", return_value=Addresses(addresses[idx])
         )
         mocker.patch.object(node.api, "channels", return_value=channels)
-        # mocker.patch.object(
-        #     node.api, "send_message", side_effect=SideEffect().send_message_success
-        # )
-        # mocker.patch.object(
-        #     node.api, "messages_pop_all", side_effect=SideEffect().inbox_messages
-        # )
-        mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
+        mocker.patch.object(node.api, "balances",
+                            side_effect=SideEffect().node_balance)
         mocker.patch.object(
             node.api,
             "peers",
             return_value=[
-                ConnectedPeer(peer) for peer in peers_raw[:idx] + peers_raw[idx + 1 :]
+                ConnectedPeer(peer) for peer in peers_raw[:idx] + peers_raw[idx + 1:]
             ],
         )
 
@@ -182,10 +177,10 @@ def channels(peers: set[Peer]) -> Channels:
                     {
                         "balance": f"{1*1e18:.0f}",
                         "id": f"channel_{index}",
-                        "destinationAddress": dest.address.address,
-                        "destinationPeerId": dest.address.id,
-                        "sourceAddress": src.address.address,
-                        "sourcePeerId": src.address.id,
+                        "destinationAddress": dest.address.native,
+                        "destinationPeerId": dest.address.hopr,
+                        "sourceAddress": src.address.native,
+                        "sourcePeerId": src.address.hopr,
                         "status": "Open",
                     }
                 )
@@ -236,8 +231,10 @@ async def node(
     mocker.patch.object(
         node.api, "peers", return_value=[ConnectedPeer(peer) for peer in peers_raw[1:]]
     )
-    mocker.patch.object(node.api, "get_address", return_value=Addresses(addresses[0]))
-    mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
+    mocker.patch.object(node.api, "get_address",
+                        return_value=Addresses(addresses[0]))
+    mocker.patch.object(node.api, "balances",
+                        side_effect=SideEffect().node_balance)
     # mocker.patch.object(node.api, "send_message", return_value=1)
     mocker.patch.object(node.api, "healthyz", return_value=True)
 
