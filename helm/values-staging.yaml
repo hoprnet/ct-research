@@ -9,7 +9,7 @@ backup:
 
 ctdapp:
   core:
-    replicas: 0
+    replicas: 1
     tag: staging
   nodes:
     NODE_ADDRESS_1: http://ctdapp-green-node-1.ctdapp.svc:3001
