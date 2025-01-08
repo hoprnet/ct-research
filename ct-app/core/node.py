@@ -403,7 +403,7 @@ class Node(Base):
                 self.address.hopr, message.relayer
             )
             self.session_management[message.relayer] = SessionToSocket(
-                session
+                session, self.url.split(':')[0]
             )
 
         self.session_management[message.relayer].send(message.bytes)
