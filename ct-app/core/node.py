@@ -402,6 +402,9 @@ class Node(Base):
             session = await self.api.post_session(
                 self.address.hopr, message.relayer
             )
+            if session is None:
+                return
+                
             self.session_management[message.relayer] = SessionToSocket(
                 session, self.url.split(':')[0]
             )
