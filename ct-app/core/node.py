@@ -406,7 +406,7 @@ class Node(Base):
                 return
                 
             self.session_management[message.relayer] = SessionToSocket(
-                session, self.url.split(':')[0]
+                session, session.ip
             )
 
         self.session_management[message.relayer].send(message.bytes)
