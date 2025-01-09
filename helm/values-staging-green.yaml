@@ -10,6 +10,8 @@ deployment:
       value: full
     - name: HOPRD_LOG_FORMAT
       value: json
+    - name: HOPRD_SESSION_PORT_RANGE
+      value: 10000:11000
 
 config: |
   hopr:
