@@ -34,8 +34,7 @@ flags:
     getTotalChannelFunds: 900
     
     observeMessageQueue: On # should only be On / Off
-    observeRelayedMessages: On # should only be On / Off
-    observeSessions: 60
+    observeRelayedMessages: 60
 
   peer:
     messageRelayRequest: On # should only be On / Off
@@ -108,13 +107,6 @@ channel:
   minBalance: 30
   fundingAmount: 35
   maxAgeSeconds: 172800
-
-# =============================================================================
-# 
-# =============================================================================
-sessions:
-  packetSize: 462
-  numPackets: 10
   
 # =============================================================================
 # 

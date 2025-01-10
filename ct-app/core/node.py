@@ -1,14 +1,14 @@
 # region Imports
+import asyncio
 from datetime import datetime
 
 from prometheus_client import Gauge
 
-from .api import HoprdAPI, Protocol
+from .api import HoprdAPI
 from .baseclass import Base
 from .components import LockedVar, Parameters, Peer, Utils
 from .components.decorators import connectguard, flagguard, formalin
 from .components.messages import MessageFormat, MessageQueue
-from .components.session_to_socket import SessionToSocket
 
 # endregion
 
@@ -49,7 +49,6 @@ class Node(Base):
         self._safe_address = None
 
         self.params = Parameters()
-        self.session_management = dict[str, SessionToSocket]()
         self.connected = False
         self.running = False
 
@@ -368,64 +367,40 @@ class Node(Base):
 
         return funds
 
+    @flagguard
     @formalin
+    @connectguard
     async def observe_relayed_messages(self):
         """
         Check the inbox for messages.
         """
-        if self.address is None:
-            return
+        for m in await self.api.messages_pop_all():
+            try:
+                message = MessageFormat.parse(m.body)
+            except ValueError as err:
+                self.error(f"Error while parsing message: {err}")
+                continue
 
-        for relayer, s in self.session_management.items():
-            buffer_size: int = (
-                self.params.sessions.packetSize * self.params.sessions.numPackets
-            )
-            messages = s.receive(buffer_size).decode().split("\n")
-            MESSAGES_STATS.labels("relayed", self.address.hopr, relayer).inc(
-                len(messages)
-            )
+            MESSAGES_STATS.labels("relayed", self.address.hopr, message.relayer).inc()
 
+    @flagguard
     @formalin
+    @connectguard
     async def observe_message_queue(self):
-        message: MessageFormat = await MessageQueue().buffer.get()
+        message = await MessageQueue().get()
 
         peers = [peer.address.hopr for peer in await self.peers.get()]
         if message.relayer not in peers:
             return
 
-        channels = [
-            channel.destination_peer_id for channel in self.channels.outgoing]
+        channels = [channel.destination_peer_id for channel in self.channels.outgoing]
         if message.relayer not in channels:
             return
 
-        if message.relayer not in self.session_management:
-            session = await self.api.post_session(
-                self.address.hopr, message.relayer
-            )
-            if session is None:
-                return
-                
-            self.session_management[message.relayer] = SessionToSocket(
-                session, session.ip
-            )
-
-        self.session_management[message.relayer].send(message.bytes)
+        asyncio.create_task(
+            self.api.send_message(self.address.hopr, message.format(), [message.relayer])
+        )
         MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer).inc()
-
-    @formalin
-    @connectguard
-    async def observe_sessions(self):
-        active_sessions = await self.api.get_sessions(Protocol.UDP)
-
-        to_remove = []
-        for peer, s in self.session_management.items():
-            if s.session in active_sessions:
-                continue
-            s.socket.close()
-            to_remove.append(peer)
-
-        for peer in to_remove:
-            await self.api.close_session(self.session_management.pop(peer).session)
 
     async def tasks(self):
         callbacks = [
@@ -441,7 +416,6 @@ class Node(Base):
             self.get_total_channel_funds,
             self.observe_message_queue,
             self.observe_relayed_messages,
-            self.observe_sessions,
         ]
 
         return callbacks

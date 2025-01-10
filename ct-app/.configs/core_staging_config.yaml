@@ -34,8 +34,7 @@ flags:
     getTotalChannelFunds: 300
 
     observeMessageQueue: On  # should only be On / Off
-    observeRelayedMessages: On # should only be On / Off
-    observeSessions: 60
+    observeRelayedMessages: 15
 
   peer:
     messageRelayRequest: On # should only be On / Off
@@ -49,10 +48,10 @@ economicModel:
 
   legacy:
     proportion: 1.0
-    apr: 0.0001
-    
+    apr: 0.0000000001
+
     coefficients:
-      a: 1
+      a: 2
       b: 1.4
       c: 15
       l: 0.1
@@ -97,7 +96,7 @@ storage:
 # 
 # =============================================================================
 peer:
-  minVersion: '2.1.0'
+  minVersion: '2.1.5'
   initialSleep:
     mean: 30
     std: 2
@@ -107,15 +106,8 @@ peer:
 # =============================================================================
 channel:
   minBalance: 0.05
-  fundingAmount: 0.2
+  fundingAmount: 0.1
   maxAgeSeconds: 86400
-
-# =============================================================================
-# 
-# =============================================================================
-sessions:
-  packetSize: 462
-  numPackets: 10
 
 # =============================================================================
 # 

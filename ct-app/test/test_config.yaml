@@ -35,7 +35,6 @@ flags:
     
     observeMessageQueue: On # should only be On / Off
     observeRelayedMessages: On # should only be On / Off
-    observeSessions: 60
 
   peer:
     messageRelayRequest: Off
@@ -109,13 +108,6 @@ channel:
   fundingAmount: 0.2
   maxAgeSeconds: 60
 
-# =============================================================================
-# 
-# =============================================================================
-sessions:
-  packetSize: 472
-  numPackets: 3
-  
 # =============================================================================
 # 
 # =============================================================================

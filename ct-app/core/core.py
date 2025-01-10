@@ -453,7 +453,3 @@ class Core(Base):
         """
         self.info("CTCore stopped.")
         self.running = False
-
-        for node in self.nodes:
-            for s in node.session_management.values():
-                s.socket.close()

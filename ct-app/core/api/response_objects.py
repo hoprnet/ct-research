@@ -117,6 +117,8 @@ class Configuration(ApiResponseObject):
 class OpenedChannel(ApiResponseObject):
     keys = {"channel_id": "channelId", "receipt": "transactionReceipt"}
 
+class Message(ApiResponseObject):
+    keys = {"body": "body", "timestamp": "timestamp"}
 
 class Channels:
     def __init__(self, data: dict):
@@ -129,12 +131,3 @@ class Channels:
 
     def __repr__(self):
         return str(self)
-
-
-class Session(ApiResponseObject):
-    keys = {
-        "ip": "ip",
-        "port": "port",
-        "protocol": "protocol",
-        "target": "target",
-    }
