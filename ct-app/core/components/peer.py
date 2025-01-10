@@ -9,7 +9,7 @@ from core.baseclass import Base
 
 from . import AsyncLoop, MessageFormat, MessageQueue
 from .address import Address
-from .decorators import flagguard, formalin
+from .decorators import flagguard, formalin, master
 
 STAKE = Gauge("ct_peer_stake", "Stake", ["peer_id", "type"])
 SAFE_COUNT = Gauge("ct_peer_safe_count", "Number of safes", ["peer_id"])
@@ -139,8 +139,7 @@ class Peer(Base):
 
         return True
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def message_relay_request(self):
         if self.address is None:
             return

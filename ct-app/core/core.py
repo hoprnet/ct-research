@@ -7,7 +7,7 @@ from prometheus_client import Gauge
 from .api import HoprdAPI
 from .baseclass import Base
 from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
-from .components.decorators import flagguard, formalin
+from .components.decorators import flagguard, formalin, master
 from .economic_model import EconomicModelTypes
 from .node import Node
 from .subgraph import URL, ProviderError, Type, entries
@@ -76,8 +76,7 @@ class Core(Base):
     def ct_nodes_addresses(self) -> list[Address]:
         return [node.address for node in self.nodes]
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def rotate_subgraphs(self):
         """
         Checks the subgraph URLs and sets the subgraph mode in use (default, backup or none).
@@ -85,8 +84,7 @@ class Core(Base):
         for provider in self.providers.values():
             await provider.test(self.params.subgraph.type)
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def connected_peers(self):
         """
         Aggregates the peers from all nodes and sets the all_peers LockedVar.
@@ -138,8 +136,7 @@ class Core(Base):
                 PEER_VERSION.labels(peer.address.hopr,
                                     str(peer.version)).set(1)
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def registered_nodes(self):
         """
         Gets all registered nodes in the Network Registry.
@@ -162,8 +159,7 @@ class Core(Base):
         SUBGRAPH_SIZE.set(len(results))
         self.debug(f"Fetched registered nodes ({len(results)} entries).")
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def nft_holders(self):
         """
         Gets all NFT holders.
@@ -181,8 +177,7 @@ class Core(Base):
         NFT_HOLDERS.set(len(results))
         self.debug(f"Fetched NFT holders ({len(results)} entries).")
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def allocations(self):
         """
         Gets all allocations for the investors.
@@ -204,8 +199,7 @@ class Core(Base):
         self.allocations_data = results
         self.debug(f"Fetched allocations ({len(results)} entries).")
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def eoa_balances(self):
         """
         Gets the EOA balances on Gnosis and Mainnet for the investors.
@@ -238,8 +232,7 @@ class Core(Base):
         ]
         self.debug(f"Fetched EOA balances ({len(balances)} entries).")
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def topology(self):
         """
         Gets a dictionary containing all unique source_peerId-source_address links
@@ -260,8 +253,7 @@ class Core(Base):
         self.debug(
             f"Fetched topology links ({len(self.topology_data)} entries).")
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def apply_economic_model(self):
         """
         Applies the economic model to the eligible peers (after multiple filtering layers).
@@ -345,8 +337,7 @@ class Core(Base):
             self.info(f"Eligible nodes: {eligibles} entries.")
             ELIGIBLE_PEERS.set(eligibles)
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def peers_rewards(self):
         results = dict()
         try:
@@ -359,8 +350,7 @@ class Core(Base):
         self.peers_rewards_data = results
         self.debug(f"Fetched peers rewards amounts ({len(results)} entries).")
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def ticket_parameters(self):
         """
         Gets the ticket price and winning probability from the api. They are used in the economic model to calculate the number of messages to send to a peer.
@@ -383,8 +373,7 @@ class Core(Base):
             model.budget.ticket_price = ticket_price.value
             model.budget.winning_probability = win_probability.value
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def safe_fundings(self):
         """
         Gets the total amount that was sent to CT safes.

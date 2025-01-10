@@ -7,7 +7,7 @@ from prometheus_client import Gauge
 from .api import HoprdAPI
 from .baseclass import Base
 from .components import LockedVar, Parameters, Peer, Utils
-from .components.decorators import connectguard, flagguard, formalin
+from .components.decorators import connectguard, flagguard, formalin, master
 from .components.messages import MessageFormat, MessageQueue
 
 # endregion
@@ -90,14 +90,11 @@ class Node(Base):
         else:
             self.warning("No address found")
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def healthcheck(self):
         await self._healthcheck()
 
-    @flagguard
-    @formalin
-    @connectguard
+    @master(flagguard, formalin, connectguard)
     async def retrieve_balances(self):
         """
         Retrieve the balances of the node.
@@ -112,9 +109,7 @@ class Node(Base):
 
         return balances
 
-    @flagguard
-    @formalin
-    @connectguard
+    @master(flagguard, formalin, connectguard)
     async def open_channels(self):
         """
         Open channels to discovered_peers.
@@ -149,9 +144,7 @@ class Node(Base):
             else:
                 self.warning(f"Failed to open channel to {address}")
 
-    @flagguard
-    @formalin
-    @connectguard
+    @master(flagguard, formalin, connectguard)
     async def close_incoming_channels(self):
         """
         Close incoming channels
@@ -171,9 +164,7 @@ class Node(Base):
             else:
                 self.warning(f"Failed to close channel {channel.id}")
 
-    @flagguard
-    @formalin
-    @connectguard
+    @master(flagguard, formalin, connectguard)
     async def close_pending_channels(self):
         """
         Close channels in PendingToClose state.
@@ -196,9 +187,7 @@ class Node(Base):
             else:
                 self.warning(f"Failed to close pending channel {channel.id}")
 
-    @flagguard
-    @formalin
-    @connectguard
+    @master(flagguard, formalin, connectguard)
     async def close_old_channels(self):
         """
         Close channels that have been open for too long.
@@ -246,9 +235,7 @@ class Node(Base):
             else:
                 self.warning(f"Failed to close channel {channel_id}")
 
-    @flagguard
-    @formalin
-    @connectguard
+    @master(flagguard, formalin, connectguard)
     async def fund_channels(self):
         """
         Fund channels that are below minimum threshold.
@@ -281,16 +268,13 @@ class Node(Base):
                 else:
                     self.warning(f"Failed to fund channel {channel.id}")
 
-    @flagguard
-    @formalin
-    @connectguard
+    @master(flagguard, formalin, connectguard)
     async def retrieve_peers(self):
         """
         Retrieve real peers from the network.
         """
         results = await self.api.peers()
-        peers = {Peer(item.peer_id, item.address, item.version)
-                 for item in results}
+        peers = {Peer(item.peer_id, item.address, item.version) for item in results}
         peers = {p for p in peers if not p.is_old(self.params.peer.minVersion)}
 
         addresses_w_timestamp = {
@@ -304,9 +288,7 @@ class Node(Base):
         if addr := self.address:
             PEERS_COUNT.labels(addr.hopr).set(len(peers))
 
-    @flagguard
-    @formalin
-    @connectguard
+    @master(flagguard, formalin, connectguard)
     async def retrieve_channels(self):
         """
         Retrieve all channels.
@@ -341,9 +323,7 @@ class Node(Base):
             CHANNELS.labels(addr.hopr, "outgoing").set(len(channels.outgoing))
             CHANNELS.labels(addr.hopr, "incoming").set(len(channels.incoming))
 
-    @flagguard
-    @formalin
-    @connectguard
+    @master(flagguard, formalin, connectguard)
     async def get_total_channel_funds(self):
         """
         Retrieve total funds.
@@ -367,9 +347,7 @@ class Node(Base):
 
         return funds
 
-    @flagguard
-    @formalin
-    @connectguard
+    @master(flagguard, formalin, connectguard)
     async def observe_relayed_messages(self):
         """
         Check the inbox for messages.
@@ -383,9 +361,7 @@ class Node(Base):
 
             MESSAGES_STATS.labels("relayed", self.address.hopr, message.relayer).inc()
 
-    @flagguard
-    @formalin
-    @connectguard
+    @master(flagguard, formalin, connectguard)
     async def observe_message_queue(self):
         message = await MessageQueue().get()
 
