@@ -182,7 +182,7 @@ class Node(Base):
             return
 
         out_pendings = [
-            c for c in self.channels.outgoing if c.status.isPending]
+            c for c in self.channels.outgoing if c.status.is_pending]
 
         self.info(f"Pending channels: {len(out_pendings)}")
 
