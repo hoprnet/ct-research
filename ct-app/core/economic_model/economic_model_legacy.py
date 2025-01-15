@@ -77,9 +77,9 @@ class EconomicModelLegacy:
         """
         Calculate the yearly message count a peer should receive based on the stake.
         """
-        self.coefficients.l += redeemed_rewards
+        self.coefficients.c += redeemed_rewards
         rewards = self.apr * self.transformed_stake(stake) / 100
-        self.coefficients.l -= redeemed_rewards
+        self.coefficients.c -= redeemed_rewards
 
         under = self.budget.ticket_price * self.budget.winning_probability
 
