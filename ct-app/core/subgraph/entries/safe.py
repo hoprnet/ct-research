@@ -17,7 +17,7 @@ class Safe(SubgraphEntry):
         self.address = address.lower() if isinstance(address, str) else address
         self.balance = float(balance) if balance else 0
         self.allowance = float(allowance) if allowance else 0
-        self.owners = [owner.lower() for owner in owner if isinstance(owner, str)] 
+        self.owners = [owner.lower() for owner in owners if isinstance(owner, str)] 
         self.additional_balance = 0
 
     @property
