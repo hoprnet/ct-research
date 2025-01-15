@@ -1,27 +1,35 @@
 import asyncio
-from enum import Enum
+import json
 from typing import Optional
 
 import aiohttp
 
-from .api_types import (
+from core.baseclass import Base
+
+from .http_method import HTTPMethod
+from .request_objects import (
+    ApiRequestObject,
+    FundChannelBody,
+    GetChannelsBody,
+    GetPeersBody,
+    OpenChannelBody,
+    PopMessagesBody,
+    SendMessageBody,
+)
+from .response_objects import (
     Addresses,
     Balances,
     Channels,
+    Configuration,
     ConnectedPeer,
     Infos,
+    Message,
     OpenedChannel,
     TicketPrice,
+    TicketProbability,
 )
-from .baseclass import Base
 
 MESSAGE_TAG = 0x1245
-
-
-class Method(Enum):
-    GET = "get"
-    POST = "post"
-    DELETE = "delete"
 
 
 class HoprdAPI(Base):
@@ -40,30 +48,40 @@ class HoprdAPI(Base):
 
     async def __call(
         self,
-        method: Method,
+        method: HTTPMethod,
         endpoint: str,
-        data: dict = {},
+        data: ApiRequestObject = None,
     ):
         try:
             headers = {"Content-Type": "application/json"}
             async with aiohttp.ClientSession(headers=self.headers) as s:
                 async with getattr(s, method.value)(
                     url=f"{self.host}{self.prefix}{endpoint}",
-                    json=data,
+                    json={} if data is None else data.as_dict,
                     headers=headers,
                 ) as res:
-                    return res.status, await res.json()
+                    try:
+                        data = await res.json()
+                    except Exception:
+                        data = await res.text()
+
+                    return (res.status // 200) == 1, data
 
         except OSError as e:
             self.error(f"OSError calling {method.value} {endpoint}: {e}")
 
         except Exception as e:
-            self.error(f"Exception calling {method.value} {endpoint}. error is: {e}")
+            self.error(
+                f"Exception calling {method.value} {endpoint}. error is: {e}")
 
         return (False, None)
 
     async def __call_api(
-        self, method: Method, endpoint: str, data: dict = {}, timeout: int = 60
+        self,
+        method: HTTPMethod,
+        endpoint: str,
+        data: ApiRequestObject = None,
+        timeout: int = 60,
     ) -> tuple[bool, Optional[object]]:
         try:
             return await asyncio.wait_for(
@@ -80,8 +98,7 @@ class HoprdAPI(Base):
         Returns the balance of the node.
         :return: balances: Balances | undefined
         """
-        is_ok, response = await self.__call_api(Method.GET, "account/balances")
-
+        is_ok, response = await self.__call_api(HTTPMethod.GET, "account/balances")
         return Balances(response) if is_ok else None
 
     async def open_channel(
@@ -93,17 +110,9 @@ class HoprdAPI(Base):
         :param: amount: str
         :return: channel id: str | undefined
         """
-        data = {
-            "amount": amount,
-            "peerAddress": peer_address,
-        }
+        data = OpenChannelBody(amount, peer_address)
 
-        is_ok, response = await self.__call_api(
-            Method.POST,
-            "channels",
-            data=data,
-        )
-
+        is_ok, response = await self.__call_api(HTTPMethod.POST, "channels", data)
         return OpenedChannel(response) if is_ok else None
 
     async def fund_channel(self, channel_id: str, amount: float) -> bool:
@@ -113,12 +122,11 @@ class HoprdAPI(Base):
         :param: amount: float
         :return: bool
         """
-        data = {"amount": f"{amount:.0f}"}
+        data = FundChannelBody(amount)
 
         is_ok, _ = await self.__call_api(
-            Method.POST, f"channels/{channel_id}/fund", data=data
+            HTTPMethod.POST, f"channels/{channel_id}/fund", data
         )
-
         return is_ok
 
     async def close_channel(self, channel_id: str) -> bool:
@@ -127,7 +135,7 @@ class HoprdAPI(Base):
         :param: channel_id: str
         :return: bool
         """
-        is_ok, _ = await self.__call_api(Method.DELETE, f"channels/{channel_id}")
+        is_ok, _ = await self.__call_api(HTTPMethod.DELETE, f"channels/{channel_id}")
         return is_ok
 
     async def channels(self) -> Channels:
@@ -135,11 +143,11 @@ class HoprdAPI(Base):
         Returns all channels.
         :return: channels: list
         """
-        params = {"fullTopology": "true", "includingClosed": "false"}
-        params_str = "&".join([f"{k}={v}" for k, v in params.items()])
+        params = GetChannelsBody("true", "false")
 
-        is_ok, response = await self.__call_api(Method.GET, f"channels?{params_str}")
-
+        is_ok, response = await self.__call_api(
+            HTTPMethod.GET, f"channels?{params.as_header_string}"
+        )
         return Channels(response) if is_ok else None
 
     async def peers(
@@ -153,8 +161,10 @@ class HoprdAPI(Base):
         :param: quality: int = 0..1
         :return: peers: list
         """
+        params = GetPeersBody(quality)
+
         is_ok, response = await self.__call_api(
-            Method.GET, f"node/peers?quality={quality}"
+            HTTPMethod.GET, f"node/peers?{params.as_header_string}"
         )
 
         if not is_ok:
@@ -171,7 +181,7 @@ class HoprdAPI(Base):
         Returns the address of the node.
         :return: address: str | undefined
         """
-        is_ok, response = await self.__call_api(Method.GET, "account/addresses")
+        is_ok, response = await self.__call_api(HTTPMethod.GET, "account/addresses")
 
         return Addresses(response) if is_ok else None
 
@@ -186,16 +196,26 @@ class HoprdAPI(Base):
         :param: tag: int = 0x0320
         :return: bool
         """
-        data = {
-            "body": message,
-            "path": hops,
-            "peerId": destination,
-            "tag": tag,
-        }
-
-        is_ok, _ = await self.__call_api(Method.POST, "messages", data=data)
+        data = SendMessageBody(message, hops, destination, tag)
+        is_ok, _ = await self.__call_api(HTTPMethod.POST, "messages", data=data)
 
         return is_ok
+
+    async def node_info(self) -> Optional[Infos]:
+        """
+        Gets informations about the HOPRd node.
+        :return: Infos
+        """
+        is_ok, response = await self.__call_api(HTTPMethod.GET, "node/info")
+        return Infos(response) if is_ok else None
+
+    async def ticket_price(self) -> Optional[TicketPrice]:
+        """
+        Gets the ticket price set by the oracle.
+        :return: TicketPrice
+        """
+        is_ok, response = await self.__call_api(HTTPMethod.GET, "network/price")
+        return TicketPrice(response) if is_ok else None
 
     async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
         """
@@ -203,23 +223,18 @@ class HoprdAPI(Base):
         :param: tag = 0x0320
         :return: list
         """
-        data = {} if tag is None else {"tag": tag}
         is_ok, response = await self.__call_api(
-            Method.POST, "messages/pop-all", data=data
+            HTTPMethod.POST, "messages/pop-all", data=PopMessagesBody(tag)
         )
-        return response.get("messages", []) if is_ok else []
+        return [Message(item) for item in response.get("messages", [])] if is_ok else []
 
-    async def node_info(self) -> Optional[Infos]:
-        is_ok, response = await self.__call_api(Method.GET, "node/info")
-        return Infos(response) if is_ok else None
-
-    async def ticket_price(self) -> Optional[TicketPrice]:
-        is_ok, response = await self.__call_api(Method.GET, "network/price")
-        return TicketPrice(response) if is_ok else None
-
-    async def winning_probability(self) -> Optional[float]:
-        # TODO: update to an API call once the endpoint is available
-        return 1
+    async def winning_probability(self) -> Optional[TicketProbability]:
+        """
+        Gets the winning probability set in the HOPRd node configuration file.
+        :return: TicketProbability
+        """
+        is_ok, response = await self.__call_api(HTTPMethod.GET, "node/configuration")
+        return TicketProbability(Configuration(json.loads(response)).as_dict) if is_ok else None
 
     async def healthyz(self, timeout: int = 20) -> bool:
         """

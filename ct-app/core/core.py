@@ -4,12 +4,13 @@ import random
 
 from prometheus_client import Gauge
 
-from .components import AsyncLoop, Base, HoprdAPI, LockedVar, Parameters, Utils
-from .components.decorators import flagguard, formalin
-from .model import Address, Peer
-from .model.economic_model import EconomicModelTypes
-from .model.subgraph import URL, ProviderError, Type, entries
+from .api import HoprdAPI
+from .baseclass import Base
+from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
+from .components.decorators import flagguard, formalin, master
+from .economic_model import EconomicModelTypes
 from .node import Node
+from .subgraph import URL, ProviderError, Type, entries
 
 # endregion
 
@@ -21,7 +22,8 @@ TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
 NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
 ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
 MESSAGE_COUNT = Gauge(
-    "ct_message_count", "messages one should receive / year", ["peer_id", "model"]
+    "ct_message_count", "messages one should receive / year", [
+        "peer_id", "model"]
 )
 TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
 # endregion
@@ -51,7 +53,8 @@ class Core(Base):
         self.peers_rewards_data = dict[str, float]()
 
         self.models = {
-            m: m.model.fromParameters(getattr(self.params.economicModel, m.value))
+            m: m.model.fromParameters(
+                getattr(self.params.economicModel, m.value))
             for m in EconomicModelTypes
         }
 
@@ -73,8 +76,7 @@ class Core(Base):
     def ct_nodes_addresses(self) -> list[Address]:
         return [node.address for node in self.nodes]
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def rotate_subgraphs(self):
         """
         Checks the subgraph URLs and sets the subgraph mode in use (default, backup or none).
@@ -82,8 +84,7 @@ class Core(Base):
         for provider in self.providers.values():
             await provider.test(self.params.subgraph.type)
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def connected_peers(self):
         """
         Aggregates the peers from all nodes and sets the all_peers LockedVar.
@@ -105,7 +106,8 @@ class Core(Base):
                     counts["known"] += 1
 
                     # update peer version if it has been succesfully retrieved
-                    new_version = visible_peers[visible_peers.index(peer)].version
+                    new_version = visible_peers[visible_peers.index(
+                        peer)].version
                     if new_version.major != 0:
                         peer.version = new_version
 
@@ -131,10 +133,10 @@ class Core(Base):
                 UNIQUE_PEERS.labels(key).set(value)
 
             for peer in current_peers:
-                PEER_VERSION.labels(peer.address.id, str(peer.version)).set(1)
+                PEER_VERSION.labels(peer.address.hopr,
+                                    str(peer.version)).set(1)
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def registered_nodes(self):
         """
         Gets all registered nodes in the Network Registry.
@@ -157,8 +159,7 @@ class Core(Base):
         SUBGRAPH_SIZE.set(len(results))
         self.debug(f"Fetched registered nodes ({len(results)} entries).")
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def nft_holders(self):
         """
         Gets all NFT holders.
@@ -176,8 +177,7 @@ class Core(Base):
         NFT_HOLDERS.set(len(results))
         self.debug(f"Fetched NFT holders ({len(results)} entries).")
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def allocations(self):
         """
         Gets all allocations for the investors.
@@ -199,8 +199,7 @@ class Core(Base):
         self.allocations_data = results
         self.debug(f"Fetched allocations ({len(results)} entries).")
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def eoa_balances(self):
         """
         Gets the EOA balances on Gnosis and Mainnet for the investors.
@@ -214,7 +213,8 @@ class Core(Base):
             for account in await self.providers[Type.MAINNET_BALANCES].get(
                 id_in=list(balances.keys())
             ):
-                balances[account["id"]] += float(account["totalBalance"]) / 1e18
+                balances[account["id"]
+                         ] += float(account["totalBalance"]) / 1e18
         except ProviderError as err:
             self.error(f"eoa_balances: {err}")
 
@@ -222,7 +222,8 @@ class Core(Base):
             for account in await self.providers[Type.GNOSIS_BALANCES].get(
                 id_in=list(balances.keys())
             ):
-                balances[account["id"]] += float(account["totalBalance"]) / 1e18
+                balances[account["id"]
+                         ] += float(account["totalBalance"]) / 1e18
         except ProviderError as err:
             self.error(f"eoa_balances: {err}")
 
@@ -231,8 +232,7 @@ class Core(Base):
         ]
         self.debug(f"Fetched EOA balances ({len(balances)} entries).")
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def topology(self):
         """
         Gets a dictionary containing all unique source_peerId-source_address links
@@ -250,17 +250,18 @@ class Core(Base):
         ]
 
         TOPOLOGY_SIZE.set(len(self.topology_data))
-        self.debug(f"Fetched topology links ({len(self.topology_data)} entries).")
+        self.debug(
+            f"Fetched topology links ({len(self.topology_data)} entries).")
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def apply_economic_model(self):
         """
         Applies the economic model to the eligible peers (after multiple filtering layers).
         """
         async with self.all_peers as peers:
             if not all(
-                [len(self.topology_data), len(self.registered_nodes_data), len(peers)]
+                [len(self.topology_data), len(
+                    self.registered_nodes_data), len(peers)]
             ):
                 self.warning("Not enough data to apply economic model.")
                 return
@@ -316,7 +317,7 @@ class Core(Base):
                     continue
 
                 model_input[EconomicModelTypes.LEGACY] = self.peers_rewards_data.get(
-                    peer.address.address, 0.0
+                    peer.address.native, 0.0
                 )
 
                 for model in self.models:
@@ -325,18 +326,18 @@ class Core(Base):
                         model_input[model],
                     )
 
-                    MESSAGE_COUNT.labels(peer.address.id, model.name).set(
+                    MESSAGE_COUNT.labels(peer.address.hopr, model.name).set(
                         message_count[model]
                     )
 
                 peer.yearly_message_count = sum(message_count.values())
 
-            eligibles = sum([p.yearly_message_count is not None for p in peers])
+            eligibles = sum(
+                [p.yearly_message_count is not None for p in peers])
             self.info(f"Eligible nodes: {eligibles} entries.")
             ELIGIBLE_PEERS.set(eligibles)
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def peers_rewards(self):
         results = dict()
         try:
@@ -349,8 +350,7 @@ class Core(Base):
         self.peers_rewards_data = results
         self.debug(f"Fetched peers rewards amounts ({len(results)} entries).")
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def ticket_parameters(self):
         """
         Gets the ticket price and winning probability from the api. They are used in the economic model to calculate the number of messages to send to a peer.
@@ -366,15 +366,14 @@ class Core(Base):
             return
 
         self.debug(
-            f"Ticket price: {ticket_price.value}, winning probability: {win_probability}"
+            f"Ticket price: {ticket_price.value}, winning probability: {win_probability.value}"
         )
 
         for model in self.models.values():
             model.budget.ticket_price = ticket_price.value
-            model.budget.winning_probability = win_probability
+            model.budget.winning_probability = win_probability.value
 
-    @flagguard
-    @formalin
+    @master(flagguard, formalin)
     async def safe_fundings(self):
         """
         Gets the total amount that was sent to CT safes.
@@ -433,6 +432,13 @@ class Core(Base):
         )
 
         for node in self.nodes:
-            AsyncLoop.add(node.watch_message_queue)
+            AsyncLoop.add(node.observe_message_queue)
 
         await AsyncLoop.gather()
+
+    def stop(self):
+        """
+        Stop the node.
+        """
+        self.info("CTCore stopped.")
+        self.running = False

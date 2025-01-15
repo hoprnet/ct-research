@@ -1,4 +1,4 @@
-from core.model.subgraph import Mode
+from core.subgraph import Mode
 
 
 def test_callables():

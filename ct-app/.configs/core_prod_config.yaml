@@ -33,12 +33,11 @@ flags:
 
     getTotalChannelFunds: 900
     
-    watchMessageQueue: On # should only be On / Off
-    relayedMessagesToDB: 120
+    observeMessageQueue: On # should only be On / Off
+    observeRelayedMessages: 60
 
   peer:
     messageRelayRequest: On # should only be On / Off
-    sentMessagesToDB: 120
 
 # =============================================================================
 # 
@@ -49,7 +48,6 @@ economicModel:
 
   legacy:
     proportion: 1.0
-
     apr: 12.5
 
     coefficients:
@@ -86,12 +84,6 @@ economicModel:
         upperbound: 1.0
         offset: 4.08
 
-# =============================================================================
-# 
-# =============================================================================
-storage:
-  count: 100
-  timeout: 900 # seconds
 
 # =============================================================================
 # 
@@ -101,6 +93,7 @@ peer:
   initialSleep:
     mean: 30
     std: 2
+    
 # =============================================================================
 # 
 # =============================================================================
@@ -108,7 +101,7 @@ channel:
   minBalance: 30
   fundingAmount: 35
   maxAgeSeconds: 172800
-
+  
 # =============================================================================
 # 
 # =============================================================================
