@@ -13,8 +13,8 @@ class Topology(SubgraphEntry):
         :param address: The peer's native address.
         :param channels_balance: The peer's outgoing channels total balance.
         """
-        self.peer_id: str = peer_id.lower()
-        self.address = address.lower()
+        self.peer_id: str = peer_id.lower() if peer_id is not None else None
+        self.address = address.lower() if address is not None else None
         self.channels_balance = channels_balance
 
     @classmethod
