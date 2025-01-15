@@ -14,7 +14,7 @@ class Node(SubgraphEntry):
         :param safe: A Safe object.
         """
 
-        self.address = address
+        self.address = address if isinstance(address, str) else address
         self.safe = safe
 
     @classmethod
@@ -24,6 +24,6 @@ class Node(SubgraphEntry):
         :param node: The subgraph result to create the Node from.
         """
         return cls(
-            node["node"]["id"].lower(),
+            node["node"]["id"],
             Safe.fromSubgraphResult(node["safe"]),
         )
