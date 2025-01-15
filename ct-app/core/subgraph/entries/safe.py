@@ -14,7 +14,7 @@ class Safe(SubgraphEntry):
         :param balance: The balance of the safe.
         :param allowance: The allowance of the safe.
         """
-        self.address = address
+        self.address = address.lower()
         self.balance = float(balance) if balance else 0
         self.allowance = float(allowance) if allowance else 0
         self.owners = owners
@@ -37,7 +37,7 @@ class Safe(SubgraphEntry):
             safe["id"],
             safe["balance"]["wxHoprBalance"],
             safe["allowance"]["wxHoprAllowance"],
-            [owner["owner"]["id"] for owner in safe["owners"]],
+            [owner["owner"]["id"].lower() for owner in safe["owners"]],
         )
 
     @classmethod
