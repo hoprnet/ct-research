@@ -101,6 +101,9 @@ class Node(Base):
         """
         balances = await self.api.balances()
 
+        if balances is None:
+            return None
+            
         if addr := self.address:
             for token, balance in vars(balances).items():
                 if balance is None:
