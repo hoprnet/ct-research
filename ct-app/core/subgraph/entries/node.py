@@ -24,6 +24,6 @@ class Node(SubgraphEntry):
         :param node: The subgraph result to create the Node from.
         """
         return cls(
-            node["node"]["id"].lower(),
+            node["node"]["id"],
             Safe.fromSubgraphResult(node["safe"]),
         )
