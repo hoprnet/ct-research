@@ -94,8 +94,10 @@ class Channel(ApiResponseObject):
 
     def post_init(self):
         self.status = ChannelStatus.fromString(self.status)
-        self.destination_address = self.destination_address.lower()
-        self.source_address = self.source_address.lower()
+        if isinstance(self.destination_address, str):
+            self.destination_address = self.destination_address.lower()
+        if isinstance(self.source_address, str):
+            self.source_address = self.source_address.lower()
         
 
 class TicketPrice(ApiResponseObject):
