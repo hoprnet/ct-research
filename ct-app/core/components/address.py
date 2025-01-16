@@ -10,7 +10,7 @@ class Address:
         :param address: The address of the peer.
         """
         self.hopr = hopr
-        self.native = native.lower() if isinstance(native, str) else native
+        self.native = native
 
     def __eq__(self, other):
         return self.hopr == other.hopr and self.native == other.native

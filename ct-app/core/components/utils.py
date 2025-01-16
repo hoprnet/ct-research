@@ -30,9 +30,9 @@ class Utils(Base):
         eoa_balances: dict,
     ):
         for peer in peers:
-            address = peer.node_address
-            topo = next(filter(lambda t: t.address == address, topology), None)
-            node = next(filter(lambda n: n.address == address, nodes), None)
+            address = peer.node_address.lower()
+            topo = next(filter(lambda t: t.address.lower() == address, topology), None)
+            node = next(filter(lambda n: n.address.lower() == address, nodes), None)
 
             peer.safe = getattr(node, "safe", Safe.default())
 
