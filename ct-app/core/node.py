@@ -372,6 +372,9 @@ class Node(Base):
         if message.relayer not in peers:
             return
 
+        if self.channels is None:
+            return
+            
         channels = [channel.destination_peer_id for channel in self.channels.outgoing]
         if message.relayer not in channels:
             return
