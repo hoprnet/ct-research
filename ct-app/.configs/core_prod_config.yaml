@@ -34,7 +34,7 @@ flags:
     getTotalChannelFunds: 900
     
     observeMessageQueue: On # should only be On / Off
-    observeRelayedMessages: 60
+    observeRelayedMessages: 15
 
   peer:
     messageRelayRequest: On # should only be On / Off
