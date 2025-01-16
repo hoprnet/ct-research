@@ -20,8 +20,13 @@ config: |
       on_fail_continue: true
       allow_recursive: false
       strategies: []
+    heartbeat:
+      max_parallel_probes: 50
+      threshold: 40
     protocol:
       outgoing_ticket_winning_prob: 1
+      heartbeat:
+        timeout: 7
   inbox:
     capacity: 16384
 
