@@ -310,12 +310,12 @@ class Node(Base):
             channels.outgoing = [
                 c
                 for c in channels.all
-                if c.source_peer_id == addr.hopr and c.status.is_open
+                if c.source_peer_id == addr.hopr and not c.status.is_closed
             ]
             channels.incoming = [
                 c
                 for c in channels.all
-                if c.destination_peer_id == addr.hopr and c.status.is_open
+                if c.destination_peer_id == addr.hopr and not c.status.is_closed
             ]
 
             self.channels = channels
