@@ -2,15 +2,6 @@ replicas: 5
 network: dufour
 version: "2.1.2"
 
-deployment:
-  env: |
-    - name: RUST_LOG
-      value: info
-    - name: RUST_BACKTRACE
-      value: full
-    - name: HOPRD_LOG_FORMAT
-      value: json
-      
 config: |
   hopr:
     chain:
@@ -20,13 +11,6 @@ config: |
       on_fail_continue: true
       allow_recursive: false
       strategies: []
-    heartbeat:
-      max_parallel_probes: 50
-      threshold: 40
-    protocol:
-      outgoing_ticket_winning_prob: 1
-      heartbeat:
-        timeout: 7
   inbox:
     capacity: 16384
 
