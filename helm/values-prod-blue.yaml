@@ -27,6 +27,8 @@ config: |
       outgoing_ticket_winning_prob: 1
       heartbeat:
         timeout: 7
+    network_options:
+      ignore_timeframe: 1
   inbox:
     capacity: 16384
 
