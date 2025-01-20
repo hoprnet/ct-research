@@ -281,7 +281,7 @@ class Node(Base):
         peers = {p for p in peers if not p.is_old(self.params.peer.minVersion)}
 
         addresses_w_timestamp = {
-            p.address.hopr: datetime.now() for p in peers}
+            p.address.native: datetime.now() for p in peers}
 
         await self.peers.set(peers)
         await self.peer_history.update(addresses_w_timestamp)
