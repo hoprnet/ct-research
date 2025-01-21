@@ -1,22 +1,22 @@
 # region Imports
-import asyncio
 from datetime import datetime
 
 from prometheus_client import Gauge
+
+from core.components.asyncloop import AsyncLoop
 
 from .api import HoprdAPI
 from .baseclass import Base
 from .components import LockedVar, Parameters, Peer, Utils
 from .components.decorators import connectguard, flagguard, formalin, master
 from .components.messages import MessageFormat, MessageQueue
+from .components.node_helper import NodeHelper
 
 # endregion
 
 # region Metrics
 BALANCE = Gauge("ct_balance", "Node balance", ["peer_id", "token"])
 CHANNELS = Gauge("ct_channels", "Node channels", ["peer_id", "direction"])
-CHANNELS_OPS = Gauge("ct_channel_operation",
-                     "Channel operation", ["peer_id", "op"])
 CHANNEL_FUNDS = Gauge("ct_channel_funds",
                       "Total funds in out. channels", ["peer_id"])
 HEALTH = Gauge("ct_node_health", "Node health", ["peer_id"])
@@ -135,17 +135,8 @@ class Node(Base):
             f"Addresses without channels: {len(addresses_without_channels)}")
 
         for address in addresses_without_channels:
-            self.debug(f"Opening channel to {address}")
-            ok = await self.api.open_channel(
-                address,
-                f"{int(self.params.channel.fundingAmount*1e18):d}",
-            )
-            if ok is not None:
-                self.info(f"Opened channel to {address}")
-                if addr := self.address:
-                    CHANNELS_OPS.labels(addr.hopr, "opened").inc()
-            else:
-                self.warning(f"Failed to open channel to {address}")
+            AsyncLoop.add(NodeHelper.open_channel, self.address, self.api, address,
+                          self.params.channel.fundingAmount)
 
     @master(flagguard, formalin, connectguard)
     async def close_incoming_channels(self):
@@ -158,14 +149,8 @@ class Node(Base):
         in_opens = [c for c in self.channels.incoming if c.status.is_open]
 
         for channel in in_opens:
-            self.debug(f"Closing incoming channel {channel.id}")
-            ok = await self.api.close_channel(channel.id)
-            if ok:
-                self.info(f"Closed channel {channel.id}")
-                if addr := self.address:
-                    CHANNELS_OPS.labels(addr.hopr, "incoming_closed").inc()
-            else:
-                self.warning(f"Failed to close channel {channel.id}")
+            AsyncLoop.add(NodeHelper.close_incoming_channel,
+                          self.address, self.api, channel)
 
     @master(flagguard, formalin, connectguard)
     async def close_pending_channels(self):
@@ -181,14 +166,8 @@ class Node(Base):
         self.info(f"Pending channels: {len(out_pendings)}")
 
         for channel in out_pendings:
-            self.debug(f"Closing pending channel {channel.id}")
-            ok = await self.api.close_channel(channel.id)
-            if ok:
-                self.info(f"Closed pending channel {channel.id}")
-                if addr := self.address:
-                    CHANNELS_OPS.labels(addr.hopr, "pending_closed").inc()
-            else:
-                self.warning(f"Failed to close pending channel {channel.id}")
+            AsyncLoop.add(NodeHelper.close_pending_channel,
+                          self.address, self.api, channel)
 
     @master(flagguard, formalin, connectguard)
     async def close_old_channels(self):
@@ -228,15 +207,8 @@ class Node(Base):
 
         self.info(f"Closing {len(channels_to_close)} old channels")
         for channel in channels_to_close:
-            self.debug(f"Closing channel {channel}")
-            ok = await self.api.close_channel(channel)
-
-            if ok:
-                self.info(f"Channel {channel} closed")
-                if addr := self.address:
-                    CHANNELS_OPS.labels(addr.hopr, "old_closed").inc()
-            else:
-                self.warning(f"Failed to close channel {channel_id}")
+            AsyncLoop.add(NodeHelper.close_old_channel,
+                          self.address, self.api, channel)
 
     @master(flagguard, formalin, connectguard)
     async def fund_channels(self):
@@ -260,16 +232,8 @@ class Node(Base):
 
         for channel in low_balances:
             if channel.destination_peer_id in peer_ids:
-                self.debug(f"Funding channel {channel.id}")
-                ok = await self.api.fund_channel(
-                    channel.id, self.params.channel.fundingAmount * 1e18
-                )
-                if ok:
-                    self.info(f"Funded channel {channel.id}")
-                    if addr := self.address:
-                        CHANNELS_OPS.labels(addr.hopr, "fund").inc()
-                else:
-                    self.warning(f"Failed to fund channel {channel.id}")
+                AsyncLoop.add(NodeHelper.fund_channel, self.address,
+                              self.api, channel, self.params.channel.fundingAmount)
 
     @master(flagguard, formalin, connectguard)
     async def retrieve_peers(self):
@@ -379,9 +343,7 @@ class Node(Base):
         if message.relayer not in channels:
             return
 
-        asyncio.create_task(
-            self.api.send_message(self.address.hopr, message.format(), [message.relayer])
-        )
+        AsyncLoop.add(self.api.send_message, self.address.hopr, message.format(), [message.relayer])
         MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer).inc()
 
     async def tasks(self):
