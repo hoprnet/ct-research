@@ -112,7 +112,7 @@ class HoprdAPI(Base):
         """
         data = OpenChannelBody(amount, peer_address)
 
-        is_ok, response = await self.__call_api(HTTPMethod.POST, "channels", data)
+        is_ok, response = await self.__call_api(HTTPMethod.POST, "channels", data, timeout=90)
         return OpenedChannel(response) if is_ok else None
 
     async def fund_channel(self, channel_id: str, amount: float) -> bool:
@@ -125,7 +125,7 @@ class HoprdAPI(Base):
         data = FundChannelBody(amount)
 
         is_ok, _ = await self.__call_api(
-            HTTPMethod.POST, f"channels/{channel_id}/fund", data
+            HTTPMethod.POST, f"channels/{channel_id}/fund", data, timeout=90
         )
         return is_ok
 
@@ -135,7 +135,7 @@ class HoprdAPI(Base):
         :param: channel_id: str
         :return: bool
         """
-        is_ok, _ = await self.__call_api(HTTPMethod.DELETE, f"channels/{channel_id}")
+        is_ok, _ = await self.__call_api(HTTPMethod.DELETE, f"channels/{channel_id}", timeout=90)
         return is_ok
 
     async def channels(self) -> Channels:
