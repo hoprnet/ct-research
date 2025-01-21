@@ -1,6 +1,3 @@
-
-from mimetypes import init
-
 from prometheus_client import Gauge
 
 from core.api.hoprd_api import HoprdAPI
