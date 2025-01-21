@@ -1,5 +1,4 @@
 # region Imports
-import asyncio
 import random
 
 from prometheus_client import Gauge
@@ -41,8 +40,6 @@ class Core(Base):
         self.nodes = nodes
         for node in self.nodes:
             node.params = params
-
-        self.tasks = set[asyncio.Task]()
 
         self.all_peers = LockedVar("all_peers", set[Peer]())
         self.topology_data = list[entries.Topology]()
@@ -404,9 +401,6 @@ class Core(Base):
         Start the node.
         """
         self.info(f"CTCore started with {len(self.nodes)} nodes.")
-
-        if AsyncLoop.hasRunningTasks():
-            return
 
         for node in self.nodes:
             node.running = True
