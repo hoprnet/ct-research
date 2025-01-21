@@ -50,7 +50,7 @@ class Node(Base):
 
         self.params = Parameters()
         self.connected = False
-        self.running = False
+        self.running = True
 
     @property
     async def safe_address(self):
@@ -346,23 +346,8 @@ class Node(Base):
         AsyncLoop.add(self.api.send_message, self.address.hopr, message.format(), [message.relayer])
         MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer).inc()
 
-    async def tasks(self):
-        callbacks = [
-            self.healthcheck,
-            self.retrieve_peers,
-            self.retrieve_balances,
-            self.retrieve_channels,
-            self.open_channels,
-            self.fund_channels,
-            self.close_old_channels,
-            self.close_incoming_channels,
-            self.close_pending_channels,
-            self.get_total_channel_funds,
-            self.observe_message_queue,
-            self.observe_relayed_messages,
-        ]
-
-        return callbacks
+    def tasks(self):
+        return [getattr(self, method) for method in Utils.decorated_methods(__file__, "formalin")]
 
     @classmethod
     def fromCredentials(cls, addresses: list[str], keys: list[str]):

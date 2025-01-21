@@ -7,6 +7,7 @@ from .api import HoprdAPI
 from .baseclass import Base
 from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
 from .components.decorators import flagguard, formalin, master
+from .components.utils import Utils
 from .economic_model import EconomicModelTypes
 from .node import Node
 from .subgraph import URL, ProviderError, Type, entries
@@ -59,7 +60,7 @@ class Core(Base):
             s: s.provider(URL(self.params.subgraph, s.value)) for s in Type
         }
 
-        self.running = False
+        self.running = True
 
     @property
     def api(self) -> HoprdAPI:
@@ -402,31 +403,12 @@ class Core(Base):
         """
         self.info(f"CTCore started with {len(self.nodes)} nodes.")
 
-        for node in self.nodes:
-            node.running = True
-            await node._healthcheck()
-            AsyncLoop.update(await node.tasks())
-
-        self.running = True
-
+        [await node._healthcheck() for node in self.nodes]
+        AsyncLoop.update(sum([node.tasks() for node in self.nodes], []))
         AsyncLoop.update(
-            [
-                self.rotate_subgraphs,
-                self.peers_rewards,
-                self.ticket_parameters,
-                self.connected_peers,
-                self.registered_nodes,
-                self.topology,
-                self.nft_holders,
-                self.allocations,
-                self.eoa_balances,
-                self.apply_economic_model,
-                self.safe_fundings,
-            ]
+            [getattr(self, method)
+             for method in Utils.decorated_methods(__file__, "formalin")]
         )
-
-        for node in self.nodes:
-            AsyncLoop.add(node.observe_message_queue)
 
         await AsyncLoop.gather()
 
