@@ -5,33 +5,33 @@
 flags:
   core: 
     rotateSubgraphs: 300
-    peersRewards: 300
+    peersRewards: 600
     ticketParameters: 120
 
-    connectedPeers: 300
+    connectedPeers: 120
     registeredNodes: 600
     topology: 600
     allocations: 600
     EOABalances: 600
     NFTHolders: 600
     
-    applyEconomicModel: 120
+    applyEconomicModel: 60
 
     safeFundings: 600
     
   node:
-    healthcheck: 60
-    retrievePeers: 300
-    retrieveChannels: 600
-    retrieveBalances: 900
+    healthcheck: 30
+    retrievePeers: 120
+    retrieveChannels: 120
+    retrieveBalances: 300
 
-    openChannels: 900
-    fundChannels: 1200
-    closeOldChannels: 900
-    closePendingChannels: 1800
+    openChannels: 300
+    fundChannels: 300
+    closeOldChannels: 300
+    closePendingChannels: 300
     closeIncomingChannels: Off
 
-    getTotalChannelFunds: 900
+    getTotalChannelFunds: 300
     
     observeMessageQueue: On # should only be On / Off
     observeRelayedMessages: On # should only be On / Off
@@ -88,13 +88,6 @@ economicModel:
 # =============================================================================
 # 
 # =============================================================================
-storage:
-  count: 100 # wxHOPR
-  timeout: 900 # seconds
-
-# =============================================================================
-# 
-# =============================================================================
 peer:
   minVersion: '2.1.5'
   initialSleep:
@@ -105,10 +98,10 @@ peer:
 # 
 # =============================================================================
 channel:
-  minBalance: 30
-  fundingAmount: 35
+  minBalance: 20
+  fundingAmount: 30
   maxAgeSeconds: 172800
-
+  
 # =============================================================================
 # 
 # =============================================================================

@@ -10,3 +10,4 @@ def test_message_bytes():
 
     assert len(message.bytes) == size
     assert message.relayer == relayer
+

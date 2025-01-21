@@ -29,10 +29,19 @@ class Utils(Base):
         allocations: list,
         eoa_balances: dict,
     ):
+        def filter_func(item, true_value):
+            if item is None:
+                return False
+            if not hasattr(item, "address") or not (hasattr, true_value, "address"):
+                return False
+            if item.address is None or true_value.node_address is None:
+                return False
+
+            return item.address.lower() == true_value.node_address.lower()
+
         for peer in peers:
-            address = peer.node_address
-            topo = next(filter(lambda t: t.address == address, topology), None)
-            node = next(filter(lambda n: n.address == address, nodes), None)
+            topo = next(filter(lambda t: filter_func(t, peer), topology), None)
+            node = next(filter(lambda n: filter_func(n, peer), nodes), None)
 
             peer.safe = getattr(node, "safe", Safe.default())
 

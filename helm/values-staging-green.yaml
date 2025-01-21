@@ -23,7 +23,7 @@ config: |
       allow_recursive: false
       strategies: []
     protocol:
-      outgoing_ticket_winning_prob: 0.000125
+      outgoing_ticket_winning_prob: 1
   inbox:
     capacity: 16384
 

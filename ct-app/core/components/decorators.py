@@ -2,6 +2,17 @@ import asyncio
 import functools
 
 
+def master(*decorators):
+    """
+    Decorator to combine multiple decorators into one
+    """
+    def decorator(func):
+        for decorator in reversed(decorators):
+            func = decorator(func)
+        return func
+    return decorator
+
+
 def connectguard(func):
     """
     Decorator to check if the node is connected before running anything

@@ -95,6 +95,10 @@ class Channel(ApiResponseObject):
     def post_init(self):
         self.status = ChannelStatus.fromString(self.status)
 
+        if isinstance(self.destination_address, str):
+            self.destination_address = self.destination_address.lower()
+        if isinstance(self.source_address, str):
+            self.source_address = self.source_address.lower()
 
 class TicketPrice(ApiResponseObject):
     keys = {"value": "price"}
@@ -130,7 +134,7 @@ class Channels:
     def __repr__(self):
         return str(self)
 
-
+      
 class Session(ApiResponseObject):
     keys = {
         "ip": "ip",
