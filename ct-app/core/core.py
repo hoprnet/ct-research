@@ -7,7 +7,6 @@ from .api import HoprdAPI
 from .baseclass import Base
 from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
 from .components.decorators import flagguard, formalin, master
-from .components.utils import Utils
 from .economic_model import EconomicModelTypes
 from .node import Node
 from .subgraph import URL, ProviderError, Type, entries
@@ -397,6 +396,10 @@ class Core(Base):
             f"Fetched safe fundings ({amount} + {self.params.fundings.constant})"
         )
 
+    @property
+    async def tasks(self):
+        return [getattr(self, method) for method in Utils.decorated_methods(__file__, "formalin")]
+
     async def start(self):
         """
         Start the node.
@@ -404,11 +407,8 @@ class Core(Base):
         self.info(f"CTCore started with {len(self.nodes)} nodes.")
 
         [await node._healthcheck() for node in self.nodes]
-        AsyncLoop.update(sum([node.tasks() for node in self.nodes], []))
-        AsyncLoop.update(
-            [getattr(self, method)
-             for method in Utils.decorated_methods(__file__, "formalin")]
-        )
+        AsyncLoop.update(sum([node.tasks for node in self.nodes], []))
+        AsyncLoop.update(self.tasks)
 
         await AsyncLoop.gather()
 

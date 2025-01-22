@@ -346,9 +346,6 @@ class Node(Base):
         AsyncLoop.add(self.api.send_message, self.address.hopr, message.format(), [message.relayer])
         MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer).inc()
 
+    @property
     def tasks(self):
         return [getattr(self, method) for method in Utils.decorated_methods(__file__, "formalin")]
-
-    @classmethod
-    def fromCredentials(cls, addresses: list[str], keys: list[str]):
-        return [cls(address, key) for address, key in zip(addresses, keys)]
