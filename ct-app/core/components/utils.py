@@ -153,10 +153,17 @@ class Utils(Base):
 
     @classmethod
     def decorated_methods(cls, file: str, target: str):
-        with open(file, "r") as f:
-            source_code = f.read()
-        
-        tree = ast.parse(source_code)
+        try:
+            with open(file, "r") as f:
+                source_code = f.read()
+            
+            tree = ast.parse(source_code)
+        except FileNotFoundError as e:
+            cls().error(f"Could not find file {file}: {e}")
+            return []
+        except SyntaxError as e:
+            cls().error(f"Could not parse {file}: {e}")
+            return []
 
         keepalive_methods = []
 
@@ -165,15 +172,20 @@ class Utils(Base):
                 continue
             
             for decorator in node.decorator_list:
-                if isinstance(decorator, ast.Call):
-                    args_name = [arg.id for arg in decorator.args]
+                try:
+                    if isinstance(decorator, ast.Call):
+                        args_name = [arg.id for arg in decorator.args if isinstance(arg, ast.Name)]
 
-                    if decorator.func.id != target and target not in args_name:
-                        continue
+                        if not hasattr(decorator.func, 'id') or (decorator.func.id != target and target not in args_name):
+                            continue
 
-                elif isinstance(decorator, ast.Name):
-                    if decorator.id != target:
+                    elif isinstance(decorator, ast.Name):
+                        if not hasattr(decorator, 'id') or decorator.id != target:
+                            continue
+                    else:
                         continue
+                except AttributeError:
+                    continue
 
                 keepalive_methods.append(node.name)
                 break
