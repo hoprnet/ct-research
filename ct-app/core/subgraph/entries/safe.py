@@ -1,5 +1,7 @@
 import random
 
+from prometheus_client import Gauge
+
 from .entry import SubgraphEntry
 
 STAKE = Gauge("ct_peer_stake", "Stake", ["safe", "type"])
