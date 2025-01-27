@@ -40,6 +40,8 @@ class AsyncLoop(Base, metaclass=Singleton):
             
         if publish_to_task_set:
             cls().tasks.add(task)
+        else:
+            task.add_done_callback(lambda t: t.cancel() if not t.done() else None)
 
     @classmethod
     async def gather(cls):
