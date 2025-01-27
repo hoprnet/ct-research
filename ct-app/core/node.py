@@ -343,7 +343,8 @@ class Node(Base):
         if message.relayer not in channels:
             return
 
-        AsyncLoop.add(self.api.send_message, self.address.hopr, message.format(), [message.relayer])
+        AsyncLoop.add(self.api.send_message, self.address.hopr, message.format(), [
+                      message.relayer], publish_to_task_set=False)
         MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer).inc()
 
     async def tasks(self):
