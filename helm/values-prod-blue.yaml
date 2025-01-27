@@ -10,6 +10,14 @@ deployment:
       value: full
     - name: HOPRD_LOG_FORMAT
       value: json
+    - name: HOPR_INTERNAL_LIBP2P_MSG_ACK_MAX_TOTAL_STREAMS
+      value: "10000"
+    - name: HOPR_INTERNAL_LIBP2P_YAMUX_MAX_NUM_STREAMS
+      value: "5120"
+    - name: HOPR_INTERNAL_LIBP2P_MAX_NEGOTIATING_INBOUND_STREAM_COUNT
+      value: "512"
+    - name: HOPR_INTERNAL_LIBP2P_SWARM_IDLE_TIMEOUT
+      value: "300"
 
 config: |
   hopr:
