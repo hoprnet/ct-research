@@ -107,16 +107,8 @@ class TicketPrice(ApiResponseObject):
         self.value = float(self.value) / 1e18
 
 
-class TicketProbability(ApiResponseObject):
-    keys = {"value": "probability"}
-
-    def post_init(self):
-        self.value = float(self.value)
-
-
 class Configuration(ApiResponseObject):
     keys = {
-        "probability": "hopr/protocol/outgoing_ticket_winning_prob", 
         "price": "hopr/protocol/outgoing_ticket_price"
     }
 
@@ -127,8 +119,10 @@ class Configuration(ApiResponseObject):
 class OpenedChannel(ApiResponseObject):
     keys = {"channel_id": "channelId", "receipt": "transactionReceipt"}
 
+
 class Message(ApiResponseObject):
     keys = {"body": "body", "timestamp": "timestamp"}
+
 
 class Channels:
     def __init__(self, data: dict):
