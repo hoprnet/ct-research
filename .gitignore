@@ -20,6 +20,7 @@ out.mp4
 websocket_client.log
 logs/
 *.log
+.logs/
 
 #misc
 .coverage

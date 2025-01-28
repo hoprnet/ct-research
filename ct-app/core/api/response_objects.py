@@ -105,7 +105,16 @@ class TicketPrice(ApiResponseObject):
 
     def post_init(self):
         self.value = float(self.value) / 1e18
-        
+
+
+class Configuration(ApiResponseObject):
+    keys = {
+        "price": "hopr/protocol/outgoing_ticket_price"
+    }
+
+    def post_init(self):
+        self.price = float(self.price.split()[0])
+
 
 class OpenedChannel(ApiResponseObject):
     keys = {"channel_id": "channelId", "receipt": "transactionReceipt"}
