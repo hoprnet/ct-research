@@ -11,7 +11,6 @@ from .request_objects import (
     ApiRequestObject,
     CreateSessionBody,
     DeleteSessionBody,
-
     FundChannelBody,
     GetChannelsBody,
     GetPeersBody,
@@ -30,7 +29,6 @@ from .response_objects import (
     OpenedChannel,
     Session,
     TicketPrice,
-    TicketProbability,
 )
 
 MESSAGE_TAG = 0x1245
@@ -199,19 +197,11 @@ class HoprdAPI(Base):
 
     async def ticket_price(self) -> Optional[TicketPrice]:
         """
-        Gets the ticket price set by the oracle.
+        Gets the ticket price set in the configuration file.
         :return: TicketPrice
         """
-        is_ok, response = await self.__call_api(HTTPMethod.GET, "network/price")
-        return TicketPrice(response) if is_ok else None
-
-    async def winning_probability(self) -> Optional[TicketProbability]:
-        """
-        Gets the winning probability set in the HOPRd node configuration file.
-        :return: TicketProbability
-        """
         is_ok, response = await self.__call_api(HTTPMethod.GET, "node/configuration")
-        return TicketProbability(Configuration(json.loads(response)).as_dict) if is_ok else None
+        return TicketPrice(Configuration(json.loads(response)).as_dict) if is_ok else None
 
     async def get_sessions(self, protocol: Protocol = Protocol.UDP) -> list[Session]:
         """
@@ -271,7 +261,6 @@ class HoprdAPI(Base):
         )
 
         return is_ok
-
 
     async def healthyz(self, timeout: int = 20) -> bool:
         """

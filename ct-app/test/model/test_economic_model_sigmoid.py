@@ -116,5 +116,5 @@ def test_yearly_message_count(budget: Budget):
         model.apr([0.5, 0.25])
         / 100
         * stake
-        / (budget.ticket_price * budget.winning_probability)
+        / (budget.ticket_price)
     )

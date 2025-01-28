@@ -138,7 +138,7 @@ class Node(Base):
 
         for address in addresses_without_channels:
             AsyncLoop.add(NodeHelper.open_channel, self.address, self.api, address,
-                          self.params.channel.fundingAmount)
+                          self.params.channel.fundingAmount, publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
     async def close_incoming_channels(self):
@@ -152,7 +152,7 @@ class Node(Base):
 
         for channel in in_opens:
             AsyncLoop.add(NodeHelper.close_incoming_channel,
-                          self.address, self.api, channel)
+                          self.address, self.api, channel, publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
     async def close_pending_channels(self):
@@ -169,7 +169,7 @@ class Node(Base):
 
         for channel in out_pendings:
             AsyncLoop.add(NodeHelper.close_pending_channel,
-                          self.address, self.api, channel)
+                          self.address, self.api, channel, publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
 
@@ -211,7 +211,7 @@ class Node(Base):
         self.info(f"Closing {len(channels_to_close)} old channels")
         for channel in channels_to_close:
             AsyncLoop.add(NodeHelper.close_old_channel,
-                          self.address, self.api, channel)
+                          self.address, self.api, channel, publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
     async def fund_channels(self):
@@ -236,7 +236,7 @@ class Node(Base):
         for channel in low_balances:
             if channel.destination_peer_id in peer_ids:
                 AsyncLoop.add(NodeHelper.fund_channel, self.address,
-                              self.api, channel, self.params.channel.fundingAmount)
+                              self.api, channel, self.params.channel.fundingAmount, publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
     async def retrieve_peers(self):
@@ -359,6 +359,7 @@ class Node(Base):
             )
 
         self.session_management[message.relayer].send(message.bytes)
+
         MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer).inc()
 
     @formalin

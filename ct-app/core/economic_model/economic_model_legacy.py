@@ -81,9 +81,7 @@ class EconomicModelLegacy:
         rewards = self.apr * self.transformed_stake(stake) / 100
         self.coefficients.c -= redeemed_rewards
 
-        under = self.budget.ticket_price * self.budget.winning_probability
-
-        return rewards / under * self.proportion if under != 0 else 0
+        return rewards / self.budget.ticket_price * self.proportion
 
     @classmethod
     def fromParameters(cls, parameters: Parameters):

@@ -10,7 +10,7 @@ backup:
 ctdapp:
   core:
     replicas: 1
-    tag: v3.7.0
+    tag: v3.7.2
 
   nodes:
     NODE_ADDRESS_1: http://ctdapp-blue-node-1:3001

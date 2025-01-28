@@ -30,14 +30,17 @@ class AsyncLoop(Base, metaclass=Singleton):
             cls().add(task)
 
     @classmethod
-    def add(cls, callback: Callable, *args):
+    def add(cls, callback: Callable, *args, publish_to_task_set: bool = True):
         try:
             task = asyncio.ensure_future(callback(*args))
         except Exception as e:
             cls().error(f"Failed to create task for {callback.__name__}: {e}")
             return
             
-        cls().tasks.add(task)
+        if publish_to_task_set:
+            cls().tasks.add(task)
+        else:
+            task.add_done_callback(lambda t: t.cancel() if not t.done() else None)
 
     @classmethod
     async def gather(cls):
