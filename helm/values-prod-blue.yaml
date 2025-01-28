@@ -1,6 +1,6 @@
 replicas: 5
 network: dufour
-version: 2.2.1-pr.6828
+version: "2.2.1"
 
 deployment:
   env: |
