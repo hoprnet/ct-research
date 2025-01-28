@@ -1,6 +1,6 @@
 replicas: 5
 network: rotsee
-version: 2.2.1-pr.6818
+version: 2.2.1-pr.6828
 
 deployment:
   env: |
