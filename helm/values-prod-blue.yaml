@@ -1,6 +1,6 @@
 replicas: 5
 network: dufour
-version: "2.2.1-pr.6791"
+version: "2.2.1"
 
 deployment:
   env: |
@@ -33,6 +33,7 @@ config: |
       threshold: 40
     protocol:
       outgoing_ticket_winning_prob: 1
+      outgoing_ticket_price: "1500000000000000 HOPR"
       heartbeat:
         timeout: 7
     network_options:
