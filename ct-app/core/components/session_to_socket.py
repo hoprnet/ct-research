@@ -61,8 +61,12 @@ class SessionToSocket:
         """
         Receives data from the peer.
         """
-        if self.session.protocol == Protocol.UDP:
-            data, _ = self.socket.recvfrom(size)
-            return data
-        else:
+        if self.session.protocol != Protocol.UDP:
             raise ValueError(f"Invalid protocol: {self.session.protocol}")
+
+        try:
+            data, _ = self.socket.recvfrom(size)
+        except Exception:
+            data = b""
+            
+        return data

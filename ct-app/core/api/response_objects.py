@@ -113,7 +113,8 @@ class Configuration(ApiResponseObject):
     }
 
     def post_init(self):
-        self.price = float(self.price.split()[0])
+        if isinstance(self.price, str):
+            self.price = float(self.price.split()[0])
 
 
 class OpenedChannel(ApiResponseObject):

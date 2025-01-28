@@ -40,6 +40,6 @@ class Protocol(Enum):
 
     def __eq__(self, other):
         if isinstance(other, str):
-            return other == self.name
+            return other.lower() == self.name.lower()
 
         return self.name == other.name
