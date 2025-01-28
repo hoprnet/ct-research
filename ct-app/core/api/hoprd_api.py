@@ -1,4 +1,5 @@
 import asyncio
+import json
 from typing import Optional
 
 import aiohttp
@@ -19,6 +20,7 @@ from .response_objects import (
     Addresses,
     Balances,
     Channels,
+    Configuration,
     ConnectedPeer,
     Infos,
     Message,
@@ -208,7 +210,7 @@ class HoprdAPI(Base):
 
     async def ticket_price(self) -> Optional[TicketPrice]:
         """
-        Gets the ticket price set by the oracle.
+        Gets the ticket price set in the configuration file.
         :return: TicketPrice
         """
         is_ok, response = await self.__call_api(HTTPMethod.GET, "node/configuration")
