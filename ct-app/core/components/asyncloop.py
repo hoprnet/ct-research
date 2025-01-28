@@ -15,6 +15,7 @@ class AsyncLoop(Base, metaclass=Singleton):
         self.loop.add_signal_handler(SIGINT, self.stop)
         self.loop.add_signal_handler(SIGTERM, self.stop)
 
+    @classmethod
     def run(cls, process: Callable, stop_callback: Callable):
         try:
             cls().loop.run_until_complete(process())
