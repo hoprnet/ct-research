@@ -10,8 +10,9 @@ from .baseclass import Base
 from .components import LockedVar, Parameters, Peer, Utils
 from .components.decorators import connectguard, flagguard, formalin, master
 from .components.messages import MessageFormat, MessageQueue
-from .components.session_to_socket import SessionToSocket
 from .components.node_helper import NodeHelper
+from .components.session_to_socket import SessionToSocket
+
 # endregion
 
 # region Metrics
@@ -351,6 +352,7 @@ class Node(Base):
             session = await self.api.post_session(
                 self.address.hopr, message.relayer
             )
+
             if session is None:
                 return
                 
@@ -374,8 +376,10 @@ class Node(Base):
             s.socket.close()
             to_remove.append(peer)
 
+        
+
         for peer in to_remove:
-            await self.api.close_session(self.session_management.pop(peer).session)
+            AsyncLoop.add(self.api.close_session, self.session_management.pop(peer).session, publish_to_task_set=False)
 
 
     async def tasks(self):
