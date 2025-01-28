@@ -115,7 +115,13 @@ class TicketProbability(ApiResponseObject):
 
 
 class Configuration(ApiResponseObject):
-    keys = {"probability": "hopr/protocol/outgoing_ticket_winning_prob"}
+    keys = {
+        "probability": "hopr/protocol/outgoing_ticket_winning_prob", 
+        "price": "hopr/protocol/outgoing_ticket_price"
+    }
+
+    def post_init(self):
+        self.price = float(self.price.split()[0])
 
 
 class OpenedChannel(ApiResponseObject):

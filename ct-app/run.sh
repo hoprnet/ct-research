@@ -28,5 +28,9 @@ for i in $(seq 1 $count); do
     export NODE_KEY_${i}=$TOKEN
 done
 
+# create log folder
+mkdir -p .logs
+time=$(date '+%Y%m%d_%H%M%S')
+
 echo "Starting core in $env mode"
-python -m core --configfile ./.configs/core_${env}_config.yaml 2>&1 | tee logs_core.log
+python -m core --configfile ./.configs/core_${env}_config.yaml 2>&1 | tee ".logs/core_$time.log"

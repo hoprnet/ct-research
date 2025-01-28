@@ -214,8 +214,8 @@ class HoprdAPI(Base):
         Gets the ticket price set by the oracle.
         :return: TicketPrice
         """
-        is_ok, response = await self.__call_api(HTTPMethod.GET, "network/price")
-        return TicketPrice(response) if is_ok else None
+        is_ok, response = await self.__call_api(HTTPMethod.GET, "node/configuration")
+        return TicketPrice(Configuration(json.loads(response)).as_dict) if is_ok else None
 
     async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
         """
