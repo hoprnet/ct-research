@@ -1,6 +1,6 @@
 replicas: 5
 network: rotsee
-version: singapore-latest
+version: 2.2.1-pr.6818
 
 deployment:
   env: |
@@ -24,6 +24,7 @@ config: |
       strategies: []
     protocol:
       outgoing_ticket_winning_prob: 1
+      outgoing_ticket_price: 0.0000000000000002
   inbox:
     capacity: 16384
 
