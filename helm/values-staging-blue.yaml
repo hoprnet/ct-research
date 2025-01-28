@@ -2,6 +2,17 @@ replicas: 0
 network: rotsee
 version: singapore-latest
 
+deployment:
+  env: |
+    - name: RUST_LOG
+      value: info
+    - name: RUST_BACKTRACE
+      value: full
+    - name: HOPRD_LOG_FORMAT
+      value: json
+    - name: HOPR_INTERNAL_LIBP2P_MSG_ACK_MAX_TOTAL_STREAMS
+      value: "10000"
+
 config: |
   hopr:
     chain:

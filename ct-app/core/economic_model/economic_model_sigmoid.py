@@ -94,9 +94,8 @@ class EconomicModelSigmoid(Base):
         apr = self.apr(xs)
 
         rewards = apr * stake / 100.0
-        under = self.budget.ticket_price * self.budget.winning_probability
 
-        return round(rewards / under * self.proportion) if under != 0 else 0
+        return rewards / self.budget.ticket_price * self.proportion
 
     @classmethod
     def fromParameters(cls, parameters: Parameters):

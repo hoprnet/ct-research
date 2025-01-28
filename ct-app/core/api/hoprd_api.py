@@ -26,7 +26,6 @@ from .response_objects import (
     Message,
     OpenedChannel,
     TicketPrice,
-    TicketProbability,
 )
 
 MESSAGE_TAG = 0x1245
@@ -112,7 +111,7 @@ class HoprdAPI(Base):
         """
         data = OpenChannelBody(amount, peer_address)
 
-        is_ok, response = await self.__call_api(HTTPMethod.POST, "channels", data)
+        is_ok, response = await self.__call_api(HTTPMethod.POST, "channels", data, timeout=90)
         return OpenedChannel(response) if is_ok else None
 
     async def fund_channel(self, channel_id: str, amount: float) -> bool:
@@ -125,7 +124,7 @@ class HoprdAPI(Base):
         data = FundChannelBody(amount)
 
         is_ok, _ = await self.__call_api(
-            HTTPMethod.POST, f"channels/{channel_id}/fund", data
+            HTTPMethod.POST, f"channels/{channel_id}/fund", data, timeout=90
         )
         return is_ok
 
@@ -135,7 +134,7 @@ class HoprdAPI(Base):
         :param: channel_id: str
         :return: bool
         """
-        is_ok, _ = await self.__call_api(HTTPMethod.DELETE, f"channels/{channel_id}")
+        is_ok, _ = await self.__call_api(HTTPMethod.DELETE, f"channels/{channel_id}", timeout=90)
         return is_ok
 
     async def channels(self) -> Channels:
@@ -211,11 +210,11 @@ class HoprdAPI(Base):
 
     async def ticket_price(self) -> Optional[TicketPrice]:
         """
-        Gets the ticket price set by the oracle.
+        Gets the ticket price set in the configuration file.
         :return: TicketPrice
         """
-        is_ok, response = await self.__call_api(HTTPMethod.GET, "network/price")
-        return TicketPrice(response) if is_ok else None
+        is_ok, response = await self.__call_api(HTTPMethod.GET, "node/configuration")
+        return TicketPrice(Configuration(json.loads(response)).as_dict) if is_ok else None
 
     async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
         """
@@ -227,14 +226,6 @@ class HoprdAPI(Base):
             HTTPMethod.POST, "messages/pop-all", data=PopMessagesBody(tag)
         )
         return [Message(item) for item in response.get("messages", [])] if is_ok else []
-
-    async def winning_probability(self) -> Optional[TicketProbability]:
-        """
-        Gets the winning probability set in the HOPRd node configuration file.
-        :return: TicketProbability
-        """
-        is_ok, response = await self.__call_api(HTTPMethod.GET, "node/configuration")
-        return TicketProbability(Configuration(json.loads(response)).as_dict) if is_ok else None
 
     async def healthyz(self, timeout: int = 20) -> bool:
         """

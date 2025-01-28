@@ -69,7 +69,6 @@ class SideEffect:
 def budget() -> Budget:
     budget = Budget()
     budget.ticket_price = 0.0001
-    budget.winning_probability = 1
     return budget
 
 

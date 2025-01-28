@@ -16,10 +16,6 @@ class AsyncLoop(Base, metaclass=Singleton):
         self.loop.add_signal_handler(SIGTERM, self.stop)
 
     @classmethod
-    def hasRunningTasks(cls) -> bool:
-        return bool(cls().tasks)
-
-    @classmethod
     def run(cls, process: Callable, stop_callback: Callable):
         try:
             cls().loop.run_until_complete(process())
@@ -35,9 +31,17 @@ class AsyncLoop(Base, metaclass=Singleton):
             cls().add(task)
 
     @classmethod
-    def add(cls, callback: Callable):
-        task = asyncio.ensure_future(callback())
-        cls().tasks.add(task)
+    def add(cls, callback: Callable, *args, publish_to_task_set: bool = True):
+        try:
+            task = asyncio.ensure_future(callback(*args))
+        except Exception as e:
+            cls().error(f"Failed to create task for {callback.__name__}: {e}")
+            return
+            
+        if publish_to_task_set:
+            cls().tasks.add(task)
+        else:
+            task.add_done_callback(lambda t: t.cancel() if not t.done() else None)
 
     @classmethod
     async def gather(cls):

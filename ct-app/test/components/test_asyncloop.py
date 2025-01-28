@@ -1,6 +1,7 @@
 import asyncio
 
 import pytest
+
 from core.components import AsyncLoop
 
 
@@ -41,12 +42,3 @@ async def test_update():
 
     AsyncLoop.update({foo_awaitable, bar_awaitable})
     assert len(AsyncLoop().tasks) == 2
-
-
-@pytest.mark.asyncio
-@clearAsyncLoopInstance
-async def test_hasRunningTasks():
-    assert not AsyncLoop.hasRunningTasks()
-
-    AsyncLoop.add(foo_awaitable)
-    assert AsyncLoop.hasRunningTasks()
