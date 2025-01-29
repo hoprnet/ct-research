@@ -2,14 +2,14 @@ import asyncio
 import random
 from typing import Union
 
+from core.baseclass import Base
 from packaging.version import Version
 from prometheus_client import Gauge
-
-from core.baseclass import Base
 
 from . import AsyncLoop, MessageFormat, MessageQueue
 from .address import Address
 from .decorators import flagguard, formalin, master
+
 
 STAKE = Gauge("ct_peer_stake", "Stake", ["peer_id", "type"])
 SAFE_COUNT = Gauge("ct_peer_safe_count", "Number of safes", ["peer_id"])
@@ -145,9 +145,12 @@ class Peer(Base):
             return
 
         if delay := await self.message_delay:
-            message = MessageFormat(self.address.hopr)
+            message = MessageFormat(
+                self.address.hopr, self.params.sessions.packetSize)
             await MessageQueue().buffer.put(message)
-            await asyncio.sleep(delay)
+            # 2x delay as the loopback session hops twice by the relay
+            await asyncio.sleep(delay * 2)
+
         else:
             await asyncio.sleep(
                 random.normalvariate(

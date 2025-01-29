@@ -1,6 +1,6 @@
 replicas: 5
 network: rotsee
-version: singapore-latest
+version: "2.2.1"
 
 deployment:
   env: |
@@ -10,6 +10,8 @@ deployment:
       value: full
     - name: HOPRD_LOG_FORMAT
       value: json
+    - name: HOPRD_SESSION_PORT_RANGE
+      value: 10000:11000
     - name: HOPR_INTERNAL_LIBP2P_MSG_ACK_MAX_TOTAL_STREAMS
       value: "10000"
 
@@ -23,7 +25,8 @@ config: |
       allow_recursive: false
       strategies: []
     protocol:
-      outgoing_ticket_winning_prob: 1
+      outgoing_ticket_winning_prob: 0.000125
+      outgoing_ticket_price: "200 HOPR"
   inbox:
     capacity: 16384
 

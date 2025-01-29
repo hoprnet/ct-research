@@ -34,7 +34,8 @@ flags:
     getTotalChannelFunds: 300
 
     observeMessageQueue: On  # should only be On / Off
-    observeRelayedMessages: 15
+    observeRelayedMessages: On # should only be On / Off
+    observeSessions: 60
 
   peer:
     messageRelayRequest: On # should only be On / Off
@@ -69,7 +70,7 @@ economicModel:
 
     maxAPR: 0.0000001
     networkCapacity: 100
-    totalTokenSupply: 200
+    totalTokenSupply: 500
 
     offset: 10
     buckets:
@@ -101,6 +102,13 @@ channel:
   minBalance: 0.05
   fundingAmount: 0.1
   maxAgeSeconds: 86400
+
+# =============================================================================
+# 
+# =============================================================================
+sessions:
+  packetSize: 462
+  numPackets: 10
 
 # =============================================================================
 # 

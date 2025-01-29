@@ -1,5 +1,4 @@
 import random
-
 from .entry import SubgraphEntry
 
 
@@ -37,7 +36,7 @@ class Safe(SubgraphEntry):
             safe["id"],
             safe["balance"]["wxHoprBalance"],
             safe["allowance"]["wxHoprAllowance"],
-            [owner["owner"]["id"]for owner in safe["owners"]],
+            [owner["owner"]["id"] for owner in safe["owners"]],
         )
 
     @classmethod

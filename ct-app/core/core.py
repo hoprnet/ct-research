@@ -350,25 +350,17 @@ class Core(Base):
     @master(flagguard, formalin)
     async def ticket_parameters(self):
         """
-        Gets the ticket price and winning probability from the api. They are used in the economic model to calculate the number of messages to send to a peer.
+        Gets the ticket price from the api. They are used in the economic model to calculate the number of messages to send to a peer.
         """
         ticket_price = await self.api.ticket_price()
         if ticket_price is None:
             self.warning("Ticket price not available.")
             return
 
-        win_probability = await self.api.winning_probability()
-        if win_probability is None:
-            self.warning("Winning probability not available.")
-            return
-
-        self.debug(
-            f"Ticket price: {ticket_price.value}, winning probability: {win_probability.value}"
-        )
+        self.debug(f"Ticket price: {ticket_price.value}")
 
         for model in self.models.values():
             model.budget.ticket_price = ticket_price.value
-            model.budget.winning_probability = win_probability.value
 
     @master(flagguard, formalin)
     async def safe_fundings(self):
@@ -418,3 +410,7 @@ class Core(Base):
         """
         self.info("CTCore stopped.")
         self.running = False
+
+        for node in self.nodes:
+            for s in node.session_management.values():
+                s.socket.close()
