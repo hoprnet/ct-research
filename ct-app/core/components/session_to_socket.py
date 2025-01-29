@@ -18,8 +18,14 @@ class SessionToSocket:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.socket.close()
-        self.socket = None
+        try:
+            if self.socket:
+                self.socket.close()
+        except Exception as e:
+            self.socket = None
+            raise ValueError(f"Error closing socket: {e}") from e
+        finally:
+            self.socket = None
 
     @property
     def port(self) -> int:
