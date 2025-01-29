@@ -388,6 +388,16 @@ class Core(Base):
             f"Fetched safe fundings ({amount} + {self.params.fundings.constant})"
         )
 
+    @master(flagguard, formalin)
+    async def open_sessions(self):
+        """
+        Opens sessions for all eligible peers.
+        """
+        eligible_addresses = [peer.address for peer in await self.all_peers.get() if peer.yearly_message_count is not None]
+
+        for node in self.nodes:
+            await node.open_sessions(eligible_addresses)
+
     @property
     def tasks(self):
         return [getattr(self, method) for method in Utils.decorated_methods(__file__, "formalin")]

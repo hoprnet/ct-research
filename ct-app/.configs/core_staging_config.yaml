@@ -19,6 +19,8 @@ flags:
     
     safeFundings: 600
 
+    openSessions: 60
+
   node:
     healthcheck: 60
     retrievePeers: 120
@@ -33,7 +35,6 @@ flags:
 
     getTotalChannelFunds: 300
 
-    openSessions: 20
     closeSessions: 30
 
     observeMessageQueue: On  # should only be On / Off

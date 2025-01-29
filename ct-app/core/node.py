@@ -351,19 +351,6 @@ class Node(Base):
         MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer).inc()
         
     @master(flagguard, formalin, connectguard)
-    async def open_sessions(self):
-        known_peers_peer_ids: set[Address] = set([peer.address.hopr for peer in await self.peers.get()])
-        with_session_peer_ids = set(self.session_management.keys())
-        without_session_peer_ids = known_peers_peer_ids - with_session_peer_ids
-        
-        for peer_id in without_session_peer_ids:
-            AsyncLoop.add(self.open_session, peer_id, publish_to_task_set=False)
-
-    async def open_session(self, relayer: str):
-        if session := await NodeHelper.open_session(self.address, self.api, relayer):
-            self.session_management[relayer] = SessionToSocket(session)
-
-    @master(flagguard, formalin, connectguard)
     async def close_sessions(self):
         active_sessions = await self.api.get_sessions(Protocol.UDP)
 
@@ -378,6 +365,19 @@ class Node(Base):
                           self.session_management.pop(peer_id),
                           publish_to_task_set=False)
             
+    async def open_sessions(self, allowed_addresses: list[Address]):
+        allowed_peer_ids = set([address.hopr for address in allowed_addresses])
+        peer_ids_with_session = set(self.session_management.keys())
+        without_session_peer_ids = allowed_peer_ids - peer_ids_with_session
+
+        for peer_id in without_session_peer_ids:
+            AsyncLoop.add(self.open_session, peer_id,
+                          publish_to_task_set=False)
+
+    async def open_session(self, relayer: str):
+        if session := await NodeHelper.open_session(self.address, self.api, relayer):
+            self.session_management[relayer] = SessionToSocket(session)
+
     @property
     def tasks(self):
         return [getattr(self, method) for method in Utils.decorated_methods(__file__, "formalin")]
