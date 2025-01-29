@@ -53,10 +53,10 @@ class NodeHelper(Base):
         session = await api.post_session(initiator.hopr, relayer)
         
         if session is not None:
-            cls().debug(f"Opened session from {initiator} for {relayer}")
+            cls().debug(f"Opened session from {initiator.hopr} for {relayer}: {session}")
             SESSION_OPS.labels(initiator.hopr, relayer, "opened", "yes").inc()
         else:
-            cls().warning(f"Failed to open a session from {initiator} for {relayer}")
+            cls().warning(f"Failed to open a session from {initiator.hopr} for {relayer}")
             SESSION_OPS.labels(initiator.hopr, relayer, "opened", "no").inc()
 
         return session
@@ -67,11 +67,11 @@ class NodeHelper(Base):
         ok = await api.close_session(sess_to_socket.session)
 
         if ok:
-            cls().debug(f"Closed the session from {initiator} for {relayer}")
+            cls().debug(f"Closed the session from {initiator.hopr} for {relayer}")
             SESSION_OPS.labels(initiator.hopr, relayer, "closed", "yes").inc()
             sess_to_socket.socket.close()
         else:
-            cls().warning(f"Failed to close the session from {initiator} for {relayer}")
+            cls().warning(f"Failed to close the session from {initiator.hopr} for {relayer}")
             SESSION_OPS.labels(initiator.hopr, relayer, "closed", "no").inc()
 
     
