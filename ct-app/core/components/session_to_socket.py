@@ -5,7 +5,7 @@ from core.api.response_objects import Session
 
 
 class SessionToSocket:
-    def __init__(self, session: Session, timeout: int = 1):
+    def __init__(self, session: Session, timeout: int = 5):
         self.session = session
         self.connect_address = session.ip
 

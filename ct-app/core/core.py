@@ -389,7 +389,7 @@ class Core(Base):
         )
 
     @property
-    async def tasks(self):
+    def tasks(self):
         return [getattr(self, method) for method in Utils.decorated_methods(__file__, "formalin")]
 
     async def start(self):

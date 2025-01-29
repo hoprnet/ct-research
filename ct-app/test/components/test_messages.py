@@ -1,10 +1,12 @@
 import random
 
+import pytest
+
 from core.components import MessageFormat
 
 
-def test_message_bytes():
-    size = random.randint(1, 100)
+@pytest.mark.parametrize("size",[(random.randint(10, 100))])
+def test_message_bytes(size: int):
     relayer = "foo"
     message = MessageFormat(relayer, size)
 

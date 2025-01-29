@@ -352,36 +352,32 @@ class Node(Base):
         
     @master(flagguard, formalin, connectguard)
     async def open_sessions(self):
-        known_peers_addresses: set[Address] = set([peer.address for peer in await self.peers.get()])
-        with_session_addresses = set(self.session_management.keys())
-        without_session_addresses = known_peers_addresses - with_session_addresses
+        known_peers_peer_ids: set[Address] = set([peer.address.hopr for peer in await self.peers.get()])
+        with_session_peer_ids = set(self.session_management.keys())
+        without_session_peer_ids = known_peers_peer_ids - with_session_peer_ids
         
-        for address in without_session_addresses:
-            AsyncLoop.add(self.open_session, address, publish_to_task_set=False)
+        for peer_id in without_session_peer_ids:
+            AsyncLoop.add(self.open_session, peer_id, publish_to_task_set=False)
 
-
-    async def open_session(self, relayer: Address):
-        if session := await NodeHelper.open_session(self.address, self.api, relayer.address):
+    async def open_session(self, relayer: str):
+        if session := await NodeHelper.open_session(self.address, self.api, relayer):
             self.session_management[relayer] = SessionToSocket(session)
 
     @master(flagguard, formalin, connectguard)
     async def close_sessions(self):
         active_sessions = await self.api.get_sessions(Protocol.UDP)
 
-        to_remove = []
-        for peer, s in self.session_management.items():
-            if s.session in active_sessions:
-                continue
-            s.socket.close()
-            to_remove.append(peer)        
+        to_remove = [
+            peer_id for peer_id, s in self.session_management.items() 
+            if s.session not in active_sessions
+        ]
 
-        for peer in to_remove:
+        for peer_id in to_remove:
             AsyncLoop.add(NodeHelper.close_session, 
-                self.address, self.api, peer, 
-                self.session_management.pop(peer).session, 
-                publish_to_task_set=False)
+                          self.address, self.api, peer_id,
+                          self.session_management.pop(peer_id),
+                          publish_to_task_set=False)
             
-    
     @property
     def tasks(self):
         return [getattr(self, method) for method in Utils.decorated_methods(__file__, "formalin")]

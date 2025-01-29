@@ -1,4 +1,3 @@
-from re import U
 from typing import Optional
 
 from prometheus_client import Gauge
@@ -7,6 +6,7 @@ from core.api.hoprd_api import HoprdAPI
 from core.api.response_objects import Channel, Session
 from core.baseclass import Base
 from core.components.address import Address
+from core.components.session_to_socket import SessionToSocket
 
 CHANNELS_OPS = Gauge("ct_channel_operation", "Channel operation", ["peer_id", "op"])
 SESSION_OPS = Gauge("ct_session_operation", "Session operation", ["source", "relayer", "op", "success"])
@@ -48,29 +48,30 @@ class NodeHelper(Base):
 
 
     @classmethod
-    async def open_session(cls, initiator: Address, api: HoprdAPI, relayer: Address) -> Optional[Session]:
+    async def open_session(cls, initiator: Address, api: HoprdAPI, relayer: str) -> Optional[Session]:
         cls().debug(f"Opening session from {initiator} for {relayer}")
-        session = await api.post_session(initiator.hopr, relayer.hopr)
+        session = await api.post_session(initiator.hopr, relayer)
         
         if session is not None:
             cls().debug(f"Opened session from {initiator} for {relayer}")
-            SESSION_OPS.labels(initiator.hopr, relayer.hopr, "opened", "yes").inc()
+            SESSION_OPS.labels(initiator.hopr, relayer, "opened", "yes").inc()
         else:
             cls().warning(f"Failed to open a session from {initiator} for {relayer}")
-            SESSION_OPS.labels(initiator.hopr, relayer.hopr, "opened", "no").inc()
+            SESSION_OPS.labels(initiator.hopr, relayer, "opened", "no").inc()
 
         return session
 
     @classmethod
-    async def close_session(cls, initiator: Address, api: HoprdAPI, relayer:Address, session: Session):
+    async def close_session(cls, initiator: Address, api: HoprdAPI, relayer: str, sess_to_socket: SessionToSocket):
         cls().debug(f"Closing the session from {initiator} for {relayer}")
-        ok = await api.close_session(session)
+        ok = await api.close_session(sess_to_socket.session)
 
         if ok:
             cls().debug(f"Closed the session from {initiator} for {relayer}")
-            SESSION_OPS.labels(initiator.hopr, relayer.hopr, "closed", "yes").inc()
+            SESSION_OPS.labels(initiator.hopr, relayer, "closed", "yes").inc()
+            sess_to_socket.socket.close()
         else:
             cls().warning(f"Failed to close the session from {initiator} for {relayer}")
-            SESSION_OPS.labels(initiator.hopr, relayer.hopr, "closed", "no").inc()
+            SESSION_OPS.labels(initiator.hopr, relayer, "closed", "no").inc()
 
     
