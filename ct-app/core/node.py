@@ -3,6 +3,7 @@ from datetime import datetime
 
 from prometheus_client import Gauge
 
+from core.components.address import Address
 from core.components.asyncloop import AsyncLoop
 
 from .api import HoprdAPI, Protocol
@@ -152,8 +153,8 @@ class Node(Base):
         in_opens = [c for c in self.channels.incoming if c.status.is_open]
 
         for channel in in_opens:
-            AsyncLoop.add(NodeHelper.close_incoming_channel,
-                          self.address, self.api, channel, publish_to_task_set=False)
+            AsyncLoop.add(NodeHelper.close_channel,
+                          self.address, self.api, channel, "incoming_closed", publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
     async def close_pending_channels(self):
@@ -170,10 +171,9 @@ class Node(Base):
 
         for channel in out_pendings:
             AsyncLoop.add(NodeHelper.close_pending_channel,
-                          self.address, self.api, channel, publish_to_task_set=False)
+                          self.address, self.api, channel, "pending_closed", publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
-
     async def close_old_channels(self):
         """
         Close channels that have been open for too long.
@@ -185,13 +185,13 @@ class Node(Base):
         to_peer_history = dict[str, datetime]()
         channels_to_close: list[str] = []
 
-        address_to_channel_id = {
-            c.destination_address: c.id
+        address_to_channel = {
+            c.destination_address: c
             for c in self.channels.outgoing
             if c.status.is_open
         }
 
-        for address, channel_id in address_to_channel_id.items():
+        for address, channel in address_to_channel.items():
             timestamp = peer_history.get(address, None)
 
             if timestamp is None:
@@ -203,7 +203,7 @@ class Node(Base):
             ).total_seconds() < self.params.channel.maxAgeSeconds:
                 continue
 
-            channels_to_close.append(channel_id)
+            channels_to_close.append(channel)
 
         await self.peer_history.update(to_peer_history)
         self.debug(
@@ -211,8 +211,8 @@ class Node(Base):
 
         self.info(f"Closing {len(channels_to_close)} old channels")
         for channel in channels_to_close:
-            AsyncLoop.add(NodeHelper.close_old_channel,
-                          self.address, self.api, channel, publish_to_task_set=False)
+            AsyncLoop.add(NodeHelper.close_channel,
+                          self.address, self.api, channel, "old_closed", publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
     async def fund_channels(self):
@@ -335,38 +335,39 @@ class Node(Base):
                 len(messages)
             )
 
-    @formalin
+    @master(flagguard, formalin, connectguard)
     async def observe_message_queue(self):
         message: MessageFormat = await MessageQueue().buffer.get()
 
         peers = [peer.address.hopr for peer in await self.peers.get()]
-        if message.relayer not in peers:
-            return
+        channels = [channel.destination_peer_id for channel in self.channels.outgoing]
 
-        channels = [
-            channel.destination_peer_id for channel in self.channels.outgoing]
-        if message.relayer not in channels:
-            return
-
-        if message.relayer not in self.session_management:
-            session = await self.api.post_session(
-                self.address.hopr, message.relayer
-            )
-
-            if session is None:
+        for checklist in [peers, channels, self.session_management]:
+            if message.relayer not in checklist:
                 return
-                
-            self.session_management[message.relayer] = SessionToSocket(
-                session, session.ip
-            )
 
         self.session_management[message.relayer].send(message.bytes)
 
         MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer).inc()
 
-    @formalin
-    @connectguard
-    async def observe_sessions(self):
+
+    @master(flagguard, formalin, connectguard)
+    async def open_sessions(self):
+        known_peers_addresses: set[Address] = set([peer.address for peer in await self.peers.get()])
+        with_session_addresses = set(self.session_management.keys())
+        without_session_addresses = known_peers_addresses - with_session_addresses
+        
+        for address in without_session_addresses:
+            AsyncLoop.add(self.open_session, address, publish_to_task_set=False)
+
+
+    async def open_session(self, relayer: Address):
+        if session := await NodeHelper.open_session(self.address, self.api, relayer.address):
+            self.session_management[relayer] = SessionToSocket(session)
+
+
+    @master(flagguard, formalin, connectguard)
+    async def close_sessions(self):
         active_sessions = await self.api.get_sessions(Protocol.UDP)
 
         to_remove = []
@@ -374,12 +375,13 @@ class Node(Base):
             if s.session in active_sessions:
                 continue
             s.socket.close()
-            to_remove.append(peer)
-
-        
+            to_remove.append(peer)        
 
         for peer in to_remove:
-            AsyncLoop.add(self.api.close_session, self.session_management.pop(peer).session, publish_to_task_set=False)
+            AsyncLoop.add(NodeHelper.close_session, 
+                self.address, self.api, peer, 
+                self.session_management.pop(peer).session, 
+                publish_to_task_set=False)
 
 
     async def tasks(self):
@@ -396,7 +398,8 @@ class Node(Base):
             self.get_total_channel_funds,
             self.observe_message_queue,
             self.observe_relayed_messages,
-            self.observe_sessions,
+            self.open_sessions,
+            self.close_sessions
         ]
 
         return callbacks
