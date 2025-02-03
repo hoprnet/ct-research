@@ -11,8 +11,7 @@ from . import AsyncLoop, MessageFormat, MessageQueue
 from .address import Address
 from .decorators import flagguard, formalin, master
 
-STAKE = Gauge("ct_peer_stake", "Stake", ["peer_id", "type"])
-SAFE_COUNT = Gauge("ct_peer_safe_count", "Number of safes", ["peer_id"])
+NODES_LINKED_TO_SAFE_COUNT = Gauge("ct_peer_safe_count", "Number of nodes linked to the safes", ["peer_id", "safe"])
 DELAY = Gauge("ct_peer_delay", "Delay between two messages", ["peer_id"])
 
 SECONDS_IN_A_NON_LEAP_YEAR = 365 * 24 * 60 * 60
@@ -80,7 +79,7 @@ class Peer(Base):
     @safe_address_count.setter
     def safe_address_count(self, value: int):
         self._safe_address_count = value
-        SAFE_COUNT.labels(self.address.hopr).set(value)
+        NODES_LINKED_TO_SAFE_COUNT.labels(self.address.hopr, self.safe.address).set(value)
 
     @property
     def split_stake(self) -> float:
@@ -96,7 +95,6 @@ class Peer(Base):
         split_stake = float(self.safe.total_balance) / float(
             self.safe_address_count
         ) + float(self.channel_balance)
-        STAKE.labels(self.address.hopr, "split").set(split_stake)
 
         return split_stake
 

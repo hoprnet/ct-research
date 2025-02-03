@@ -1,7 +1,10 @@
 import random
 
+from prometheus_client import Gauge
+
 from .entry import SubgraphEntry
 
+STAKE = Gauge("ct_peer_stake", "Stake", ["safe", "type"])
 
 class Safe(SubgraphEntry):
     """
@@ -19,6 +22,10 @@ class Safe(SubgraphEntry):
         self.allowance = float(allowance) if allowance else 0
         self.owners = owners
         self.additional_balance = 0
+
+        STAKE.labels(self.address, "balance").set(self.balance)
+        STAKE.labels(self.address, "allowance").set(self.allowance)
+        STAKE.labels(self.address, "additional_balance").set(self.additional_balance)
 
     @property
     def total_balance(self) -> float:
