@@ -26,7 +26,6 @@ from .response_objects import (
     Message,
     OpenedChannel,
     TicketPrice,
-    TicketProbability,
 )
 
 MESSAGE_TAG = 0x1245
@@ -211,11 +210,11 @@ class HoprdAPI(Base):
 
     async def ticket_price(self) -> Optional[TicketPrice]:
         """
-        Gets the ticket price set by the oracle.
+        Gets the ticket price set in the configuration file.
         :return: TicketPrice
         """
-        is_ok, response = await self.__call_api(HTTPMethod.GET, "network/price")
-        return TicketPrice(response) if is_ok else None
+        is_ok, response = await self.__call_api(HTTPMethod.GET, "node/configuration")
+        return TicketPrice(Configuration(json.loads(response)).as_dict) if is_ok else None
 
     async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
         """
@@ -227,14 +226,6 @@ class HoprdAPI(Base):
             HTTPMethod.POST, "messages/pop-all", data=PopMessagesBody(tag)
         )
         return [Message(item) for item in response.get("messages", [])] if is_ok else []
-
-    async def winning_probability(self) -> Optional[TicketProbability]:
-        """
-        Gets the winning probability set in the HOPRd node configuration file.
-        :return: TicketProbability
-        """
-        is_ok, response = await self.__call_api(HTTPMethod.GET, "node/configuration")
-        return TicketProbability(Configuration(json.loads(response)).as_dict) if is_ok else None
 
     async def healthyz(self, timeout: int = 20) -> bool:
         """
