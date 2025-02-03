@@ -1,6 +1,6 @@
 replicas: 5
 network: dufour
-version: "singapore-latest"
+version: singapore-latest
 
 service:
   type: LoadBalancer

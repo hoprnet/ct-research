@@ -1,4 +1,4 @@
-replicas: 5
+replicas: 0
 network: dufour
 version: singapore-latest
 
