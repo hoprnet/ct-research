@@ -1,6 +1,6 @@
 replicas: 5
 network: rotsee
-version: "2.2.1"
+version: "2.2.2-commit.fb8c1711"
 
 deployment:
   env: |
