@@ -1,6 +1,9 @@
 replicas: 5
 network: dufour
-version: "2.2.1"
+# testing Quic changes already applied to v2.2.2 branch
+# see https://console.cloud.google.com/artifacts/docker/hoprassociation/europe-west3/docker-images/hoprd/sha256:90cf0ca8d87a92a7e43887f9d9805864090616eba114295b342bdedfee80b110?inv=1&invt=AbokDA&project=hoprassociation
+version: "2.2.2-commit.fb8c1711"
+# version: "2.2.1"
 
 deployment:
   env: |
