@@ -1,6 +1,7 @@
 replicas: 5
 network: rotsee
 version: "2.2.1"
+portsAllocation: 50
 
 deployment:
   env: |

@@ -94,11 +94,11 @@ class Channel(ApiResponseObject):
 
     def post_init(self):
         self.status = ChannelStatus.fromString(self.status)
+
         if isinstance(self.destination_address, str):
             self.destination_address = self.destination_address.lower()
         if isinstance(self.source_address, str):
             self.source_address = self.source_address.lower()
-        
 
 class TicketPrice(ApiResponseObject):
     keys = {"value": "price"}
@@ -113,15 +113,13 @@ class Configuration(ApiResponseObject):
     }
 
     def post_init(self):
-        self.price = float(self.price.split()[0])
+        if isinstance(self.price, str):
+            self.price = float(self.price.split()[0])
 
 
 class OpenedChannel(ApiResponseObject):
     keys = {"channel_id": "channelId", "receipt": "transactionReceipt"}
 
-
-class Message(ApiResponseObject):
-    keys = {"body": "body", "timestamp": "timestamp"}
 
 
 class Channels:
@@ -135,3 +133,12 @@ class Channels:
 
     def __repr__(self):
         return str(self)
+
+      
+class Session(ApiResponseObject):
+    keys = {
+        "ip": "ip",
+        "port": "port",
+        "protocol": "protocol",
+        "target": "target",
+    }

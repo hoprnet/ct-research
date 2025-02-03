@@ -1,6 +1,7 @@
 replicas: 5
 network: dufour
 version: "2.2.1"
+ports_allocation: 500
 
 deployment:
   env: |

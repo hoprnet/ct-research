@@ -3,18 +3,21 @@ import json
 from typing import Optional
 
 import aiohttp
-
 from core.baseclass import Base
 
 from .http_method import HTTPMethod
+from .protocol import Protocol
 from .request_objects import (
     ApiRequestObject,
+    CreateSessionBody,
+    DeleteSessionBody,
     FundChannelBody,
     GetChannelsBody,
     GetPeersBody,
     OpenChannelBody,
-    PopMessagesBody,
-    SendMessageBody,
+    SessionCapabilitiesBody,
+    SessionPathBodyRelayers,
+    SessionTargetBody,
 )
 from .response_objects import (
     Addresses,
@@ -23,8 +26,8 @@ from .response_objects import (
     Configuration,
     ConnectedPeer,
     Infos,
-    Message,
     OpenedChannel,
+    Session,
     TicketPrice,
 )
 
@@ -184,22 +187,6 @@ class HoprdAPI(Base):
 
         return Addresses(response) if is_ok else None
 
-    async def send_message(
-        self, destination: str, message: str, hops: list[str], tag: int = MESSAGE_TAG
-    ) -> bool:
-        """
-        Sends a message to the given destination.
-        :param: destination: str
-        :param: message: str
-        :param: hops: list[str]
-        :param: tag: int = 0x0320
-        :return: bool
-        """
-        data = SendMessageBody(message, hops, destination, tag)
-        is_ok, _ = await self.__call_api(HTTPMethod.POST, "messages", data=data)
-
-        return is_ok
-
     async def node_info(self) -> Optional[Infos]:
         """
         Gets informations about the HOPRd node.
@@ -216,16 +203,64 @@ class HoprdAPI(Base):
         is_ok, response = await self.__call_api(HTTPMethod.GET, "node/configuration")
         return TicketPrice(Configuration(json.loads(response)).as_dict) if is_ok else None
 
-    async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
+    async def get_sessions(self, protocol: Protocol = Protocol.UDP) -> list[Session]:
         """
-        Pop all messages from the inbox
-        :param: tag = 0x0320
-        :return: list
+        Lists existing Session listeners for the given IP protocol
+        :param: protocol: Protocol
+        :return: list[Session]
         """
         is_ok, response = await self.__call_api(
-            HTTPMethod.POST, "messages/pop-all", data=PopMessagesBody(tag)
+            HTTPMethod.GET, f"session/{protocol.name.lower()}"
         )
-        return [Message(item) for item in response.get("messages", [])] if is_ok else []
+
+        return [Session(s) for s in response] if is_ok else None
+
+    async def post_session(
+        self,
+        destination: str,
+        relayer: str,
+        listen_host: str = ":0",
+        protocol: Protocol = Protocol.UDP
+    ) -> Optional[Session]:
+        """
+        Creates a new client session returning the given session listening host & port over TCP or UDP.
+        :param: destination: PeerID of the recipient
+        :param: relayer: PeerID of the relayer
+        :param: listen_host: str
+        :param: protocol: Protocol (UDP or TCP)
+        :return: Session
+        """
+        capabilities_body = SessionCapabilitiesBody(
+            protocol.retransmit, protocol.segment)
+        target_body = SessionTargetBody()
+        path_body = SessionPathBodyRelayers([relayer])
+
+        data = CreateSessionBody(
+            capabilities_body.as_array,
+            destination,
+            listen_host,
+            path_body.as_dict,
+            target_body.as_dict,
+        )
+
+        is_ok, response = await self.__call_api(
+            HTTPMethod.POST, f"session/{protocol.name.lower()}", data
+        )
+
+        return Session(response) if is_ok else None
+
+    async def close_session(self, session: Session) -> bool:
+        """
+        Closes an existing Sessino listener for the given IP protocol, IP and port.
+        :param: session: Session
+        """
+        data = DeleteSessionBody(session.ip, session.port)
+
+        is_ok, _ = await self.__call_api(
+            HTTPMethod.DELETE, f"session/{session.protocol}", data
+        )
+
+        return is_ok
 
     async def healthyz(self, timeout: int = 20) -> bool:
         """

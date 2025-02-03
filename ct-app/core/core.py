@@ -59,7 +59,7 @@ class Core(Base):
             s: s.provider(URL(self.params.subgraph, s.value)) for s in Type
         }
 
-        self.running = False
+        self.running = True
 
     @property
     def api(self) -> HoprdAPI:
@@ -388,37 +388,29 @@ class Core(Base):
             f"Fetched safe fundings ({amount} + {self.params.fundings.constant})"
         )
 
+    @master(flagguard, formalin)
+    async def open_sessions(self):
+        """
+        Opens sessions for all eligible peers.
+        """
+        eligible_addresses = [peer.address for peer in await self.all_peers.get() if peer.yearly_message_count is not None]
+
+        for node in self.nodes:
+            await node.open_sessions(eligible_addresses)
+
+    @property
+    def tasks(self):
+        return [getattr(self, method) for method in Utils.decorated_methods(__file__, "formalin")]
+
     async def start(self):
         """
         Start the node.
         """
         self.info(f"CTCore started with {len(self.nodes)} nodes.")
 
-        for node in self.nodes:
-            node.running = True
-            await node._healthcheck()
-            AsyncLoop.update(await node.tasks())
-
-        self.running = True
-
-        AsyncLoop.update(
-            [
-                self.rotate_subgraphs,
-                self.peers_rewards,
-                self.ticket_parameters,
-                self.connected_peers,
-                self.registered_nodes,
-                self.topology,
-                self.nft_holders,
-                self.allocations,
-                self.eoa_balances,
-                self.apply_economic_model,
-                self.safe_fundings,
-            ]
-        )
-
-        for node in self.nodes:
-            AsyncLoop.add(node.observe_message_queue)
+        [await node._healthcheck() for node in self.nodes]
+        AsyncLoop.update(sum([node.tasks for node in self.nodes], []))
+        AsyncLoop.update(self.tasks)
 
         await AsyncLoop.gather()
 
@@ -428,3 +420,7 @@ class Core(Base):
         """
         self.info("CTCore stopped.")
         self.running = False
+
+        for node in self.nodes:
+            for s in node.session_management.values():
+                s.socket.close()
