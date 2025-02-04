@@ -14,17 +14,18 @@ from .subgraph import URL, ProviderError, Type, entries
 # endregion
 
 # region Metrics
-PEER_VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
-UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers", ["type"])
-SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
-TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
-NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
 ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
 MESSAGE_COUNT = Gauge(
     "ct_message_count", "messages one should receive / year", [
         "peer_id", "model"]
 )
+NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
+PEER_VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
+REDEEMED_TICKETS = Gauge("ct_redeemed_tickets", "Redeemed tickets", ["peer_id", "sender", "timestamp"])
+SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
+TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
 TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
+UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers", ["type"])
 # endregion
 
 
@@ -336,8 +337,14 @@ class Core(Base):
     async def peers_rewards(self):
         results = dict()
         try:
-            for account in await self.providers[Type.REWARDS].get():
-                results[Utils.checksum_address(account["id"])] = float(account["redeemedValue"])
+            for acc in await self.providers[Type.REWARDS].get():
+                account = entries.Account.fromSubgraphResult(acc)
+                results[account.address] = account.redeemed_value
+
+                for channel in account.channels:
+                    for idx, ticket in enumerate(channel.tickets, start=1):
+                        REDEEMED_TICKETS.labels(account.address, channel.source, ticket.timestamp).set(ticket.value)
+
 
         except ProviderError as err:
             self.error(f"get_peers_rewards: {err}")

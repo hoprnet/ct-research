@@ -4,19 +4,19 @@
 # =============================================================================
 flags:
   core: 
-    rotateSubgraphs: 300
-    peersRewards: 600
+    applyEconomicModel: 60
     ticketParameters: 120
 
     connectedPeers: 120
-    registeredNodes: 600
     topology: 600
+
+    rotateSubgraphs: 300
+
+    peersRewards: 600
+    registeredNodes: 600
     allocations: 600
     EOABalances: 600
     NFTHolders: 600
-    
-    applyEconomicModel: 60
-
     safeFundings: 600
     
   node:
@@ -141,6 +141,14 @@ subgraph:
   rewards:
     queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
     slug: hopr-channels
+    inputs:
+      source_in:
+        # blue nodes
+        - '0x5927c321ca2a925d17edcf9c58343e24337d18ba'
+        - '0x0543aa9d1dafa9cc49bf87ce5ea1e18277b3ae0f'
+        - '0x29d61ddbc682f272fc7f0dfb203938e211471826'
+        - '0x8fd1766b4215944f2eb21f03e6820bc3c75d936c'
+        - '0x633382b748e34432df1dbdfdd234833454b3d768'
   safesBalance:
     queryID: GP2abJCarirMJCanuk4SBmnadiobEWH9ME2MNRAHbBTp
     slug: hopr-nodes-dufour
