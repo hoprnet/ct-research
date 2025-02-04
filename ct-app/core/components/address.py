@@ -1,3 +1,6 @@
+from core.components.utils import Utils
+
+
 class Address:
     """
     Class that represents an address with a native and native address.
@@ -10,7 +13,7 @@ class Address:
         :param address: The address of the peer.
         """
         self.hopr = hopr
-        self.native = native.lower()
+        self.native = Utils.checksum_address(native)
 
     def __eq__(self, other):
         return self.hopr == other.hopr and self.native == other.native

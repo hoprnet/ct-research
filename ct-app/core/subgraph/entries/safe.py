@@ -17,10 +17,10 @@ class Safe(SubgraphEntry):
         :param balance: The balance of the safe.
         :param allowance: The allowance of the safe.
         """
-        self.address = address
+        self.address = self.checksum(address)
         self.balance = float(balance) if balance else 0
         self.allowance = float(allowance) if allowance else 0
-        self.owners = owners
+        self.owners = [self.checksum(owner) for owner in owners ] 
         self.additional_balance = 0
 
         STAKE.labels(self.address, "balance").set(self.balance)

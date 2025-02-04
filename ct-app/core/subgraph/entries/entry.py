@@ -1,3 +1,6 @@
+from web3 import Web3
+
+
 class SubgraphEntry:
     def __str__(self):
         cls = self.__class__.__name__
@@ -10,3 +13,13 @@ class SubgraphEntry:
 
     def __eq__(self, other):
         return vars(self) == vars(other)
+
+    @classmethod
+    def checksum(cls, address: str):
+        try:
+            return Web3().to_checksum_address(address)
+        except ValueError:
+            pass
+        except TypeError:
+            pass
+        return address

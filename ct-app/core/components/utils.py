@@ -1,3 +1,5 @@
+from web3 import Web3
+
 from core.baseclass import Base
 from core.subgraph.entries import Safe
 
@@ -148,3 +150,10 @@ class Utils(Base):
                 c.balance) / 1e18
 
         return results
+
+    @classmethod
+    def checksum_address(cls, address: str):
+        try:
+            return Web3().to_checksum_address(address)
+        except ValueError:
+            return address
