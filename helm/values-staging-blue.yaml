@@ -2,6 +2,9 @@ replicas: 0
 network: rotsee
 version: singapore-latest
 
+service:
+  type: LoadBalancer
+
 deployment:
   env: |
     - name: RUST_LOG

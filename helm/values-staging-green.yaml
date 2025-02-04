@@ -1,6 +1,9 @@
 replicas: 5
 network: rotsee
-version: "2.2.2-commit.fb8c1711"
+version: singapore-latest
+
+service:
+  type: LoadBalancer
 
 deployment:
   env: |
