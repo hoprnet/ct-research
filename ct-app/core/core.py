@@ -145,7 +145,7 @@ class Core(Base):
                 results.extend(
                     [
                         entries.Node.fromSubgraphResult(node)
-                        for node in safe["registeredNodesInNetworkRegistry"]
+                        for node in safe["registeredNodesInSafeRegistry"]
                     ]
                 )
 
@@ -210,8 +210,7 @@ class Core(Base):
             for account in await self.providers[Type.MAINNET_BALANCES].get(
                 id_in=list(balances.keys())
             ):
-                balances[account["id"]
-                         ] += float(account["totalBalance"]) / 1e18
+                balances[Utils.checksum_address(account["id"])] += float(account["totalBalance"]) / 1e18
         except ProviderError as err:
             self.error(f"eoa_balances: {err}")
 
@@ -219,8 +218,7 @@ class Core(Base):
             for account in await self.providers[Type.GNOSIS_BALANCES].get(
                 id_in=list(balances.keys())
             ):
-                balances[account["id"]
-                         ] += float(account["totalBalance"]) / 1e18
+                balances[Utils.checksum_address(account["id"])] += float(account["totalBalance"]) / 1e18
         except ProviderError as err:
             self.error(f"eoa_balances: {err}")
 
@@ -339,7 +337,7 @@ class Core(Base):
         results = dict()
         try:
             for account in await self.providers[Type.REWARDS].get():
-                results[account["id"]] = float(account["redeemedValue"])
+                results[Utils.checksum_address(account["id"])] = float(account["redeemedValue"])
 
         except ProviderError as err:
             self.error(f"get_peers_rewards: {err}")
