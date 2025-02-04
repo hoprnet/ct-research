@@ -1,6 +1,9 @@
-replicas: 5
+replicas: 0
 network: dufour
-version: "2.1.2"
+version: singapore-latest
+
+service:
+  type: LoadBalancer
 
 config: |
   hopr:
