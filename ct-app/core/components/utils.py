@@ -7,6 +7,8 @@ from .environment_utils import EnvironmentUtils
 
 
 class Utils(Base):
+    _web3 = None  # Class variable to store Web3 instance
+
     @classmethod
     def nodesCredentials(
         cls, address_prefix: str, keyenv: str
@@ -153,7 +155,13 @@ class Utils(Base):
 
     @classmethod
     def checksum_address(cls, address: str):
+        if not cls._web3:
+            cls._web3 = Web3()
+
         try:
-            return Web3().to_checksum_address(address)
+            return cls._web3.to_checksum_address(address)
         except ValueError:
-            return address
+            pass
+        except TypeError:
+            pass
+        return address
