@@ -1,18 +1,4 @@
 accounts(first: $first, skip: $skip, where: {redeemedValue_gt: "0"}) {
     id
     redeemedValue
-    toChannels(where: {source_: {id_in: $source_in}}) {
-        id
-        redeemedTicketCount
-        tickets {
-            id
-            amount
-            redeemedAt
-        }
-        source {
-            id
-        }
-    }
 }
-
-

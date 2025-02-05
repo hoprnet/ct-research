@@ -213,7 +213,7 @@ class Staking(GraphQLProvider):
 class Rewards(GraphQLProvider):
     def __init__(self, url: URL):
         super().__init__(url)
-        self._initialize_query("rewards.graphql", ['$source_in: [String!] = [""]'])
+        self._initialize_query("rewards.graphql")
 
 class Allocations(GraphQLProvider):
     def __init__(self, url: URL):

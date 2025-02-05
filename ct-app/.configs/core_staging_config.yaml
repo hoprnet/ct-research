@@ -141,20 +141,6 @@ subgraph:
   rewards:
     queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
     slug: hopr-channels
-    inputs:
-      source_in:
-        # blue nodes
-        - '0x5927c321ca2a925d17edcf9c58343e24337d18ba'
-        - '0x0543aa9d1dafa9cc49bf87ce5ea1e18277b3ae0f'
-        - '0x29d61ddbc682f272fc7f0dfb203938e211471826'
-        - '0x8fd1766b4215944f2eb21f03e6820bc3c75d936c'
-        - '0x633382b748e34432df1dbdfdd234833454b3d768'
-        # green nodes
-        - '0xac3c2d1f751d9c763be29aabb20cf31295f3ea27'
-        - '0x154a32241dacd34c55ca65c2dfdef173d6d9e7f3'
-        - '0x7673daf47ae218d7d9b2fa0e8fc397c2a6940bc1'
-        - '0xc2421cc4e9b3eeaefea2d87d2ee3dde9cc772e8a'
-        - '0x4b306f6a7fee6cbfdab11645b81337cbaab59900'
   safesBalance:
     queryID: GmbJTpa1o4baeStDT48TfQu4ditJmQwwXYPG1DvEiufB
     slug: hopr-nodes-rotsee

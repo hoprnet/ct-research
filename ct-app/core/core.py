@@ -21,7 +21,6 @@ MESSAGE_COUNT = Gauge(
 )
 NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
 PEER_VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
-REDEEMED_TICKETS = Gauge("ct_redeemed_tickets_amounts", "Redeemed tickets", ["relayer", "sender", "timestamp"])
 SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
 TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
 TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
@@ -340,14 +339,8 @@ class Core(Base):
             for acc in await self.providers[Type.REWARDS].get():
                 account = entries.Account.fromSubgraphResult(acc)
                 results[account.address] = account.redeemed_value
-
-                for channel in account.channels:
-                    for idx, ticket in enumerate(channel.tickets, start=1):
-                        REDEEMED_TICKETS.labels(account.address, channel.source, ticket.timestamp).set(ticket.value)
-
-
         except ProviderError as err:
-            self.error(f"get_peers_rewards: {err}")
+            self.error(f"peers_rewards: {err}")
 
         self.peers_rewards_data = results
         self.debug(f"Fetched peers rewards amounts ({len(results)} entries).")
@@ -384,7 +377,7 @@ class Core(Base):
         try:
             entries = await provider.get(to_in=addresses)
         except ProviderError as err:
-            self.error(f"get_peers_rewards: {err}")
+            self.error(f"safe_fundings: {err}")
             entries = []
         amount = sum([float(item["amount"]) for item in entries])
 
