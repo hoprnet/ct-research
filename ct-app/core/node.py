@@ -20,7 +20,7 @@ CHANNELS = Gauge("ct_channels", "Node channels", ["peer_id", "direction"])
 CHANNEL_FUNDS = Gauge("ct_channel_funds",
                       "Total funds in out. channels", ["peer_id"])
 HEALTH = Gauge("ct_node_health", "Node health", ["peer_id"])
-MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer"])
+MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer", "uuid", "timestamp"])
 PEERS_COUNT = Gauge("ct_peers_count", "Node peers", ["peer_id"])
 # endregion
 
@@ -135,7 +135,7 @@ class Node(Base):
             f"Addresses without channels: {len(addresses_without_channels)}")
 
         for address in addresses_without_channels:
-            AsyncLoop.add(NodeHelper.open_channel, self.address, self.api, address,
+            await AsyncLoop.add(NodeHelper.open_channel, self.address, self.api, address,
                           self.params.channel.fundingAmount, publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
@@ -149,7 +149,7 @@ class Node(Base):
         in_opens = [c for c in self.channels.incoming if c.status.is_open]
 
         for channel in in_opens:
-            AsyncLoop.add(NodeHelper.close_incoming_channel,
+            await AsyncLoop.add(NodeHelper.close_incoming_channel,
                           self.address, self.api, channel, publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
@@ -166,7 +166,7 @@ class Node(Base):
         self.info(f"Pending channels: {len(out_pendings)}")
 
         for channel in out_pendings:
-            AsyncLoop.add(NodeHelper.close_pending_channel,
+            await AsyncLoop.add(NodeHelper.close_pending_channel,
                           self.address, self.api, channel, publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
@@ -207,7 +207,7 @@ class Node(Base):
 
         self.info(f"Closing {len(channels_to_close)} old channels")
         for channel in channels_to_close:
-            AsyncLoop.add(NodeHelper.close_old_channel,
+            await AsyncLoop.add(NodeHelper.close_old_channel,
                           self.address, self.api, channel, publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
@@ -232,7 +232,7 @@ class Node(Base):
 
         for channel in low_balances:
             if channel.destination_peer_id in peer_ids:
-                AsyncLoop.add(NodeHelper.fund_channel, self.address,
+                await AsyncLoop.add(NodeHelper.fund_channel, self.address,
                               self.api, channel, self.params.channel.fundingAmount, publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
@@ -326,7 +326,7 @@ class Node(Base):
                 self.error(f"Error while parsing message: {err}")
                 continue
 
-            MESSAGES_STATS.labels("relayed", self.address.hopr, message.relayer).inc()
+            MESSAGES_STATS.labels("relayed", self.address.hopr, message.relayer, message.uid, message.timestamp).inc()
 
     @master(flagguard, formalin, connectguard)
     async def observe_message_queue(self):
@@ -343,9 +343,11 @@ class Node(Base):
         if message.relayer not in channels:
             return
 
-        AsyncLoop.add(self.api.send_message, self.address.hopr, message.format(), [
-                      message.relayer], publish_to_task_set=False)
-        MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer).inc()
+        ack = await AsyncLoop.add(self.api.send_message, self.address.hopr, message.format(), [
+                      message.relayer], publish_to_task_set=False, get_result=True)
+
+        if ack:
+            MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer, message.uid, ack.timestamp).inc()
 
     async def tasks(self):
         callbacks = [

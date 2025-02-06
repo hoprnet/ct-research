@@ -123,6 +123,8 @@ class OpenedChannel(ApiResponseObject):
 class Message(ApiResponseObject):
     keys = {"body": "body", "timestamp": "timestamp"}
 
+class SendMessageAck(ApiResponseObject):
+    keys =  {"timestamp": "timestamp"}
 
 class Channels:
     def __init__(self, data: dict):

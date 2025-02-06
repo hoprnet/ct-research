@@ -31,7 +31,7 @@ async def bar_awaitable():
 async def test_add():
     assert len(AsyncLoop().tasks) == 0
 
-    AsyncLoop.add(foo_awaitable)
+    await AsyncLoop.add(foo_awaitable)
     assert len(AsyncLoop().tasks) == 1
 
 
@@ -40,5 +40,5 @@ async def test_add():
 async def test_update():
     assert len(AsyncLoop().tasks) == 0
 
-    AsyncLoop.update({foo_awaitable, bar_awaitable})
+    await AsyncLoop.update({foo_awaitable, bar_awaitable})
     assert len(AsyncLoop().tasks) == 2

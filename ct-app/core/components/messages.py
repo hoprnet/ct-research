@@ -1,4 +1,5 @@
 import re
+import uuid
 from asyncio import Queue
 
 from prometheus_client import Gauge
@@ -8,10 +9,11 @@ from .singleton import Singleton
 QUEUE_SIZE = Gauge("ct_queue_size", "Size of the message queue")
 
 class MessageFormat:
-    pattern = "{relayer}"
+    pattern = "{relayer} {uid}"
 
-    def __init__(self, relayer: str):
+    def __init__(self, relayer: str, uid: str = None):
         self.relayer = relayer
+        self.uid = uid if uid else str(uuid.uuid4())
 
     @classmethod
     def parse(cls, input_string: str):
