@@ -187,7 +187,7 @@ class HoprdAPI(Base):
 
     async def send_message(
         self, destination: str, message: str, hops: list[str], tag: int = MESSAGE_TAG
-    ) -> bool:
+    ) -> Optional[SendMessageAck]:
         """
         Sends a message to the given destination.
         :param: destination: str

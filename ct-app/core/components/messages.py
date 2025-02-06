@@ -25,7 +25,7 @@ class MessageFormat:
             raise ValueError(
                 f"Input string format is incorrect. {input_string} incompatible with format {cls.pattern}"
             )
-        return cls(match.group("relayer"))
+        return cls(match.group("relayer"), match.group("uid"))
 
     def format(self):
         return self.pattern.format_map(self.__dict__)
