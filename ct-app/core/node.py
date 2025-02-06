@@ -327,7 +327,6 @@ class Node(Base):
                 continue
 
             MESSAGES_STATS.labels("relayed", self.address.hopr, message.relayer, message.uid).inc()
-            del m
 
     @master(flagguard, formalin, connectguard)
     async def observe_message_queue(self):
@@ -349,7 +348,6 @@ class Node(Base):
 
         MESSAGES_STATS.labels("sent", self.address.hopr,
                               message.relayer, message.uid).inc()
-        del message
 
     async def tasks(self):
         callbacks = [
