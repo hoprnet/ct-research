@@ -423,9 +423,6 @@ class Core(Base):
             ]
         )
 
-        for node in self.nodes:
-            AsyncLoop.add(node.observe_message_queue)
-
         await AsyncLoop.gather()
 
     def stop(self):
