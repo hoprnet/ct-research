@@ -13,7 +13,7 @@ class MessageFormat:
 
     def __init__(self, relayer: str, timestamp: str = None):
         self.relayer = relayer
-        self.timestamp = int(timestamp) if timestamp else int(datetime.now().timestamp()*1000)
+        self.timestamp = int(float(timestamp)) if timestamp else int(datetime.now().timestamp()*1000)
 
     @classmethod
     def parse(cls, input_string: str):
