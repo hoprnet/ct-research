@@ -100,7 +100,7 @@ class Core(Base):
                 if peer in visible_peers:
                     if peer.yearly_message_count is None:
                         peer.yearly_message_count = 0
-                        peer.start_async_processes()
+                        await peer.start_async_processes()
                     counts["known"] += 1
 
                     # update peer version if it has been succesfully retrieved
@@ -120,7 +120,7 @@ class Core(Base):
                 if peer not in current_peers:
                     peer.params = self.params
                     peer.yearly_message_count = 0
-                    peer.start_async_processes()
+                    await peer.start_async_processes()
                     current_peers.add(peer)
                     counts["new"] += 1
 
@@ -401,11 +401,11 @@ class Core(Base):
         for node in self.nodes:
             node.running = True
             await node._healthcheck()
-            AsyncLoop.update(await node.tasks())
+            await AsyncLoop.update(await node.tasks())
 
         self.running = True
 
-        AsyncLoop.update(
+        await AsyncLoop.update(
             [
                 self.rotate_subgraphs,
                 self.peers_rewards,
@@ -422,7 +422,7 @@ class Core(Base):
         )
 
         for node in self.nodes:
-            AsyncLoop.add(node.observe_message_queue)
+            await AsyncLoop.add(node.observe_message_queue)
 
         await AsyncLoop.gather()
 

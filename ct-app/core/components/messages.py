@@ -1,6 +1,6 @@
 import re
-import uuid
 from asyncio import Queue
+from datetime import datetime
 
 from prometheus_client import Gauge
 
@@ -9,11 +9,11 @@ from .singleton import Singleton
 QUEUE_SIZE = Gauge("ct_queue_size", "Size of the message queue")
 
 class MessageFormat:
-    pattern = "{relayer} {uid}"
+    pattern = "{relayer} {timestamp}"
 
-    def __init__(self, relayer: str, uid: str = None):
+    def __init__(self, relayer: str, timestamp: str = None):
         self.relayer = relayer
-        self.uid = uid if uid else str(uuid.uuid4())
+        self.timestamp = float(timestamp) or datetime.now().timestamp()
 
     @classmethod
     def parse(cls, input_string: str):
@@ -25,7 +25,7 @@ class MessageFormat:
             raise ValueError(
                 f"Input string format is incorrect. {input_string} incompatible with format {cls.pattern}"
             )
-        return cls(match.group("relayer"), match.group("uid"))
+        return cls(match.group("relayer"), match.group("timestamp"))
 
     def format(self):
         return self.pattern.format_map(self.__dict__)
