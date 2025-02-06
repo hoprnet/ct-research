@@ -4,6 +4,8 @@ from test.decorators_patches import patches
 
 import pytest
 import yaml
+from pytest_mock import MockerFixture
+
 from core.api.response_objects import (
     Addresses,
     Balances,
@@ -23,7 +25,6 @@ from core.economic_model import (
     Equations,
 )
 from core.node import Node
-from pytest_mock import MockerFixture
 
 
 class SideEffect:

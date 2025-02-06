@@ -1,5 +1,7 @@
 from typing import Any
 
+from core.components.utils import Utils
+
 from .channelstatus import ChannelStatus
 
 
@@ -95,9 +97,9 @@ class Channel(ApiResponseObject):
     def post_init(self):
         self.status = ChannelStatus.fromString(self.status)
         if isinstance(self.destination_address, str):
-            self.destination_address = self.destination_address.lower()
+            self.destination_address = Utils.checksum_address(self.destination_address)
         if isinstance(self.source_address, str):
-            self.source_address = self.source_address.lower()
+            self.source_address = Utils.checksum_address(self.source_address)
         
 
 class TicketPrice(ApiResponseObject):

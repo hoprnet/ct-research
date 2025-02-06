@@ -1,3 +1,9 @@
+from prometheus_client import Gauge
+
+from core.components.utils import Utils
+
+PEER = Gauge("ct_address_pairs", "PeerID / address pairs of node reachable by CT", ["peer_id", "address"])
+
 class Address:
     """
     Class that represents an address with a native and native address.
@@ -10,7 +16,8 @@ class Address:
         :param address: The address of the peer.
         """
         self.hopr = hopr
-        self.native = native.lower()
+        self.native = Utils.checksum_address(native)
+        PEER.labels(self.hopr, self.native).set(1)
 
     def __eq__(self, other):
         return self.hopr == other.hopr and self.native == other.native

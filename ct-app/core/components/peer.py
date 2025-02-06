@@ -11,8 +11,9 @@ from . import AsyncLoop, MessageFormat, MessageQueue
 from .address import Address
 from .decorators import flagguard, formalin, master
 
-NODES_LINKED_TO_SAFE_COUNT = Gauge("ct_peer_safe_count", "Number of nodes linked to the safes", ["peer_id", "safe"])
+CHANNEL_STAKE = Gauge("ct_peer_channels_balance", "Balance in outgoing channels", ["peer_id"])
 DELAY = Gauge("ct_peer_delay", "Delay between two messages", ["peer_id"])
+NODES_LINKED_TO_SAFE_COUNT = Gauge("ct_peer_safe_count", "Number of nodes linked to the safes", ["peer_id", "safe"])
 
 SECONDS_IN_A_NON_LEAP_YEAR = 365 * 24 * 60 * 60
 
@@ -31,10 +32,10 @@ class Peer(Base):
         """
         self.address = Address(id, address)
         self.version = version
-        self.channel_balance = None
 
         self.safe = None
         self._safe_address_count = None
+        self._channel_balance = None
 
         self.yearly_message_count = 0
 
@@ -64,6 +65,15 @@ class Peer(Base):
                 value = Version("0.0.0")
 
         self._version = value
+
+    @property
+    def channel_balance(self):
+        return self._channel_balance
+
+    @channel_balance.setter
+    def channel_balance(self, value):
+        self._channel_balance = value
+        CHANNEL_STAKE.labels(self.address.hopr).set(value if value is not None else 0)
 
     @property
     def node_address(self) -> str:
