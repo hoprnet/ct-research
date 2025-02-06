@@ -121,7 +121,7 @@ class OpenedChannel(ApiResponseObject):
 
 
 class Message(ApiResponseObject):
-    keys = {"body": "body", "timestamp": "timestamp"}
+    keys = {"body": "body", "timestamp": "receivedAt"}
 
 class SendMessageAck(ApiResponseObject):
     keys =  {"timestamp": "timestamp"}
