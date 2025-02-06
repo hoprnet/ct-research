@@ -26,12 +26,12 @@ class AsyncLoop(Base, metaclass=Singleton):
             cls().stop()
 
     @classmethod
-    async def update(cls, tasks: set[Callable]):
+    def update(cls, tasks: set[Callable]):
         for task in tasks:
-            await cls().add(task)
+            cls().add(task)
 
     @classmethod
-    async def add(cls, callback: Callable, *args, publish_to_task_set: bool=True, get_result: bool=False):
+    def add(cls, callback: Callable, *args, publish_to_task_set: bool=True):
         try:
             task = asyncio.ensure_future(callback(*args))
         except Exception as e:
@@ -42,9 +42,6 @@ class AsyncLoop(Base, metaclass=Singleton):
             cls().tasks.add(task)
         else:
             task.add_done_callback(lambda t: t.cancel() if not t.done() else None)
-
-        if get_result:
-            return await task
 
     @classmethod
     async def gather(cls):
