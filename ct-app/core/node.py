@@ -20,7 +20,7 @@ CHANNELS = Gauge("ct_channels", "Node channels", ["peer_id", "direction"])
 CHANNEL_FUNDS = Gauge("ct_channel_funds",
                       "Total funds in out. channels", ["peer_id"])
 HEALTH = Gauge("ct_node_health", "Node health", ["peer_id"])
-MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer", "uuid", "timestamp"])
+MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer", "uuid"])
 PEERS_COUNT = Gauge("ct_peers_count", "Node peers", ["peer_id"])
 # endregion
 
@@ -326,7 +326,8 @@ class Node(Base):
                 self.error(f"Error while parsing message: {err}")
                 continue
 
-            MESSAGES_STATS.labels("relayed", self.address.hopr, message.relayer, message.uid, m.timestamp).inc()
+            MESSAGES_STATS.labels("relayed", self.address.hopr, message.relayer, message.uid).inc()
+            del m
 
     @master(flagguard, formalin, connectguard)
     async def observe_message_queue(self):
@@ -346,9 +347,9 @@ class Node(Base):
         AsyncLoop.add(self.api.send_message, self.address.hopr, message.format(), [
                       message.relayer], publish_to_task_set=False)
 
-        timestamp = datetime.now().timestamp()
         MESSAGES_STATS.labels("sent", self.address.hopr,
-                              message.relayer, message.uid, timestamp).inc()
+                              message.relayer, message.uid).inc()
+        del message
 
     async def tasks(self):
         callbacks = [
