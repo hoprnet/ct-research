@@ -25,7 +25,6 @@ from .response_objects import (
     Infos,
     Message,
     OpenedChannel,
-    SendMessageAck,
     TicketPrice,
 )
 
@@ -187,7 +186,7 @@ class HoprdAPI(Base):
 
     async def send_message(
         self, destination: str, message: str, hops: list[str], tag: int = MESSAGE_TAG
-    ) -> Optional[SendMessageAck]:
+    ) -> bool:
         """
         Sends a message to the given destination.
         :param: destination: str
@@ -197,9 +196,9 @@ class HoprdAPI(Base):
         :return: bool
         """
         data = SendMessageBody(message, hops, destination, tag)
-        is_ok, response = await self.__call_api(HTTPMethod.POST, "messages", data=data)
+        is_ok, _ = await self.__call_api(HTTPMethod.POST, "messages", data=data)
 
-        return SendMessageAck(response) if is_ok else None
+        return is_ok
 
     async def node_info(self) -> Optional[Infos]:
         """
