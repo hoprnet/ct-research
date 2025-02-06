@@ -14,18 +14,18 @@ from .subgraph import URL, ProviderError, Type, entries
 # endregion
 
 # region Metrics
-PEER_VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
-UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers", ["type"])
-SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
-STAKE = Gauge("ct_peer_stake", "Stake", ["safe", "type"])
-TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
-NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
 ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
 MESSAGE_COUNT = Gauge(
     "ct_message_count", "messages one should receive / year", [
         "peer_id", "model"]
 )
+NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
+PEER_VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
+STAKE = Gauge("ct_peer_stake", "Stake", ["safe", "type"])
+SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
+TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
 TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
+UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers", ["type"])
 # endregion
 
 
@@ -146,7 +146,7 @@ class Core(Base):
                 results.extend(
                     [
                         entries.Node.fromSubgraphResult(node)
-                        for node in safe["registeredNodesInNetworkRegistry"]
+                        for node in safe["registeredNodesInSafeRegistry"]
                     ]
                 )
 
@@ -216,8 +216,7 @@ class Core(Base):
             for account in await self.providers[Type.MAINNET_BALANCES].get(
                 id_in=list(balances.keys())
             ):
-                balances[account["id"]
-                         ] += float(account["totalBalance"]) / 1e18
+                balances[Utils.checksum_address(account["id"])] += float(account["totalBalance"]) / 1e18
         except ProviderError as err:
             self.error(f"eoa_balances: {err}")
 
@@ -225,8 +224,7 @@ class Core(Base):
             for account in await self.providers[Type.GNOSIS_BALANCES].get(
                 id_in=list(balances.keys())
             ):
-                balances[account["id"]
-                         ] += float(account["totalBalance"]) / 1e18
+                balances[Utils.checksum_address(account["id"])] += float(account["totalBalance"]) / 1e18
         except ProviderError as err:
             self.error(f"eoa_balances: {err}")
 
@@ -344,11 +342,11 @@ class Core(Base):
     async def peers_rewards(self):
         results = dict()
         try:
-            for account in await self.providers[Type.REWARDS].get():
-                results[account["id"]] = float(account["redeemedValue"])
-
+            for acc in await self.providers[Type.REWARDS].get():
+                account = entries.Account.fromSubgraphResult(acc)
+                results[account.address] = account.redeemed_value
         except ProviderError as err:
-            self.error(f"get_peers_rewards: {err}")
+            self.error(f"peers_rewards: {err}")
 
         self.peers_rewards_data = results
         self.debug(f"Fetched peers rewards amounts ({len(results)} entries).")
@@ -385,7 +383,7 @@ class Core(Base):
         try:
             entries = await provider.get(to_in=addresses)
         except ProviderError as err:
-            self.error(f"get_peers_rewards: {err}")
+            self.error(f"safe_fundings: {err}")
             entries = []
         amount = sum([float(item["amount"]) for item in entries])
 

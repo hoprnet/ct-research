@@ -4,7 +4,7 @@ from .safe import Safe
 
 class Allocation(SubgraphEntry):
     def __init__(self, id: str, claimedAmount: str, allocatedAmount: str):
-        self.address = id
+        self.address = self.checksum(id)
         self.claimed_amount = float(claimedAmount) / 1e18
         self.allocated_amount = float(allocatedAmount) / 1e18
         self.linked_safes: set[Safe] = set()

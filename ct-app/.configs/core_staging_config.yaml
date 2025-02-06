@@ -4,31 +4,31 @@
 # =============================================================================
 flags:
   core: 
-    rotateSubgraphs: 300
-    peersRewards: 120
+    applyEconomicModel: 60
     ticketParameters: 120
 
     connectedPeers: 120
-    registeredNodes: 600
     topology: 60
+
+    rotateSubgraphs: 300
+
+    peersRewards: 120
+    registeredNodes: 600
     allocations: 600
     EOABalances: 600
     NFTHolders: 600
-    
-    applyEconomicModel: 120
-    
     safeFundings: 600
-
+    
   node:
-    healthcheck: 60
+    healthcheck: 30
     retrievePeers: 120
     retrieveChannels: 60
-    retrieveBalances: 120
+    retrieveBalances: 300
 
-    openChannels: 900
-    fundChannels: 900
-    closeOldChannels: 900
-    closePendingChannels: 900
+    openChannels: 300
+    fundChannels: 300
+    closeOldChannels: 300
+    closePendingChannels: 300
     closeIncomingChannels: Off
 
     getTotalChannelFunds: 300
@@ -69,7 +69,7 @@ economicModel:
 
     maxAPR: 0.0000001
     networkCapacity: 100
-    totalTokenSupply: 200
+    totalTokenSupply: 500
 
     offset: 10
     buckets:
