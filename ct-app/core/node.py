@@ -135,7 +135,7 @@ class Node(Base):
             f"Addresses without channels: {len(addresses_without_channels)}")
 
         for address in addresses_without_channels:
-            await AsyncLoop.add(NodeHelper.open_channel, self.address, self.api, address,
+            AsyncLoop.add(NodeHelper.open_channel, self.address, self.api, address,
                           self.params.channel.fundingAmount, publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
@@ -149,7 +149,7 @@ class Node(Base):
         in_opens = [c for c in self.channels.incoming if c.status.is_open]
 
         for channel in in_opens:
-            await AsyncLoop.add(NodeHelper.close_incoming_channel,
+            AsyncLoop.add(NodeHelper.close_incoming_channel,
                           self.address, self.api, channel, publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
@@ -166,7 +166,7 @@ class Node(Base):
         self.info(f"Pending channels: {len(out_pendings)}")
 
         for channel in out_pendings:
-            await AsyncLoop.add(NodeHelper.close_pending_channel,
+            AsyncLoop.add(NodeHelper.close_pending_channel,
                           self.address, self.api, channel, publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
@@ -207,7 +207,7 @@ class Node(Base):
 
         self.info(f"Closing {len(channels_to_close)} old channels")
         for channel in channels_to_close:
-            await AsyncLoop.add(NodeHelper.close_old_channel,
+            AsyncLoop.add(NodeHelper.close_old_channel,
                           self.address, self.api, channel, publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
@@ -232,7 +232,7 @@ class Node(Base):
 
         for channel in low_balances:
             if channel.destination_peer_id in peer_ids:
-                await AsyncLoop.add(NodeHelper.fund_channel, self.address,
+                AsyncLoop.add(NodeHelper.fund_channel, self.address,
                               self.api, channel, self.params.channel.fundingAmount, publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
@@ -343,11 +343,12 @@ class Node(Base):
         if message.relayer not in channels:
             return
 
-        ack = await AsyncLoop.add(self.api.send_message, self.address.hopr, message.format(), [
-                      message.relayer], publish_to_task_set=False, get_result=True)
+        AsyncLoop.add(self.api.send_message, self.address.hopr, message.format(), [
+                      message.relayer], publish_to_task_set=False)
 
-        if ack:
-            MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer, message.uid, ack.timestamp).inc()
+        timestamp = datetime.now().timestamp()
+        MESSAGES_STATS.labels("sent", self.address.hopr,
+                              message.relayer, message.uid, timestamp).inc()
 
     async def tasks(self):
         callbacks = [
