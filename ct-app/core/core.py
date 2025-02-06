@@ -17,6 +17,7 @@ from .subgraph import URL, ProviderError, Type, entries
 PEER_VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
 UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers", ["type"])
 SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
+STAKE = Gauge("ct_peer_stake", "Stake", ["safe", "type"])
 TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
 NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
 ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
@@ -151,6 +152,11 @@ class Core(Base):
 
         except ProviderError as err:
             self.error(f"get_registered_nodes: {err}")
+
+        for node in results:
+            STAKE.labels(node.safe.address, "balance").set(node.safe.balance)
+            STAKE.labels(node.safe.address, "allowance").set(node.safe.allowance)
+            STAKE.labels(node.safe.address, "additional_balance").set(node.safe.additional_balance)
 
         self.registered_nodes_data = results
         SUBGRAPH_SIZE.set(len(results))

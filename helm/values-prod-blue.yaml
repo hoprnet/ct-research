@@ -1,6 +1,9 @@
 replicas: 5
 network: dufour
-version: "2.2.1"
+version: singapore-latest
+
+service:
+  type: LoadBalancer
 
 deployment:
   env: |
