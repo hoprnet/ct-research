@@ -326,10 +326,12 @@ class Node(Base):
                 self.error(f"Error while parsing message: {err}")
                 continue
             
-            rtt = (m.timestamp - message.timestamp) / 1000
 
-            MESSAGES_DELAYS.labels(self.address.hopr, message.relayer).observe(rtt)
-            MESSAGES_STATS.labels("relayed", self.address.hopr, message.relayer).inc()
+            if message.timestamp and message.relayer:
+                rtt = (m.timestamp - message.timestamp) / 1000
+
+                MESSAGES_DELAYS.labels(self.address.hopr, message.relayer).observe(rtt)
+                MESSAGES_STATS.labels("relayed", self.address.hopr, message.relayer).inc()
 
     @master(flagguard, formalin, connectguard)
     async def observe_message_queue(self):
