@@ -1,7 +1,7 @@
 # region Imports
 from datetime import datetime
 
-from prometheus_client import Gauge
+from prometheus_client import Gauge, Histogram
 
 from core.components.asyncloop import AsyncLoop
 
@@ -17,9 +17,9 @@ from .components.node_helper import NodeHelper
 # region Metrics
 BALANCE = Gauge("ct_balance", "Node balance", ["peer_id", "token"])
 CHANNELS = Gauge("ct_channels", "Node channels", ["peer_id", "direction"])
-CHANNEL_FUNDS = Gauge("ct_channel_funds",
-                      "Total funds in out. channels", ["peer_id"])
+CHANNEL_FUNDS = Gauge("ct_channel_funds", "Total funds in out. channels", ["peer_id"])
 HEALTH = Gauge("ct_node_health", "Node health", ["peer_id"])
+MESSAGES_DELAYS = Histogram("ct_messages_delays", "Messages delays", ["sender","relayer"], buckets=[0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2.5])
 MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer"])
 PEERS_COUNT = Gauge("ct_peers_count", "Node peers", ["peer_id"])
 # endregion
@@ -28,7 +28,7 @@ PEERS_COUNT = Gauge("ct_peers_count", "Node peers", ["peer_id"])
 class Node(Base):
     """
     A Node represents a single node in the network, managed by HOPR, and used to distribute rewards.
-    """
+    """ 
 
     def __init__(self, url: str, key: str):
         """
@@ -325,26 +325,37 @@ class Node(Base):
             except ValueError as err:
                 self.error(f"Error while parsing message: {err}")
                 continue
+            
+            rtt = (m.timestamp - message.timestamp) / 1000
 
+            MESSAGES_DELAYS.labels(self.address.hopr, message.relayer).observe(rtt)
             MESSAGES_STATS.labels("relayed", self.address.hopr, message.relayer).inc()
 
     @master(flagguard, formalin, connectguard)
     async def observe_message_queue(self):
         message = await MessageQueue().get()
+        # TODO: maybe set the timestamp here ?
 
         peers = [peer.address.hopr for peer in await self.peers.get()]
+
         if message.relayer not in peers:
             return
 
         if self.channels is None:
             return
             
-        channels = [channel.destination_peer_id for channel in self.channels.outgoing]
+        channels = [
+            channel.destination_peer_id for channel in self.channels.outgoing]
+
         if message.relayer not in channels:
             return
 
-        AsyncLoop.add(self.api.send_message, self.address.hopr, message.format(), [
-                      message.relayer], publish_to_task_set=False)
+        AsyncLoop.add(self.api.send_message, 
+                      self.address.hopr, 
+                      message.format(), 
+                      [message.relayer], 
+                      publish_to_task_set=False)
+
         MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer).inc()
 
     async def tasks(self):

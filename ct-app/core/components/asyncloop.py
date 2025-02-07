@@ -31,7 +31,7 @@ class AsyncLoop(Base, metaclass=Singleton):
             cls().add(task)
 
     @classmethod
-    def add(cls, callback: Callable, *args, publish_to_task_set: bool = True):
+    def add(cls, callback: Callable, *args, publish_to_task_set: bool=True):
         try:
             task = asyncio.ensure_future(callback(*args))
         except Exception as e:
