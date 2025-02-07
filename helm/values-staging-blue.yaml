@@ -1,6 +1,6 @@
 replicas: 0
 network: rotsee
-version: singapore-latest
+version: "2.2.2"
 
 service:
   type: LoadBalancer
