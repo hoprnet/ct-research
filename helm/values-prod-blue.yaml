@@ -1,6 +1,6 @@
 replicas: 5
 network: dufour
-version: "2.2.2"
+version: "2.2.3-commit.2fd1da40"
 
 service:
   type: LoadBalancer
