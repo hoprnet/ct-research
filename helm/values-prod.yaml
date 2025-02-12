@@ -10,7 +10,8 @@ backup:
 ctdapp:
   core:
     replicas: 1
-    tag: v3.8.0
+    # see https://console.cloud.google.com/artifacts/docker/hoprassociation/europe-west3/docker-images/cover-traffic?inv=1&invt=AbpZVw&project=hoprassociation
+    tag: v3.8.1
 
   nodes:
     NODE_ADDRESS_1: http://ctdapp-blue-node-1-p2p-tcp:3001
