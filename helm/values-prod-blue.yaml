@@ -1,6 +1,7 @@
 replicas: 5
 network: dufour
-version: "2.2.3-commit.2fd1da40"
+# testing with connectivity debug logging, this is based on 2.2.3
+version: europe-west3-docker.pkg.dev/hoprassociation/docker-images/hoprd:2.2.3-pr.6869
 
 service:
   type: LoadBalancer
