@@ -14,10 +14,10 @@ class Safe(SubgraphEntry):
         :param balance: The balance of the safe.
         :param allowance: The allowance of the safe.
         """
-        self.address = self.checksum(address)
+        self.address = address.lower() if address is not None else None
         self.balance = float(balance) if balance else 0
         self.allowance = float(allowance) if allowance else 0
-        self.owners = [self.checksum(owner) for owner in owners ] 
+        self.owners = [owner.lower() for owner in owners if owner is not None]
         self.additional_balance = 0
 
     @property

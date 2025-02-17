@@ -216,7 +216,7 @@ class Core(Base):
             for account in await self.providers[Type.MAINNET_BALANCES].get(
                 id_in=list(balances.keys())
             ):
-                balances[Utils.checksum_address(account["id"])] += float(account["totalBalance"]) / 1e18
+                balances[account["id"].lower()] += float(account["totalBalance"]) / 1e18
         except ProviderError as err:
             self.error(f"eoa_balances: {err}")
 
@@ -224,7 +224,7 @@ class Core(Base):
             for account in await self.providers[Type.GNOSIS_BALANCES].get(
                 id_in=list(balances.keys())
             ):
-                balances[Utils.checksum_address(account["id"])] += float(account["totalBalance"]) / 1e18
+                balances[account["id"].lower()] += float(account["totalBalance"]) / 1e18
         except ProviderError as err:
             self.error(f"eoa_balances: {err}")
 
