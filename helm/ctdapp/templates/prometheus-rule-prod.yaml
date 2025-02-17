@@ -1,0 +1,145 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ctdapp
+spec:
+  groups:
+    - name: peers
+      rules:
+        - alert: PeersEligibleNodesMonotonicity
+          annotations:
+            description: >-
+              Eligible nodes count should both increase and decrease
+            summary: Eligible nodes count too monotonic
+          expr:
+          for: 10m
+          labels:
+            severity: 
+        - alert: PeersVisibleNodesDrop
+          annotations:
+            description: >-
+              Cout of peers seen by some nodes dropped by more than 50
+            summary: Visible peers count drop
+          expr:
+          for: 10m
+          labels:
+            severity: 
+        - alert: PeersVisibleNodesMonotonicity
+          annotations:
+            description: >-
+              Visible nodes count should both increase and decrease
+            summary: Visible nodes count too monotonic
+          expr:
+          for: 10m
+          labels:
+            severity: 
+        - alert: PeersUnevenNetworkView
+          annotations:
+            description: >-
+              Nodes have views of the network which differ too much
+            summary: Uneven view of the network
+          expr: max(sum by (peer_id) (ct_peers_count) != 0) - min(sum by (peer_id) (ct_peers_count != 0)) >= 10
+          for: 10m
+          labels:
+            severity: warning
+
+    - name: subgraphs
+      rules:
+        - alert: SubgraphNFTHoldersCountDrop
+          annotations:
+            description: >-
+              The number of NFT holders should only go up
+            summary: NFT holders count going down
+          expr: sum(ct_nft_holders - ct_nft_holders offset 1h) > 0
+          for: 10m
+          labels:
+            severity: warning
+        - alert: SubgraphUsingCentralizedEndpoint
+          annotations:
+            description: >-
+              All decentralized endpoints are paired with centralized endpoints in case they become unusable.
+              However it shouldn't rely on centralized endpoint for too long
+            summary: Using centralized endpoint
+          expr: sum by (slug) (ct_subgraph_in_use) == 1
+          for: 10m
+          labels:
+            severity: warning
+        - alert: SubgraphNoEndpointUsable
+          annotations:
+            description: >-
+              Neither the centralized nor decentralized endpoints are usable for at least one subgraph
+            summary: No endpoint available
+          expr: sum by (slug) (ct_subgraph_in_use) == -1
+          for: 10m
+          labels:
+            severity: critical 
+    - name: nodes
+      rules:
+        - alert: NodesNotReachable
+          annotations:
+            description: >-
+              Nodes are not reachable which might cause CT interuptions
+            summary: Nodes not reachable
+          expr: sum by (peer_id) (ct_node_health) != 1
+          for: 10m
+          labels:
+            severity: critical
+    - name: messages
+      rules:
+        - alert: MessagesNotEnoughSent
+          annotations:
+            description: >-
+              Amount of sent messages doesn't match the expected amount
+            summary: Not sending enough messages
+          expr: sum(rate(hopr_packets_count{namespace="ctdapp", type="sent"}[30s])) / sum(1 / (ct_peer_delay != 0)) < 0.95
+          for: 10m
+          labels:
+            severity: warning
+        - alert: MessagesNotEnoughRelayed
+          annotations:
+            description: >-
+              Amount of relayed messages doesn't match the amount of sent messages
+            summary: Missing relayed messages
+          expr: sum(rate(hopr_packets_count{namespace="ctdapp", type="received"}[30s])) / sum(rate(hopr_packets_count{namespace="ctdapp", type="sent"}[30s])) < 0.90
+          for: 10m
+          labels:
+            severity: warning
+
+        - alert: MessagesQueueSizeGrowing
+          annotations: 
+            description:
+              Number of messages in the queue is growing too big.
+            summary: Lagging behind expected throughput
+          expr: ct_queue_size > 5
+          for: 10m
+          labels:
+            severity: critical
+    - name: finance
+      rules: 
+        - alert: FinanceRunwayTooShort
+          annotations:
+            description: >-
+              Based on the previous day stake reduction rate, the expected runway with the current stake is less than a week
+            summary: Runway too short
+          expr: (avg(ct_balance{token="safe_hopr"})) / (-1 * avg(sum by (peer_id)(delta(ct_balance{token="safe_hopr"}[1d])))) / 1 < 7
+          for: 10m
+          labels:
+            severity: warning
+        - alert: FinanceRunwayVeryShort
+          annotations:
+            description: >-
+              Based on the previous day stake reduction rate, the expected runway with the current stake is less than two days
+            summary: Runway very short
+          expr: (avg(ct_balance{token="safe_hopr"})) / (-1 * avg(sum by (peer_id)(delta(ct_balance{token="safe_hopr"}[1d])))) / 1 < 2
+          for: 10m
+          labels:
+            severity: critical
+        - alert: FinanceNodesOutOfFunds
+          annotations:
+            description: >-
+              xDai balance of some nodes is lower than 0.1 xDai
+            summary: Nodes lacking funds
+          expr:
+          for: 10m
+          labels:
+            severity: critical
