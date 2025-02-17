@@ -6,8 +6,6 @@ from .environment_utils import EnvironmentUtils
 
 
 class Utils(Base):
-    _web3 = None  # Class variable to store Web3 instance
-
     @classmethod
     def nodesCredentials(
         cls, address_prefix: str, keyenv: str
