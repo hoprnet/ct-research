@@ -7,6 +7,9 @@ backup:
   enabled: true
   schedule: 30 21 * * * # 9:30 PM UTC
 
+thresholds:
+  network_size_allowed_offset: 5
+  
 ctdapp:
   core:
     replicas: 1
