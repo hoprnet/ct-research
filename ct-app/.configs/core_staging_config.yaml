@@ -4,25 +4,25 @@
 # =============================================================================
 flags:
   core: 
-    applyEconomicModel: 60
-    ticketParameters: 120
+    applyEconomicModel: 30
+    ticketParameters: 60
 
-    connectedPeers: 120
-    topology: 60
+    connectedPeers: 30
+    topology: 30
 
-    rotateSubgraphs: 300
+    rotateSubgraphs: 60
 
-    peersRewards: 120
-    registeredNodes: 600
-    allocations: 600
-    EOABalances: 600
-    NFTHolders: 600
-    safeFundings: 600
+    peersRewards: 300
+    registeredNodes: 300
+    allocations: 300
+    EOABalances: 300
+    NFTHolders: 300
+    safeFundings: 300
     
   node:
-    healthcheck: 30
-    retrievePeers: 120
-    retrieveChannels: 60
+    healthcheck: 15
+    retrievePeers: 60
+    retrieveChannels: 120
     retrieveBalances: 300
 
     openChannels: 300
@@ -33,7 +33,7 @@ flags:
 
     getTotalChannelFunds: 300
 
-    observeMessageQueue: On  # should only be On / Off
+    observeMessageQueue: On # should only be On / Off
     observeRelayedMessages: 15
 
   peer:
