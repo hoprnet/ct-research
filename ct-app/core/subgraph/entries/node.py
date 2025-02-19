@@ -14,7 +14,7 @@ class Node(SubgraphEntry):
         :param safe: A Safe object.
         """
 
-        self.address = self.checksum(address)
+        self.address = address.lower() if address is not None else None
         self.safe = safe
 
     @classmethod

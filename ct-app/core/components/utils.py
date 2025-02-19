@@ -1,4 +1,3 @@
-from web3 import Web3
 
 from core.baseclass import Base
 from core.subgraph.entries import Safe
@@ -7,8 +6,6 @@ from .environment_utils import EnvironmentUtils
 
 
 class Utils(Base):
-    _web3 = None  # Class variable to store Web3 instance
-
     @classmethod
     def nodesCredentials(
         cls, address_prefix: str, keyenv: str
@@ -152,21 +149,3 @@ class Utils(Base):
                 c.balance) / 1e18
 
         return results
-
-    @classmethod
-    def checksum_address(cls, address: str):
-        if not cls._web3:
-            cls._web3 = Web3()
-
-        cls().info(f"Checksumming address {address}")
-        try:
-            checksummed = cls._web3.to_checksum_address(address)
-            cls().info(f"Checksummed address {address} => {checksummed}")
-            return checksummed
-        except ValueError:
-            pass
-        except TypeError:
-            pass
-
-        cls().error(f"Not using a checksummed address due to failure, using {address}")
-        return address

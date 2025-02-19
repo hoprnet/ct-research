@@ -13,7 +13,7 @@ class Account(SubgraphEntry):
         :param redeemed_value: The value of redemeed tickets.
         """
 
-        self.address = self.checksum(address)
+        self.address = address.lower() if address is not None else None
         self.redeemed_value = float(redeemed_value)
 
 

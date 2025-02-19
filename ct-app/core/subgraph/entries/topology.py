@@ -14,7 +14,7 @@ class Topology(SubgraphEntry):
         :param channels_balance: The peer's outgoing channels total balance.
         """
         self.peer_id: str = peer_id
-        self.address = self.checksum(address)
+        self.address = address.lower() if address is not None else None
         self.channels_balance = channels_balance
 
     @classmethod
