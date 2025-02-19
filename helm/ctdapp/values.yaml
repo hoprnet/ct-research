@@ -2,8 +2,11 @@ environmentName: ""
 backup:
   enabled: false
   schedule:
-ctdapp:
 
+thresholds:
+  network_size_allowed_offset: 10
+
+ctdapp:
   nameOverride: ""
   fullnameOverride: ""
 
@@ -31,6 +34,7 @@ ctdapp:
     # NODE_ADDRESS_3: http://hoprd-ctdapp-3:3001
     # NODE_ADDRESS_4: http://hoprd-ctdapp-4:3001
     # NODE_ADDRESS_5: http://hoprd-ctdapp-5:3001
+
 
   core:
     repository: europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic
