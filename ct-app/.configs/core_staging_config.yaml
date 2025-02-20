@@ -76,7 +76,7 @@ economicModel:
       economicSecurity:
         flatness: 1.65
         skewness: 1.50
-        upperbound: 0.5
+        upperbound: 0.75
         offset: 0
 
       networkCapacity:
