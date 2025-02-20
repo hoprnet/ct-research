@@ -10,7 +10,7 @@ flag_dictionary = {"flags": {"fooclass": {"fooFlagguardFunc": 1, "fooFormalinFun
 
 class FooClass:
     def __init__(self):
-        super().__init__()
+        pass
         self.connected = LockedVar("connected", False)
         self.running = False
         self.counter = 0

@@ -37,9 +37,9 @@ class FundChannels(EnduranceTest):
         self.channel = random.choice(open_channels)
         self.inital_balance = self.channel.balance
 
-        logger.info(f"peer_id: {self.channel.peer_id}", prefix="\t")
-        logger.info(f"channel: {self.channel.id}", prefix="\t")
-        logger.info(f"balance: {self.inital_balance}", prefix="\t")
+        logger.info(f"\tpeer_id: {self.channel.peer_id}")
+        logger.info(f"\tchannel: {self.channel.id}")
+        logger.info(f"\tbalance: {self.inital_balance}")
 
     async def task(self) -> bool:
         success = await self.api.fund_channel(
