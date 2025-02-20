@@ -1,10 +1,3 @@
-import logging
-
-logging.basicConfig()
-logging.getLogger("asyncio").setLevel(logging.WARNING)
-formatter = logging.Formatter("%(asctime)s %(levelname)s:%(message)s")
-
-
 class SubgraphEntry:
     def __str__(self):
         cls = self.__class__.__name__

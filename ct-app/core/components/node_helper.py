@@ -2,12 +2,11 @@ from prometheus_client import Gauge
 
 from core.api.hoprd_api import HoprdAPI
 from core.api.response_objects import Channel
-from core.baseclass import Base
 from core.components.address import Address
 
 CHANNELS_OPS = Gauge("ct_channel_operation", "Channel operation", ["peer_id", "op"])
 
-class NodeHelper(Base):
+class NodeHelper:
     @classmethod
     async def open_channel(cls, initiator: Address, api: HoprdAPI, address: str, amount: int):
         cls().debug(f"Opening channel from {initiator} to {address}")

@@ -1,13 +1,17 @@
 import asyncio
+import logging
 from signal import SIGINT, SIGTERM
 from typing import Callable
 
-from core.baseclass import Base
+from core.components.logs import configure_logging
 
 from .singleton import Singleton
 
+configure_logging()
+logger = logging.getLogger(__name__)
 
-class AsyncLoop(Base, metaclass=Singleton):
+
+class AsyncLoop(metaclass=Singleton):
     def __init__(self):
         self.loop = asyncio.new_event_loop()
         self.tasks = set[asyncio.Task]()
@@ -20,7 +24,7 @@ class AsyncLoop(Base, metaclass=Singleton):
         try:
             cls().loop.run_until_complete(process())
         except asyncio.CancelledError:
-            cls().error("Stopping the instance...")
+            logger.error("Stopping the instance...")
         finally:
             stop_callback()
             cls().stop()
@@ -35,7 +39,7 @@ class AsyncLoop(Base, metaclass=Singleton):
         try:
             task = asyncio.ensure_future(callback(*args))
         except Exception as e:
-            cls().error(f"Failed to create task for {callback.__name__}: {e}")
+            logger.error(f"Failed to create task for {callback.__name__}: {e}")
             return
             
         if publish_to_task_set:

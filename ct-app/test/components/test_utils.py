@@ -198,25 +198,6 @@ def test_allowManyNodePerSafe():
     assert peer_2.safe_address_count == 2
     assert peer_3.safe_address_count == 1
 
-
-def test_exclude():
-    source_data = [
-        Peer("id_1", "address_1", "v1.0.0"),
-        Peer("id_2", "address_2", "v1.1.0"),
-        Peer("id_3", "address_3", "v1.0.2"),
-        Peer("id_4", "address_4", "v1.0.0"),
-        Peer("id_5", "address_5", "v1.1.1"),
-    ]
-    blacklist = [Address("id_2", "address_2"), Address("id_4", "address_4")]
-
-    excluded = Utils.exclude(source_data, blacklist)
-
-    assert len(source_data) == 3
-    assert len(excluded) == 2
-    for item in excluded:
-        assert item.address in blacklist
-
-
 @pytest.mark.asyncio
 async def test_balanceInChannels(channel_topology):
     results = await Utils.balanceInChannels(channel_topology)

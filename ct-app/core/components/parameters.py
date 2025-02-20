@@ -1,9 +1,14 @@
-from core.baseclass import Base
+import logging
+
+from core.components.logs import configure_logging
 
 from .environment_utils import EnvironmentUtils as Utils
 
+configure_logging()
+logger = logging.getLogger(__name__)
 
-class Parameters(Base):
+
+class Parameters:
     """
     Class that represents a set of parameters that can be accessed and modified. The parameters are stored in a dictionary and can be accessed and modified using the dot notation. The parameters can be loaded from environment variables with a specified prefix.
     """
@@ -23,7 +28,7 @@ class Parameters(Base):
                 setattr(self, key, value)
 
         if entrypoint:
-            self.info(f"Loaded config: {self}")
+            logger.info(f"Loaded config: {self}")
 
     def overrides(self, prefix: str):
         for key, value in Utils.envvarWithPrefix(prefix).items():
