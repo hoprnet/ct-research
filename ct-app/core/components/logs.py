@@ -16,11 +16,11 @@ class JSONFormatter:
             'timestamp':        timestamp,
             'level':            record.levelname,
             'message':          record.msg % record.args,
-            'threadId':           record.threadName,
+            'threadId':         record.threadName,
             'fields': {
-                'target': record.name,
-                'log_filename': record.filename,
-                'log_line_number': record.lineno,
+                'target':           record.name,
+                'log_filename':     record.filename,
+                'log_line_number':  record.lineno,
             }
         }
 
@@ -33,6 +33,6 @@ class JSONFormatter:
 
 def configure_logging():
     handler = logging.StreamHandler(sys.stderr)
-    handler.setFormatter(JSONFormatter(application="ctdapp"))
+    handler.setFormatter(JSONFormatter())
     logging.basicConfig(level=logging.DEBUG, handlers=[handler])
     logging.getLogger("asyncio").setLevel(logging.WARNING)
