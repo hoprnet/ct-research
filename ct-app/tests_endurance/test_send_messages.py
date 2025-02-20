@@ -48,11 +48,11 @@ class SendMessages(EnduranceTest):
         self.message_tag = random.randint(1024, 32768)
 
         logger.info(f"Connected to node {self.recipient.hopr}")
-        logger.info(f"relayer: {self.relayer}", prefix="\t")
-        logger.info(f"channel: {channel.id}", prefix="\t")
-        logger.info(f"status : {channel.status}", prefix="\t")
-        logger.info(f"balance: {channel.balance}HOPR", prefix="\t")
-        logger.info(f"tag    : {self.tag}", prefix="\t")
+        logger.info(f"\trelayer: {self.relayer}")
+        logger.info(f"\tchannel: {channel.id}")
+        logger.info(f"\tstatus : {channel.status}")
+        logger.info(f"\tbalance: {channel.balance}HOPR")
+        logger.info(f"\ttag    : {self.tag}")
 
         await self.api.messages_pop_all(self.message_tag)
 
