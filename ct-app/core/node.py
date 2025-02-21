@@ -86,7 +86,7 @@ class Node:
         if addr := await self.retrieve_address():
             HEALTH.labels(addr.hopr).set(int(health))
             if not health:
-                logger.warning("Node is not reachable.")
+                logger.warning("Node is not reachable")
         else:
             logger.warning("No address found")
 
@@ -132,8 +132,7 @@ class Node:
         addresses_without_channels = all_addresses - addresses_with_channels
 
 
-        logger.info(
-            f"Addresses without channels: {len(addresses_without_channels)}")
+        logger.info("Fetched nodes without open channels to them", {"count": len(addresses_without_channels)})
 
         for address in addresses_without_channels:
             AsyncLoop.add(NodeHelper.open_channel, self.address, self.api, address,
@@ -164,7 +163,8 @@ class Node:
         out_pendings = [
             c for c in self.channels.outgoing if c.status.is_pending]
 
-        logger.info(f"Pending channels: {len(out_pendings)}")
+        if len(out_pendings) > 0:
+            logger.info("Starting closure of pending channels", {"count": len(out_pendings)})
 
         for channel in out_pendings:
             AsyncLoop.add(NodeHelper.close_pending_channel,
@@ -203,10 +203,10 @@ class Node:
             channels_to_close.append(channel_id)
 
         await self.peer_history.update(to_peer_history)
-        logger.debug(
-            f"Updated peer history with {len(to_peer_history)} new entries")
 
-        logger.info(f"Closing {len(channels_to_close)} old channels")
+        logger.info("Starting closure of dangling channels open with peer visible for too long", 
+                    {"count": len(channels_to_close)})
+
         for channel in channels_to_close:
             AsyncLoop.add(NodeHelper.close_old_channel,
                           self.address, self.api, channel, publish_to_task_set=False)
@@ -227,7 +227,8 @@ class Node:
             if int(c.balance) / 1e18 <= self.params.channel.minBalance
         ]
 
-        logger.info(f"Low balance channels: {len(low_balances)}")
+        logger.info("Starting funding of channels where balance is too low", 
+                    {"count": len(low_balances), "threshold": self.params.channel.minBalance})
 
         peer_ids = [p.address.hopr for p in await self.peers.get()]
 
@@ -251,7 +252,7 @@ class Node:
         await self.peers.set(peers)
         await self.peer_history.update(addresses_w_timestamp)
 
-        logger.info(f"Peers: {len(peers)}")
+        logger.info("Scanned reachable peers", {"count": len(peers)})
 
         if addr := self.address:
             PEERS_COUNT.labels(addr.hopr).set(len(peers))
@@ -264,11 +265,6 @@ class Node:
         channels = await self.api.channels()
 
         if channels is None:
-            logger.warning("No channels found")
-            return
-
-        if not hasattr(channels, "incoming") or not hasattr(channels, "outgoing"):
-            logger.warning("No channels found")
             return
 
         if addr := self.address:
@@ -285,11 +281,14 @@ class Node:
 
             self.channels = channels
 
-            logger.info(
-                f"Channels: {len(channels.incoming)} in and {len(channels.outgoing)} out"
-            )
             CHANNELS.labels(addr.hopr, "outgoing").set(len(channels.outgoing))
             CHANNELS.labels(addr.hopr, "incoming").set(len(channels.incoming))
+
+        incoming_count = len(channels.incoming) if channels else 0
+        outgoing_count = len(channels.outgoing) if channels else 0
+
+        logger.info("Scanned channels linked to the node", 
+                    {"incoming": incoming_count, "outgoing": outgoing_count})
 
     @master(flagguard, formalin, connectguard)
     async def get_total_channel_funds(self):
@@ -304,16 +303,12 @@ class Node:
 
         results = await Utils.balanceInChannels(self.channels.outgoing)
 
-        if self.address.hopr not in results:
-            logger.warning("Funding info not found")
-            return
+        total = results.get(self.address.hopr, dict()).get("channels_balance", 0)
 
-        funds = results[self.address.hopr].get("channels_balance", 0)
+        logger.info("Retrieved total amount stored in outgoing channels", {"amount": total})
+        CHANNEL_FUNDS.labels(self.address.hopr).set(total)
 
-        logger.info(f"Channels funds: {funds}")
-        CHANNEL_FUNDS.labels(self.address.hopr).set(funds)
-
-        return funds
+        return total
 
     @master(flagguard, formalin, connectguard)
     async def observe_relayed_messages(self):
@@ -324,7 +319,7 @@ class Node:
             try:
                 message = MessageFormat.parse(m.body)
             except ValueError as err:
-                logger.error(f"Error while parsing message: {err}")
+                logger.exception("Error while parsing message", {"error": err})
                 continue
             
 

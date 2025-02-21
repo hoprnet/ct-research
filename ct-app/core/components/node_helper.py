@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class NodeHelper:
     @classmethod
     async def open_channel(cls, initiator: Address, api: HoprdAPI, address: str, amount: int):
-        logger.debug(f"Opening channel from {initiator} to {address}")
+        logger.debug("Opening channel", {"from": initiator, "to": address, "amount": amount})
         channel = await api.open_channel(address, f"{int(amount*1e18):d}")
 
         if channel is not None:
@@ -28,7 +28,7 @@ class NodeHelper:
 
     @classmethod
     async def close_pending_channel(cls, initiator: Address, api: HoprdAPI, channel: Channel):
-        logger.debug(f"Closing pending channel from {initiator}: {channel.id}")
+        logger.debug("Closing pending channel", {"from": initiator, "channel": channel.id})
         ok = await api.close_channel(channel.id)
 
         if ok:
@@ -39,7 +39,7 @@ class NodeHelper:
 
     @classmethod
     async def close_incoming_channel(cls, initiator: Address, api: HoprdAPI, channel: Channel):
-        logger.debug(f"Closing incoming channel to {initiator}: {channel.id}")
+        logger.debug("Closing incoming channel", {"from": initiator, "channel": channel.id})
         ok = await api.close_channel(channel.id)
 
         if ok:
@@ -50,7 +50,7 @@ class NodeHelper:
 
     @classmethod
     async def close_old_channel(cls, initiator: Address, api: HoprdAPI, channel_id: str):
-        logger.debug(f"Closing channel from {initiator}: {channel_id}")
+        logger.debug("Closing channel", {"from": initiator, "channel": channel_id})
         ok = await api.close_channel(channel_id)
 
         if ok:
@@ -61,7 +61,7 @@ class NodeHelper:
 
     @classmethod
     async def fund_channel(cls, initiator: Address, api: HoprdAPI, channel: Channel, amount: int):
-        logger.debug(f"Funding channel from {initiator}: {channel.id}")
+        logger.debug("Funding channel", {"from": initiator, "channel": channel.id, "amount": amount})
         ok = await api.fund_channel(channel.id, amount * 1e18)
 
         if ok:

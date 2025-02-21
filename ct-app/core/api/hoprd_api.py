@@ -68,12 +68,13 @@ class HoprdAPI:
 
                     return (res.status // 200) == 1, data
 
-        except OSError as e:
-            logger.error(f"OSError calling {method.value} {endpoint}: {e}")
+        except OSError as err:
+            logger.exception("OSError while doing an API call",
+                         {"error": err, "method": method.value, "endpoint": endpoint})
 
-        except Exception as e:
-            logger.error(
-                f"Exception calling {method.value} {endpoint}. error is: {e}")
+        except Exception as err:
+            logger.exception("Exception while doing an API call", 
+                         {"error": err, "method": method.value, "endpoint": endpoint})
 
         return (False, None)
 
@@ -90,8 +91,9 @@ class HoprdAPI:
                 timeout=timeout,
             )
 
-        except asyncio.TimeoutError:
-            logger.error(f"TimeoutError calling {method} {endpoint}")
+        except asyncio.TimeoutError as err:
+            logger.exception("Exception while doing an API call",
+                             {"error": err, "method": method.value, "endpoint": endpoint})
             return (False, None)
 
     async def balances(self) -> Optional[Balances]:

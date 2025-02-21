@@ -1,5 +1,7 @@
 import asyncio
+import json
 import logging
+import sys
 from pathlib import Path
 from typing import Optional, Union
 
@@ -23,10 +25,14 @@ class ProviderError(Exception):
 
 
 class GraphQLProvider:
+    query_file: str = None
+    params: list[str] = []
+    default_key: list[str] = None
+
     def __init__(self, url: URL):
         self.url = url
-        self.pwd = Path(__file__).parent.joinpath("queries")
-        self._default_key = None
+        self.pwd = Path(sys.modules[self.__class__.__module__].__file__).parent
+        self._initialize_query(self.query_file, self.params)
 
     #### PRIVATE METHODS ####
     def _initialize_query(
@@ -35,7 +41,10 @@ class GraphQLProvider:
         if extra_inputs is None:
             extra_inputs = []
 
-        self._default_key, self._sku_query = self._load_query(query_file, extra_inputs)
+        keys, self._sku_query = self._load_query(query_file, extra_inputs)
+
+        if self.default_key is None:
+            self.default_key = keys
 
     def _load_query(self, path: Union[str, Path], extra_inputs: list[str] = []) -> str:
         """
@@ -111,11 +120,10 @@ class GraphQLProvider:
                     self._execute(self._sku_query, kwargs), timeout=30
                 )
             except asyncio.TimeoutError:
-                logger.error(
-                    "Timeout error while fetching data from subgraph.")
+                logger.exception("Timeout error while fetching data from subgraph")
                 break
             except ProviderError as err:
-                logger.error(f"ProviderError error: {err}")
+                logger.exception("ProviderError error", {"error": err})
                 break
 
             if response is None:
@@ -137,8 +145,9 @@ class GraphQLProvider:
 
         try:
             if headers is not None:
+                attestations = json.loads(headers.getall("graph-attestation")[0])
                 logger.debug(
-                    f"Subgraph attestations {headers.getall('graph-attestation')}"
+            "Subgraph attestations", {"attestations": attestations}
                 )
         except UnboundLocalError:
             # raised if the headers variable is not defined
@@ -157,8 +166,8 @@ class GraphQLProvider:
         :return: The data from the query.
         """
 
-        if key is None and self._default_key is not None:
-            key = self._default_key
+        if key is None and self.default_key is not None:
+            key = self.default_key
         else:
             logger.warning(
                 "No key provided for the query, and no default key set. Skipping query..."
@@ -175,7 +184,7 @@ class GraphQLProvider:
         :param kwargs: The variables to use in the query (dict).
         :return: True if the query is successful, False otherwise.
         """
-        if self._default_key is None:
+        if self.default_key is None:
             logger.warning(
                 "No key provided for the query, and no default key set. Skipping test query..."
             )
@@ -187,7 +196,7 @@ class GraphQLProvider:
             for mode in Mode.callables():
                 self.url.mode = mode
                 try:
-                    result = await self._test_query(self._default_key, **kwargs)
+                    result = await self._test_query(self.default_key, **kwargs)
                 except ProviderError as err:
                     logger.error(f"ProviderError error: {err}")
 
@@ -205,39 +214,27 @@ class GraphQLProvider:
 
 
 class Safes(GraphQLProvider):
-    def __init__(self, url: URL):
-        super().__init__(url)
-        self._initialize_query("safes_balance.graphql")
+    query_file = "queries/safes_balance.graphql"
 
 
 class Staking(GraphQLProvider):
-    def __init__(self, url: URL):
-        super().__init__(url)
-        self._initialize_query("staking.graphql")
+    query_file = "queries/staking.graphql"
 
 
 class Rewards(GraphQLProvider):
-    def __init__(self, url: URL):
-        super().__init__(url)
-        self._initialize_query("rewards.graphql")
+    query_file = "queries/rewards.graphql"
+
 
 class Allocations(GraphQLProvider):
-    def __init__(self, url: URL):
-        super().__init__(url)
-        self._initialize_query(
-            "allocations.graphql", ['$schedule_in: [String!] = [""]']
-        )
+    query_file = "queries/allocations.graphql"
+    params = ['$schedule_in: [String!] = [""]']
 
 
 class Fundings(GraphQLProvider):
-    def __init__(self, url: URL):
-        super().__init__(url)
-        self._initialize_query(
-            "fundings.graphql", ['$from: String = ""', '$to_in: [String!] = [""]']
-        )
+    query_file = "queries/fundings.graphql"
+    params = ['$from: String = ""', '$to_in: [String!] = [""]']
 
 
 class EOABalance(GraphQLProvider):
-    def __init__(self, url: URL):
-        super().__init__(url)
-        self._initialize_query("eoa_balance.graphql", ['$id_in: [Bytes!] = [""]'])
+    query_file = "queries/eoa_balance.graphql"
+    params = ['$id_in: [Bytes!] = [""]']

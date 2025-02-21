@@ -34,12 +34,12 @@ class Bucket:
                 log(pow(self.upperbound / x, self.skewness) - 1) * self.flatness
                 + self.offset
             )
-        except ValueError as e:
-            raise ValueError(f"Math domain error: {x=}, {vars(self)}") from e
-        except ZeroDivisionError as e:
-            raise ValueError("Zero division error") from e
-        except OverflowError as e:
-            raise ValueError("Overflow error") from e
+        except ValueError as err:
+            raise ValueError(f"Math domain error: {x=}, {vars(self)}") from err
+        except ZeroDivisionError as err:
+            raise ValueError("Zero division error") from err
+        except OverflowError as err:
+            raise ValueError("Overflow error") from err
 
         return max(apr, 0)
 
@@ -82,8 +82,8 @@ class EconomicModelSigmoid:
                 )
                 + self.offset
             )
-        except ValueError as e:
-            logger.error(f"Value error in APR calculation: {e}")
+        except ValueError as err:
+            logger.exception("Value error in APR calculation", {"error": err})
             apr = 0
 
         if self.max_apr is not None:

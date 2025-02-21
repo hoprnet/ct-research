@@ -8,8 +8,8 @@ import traceback
 class JSONFormatter:
     def __init__(self):
         pass
-    
-    def format(self, record):
+
+    def format(self, record: logging.LogRecord):
         timestamp = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(record.created)) + (".%03dZ" % (1000 * (record.created % 1)))
 
         result = {
@@ -23,6 +23,9 @@ class JSONFormatter:
                 'log_line_number':  record.lineno,
             }
         }
+
+        if isinstance(record.args, dict):
+            result['fields']["args"] = record.args        
 
         if (record.exc_info):
             result['exception'] = traceback.format_exception(
