@@ -1,12 +1,13 @@
 # region Imports
+import logging
 from datetime import datetime
 
 from prometheus_client import Gauge, Histogram
 
 from core.components.asyncloop import AsyncLoop
+from core.components.logs import configure_logging
 
 from .api import HoprdAPI
-from .baseclass import Base
 from .components import LockedVar, Parameters, Peer, Utils
 from .components.decorators import connectguard, flagguard, formalin, master
 from .components.messages import MessageFormat, MessageQueue
@@ -24,8 +25,11 @@ MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer"])
 PEERS_COUNT = Gauge("ct_peers_count", "Node peers", ["peer_id"])
 # endregion
 
+configure_logging()
+logger = logging.getLogger(__name__)
 
-class Node(Base):
+
+class Node:
     """
     A Node represents a single node in the network, managed by HOPR, and used to distribute rewards.
     """ 
@@ -60,10 +64,6 @@ class Node(Base):
 
         return self._safe_address
 
-    @property
-    def log_prefix(self):
-        return self.url.split("//")[-1].split(".")[0]
-
     async def retrieve_address(self):
         """
         Retrieve the address of the node.
@@ -86,9 +86,9 @@ class Node(Base):
         if addr := await self.retrieve_address():
             HEALTH.labels(addr.hopr).set(int(health))
             if not health:
-                self.warning("Node is not reachable.")
+                logger.warning("Node is not reachable.")
         else:
-            self.warning("No address found")
+            logger.warning("No address found")
 
     @master(flagguard, formalin)
     async def healthcheck(self):
@@ -131,7 +131,8 @@ class Node(Base):
         }
         addresses_without_channels = all_addresses - addresses_with_channels
 
-        self.info(
+
+        logger.info(
             f"Addresses without channels: {len(addresses_without_channels)}")
 
         for address in addresses_without_channels:
@@ -163,7 +164,7 @@ class Node(Base):
         out_pendings = [
             c for c in self.channels.outgoing if c.status.is_pending]
 
-        self.info(f"Pending channels: {len(out_pendings)}")
+        logger.info(f"Pending channels: {len(out_pendings)}")
 
         for channel in out_pendings:
             AsyncLoop.add(NodeHelper.close_pending_channel,
@@ -202,10 +203,10 @@ class Node(Base):
             channels_to_close.append(channel_id)
 
         await self.peer_history.update(to_peer_history)
-        self.debug(
+        logger.debug(
             f"Updated peer history with {len(to_peer_history)} new entries")
 
-        self.info(f"Closing {len(channels_to_close)} old channels")
+        logger.info(f"Closing {len(channels_to_close)} old channels")
         for channel in channels_to_close:
             AsyncLoop.add(NodeHelper.close_old_channel,
                           self.address, self.api, channel, publish_to_task_set=False)
@@ -226,7 +227,7 @@ class Node(Base):
             if int(c.balance) / 1e18 <= self.params.channel.minBalance
         ]
 
-        self.info(f"Low balance channels: {len(low_balances)}")
+        logger.info(f"Low balance channels: {len(low_balances)}")
 
         peer_ids = [p.address.hopr for p in await self.peers.get()]
 
@@ -250,7 +251,7 @@ class Node(Base):
         await self.peers.set(peers)
         await self.peer_history.update(addresses_w_timestamp)
 
-        self.info(f"Peers: {len(peers)}")
+        logger.info(f"Peers: {len(peers)}")
 
         if addr := self.address:
             PEERS_COUNT.labels(addr.hopr).set(len(peers))
@@ -263,11 +264,11 @@ class Node(Base):
         channels = await self.api.channels()
 
         if channels is None:
-            self.warning("No channels found")
+            logger.warning("No channels found")
             return
 
         if not hasattr(channels, "incoming") or not hasattr(channels, "outgoing"):
-            self.warning("No channels found")
+            logger.warning("No channels found")
             return
 
         if addr := self.address:
@@ -284,7 +285,7 @@ class Node(Base):
 
             self.channels = channels
 
-            self.info(
+            logger.info(
                 f"Channels: {len(channels.incoming)} in and {len(channels.outgoing)} out"
             )
             CHANNELS.labels(addr.hopr, "outgoing").set(len(channels.outgoing))
@@ -304,12 +305,12 @@ class Node(Base):
         results = await Utils.balanceInChannels(self.channels.outgoing)
 
         if self.address.hopr not in results:
-            self.warning("Funding info not found")
+            logger.warning("Funding info not found")
             return
 
         funds = results[self.address.hopr].get("channels_balance", 0)
 
-        self.info(f"Channels funds: {funds}")
+        logger.info(f"Channels funds: {funds}")
         CHANNEL_FUNDS.labels(self.address.hopr).set(funds)
 
         return funds
@@ -323,7 +324,7 @@ class Node(Base):
             try:
                 message = MessageFormat.parse(m.body)
             except ValueError as err:
-                self.error(f"Error while parsing message: {err}")
+                logger.error(f"Error while parsing message: {err}")
                 continue
             
 

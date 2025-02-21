@@ -1,10 +1,15 @@
 import asyncio
+import logging
 import random
 
 from core.api import HoprdAPI
 from core.components import EnvironmentUtils
+from core.components.logs import configure_logging
 
 from . import EnduranceTest, Metric
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 
 class FundChannels(EnduranceTest):
@@ -16,7 +21,7 @@ class FundChannels(EnduranceTest):
         )
 
         self.address = await self.api.get_address()
-        self.info(f"Connected to node '...{self.address.hopr[-10:]}'")
+        logger.info(f"Connected to node '...{self.address.hopr[-10:]}'")
 
         # get channel
         channels = await self.api.channels()
@@ -32,9 +37,9 @@ class FundChannels(EnduranceTest):
         self.channel = random.choice(open_channels)
         self.inital_balance = self.channel.balance
 
-        self.info(f"peer_id: {self.channel.peer_id}", prefix="\t")
-        self.info(f"channel: {self.channel.id}", prefix="\t")
-        self.info(f"balance: {self.inital_balance}", prefix="\t")
+        logger.info(f"\tpeer_id: {self.channel.peer_id}")
+        logger.info(f"\tchannel: {self.channel.id}")
+        logger.info(f"\tbalance: {self.inital_balance}")
 
     async def task(self) -> bool:
         success = await self.api.fund_channel(
@@ -59,13 +64,13 @@ class FundChannels(EnduranceTest):
             return channel.balance
 
         timeout = EnvironmentUtils.envvar("BALANCE_CHANGE_TIMEOUT", float)
-        self.info(f"Waiting up to {timeout}s for the balance to change")
+        logger.info(f"Waiting up to {timeout}s for the balance to change")
         try:
             self.final_balance = await asyncio.wait_for(
                 balance_changed(self.channel.id, self.inital_balance), timeout=timeout
             )
         except asyncio.TimeoutError:
-            self.error(f"Balance not changed after {timeout}s")
+            logger.error(f"Balance not changed after {timeout}s")
             self.final_balance = self.inital_balance
 
     def metrics(self) -> list[Metric]:

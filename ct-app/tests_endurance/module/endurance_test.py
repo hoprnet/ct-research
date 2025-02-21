@@ -3,13 +3,14 @@ import logging
 import pprint
 import time
 from datetime import timedelta
-from logging import getLogger
 
 from core.components import EnvironmentUtils
+from core.components.logs import configure_logging
 
 from .metric import Metric
 
-log = getLogger("ct-app")
+configure_logging()
+logger = logging.getLogger(__name__)
 
 
 class EnduranceTest(object):
@@ -30,10 +31,10 @@ class EnduranceTest(object):
             "PROGRESS_BAR_LENGTH", type=int, default=50
         )
 
-        log.setLevel(
+        logger.setLevel(
             getattr(logging, EnvironmentUtils.envvar("LOG_LEVEL", default="INFO"))
         )
-        log.disabled = not EnvironmentUtils.envvar(
+        logger.disabled = not EnvironmentUtils.envvar(
             "LOG_ENABLED", type=bool, default=True
         )
 
@@ -71,7 +72,7 @@ class EnduranceTest(object):
         print("\r" + " " * len(str_to_print), end="\r")
 
         plural = "s" if completed_tasks > 1 else ""
-        self.info(f"Executed {completed_tasks} task{plural} in {duration_f}")
+        logger.info(f"Executed {completed_tasks} task{plural} in {duration_f}")
 
     async def delayed_task(self, task, iteration: int):
         await asyncio.sleep((iteration + 1) / self.rate)
@@ -143,7 +144,7 @@ class EnduranceTest(object):
         )
 
     def success_flag(self):
-        self.warning(
+        logger.warning(
             "Method `success_flag` not implemented. "
             + "Please create it with the following signature:\n"
             + "def success_flag(self): -> bool"
@@ -151,7 +152,7 @@ class EnduranceTest(object):
         return True
 
     def metrics(self):
-        self.warning(
+        logger.warning(
             "Method `metrics` not implemented. "
             + "Please create it with the following signature:\n"
             + "def metrics(self): -> list[Metric]"

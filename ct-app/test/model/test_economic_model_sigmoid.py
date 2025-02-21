@@ -1,4 +1,5 @@
 import pytest
+
 from core.components import Parameters
 from core.economic_model import Bucket, Budget, EconomicModelSigmoid
 
