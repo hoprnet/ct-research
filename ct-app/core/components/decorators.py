@@ -45,11 +45,12 @@ def flagguard(func):
         func_name_clean = func.__name__.replace("_", "").lower()
 
         if not hasattr(self.params, "flags"):
-            logger.error("No flags available")
+            logger.error("No class listed in config file as might contain long running tasks")
             return
 
         if not hasattr(self.params.flags, self.__class__.__name__.lower()):
-            logger.error(f"Feature `{func.__name__}` not in config file")
+            logger.error("Class not listed in config file as might contain long running tasks",
+                         {"class": self.__class__.__name__.lower()})
             return
 
         class_flags = getattr(
@@ -59,7 +60,8 @@ def flagguard(func):
         params_clean = list(map(lambda s: s.lower(), params_raw))
 
         if func_name_clean not in params_clean:
-            logger.error(f"Feature `{func.__name__}` not in config file")
+            logger.error("Method not listed in config file as a long running task", 
+                         {"method": func.__name__})
             return
 
         index = params_clean.index(func_name_clean)
@@ -91,7 +93,7 @@ def formalin(func):
         params_clean = list(map(lambda s: s.lower(), params_raw))
 
         if func_name_clean not in params_clean:
-            logger.error(f"Feature `{func.__name__}` not regonized")
+            logger.error("Method not listed in config file as a long running task", {"method": func.__name__})
             return
 
         index = params_clean.index(func_name_clean)
@@ -102,10 +104,7 @@ def formalin(func):
         if delay is False:
             delay = None
 
-        if delay == 0:
-            logger.debug(f"Running `{func.__name__}` continuously")
-        elif delay is not None:
-            logger.debug(f"Running `{func.__name__}` every {delay} seconds")
+        logger.debug("Running method continuously", {"method": func.__name__, "delay": delay})
 
         while self.running:
             await func(self, *args, **kwargs)
