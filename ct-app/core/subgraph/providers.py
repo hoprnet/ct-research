@@ -1,11 +1,12 @@
 import asyncio
+import logging
 from pathlib import Path
 from typing import Optional, Union
 
 import aiohttp
 from prometheus_client import Gauge
 
-from core.baseclass import Base
+from core.components.logs import configure_logging
 
 from .mode import Mode
 from .url import URL
@@ -13,12 +14,15 @@ from .url import URL
 SUBGRAPH_CALLS = Gauge("ct_subgraph_calls", "# of subgraph calls", ["slug", "type"])
 SUBGRAPH_IN_USE = Gauge("ct_subgraph_in_use", "Subgraph in use", ["slug"])
 
+configure_logging()
+logger = logging.getLogger(__name__)
+
 
 class ProviderError(Exception):
     pass
 
 
-class GraphQLProvider(Base):
+class GraphQLProvider:
     def __init__(self, url: URL):
         self.url = url
         self.pwd = Path(__file__).parent.joinpath("queries")
@@ -61,9 +65,9 @@ class GraphQLProvider(Base):
                 SUBGRAPH_CALLS.labels(self.url.params.slug, self.url.mode).inc()
                 return await response.json(), response.headers
         except TimeoutError as err:
-            self.error(f"Timeout error: {err}")
+            logger.error(f"Timeout error: {err}")
         except Exception as err:
-            self.error(f"Unknown error: {err}")
+            logger.error(f"Unknown error: {err}")
         return {}, None
 
     async def _test_query(self, key: str, **kwargs) -> bool:
@@ -80,10 +84,10 @@ class GraphQLProvider(Base):
                 self._execute(self._sku_query, kwargs), timeout=30
             )
         except asyncio.TimeoutError:
-            self.error("Query timeout occurred")
+            logger.error("Query timeout occurred")
             return False
         except ProviderError as err:
-            self.error(f"ProviderError error: {err}")
+            logger.error(f"ProviderError error: {err}")
             return False
 
         return key in response.get("data", [])
@@ -107,22 +111,23 @@ class GraphQLProvider(Base):
                     self._execute(self._sku_query, kwargs), timeout=30
                 )
             except asyncio.TimeoutError:
-                self.error("Timeout error while fetching data from subgraph.")
+                logger.error(
+                    "Timeout error while fetching data from subgraph.")
                 break
             except ProviderError as err:
-                self.error(f"ProviderError error: {err}")
+                logger.error(f"ProviderError error: {err}")
                 break
 
             if response is None:
                 break
 
             if "errors" in response:
-                self.error(f"Internal error: {response['errors']}")
+                logger.error(f"Internal error: {response['errors']}")
 
             try:
                 content = response.get("data", dict()).get(key, [])
             except Exception as err:
-                self.error(f"Error while fetching data from subgraph: {err}")
+                logger.error(f"Error while fetching data from subgraph: {err}")
                 break
             data.extend(content)
 
@@ -132,7 +137,7 @@ class GraphQLProvider(Base):
 
         try:
             if headers is not None:
-                self.debug(
+                logger.debug(
                     f"Subgraph attestations {headers.getall('graph-attestation')}"
                 )
         except UnboundLocalError:
@@ -155,7 +160,7 @@ class GraphQLProvider(Base):
         if key is None and self._default_key is not None:
             key = self._default_key
         else:
-            self.warning(
+            logger.warning(
                 "No key provided for the query, and no default key set. Skipping query..."
             )
             return []
@@ -171,7 +176,7 @@ class GraphQLProvider(Base):
         :return: True if the query is successful, False otherwise.
         """
         if self._default_key is None:
-            self.warning(
+            logger.warning(
                 "No key provided for the query, and no default key set. Skipping test query..."
             )
             return False
@@ -184,7 +189,7 @@ class GraphQLProvider(Base):
                 try:
                     result = await self._test_query(self._default_key, **kwargs)
                 except ProviderError as err:
-                    self.error(f"ProviderError error: {err}")
+                    logger.error(f"ProviderError error: {err}")
 
                 if result is True:
                     break
@@ -192,7 +197,8 @@ class GraphQLProvider(Base):
                 self.url.mode = Mode.NONE
 
         if self.url.mode == Mode.NONE:
-            self.warning(f"No subgraph available for '{self.url.params.slug}'")
+            logger.warning(
+                f"No subgraph available for '{self.url.params.slug}'")
 
         SUBGRAPH_IN_USE.labels(self.url.params.slug).set(self.url.mode.toInt())
         return self.url.mode

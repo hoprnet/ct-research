@@ -1,10 +1,11 @@
 import asyncio
 import json
+import logging
 from typing import Optional
 
 import aiohttp
 
-from core.baseclass import Base
+from core.components.logs import configure_logging
 
 from .http_method import HTTPMethod
 from .request_objects import (
@@ -31,8 +32,11 @@ from .response_objects import (
 
 MESSAGE_TAG = 0x1245
 
+configure_logging()
+logger = logging.getLogger(__name__)
 
-class HoprdAPI(Base):
+
+class HoprdAPI:
     """
     HOPRd API helper to handle exceptions and logging.
     """
@@ -42,9 +46,6 @@ class HoprdAPI(Base):
         self.headers = {"Authorization": f"Bearer {token}"}
         self.prefix = "/api/v3/"
 
-    @property
-    def log_prefix(cls) -> str:
-        return "api"
 
     async def __call(
         self,
@@ -68,10 +69,10 @@ class HoprdAPI(Base):
                     return (res.status // 200) == 1, data
 
         except OSError as e:
-            self.error(f"OSError calling {method.value} {endpoint}: {e}")
+            logger.error(f"OSError calling {method.value} {endpoint}: {e}")
 
         except Exception as e:
-            self.error(
+            logger.error(
                 f"Exception calling {method.value} {endpoint}. error is: {e}")
 
         return (False, None)
@@ -90,7 +91,7 @@ class HoprdAPI(Base):
             )
 
         except asyncio.TimeoutError:
-            self.error(f"TimeoutError calling {method} {endpoint}")
+            logger.error(f"TimeoutError calling {method} {endpoint}")
             return (False, None)
 
     async def balances(self) -> Optional[Balances]:
@@ -171,7 +172,6 @@ class HoprdAPI(Base):
             return []
 
         if "connected" not in response:
-            self.warning("No 'connected' field returned from the API")
             return []
 
         return [ConnectedPeer(peer) for peer in response["connected"]]

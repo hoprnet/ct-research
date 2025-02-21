@@ -1,10 +1,12 @@
 # region Imports
+import logging
 import random
 
 from prometheus_client import Gauge
 
+from core.components.logs import configure_logging
+
 from .api import HoprdAPI
-from .baseclass import Base
 from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
 from .components.decorators import flagguard, formalin, master
 from .economic_model import EconomicModelTypes
@@ -28,8 +30,11 @@ TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
 UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers", ["type"])
 # endregion
 
+configure_logging()
+logger = logging.getLogger(__name__)
 
-class Core(Base):
+
+class Core:
     """
     The Core class represents the main class of the application. It is responsible for managing the nodes, the economic model and the distribution of rewards.
     """
@@ -124,7 +129,7 @@ class Core(Base):
                     current_peers.add(peer)
                     counts["new"] += 1
 
-            self.debug(
+            logger.debug(
                 f"Aggregated peers ({len(current_peers)} entries) ({', '.join([f'{value} {key}' for key, value in counts.items() ] )})."
             )
             for key, value in counts.items():
@@ -151,7 +156,7 @@ class Core(Base):
                 )
 
         except ProviderError as err:
-            self.error(f"get_registered_nodes: {err}")
+            logger.error(f"get_registered_nodes: {err}")
 
         for node in results:
             STAKE.labels(node.safe.address, "balance").set(node.safe.balance)
@@ -160,7 +165,7 @@ class Core(Base):
 
         self.registered_nodes_data = results
         SUBGRAPH_SIZE.set(len(results))
-        self.debug(f"Fetched registered nodes ({len(results)} entries).")
+        logger.debug(f"Fetched registered nodes ({len(results)} entries).")
 
     @master(flagguard, formalin)
     async def nft_holders(self):
@@ -174,11 +179,11 @@ class Core(Base):
                     results.append(owner)
 
         except ProviderError as err:
-            self.error(f"nft_holders: {err}")
+            logger.error(f"nft_holders: {err}")
 
         self.nft_holders_data = results
         NFT_HOLDERS.set(len(results))
-        self.debug(f"Fetched NFT holders ({len(results)} entries).")
+        logger.debug(f"Fetched NFT holders ({len(results)} entries).")
 
     @master(flagguard, formalin)
     async def allocations(self):
@@ -191,16 +196,16 @@ class Core(Base):
             for account in await self.providers[Type.MAINNET_ALLOCATIONS].get():
                 results.append(entries.Allocation(**account["account"]))
         except ProviderError as err:
-            self.error(f"allocations: {err}")
+            logger.error(f"allocations: {err}")
 
         try:
             for account in await self.providers[Type.GNOSIS_ALLOCATIONS].get():
                 results.append(entries.Allocation(**account["account"]))
         except ProviderError as err:
-            self.error(f"allocations: {err}")
+            logger.error(f"allocations: {err}")
 
         self.allocations_data = results
-        self.debug(f"Fetched allocations ({len(results)} entries).")
+        logger.debug(f"Fetched allocations ({len(results)} entries).")
 
     @master(flagguard, formalin)
     async def eoa_balances(self):
@@ -209,7 +214,7 @@ class Core(Base):
         """
         balances = {alloc.address: 0 for alloc in self.allocations_data}
         if len(balances) == 0:
-            self.info("No investors addresses found.")
+            logger.info("No investors addresses found.")
             return
 
         try:
@@ -218,7 +223,7 @@ class Core(Base):
             ):
                 balances[account["id"].lower()] += float(account["totalBalance"]) / 1e18
         except ProviderError as err:
-            self.error(f"eoa_balances: {err}")
+            logger.error(f"eoa_balances: {err}")
 
         try:
             for account in await self.providers[Type.GNOSIS_BALANCES].get(
@@ -226,12 +231,12 @@ class Core(Base):
             ):
                 balances[account["id"].lower()] += float(account["totalBalance"]) / 1e18
         except ProviderError as err:
-            self.error(f"eoa_balances: {err}")
+            logger.error(f"eoa_balances: {err}")
 
         self.eoa_balances_data = [
             entries.Balance(key, value) for key, value in balances.items()
         ]
-        self.debug(f"Fetched EOA balances ({len(balances)} entries).")
+        logger.debug(f"Fetched EOA balances ({len(balances)} entries).")
 
     @master(flagguard, formalin)
     async def topology(self):
@@ -242,7 +247,7 @@ class Core(Base):
 
         channels = self.channels
         if channels is None or channels.all is None:
-            self.warning("Topology data not available")
+            logger.warning("Topology data not available")
             return
 
         self.topology_data = [
@@ -251,7 +256,7 @@ class Core(Base):
         ]
 
         TOPOLOGY_SIZE.set(len(self.topology_data))
-        self.debug(
+        logger.debug(
             f"Fetched topology links ({len(self.topology_data)} entries).")
 
     @master(flagguard, formalin)
@@ -264,7 +269,7 @@ class Core(Base):
                 [len(self.topology_data), len(
                     self.registered_nodes_data), len(peers)]
             ):
-                self.warning("Not enough data to apply economic model.")
+                logger.warning("Not enough data to apply economic model.")
                 return
 
             Utils.associateEntitiesToNodes(
@@ -335,7 +340,7 @@ class Core(Base):
 
             eligibles = sum(
                 [p.yearly_message_count is not None for p in peers])
-            self.info(f"Eligible nodes: {eligibles} entries.")
+            logger.info(f"Eligible nodes: {eligibles} entries.")
             ELIGIBLE_PEERS.set(eligibles)
 
     @master(flagguard, formalin)
@@ -346,10 +351,10 @@ class Core(Base):
                 account = entries.Account.fromSubgraphResult(acc)
                 results[account.address] = account.redeemed_value
         except ProviderError as err:
-            self.error(f"peers_rewards: {err}")
+            logger.error(f"peers_rewards: {err}")
 
         self.peers_rewards_data = results
-        self.debug(f"Fetched peers rewards amounts ({len(results)} entries).")
+        logger.debug(f"Fetched peers rewards amounts ({len(results)} entries).")
 
     @master(flagguard, formalin)
     async def ticket_parameters(self):
@@ -358,10 +363,10 @@ class Core(Base):
         """
         ticket_price = await self.api.ticket_price()
         if ticket_price is None:
-            self.warning("Ticket price not available.")
+            logger.warning("Ticket price not available.")
             return
 
-        self.debug(f"Ticket price: {ticket_price.value}")
+        logger.debug(f"Ticket price: {ticket_price.value}")
 
         for model in self.models.values():
             model.budget.ticket_price = ticket_price.value
@@ -383,12 +388,12 @@ class Core(Base):
         try:
             entries = await provider.get(to_in=addresses)
         except ProviderError as err:
-            self.error(f"safe_fundings: {err}")
+            logger.error(f"safe_fundings: {err}")
             entries = []
         amount = sum([float(item["amount"]) for item in entries])
 
         TOTAL_FUNDING.set(amount + self.params.fundings.constant)
-        self.debug(
+        logger.debug(
             f"Fetched safe fundings ({amount} + {self.params.fundings.constant})"
         )
 
@@ -396,7 +401,7 @@ class Core(Base):
         """
         Start the node.
         """
-        self.info(f"CTCore started with {len(self.nodes)} nodes.")
+        logger.info(f"CTCore started with {len(self.nodes)} nodes.")
 
         for node in self.nodes:
             node.running = True
@@ -430,5 +435,5 @@ class Core(Base):
         """
         Stop the node.
         """
-        self.info("CTCore stopped.")
+        logger.info("CTCore stopped.")
         self.running = False

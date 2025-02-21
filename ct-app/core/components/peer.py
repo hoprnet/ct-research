@@ -5,8 +5,6 @@ from typing import Union
 from packaging.version import Version
 from prometheus_client import Gauge
 
-from core.baseclass import Base
-
 from . import AsyncLoop, MessageFormat, MessageQueue
 from .address import Address
 from .decorators import flagguard, formalin, master
@@ -18,7 +16,7 @@ NODES_LINKED_TO_SAFE_COUNT = Gauge("ct_peer_safe_count", "Number of nodes linked
 SECONDS_IN_A_NON_LEAP_YEAR = 365 * 24 * 60 * 60
 
 
-class Peer(Base):
+class Peer:
     """
     Representation of a peer in the network. A peer is a node that is part of the network and not hosted by HOPR.
     """
@@ -180,7 +178,3 @@ class Peer(Base):
 
     def __hash__(self):
         return hash(self.address)
-
-    @property
-    def log_prefix(self) -> str:
-        return f"peer ..{self.address.hopr[-5:]}"

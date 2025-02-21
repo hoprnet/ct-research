@@ -1,5 +1,11 @@
 import asyncio
 import functools
+import logging
+
+from core.components.logs import configure_logging
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 
 def master(*decorators):
@@ -21,7 +27,7 @@ def connectguard(func):
     @functools.wraps(func)
     async def wrapper(self, *args, **kwargs):
         if not self.connected:
-            self.warning("Node not connected, skipping")
+            logger.warning("Node not connected, skipping")
             return
 
         return await func(self, *args, **kwargs)
@@ -39,20 +45,21 @@ def flagguard(func):
         func_name_clean = func.__name__.replace("_", "").lower()
 
         if not hasattr(self.params, "flags"):
-            self.error("No flags available")
+            logger.error("No flags available")
             return
 
-        if not hasattr(self.params.flags, self.class_prefix()):
-            self.error(f"Feature `{func.__name__}` not in config file")
+        if not hasattr(self.params.flags, self.__class__.__name__.lower()):
+            logger.error(f"Feature `{func.__name__}` not in config file")
             return
 
-        class_flags = getattr(self.params.flags, self.class_prefix())
+        class_flags = getattr(
+            self.params.flags, self.__class__.__name__.lower())
 
         params_raw = dir(class_flags)
         params_clean = list(map(lambda s: s.lower(), params_raw))
 
         if func_name_clean not in params_clean:
-            self.error(f"Feature `{func.__name__}` not in config file")
+            logger.error(f"Feature `{func.__name__}` not in config file")
             return
 
         index = params_clean.index(func_name_clean)
@@ -76,13 +83,15 @@ def formalin(func):
     @functools.wraps(func)
     async def wrapper(self, *args, **kwargs):
         func_name_clean = func.__name__.replace("_", "").lower()
-        class_flags = getattr(self.params.flags, self.class_prefix())
+        
+        class_flags = getattr(
+            self.params.flags, self.__class__.__name__.lower())
 
         params_raw = dir(class_flags)
         params_clean = list(map(lambda s: s.lower(), params_raw))
 
         if func_name_clean not in params_clean:
-            self.error(f"Feature `{func.__name__}` not regonized")
+            logger.error(f"Feature `{func.__name__}` not regonized")
             return
 
         index = params_clean.index(func_name_clean)
@@ -94,9 +103,9 @@ def formalin(func):
             delay = None
 
         if delay == 0:
-            self.info(f"Running `{func.__name__}` continuously")
+            logger.info(f"Running `{func.__name__}` continuously")
         elif delay is not None:
-            self.info(f"Running `{func.__name__}` every {delay} seconds")
+            logger.info(f"Running `{func.__name__}` every {delay} seconds")
 
         while self.running:
             await func(self, *args, **kwargs)
