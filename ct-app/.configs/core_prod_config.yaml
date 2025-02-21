@@ -141,7 +141,6 @@ subgraph:
   rewards:
     queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
     slug: hopr-channels
-
   safesBalance:
     queryID: GP2abJCarirMJCanuk4SBmnadiobEWH9ME2MNRAHbBTp
     slug: hopr-nodes-dufour

@@ -28,7 +28,7 @@ class Parameters:
                 setattr(self, key, value)
 
         if entrypoint:
-            logger.info(f"Loaded config: {self}")
+            logger.debug("Loaded config from file", {"config": self})
 
     def overrides(self, prefix: str):
         for key, value in Utils.envvarWithPrefix(prefix).items():

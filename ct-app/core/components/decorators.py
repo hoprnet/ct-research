@@ -103,9 +103,9 @@ def formalin(func):
             delay = None
 
         if delay == 0:
-            logger.info(f"Running `{func.__name__}` continuously")
+            logger.debug(f"Running `{func.__name__}` continuously")
         elif delay is not None:
-            logger.info(f"Running `{func.__name__}` every {delay} seconds")
+            logger.debug(f"Running `{func.__name__}` every {delay} seconds")
 
         while self.running:
             await func(self, *args, **kwargs)
