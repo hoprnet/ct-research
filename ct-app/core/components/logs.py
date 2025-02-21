@@ -25,7 +25,7 @@ class JSONFormatter:
         }
 
         if isinstance(record.args, dict):
-            result['fields'].update(record.args)        
+            result['fields']["args"] = record.args        
 
         if (record.exc_info):
             result['exception'] = traceback.format_exception(
