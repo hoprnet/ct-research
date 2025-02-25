@@ -25,7 +25,7 @@ class AsyncLoop(metaclass=Singleton):
         try:
             cls().loop.run_until_complete(process())
         except asyncio.CancelledError:
-            logger.error("Stopping the instance...")
+            logger.error("Stopping the instance")
         finally:
             stop_callback()
             cls().stop()
@@ -39,8 +39,8 @@ class AsyncLoop(metaclass=Singleton):
     def add(cls, callback: Callable, *args, publish_to_task_set: bool = True):
         try:
             task = asyncio.ensure_future(callback(*args))
-        except Exception as e:
-            logger.error(f"Failed to create task for {callback.__name__}: {e}")
+        except Exception as err:
+            logger.exception("Failed to create task", {"task": callback.__name__, "error": err})
             return
 
         if publish_to_task_set:
