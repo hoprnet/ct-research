@@ -28,7 +28,7 @@ class Parameters:
                 setattr(self, key, value)
 
         if entrypoint:
-            logger.info(f"Loaded config: {self}")
+            logger.debug("Loaded config from file", {"config": self.as_dict})
 
     def overrides(self, prefix: str):
         for key, value in Utils.envvarWithPrefix(prefix).items():
@@ -92,6 +92,10 @@ class Parameters:
             pass
 
         return value
+    
+    @property
+    def as_dict(self):
+        return {k: v.as_dict if isinstance(v, type(self)) else v for k, v in self.__dict__.items()}
 
     def __repr__(self):
         return str(self.__dict__)
