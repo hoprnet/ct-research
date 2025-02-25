@@ -3,15 +3,16 @@ from datetime import datetime
 
 
 class MessageFormat:
-    pattern = "{relayer} {index} {multiplier} {timestamp}"
+    pattern = "{relayer} {index} {inner_index} {multiplier} {timestamp}"
     index = 0
     range = int(1e5)
 
-    def __init__(self, relayer: str, index: str = None, timestamp: str = None, multiplier: int = None):
+    def __init__(self, relayer: str, index: str = None, inner_index: int = None, multiplier: int = None, timestamp: str = None ):
         self.relayer = relayer
         self.index = int(index) if index else self.message_index
         self.timestamp = int(float(timestamp)) if timestamp else int(datetime.now().timestamp()*1000)
         self.multiplier = int(multiplier) if multiplier else 1
+        self.inner_index = int(inner_index) if inner_index else 1
 
     @property
     def message_index(self):
@@ -30,7 +31,10 @@ class MessageFormat:
             raise ValueError(
                 f"Input string format is incorrect. {input_string} incompatible with format {cls.pattern}"
             )
-        return cls(match.group("relayer"), match.group("index"), match.group("timestamp"), match.group("multiplier"))
+        return cls(match.group("relayer"), match.group("index"), match.group("inner_index"), match.group("multiplier"), match.group("timestamp"))
+
+    def increase_inner_index(self):
+        self.inner_index += 1
 
     def format(self):
         return self.pattern.format_map(self.__dict__)

@@ -18,6 +18,15 @@ def test_parse_message():
     assert decoded.timestamp == encoded.timestamp
     assert decoded.index == encoded.index
     assert decoded.multiplier == encoded.multiplier
+    assert decoded.inner_index == encoded.inner_index
+
+def test_increase_inner_index():
+    encoded = MessageFormat(relayer)
+    decoded = MessageFormat.parse(encoded.format())
+
+    decoded.increase_inner_index()
+
+    assert decoded.inner_index == encoded.inner_index + 1
 
 def test_message_byte_size():
     MessageFormat.index = MessageFormat.range - 1

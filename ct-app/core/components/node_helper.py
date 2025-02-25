@@ -74,4 +74,5 @@ class NodeHelper:
     @classmethod
     async def send_message(cls, initiator: Address, api: HoprdAPI, message: MessageFormat):
         for idx in range(message.multiplier):
-            await api.send_message(initiator.hopr, f"{idx} {message.format()}", [message.relayer])
+            await api.send_message(initiator.hopr, message.format(), [message.relayer])
+            message.increase_inner_index()
