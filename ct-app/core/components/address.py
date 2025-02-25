@@ -1,5 +1,6 @@
-from .metrics import PEER
+from prometheus_client import Gauge
 
+PEER = Gauge("ct_address_pairs", "PeerID / address pairs of node reachable by CT", ["peer_id", "address"])
 
 class Address:
     """

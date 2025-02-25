@@ -1,4 +1,6 @@
-from ..components.metrics import TICKET_STATS
+from prometheus_client import Gauge
+
+TICKET_STATS = Gauge("ct_ticket_stats", "Ticket stats", ["type"])
 
 
 class Budget:

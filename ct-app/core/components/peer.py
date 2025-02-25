@@ -3,12 +3,16 @@ import random
 from typing import Union
 
 from packaging.version import Version
+from prometheus_client import Gauge
 
 from .address import Address
 from .asyncloop import AsyncLoop
 from .decorators import flagguard, formalin, master
 from .messages import MessageFormat, MessageQueue
-from .metrics import CHANNEL_STAKE, DELAY, NODES_LINKED_TO_SAFE_COUNT
+
+CHANNEL_STAKE = Gauge("ct_peer_channels_balance", "Balance in outgoing channels", ["peer_id"])
+DELAY = Gauge("ct_peer_delay", "Delay between two messages", ["peer_id"])
+NODES_LINKED_TO_SAFE_COUNT = Gauge("ct_peer_safe_count", "Number of nodes linked to the safes", ["peer_id", "safe"])
 
 SECONDS_IN_A_NON_LEAP_YEAR = 365 * 24 * 60 * 60
 

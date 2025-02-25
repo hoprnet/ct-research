@@ -2,6 +2,8 @@
 import logging
 from datetime import datetime
 
+from prometheus_client import Gauge, Histogram
+
 from core.components.asyncloop import AsyncLoop
 from core.components.logs import configure_logging
 
@@ -9,17 +11,18 @@ from .api import HoprdAPI
 from .components import LockedVar, Parameters, Peer, Utils
 from .components.decorators import connectguard, flagguard, formalin, master
 from .components.messages import MessageFormat, MessageQueue
-from .components.metrics import (
-    BALANCE,
-    CHANNEL_FUNDS,
-    CHANNELS,
-    HEALTH,
-    MESSAGES_DELAYS,
-    MESSAGES_STATS,
-    PEERS_COUNT,
-)
 from .components.node_helper import NodeHelper
 
+# endregion
+
+# region Metrics
+BALANCE = Gauge("ct_balance", "Node balance", ["peer_id", "token"])
+CHANNELS = Gauge("ct_channels", "Node channels", ["peer_id", "direction"])
+CHANNEL_FUNDS = Gauge("ct_channel_funds", "Total funds in out. channels", ["peer_id"])
+HEALTH = Gauge("ct_node_health", "Node health", ["peer_id"])
+MESSAGES_DELAYS = Histogram("ct_messages_delays", "Messages delays", ["sender","relayer"], buckets=[0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2.5])
+MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer"])
+PEERS_COUNT = Gauge("ct_peers_count", "Node peers", ["peer_id"])
 # endregion
 
 configure_logging()
@@ -345,9 +348,13 @@ class Node:
         if message.relayer not in channels:
             return
 
-        AsyncLoop.add(NodeHelper.send_message, 
-                      self.address, self.api, message.format(), message.relayer, 
+        AsyncLoop.add(self.api.send_message, 
+                      self.address.hopr, 
+                      message.format(), 
+                      [message.relayer], 
                       publish_to_task_set=False)
+
+        MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer).inc()
 
     async def tasks(self):
         callbacks = [
