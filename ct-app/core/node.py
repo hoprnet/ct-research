@@ -331,7 +331,7 @@ class Node:
 
     @master(flagguard, formalin, connectguard)
     async def observe_message_queue(self):
-        message = await MessageQueue().get()
+        message = await MessageQueue().get_async()        
         # TODO: maybe set the timestamp here ?
 
         peers = [peer.address.hopr for peer in await self.peers.get()]

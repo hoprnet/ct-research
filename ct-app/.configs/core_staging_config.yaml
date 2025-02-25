@@ -91,7 +91,7 @@ economicModel:
 peer:
   minVersion: '2.1.5'
   initialSleep:
-    mean: 30
+    mean: 10
     std: 2
 
 # =============================================================================

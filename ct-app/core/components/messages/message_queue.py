@@ -1,0 +1,35 @@
+import janus
+from prometheus_client import Gauge
+
+from ..singleton import Singleton
+from .message_format import MessageFormat
+
+QUEUE_SIZE = Gauge("ct_queue_size", "Size of the message queue")
+
+
+class MessageQueue(metaclass=Singleton):
+    def __init__(self):
+        self._buffer = janus.Queue()
+
+    def get_sync(self) -> MessageFormat:
+        return self.buffer.sync_q.get()
+
+    async def get_async(self) -> MessageFormat:
+        return await self.buffer.async_q.get()
+
+    def put_sync(self, item: MessageFormat):
+        self.buffer.sync_q.put(item)
+
+    async def put_async(self, item: MessageFormat):
+        self.buffer.async_q.put(item)
+
+    @property
+    def buffer(self):
+        QUEUE_SIZE.set(self._buffer._qsize())
+        return self._buffer
+
+    @classmethod
+    def clear(cls):
+        while not cls()._buffer.empty():
+            cls()._buffer.get_nowait()
+            cls()._buffer.task_done()
