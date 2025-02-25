@@ -2,34 +2,29 @@
 import logging
 import random
 
-from prometheus_client import Gauge
-
 from core.components.logs import configure_logging
 from core.subgraph.providers import GraphQLProvider
 
 from .api import HoprdAPI
 from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
 from .components.decorators import flagguard, formalin, master
+from .components.metrics import (
+    ELIGIBLE_PEERS,
+    MESSAGE_COUNT,
+    NFT_HOLDERS,
+    PEER_VERSION,
+    STAKE,
+    SUBGRAPH_SIZE,
+    TOPOLOGY_SIZE,
+    TOTAL_FUNDING,
+    UNIQUE_PEERS,
+)
 from .economic_model import EconomicModelTypes
 from .node import Node
 from .subgraph import URL, Type, entries
 
 # endregion
 
-# region Metrics
-ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
-MESSAGE_COUNT = Gauge(
-    "ct_message_count", "messages one should receive / year", [
-        "peer_id", "model"]
-)
-NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
-PEER_VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
-STAKE = Gauge("ct_peer_stake", "Stake", ["safe", "type"])
-SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
-TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
-TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
-UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers", ["type"])
-# endregion
 
 configure_logging()
 logger = logging.getLogger(__name__)

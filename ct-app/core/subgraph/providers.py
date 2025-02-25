@@ -6,15 +6,12 @@ from pathlib import Path
 from typing import Optional, Union
 
 import aiohttp
-from prometheus_client import Gauge
 
 from core.components.logs import configure_logging
+from core.components.metrics import SUBGRAPH_CALLS, SUBGRAPH_IN_USE
 
 from .mode import Mode
 from .url import URL
-
-SUBGRAPH_CALLS = Gauge("ct_subgraph_calls", "# of subgraph calls", ["slug", "type"])
-SUBGRAPH_IN_USE = Gauge("ct_subgraph_in_use", "Subgraph in use", ["slug"])
 
 configure_logging()
 logger = logging.getLogger(__name__)

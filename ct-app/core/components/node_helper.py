@@ -1,14 +1,10 @@
 import logging
 
-from prometheus_client import Gauge
-
 from core.api.hoprd_api import HoprdAPI
 from core.api.response_objects import Channel
 from core.components.address import Address
 from core.components.logs import configure_logging
-
-CHANNELS_OPS = Gauge("ct_channel_operation", "Channel operation", ["peer_id", "op"])
-
+from core.components.metrics import CHANNELS_OPS, MESSAGES_STATS
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -69,3 +65,10 @@ class NodeHelper:
             CHANNELS_OPS.labels(initiator.hopr, "fund").inc()
         else:
             logger.warning(f"Failed to fund channel {channel.id}")
+
+    @classmethod
+    async def send_message(cls, initiator: Address, api: HoprdAPI, message: str, relayer: str):
+        ok = await api.send_message(initiator.hopr, message, [relayer])
+
+        if ok:
+            MESSAGES_STATS.labels("sent", initiator.hopr, relayer).inc()

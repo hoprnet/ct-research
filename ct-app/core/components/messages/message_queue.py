@@ -1,10 +1,8 @@
 from janus import Queue
-from prometheus_client import Gauge
 
+from ..metrics import QUEUE_SIZE
 from ..singleton import Singleton
 from .message_format import MessageFormat
-
-QUEUE_SIZE = Gauge("ct_queue_size", "Size of the message queue")
 
 
 class MessageQueue(metaclass=Singleton):
