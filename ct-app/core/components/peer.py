@@ -165,7 +165,7 @@ class Peer:
     def start_async_processes(self):
         if self.running is False:
             self.running = True
-            AsyncLoop.add(self.message_relay_request)
+            AsyncLoop.run_in_thread(self.message_relay_request)
 
     def stop_async_processes(self):
         self.running = False
