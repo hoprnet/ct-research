@@ -48,7 +48,7 @@ economicModel:
 
   legacy:
     proportion: 1.0
-    apr: 0.0000008
+    apr: 0.000001
 
     coefficients:
       a: 1
@@ -91,8 +91,9 @@ economicModel:
 peer:
   minVersion: '2.1.5'
   initialSleep:
-    mean: 30
+    mean: 10
     std: 2
+  messageMultiplier: 5
 
 # =============================================================================
 # 

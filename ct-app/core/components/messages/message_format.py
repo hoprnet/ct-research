@@ -1,22 +1,17 @@
 import re
-from asyncio import Queue
 from datetime import datetime
 
-from prometheus_client import Gauge
-
-from .singleton import Singleton
-
-QUEUE_SIZE = Gauge("ct_queue_size", "Size of the message queue")
 
 class MessageFormat:
-    pattern = "{relayer} {index} {timestamp}"
+    pattern = "{relayer} {index} {multiplier} {timestamp}"
     index = 0
-    range = int(1e10)
+    range = int(1e5)
 
-    def __init__(self, relayer: str, index: str = None, timestamp: str = None):
+    def __init__(self, relayer: str, index: str = None, timestamp: str = None, multiplier: int = 1):
         self.relayer = relayer
         self.timestamp = int(float(timestamp)) if timestamp else int(datetime.now().timestamp()*1000)
         self.index = int(index) if index else self.message_index
+        self.multiplier = multiplier
 
     @property
     def message_index(self):
@@ -42,23 +37,3 @@ class MessageFormat:
     
     def bytes(self):
         return self.format().encode()
-
-class MessageQueue(metaclass=Singleton):
-    def __init__(self):
-        self._buffer = Queue()
-
-    async def get(self) -> MessageFormat:
-        return await self.buffer.get()
-
-    @property
-    def buffer(self):
-        QUEUE_SIZE.set(self._buffer.qsize())
-        return self._buffer
-
-    @classmethod
-    def clear(cls):
-        instance = cls()
-
-        while not instance._buffer.empty():
-            instance._buffer.get_nowait()
-            instance._buffer.task_done()
