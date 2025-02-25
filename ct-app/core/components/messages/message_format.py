@@ -3,14 +3,15 @@ from datetime import datetime
 
 
 class MessageFormat:
-    pattern = "{relayer} {index} {timestamp}"
+    pattern = "{relayer} {index} {multiplier} {timestamp}"
     index = 0
-    range = int(1e10)
+    range = int(1e5)
 
-    def __init__(self, relayer: str, index: str = None, timestamp: str = None):
+    def __init__(self, relayer: str, index: str = None, timestamp: str = None, multiplier: int = 1):
         self.relayer = relayer
         self.timestamp = int(float(timestamp)) if timestamp else int(datetime.now().timestamp()*1000)
         self.index = int(index) if index else self.message_index
+        self.multiplier = multiplier
 
     @property
     def message_index(self):
