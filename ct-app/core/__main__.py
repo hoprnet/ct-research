@@ -24,6 +24,8 @@ def main(configfile: str):
 
     params = Parameters(config)
 
+    print(f"{params.as_dict=}")
+
     # create the core and nodes instances
     nodes = Node.fromCredentials(*Utils.nodesCredentials("NODE_ADDRESS", "NODE_KEY"))
 

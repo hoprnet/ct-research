@@ -6,157 +6,197 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 
-class Param:
-    def __init__(self, name: str, type: type = str, default=None):
-        self.name = name
-        self.type = type
-        self.default = default
-
-
 class ExplicitParams:
-    keys: dict[str, Param] = {}
+    keys: dict[str, type] = {}
 
     def __init__(self, data: dict):
         self.parse(data)
 
     def parse(self, data: dict):
-        for in_file, param in self.keys.items():
-            if value := data.get(in_file):
-                value = param.type(value)
-            setattr(self, param.name, value)
+        for name, type in self.keys.items():
+            if value := data.get(name):
+                value = type(value)
+            setattr(self, name, value)
 
     @property
     def as_dict(self):
         return {k: v.as_dict if isinstance(v, ExplicitParams) else v for k, v in self.__dict__.items()}
 
+class FlagParam(ExplicitParams):
+    keys = {
+        "value": int
+    }
+
+class FlagCoreParams(ExplicitParams):
+    keys = {
+        "apply_economic_model": FlagParam,
+        "ticket_parameters": FlagParam,
+        "connected_peers": FlagParam,
+        "topology": FlagParam,
+        "rotate_subgraphs": FlagParam,
+        "peers_rewards": FlagParam,
+        "registered_nodes": FlagParam,
+        "allocations": FlagParam,
+        "eoa_balances": FlagParam,
+        "nft_holders": FlagParam,
+        "safe_fundings": FlagParam
+    }
+
+
+class FlagNodeParams(ExplicitParams):
+    keys = {
+        "healthcheck": FlagParam,
+        "retrieve_peers": FlagParam, 
+        "retrieve_channels": FlagParam,
+        "retrieve_balances": FlagParam, 
+        "open_channels": FlagParam,
+        "fund_channels": FlagParam,
+        "close_old_channels": FlagParam,
+        "close_pending_channels": FlagParam,
+        "close_incoming_channels": FlagParam,
+        "get_total_channel_funds": FlagParam,
+        "observe_message_queue": FlagParam,
+        "observe_relayed_messages": FlagParam,
+    }
+
+
+class FlagPeerParams(ExplicitParams):
+    keys = {
+        "message_relay_request": FlagParam
+    }
+
 
 class FlagParams(ExplicitParams):
-    pass
+    keys = {
+        "core": FlagCoreParams,
+        "node": FlagNodeParams,
+        "peer": FlagPeerParams
+    }
 
 
 class LegacyCoefficientsParams(ExplicitParams):
     keys = {
-        "a": Param("a", float),
-        "b": Param("b", float),
-        "c": Param("c", float),
-        "l": Param("l", float)
+        "a": float,
+        "b": float,
+        "c": float,
+        "l": float,
     }
 
 
 class LegacyEquationParams(ExplicitParams):
     keys = {
-        "formula": Param("formula"),
-        "condition": Param("condition"),
+        "formula": str,
+        "condition": str,
     }
 
 
 class LegacyEquationsParams(ExplicitParams):
     keys = {
-        "fx": Param("fx", LegacyEquationParams),
-        "gx": Param("gx", LegacyEquationParams),
+        "fx": LegacyEquationParams,
+        "gx": LegacyEquationParams,
     }
 
 
 class LegacyParams(ExplicitParams):
     keys = {
-        "proportion": Param("proportion", float),
-        "apr": Param("apr", float),
-        "coefficients": Param("coefficients", LegacyCoefficientsParams),
-        "equations": Param("equations", LegacyEquationsParams)
+        "proportion": float,
+        "apr": float,
+        "coefficients": LegacyCoefficientsParams,
+        "equations": LegacyEquationsParams
     }
 
 
 class BucketParams(ExplicitParams):
     keys = {
-        "flatness": Param("flatness", float),
-        "skewness": Param("skewness", float),
-        "upperbound": Param("upperbound", float),
-        "offset": Param("offset", float)
+        "flatness": float,
+        "skewness": float,
+        "upperbound": float,
+        "offset": float
     }
 
 
 class BucketsParams(ExplicitParams):
     keys = {
-        "economicSecurity": Param("economic_security", BucketParams),
-        "networkCapacity": Param("network_capacity", BucketParams)
+        "economic_security": BucketParams,
+        "network_capacity": BucketParams
     }
 
 
 class SigmoidParams(ExplicitParams):
     keys = {
-        "proportion": Param("proportion", float),
-        "maxAPR": Param("max_apr", float),
-        "networkCapacity": Param("network_capacity", int),
-        "totalTokenSupply": Param("total_token_supply", int),
-        "offset": Param("offset", int),
-        "buckets": Param("buckets", BucketsParams)
+        "proportion": float,
+        "max_apr": float,
+        "network_capacity": int,
+        "total_token_supply": int,
+        "offset": int,
+        "buckets": BucketsParams
     }
 
 
 class EconomicModelParams(ExplicitParams):
     keys = {
-        "minSafeAllowance": Param("min_safe_allowance", float),
-        "NFTThreshold": Param("nft_threshold", float),
-        "legacy": Param("legacy", LegacyParams),
-        "sigmoid": Param("sigmoid", SigmoidParams)
+        "min_safe_allowance": float,
+        "nft_threshold": float,
+        "legacy": LegacyParams,
+        "sigmoid": SigmoidParams
     }
 
 
 class PeerParams(ExplicitParams):
     keys = {
-        "minVersion": Param("min_version"),
-        "sleepMeanTime": Param("sleep_mean_time", int),
-        "sleepStdTime": Param("sleep_std_time", int),
+        "min_version": str,
+        "sleep_mean_time": int,
+        "sleep_std_time": int
     }
 
 
 class ChannelParams(ExplicitParams):
     keys = {
-        "minBalance": Param("min_balance", float),
-        "fundingAmount": Param("funding_amount", float),
-        "maxAgeSeconds": Param("max_age_seconds", int)
+        "min_balance": float,
+        "funding_amount": float,
+        "max_age_seconds": int
     }
 
 
 class FundingsParams(ExplicitParams):
     keys = {
-        "constant": Param("constant", float)
+        "constant": float
     }
 
 
 class SubgraphEndpointInputsParams(ExplicitParams):
     keys = {
-        "schedule_in": Param("schedule_in", list[str])
+        "schedule_in": list[str]
     }
 
 
 class SubgraphEndpointParams(ExplicitParams):
     keys = {
-        "queryID": Param("query_id"),
-        "slug": Param("slug"),
-        "inputs": Param("inputs", SubgraphEndpointInputsParams)
+        "query_id": str,
+        "slug": str,
+        "inputs": SubgraphEndpointInputsParams
     }
 
 
 class SubgraphParams(ExplicitParams):
     keys = {
-        "mainnetAllocations": Param("mainnet_allocations", SubgraphEndpointParams),
-        "gnosisAllocations": Param("gnosis_allocations", SubgraphEndpointParams),
-        "hoprOnMainnet": Param("hopr_on_mainnet", SubgraphEndpointParams),
-        "hoprOnGnosis": Param("hopr_on_gnosis", SubgraphEndpointParams),
-        "fundings": Param("fundings", SubgraphEndpointParams),
-        "rewards": Param("rewards", SubgraphEndpointParams),
-        "safesBalance": Param("safes_balance", SubgraphEndpointParams),
-        "staking": Param("staking", SubgraphEndpointParams),
+        "mainnet_allocations": SubgraphEndpointParams,
+        "gnosis_allocations": SubgraphEndpointParams,
+        "hopr_on_mainnet": SubgraphEndpointParams,
+        "hopr_on_gnosis": SubgraphEndpointParams,
+        "safes_balance": SubgraphEndpointParams,
+        "fundings": SubgraphEndpointParams,
+        "rewards": SubgraphEndpointParams,
+        "staking": SubgraphEndpointParams
     }
 
 
 class Parameters(ExplicitParams):
     keys = {
-        "flags": Param("flags", FlagParams),
-        "economicModel": Param("economic_model", EconomicModelParams),
-        "peer": Param("peer", PeerParams),
-        "channel": Param("channel", ChannelParams),
-        "fundings": Param("fundings", FundingsParams),
-        "subgraph": Param("subgraph", SubgraphParams)
+        "flags": FlagParams,
+        "economic_model": EconomicModelParams,
+        "peer": PeerParams,
+        "channel": ChannelParams,
+        "fundings": FundingsParams,
+        "subgraph": SubgraphParams
     }
