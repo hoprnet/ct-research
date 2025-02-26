@@ -48,7 +48,7 @@ economicModel:
 
   legacy:
     proportion: 1.0
-    apr: 0.0000008
+    apr: 0.000001
 
     coefficients:
       a: 1
@@ -69,7 +69,7 @@ economicModel:
 
     maxAPR: 0.0000001
     networkCapacity: 100
-    totalTokenSupply: 500
+    totalTokenSupply: 5000
 
     offset: 10
     buckets:
@@ -91,8 +91,14 @@ economicModel:
 peer:
   minVersion: '2.1.5'
   initialSleep:
-    mean: 30
+    mean: 10
     std: 2
+
+  # Controls how many messages are batched at a time. Increasing this reduces
+  # the queue size but also privacy as the load gets less spread over time. 
+  # NOTE: Should be replaced by a dynamic approch, by setting the minimum delay
+  # acceptable before increasing the batch size accordingly (auto-mode)
+  messageMultiplier: 5 
 
 # =============================================================================
 # 

@@ -331,7 +331,7 @@ class Node:
 
     @master(flagguard, formalin, connectguard)
     async def observe_message_queue(self):
-        message = await MessageQueue().get()
+        message = await MessageQueue().get_async()        
         # TODO: maybe set the timestamp here ?
 
         peers = [peer.address.hopr for peer in await self.peers.get()]
@@ -348,13 +348,8 @@ class Node:
         if message.relayer not in channels:
             return
 
-        AsyncLoop.add(self.api.send_message, 
-                      self.address.hopr, 
-                      message.format(), 
-                      [message.relayer], 
-                      publish_to_task_set=False)
-
-        MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer).inc()
+        AsyncLoop.add(NodeHelper.send_message, self.address, self.api, message, publish_to_task_set=False)
+        MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer).inc(message.multiplier)
 
     async def tasks(self):
         callbacks = [

@@ -6,6 +6,7 @@ from core.api.hoprd_api import HoprdAPI
 from core.api.response_objects import Channel
 from core.components.address import Address
 from core.components.logs import configure_logging
+from core.components.messages.message_format import MessageFormat
 
 CHANNELS_OPS = Gauge("ct_channel_operation", "Channel operation", ["peer_id", "op"])
 
@@ -69,3 +70,9 @@ class NodeHelper:
             CHANNELS_OPS.labels(initiator.hopr, "fund").inc()
         else:
             logger.warning(f"Failed to fund channel {channel.id}")
+
+    @classmethod
+    async def send_message(cls, initiator: Address, api: HoprdAPI, message: MessageFormat):
+        for idx in range(message.multiplier):
+            await api.send_message(initiator.hopr, message.format(), [message.relayer])
+            message.increase_inner_index()
