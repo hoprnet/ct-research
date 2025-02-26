@@ -21,7 +21,7 @@ class MessageQueue(metaclass=Singleton):
         return await self.buffer.async_q.get()
 
     async def put_async(self, item: MessageFormat):
-        self.buffer.async_q.put(item)
+        await self.buffer.async_q.put(item)
 
     @property
     def size(self):
