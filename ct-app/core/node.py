@@ -319,7 +319,7 @@ class Node:
             try:
                 message = MessageFormat.parse(m.body)
             except ValueError as err:
-                logger.exception("Error while parsing message", {"error": err})
+                logger.exception("Error while parsing message", {"error": str(err)})
                 continue
             
 

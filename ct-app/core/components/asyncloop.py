@@ -40,7 +40,7 @@ class AsyncLoop(metaclass=Singleton):
         try:
             task = asyncio.ensure_future(callback(*args))
         except Exception as err:
-            logger.exception("Failed to create task", {"task": callback.__name__, "error": err})
+            logger.exception("Failed to create task", {"task": callback.__name__, "error": str(err)})
             return
 
         if publish_to_task_set:
@@ -54,7 +54,7 @@ class AsyncLoop(metaclass=Singleton):
             try:
                 asyncio.run(callback(*args))
             except Exception as err:
-                logger.exception("Failed to run task", {"task": callback.__name__, "error": err})
+                logger.exception("Failed to run task", {"task": callback.__name__, "error": str(err)})
 
         threading.Thread(target=sync_wrapper, args=(callback, *args), daemon=True).start()
 

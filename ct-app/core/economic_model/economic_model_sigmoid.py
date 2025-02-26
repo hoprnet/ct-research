@@ -83,7 +83,7 @@ class EconomicModelSigmoid:
                 + self.offset
             )
         except ValueError as err:
-            logger.exception("Value error in APR calculation", {"error": err})
+            logger.exception("Value error in APR calculation", {"error": str(err)})
             apr = 0
 
         if self.max_apr is not None:
