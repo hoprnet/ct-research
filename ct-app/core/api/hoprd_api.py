@@ -46,7 +46,6 @@ class HoprdAPI:
         self.headers = {"Authorization": f"Bearer {token}"}
         self.prefix = "/api/v3/"
 
-
     async def __call(
         self,
         method: HTTPMethod,
@@ -67,14 +66,13 @@ class HoprdAPI:
                         data = await res.text()
 
                     return (res.status // 200) == 1, data
-
         except OSError as err:
             logger.exception("OSError while doing an API call",
-                         {"error": err, "method": method.value, "endpoint": endpoint})
+                             {"error": str(err), "method": method.value, "endpoint": endpoint})
 
         except Exception as err:
-            logger.exception("Exception while doing an API call", 
-                         {"error": err, "method": method.value, "endpoint": endpoint})
+            logger.exception("Exception while doing an API call",
+                             {"error": str(err), "method": method.value, "endpoint": endpoint})
 
         return (False, None)
 
@@ -85,16 +83,27 @@ class HoprdAPI:
         data: ApiRequestObject = None,
         timeout: int = 60,
     ) -> tuple[bool, Optional[object]]:
-        try:
-            return await asyncio.wait_for(
-                asyncio.create_task(self.__call(method, endpoint, data)),
-                timeout=timeout,
-            )
+        backoff = 0.5
+        while True:
+            try:
+                result = await asyncio.wait_for(
+                    asyncio.create_task(self.__call(method, endpoint, data)),
+                    timeout=timeout,
+                )
+            except aiohttp.ClientConnectionError as err:
+                backoff *= 2
+                logger.exception("ClientConnection exception while doing an API call.",
+                                 {"error": str(err), "method": method.value, "endpoint": endpoint, "backoff": backoff})
+                if backoff > 10:
+                    return (False, None)
+                await asyncio.sleep(backoff)
 
-        except asyncio.TimeoutError as err:
-            logger.exception("Exception while doing an API call",
-                             {"error": err, "method": method.value, "endpoint": endpoint})
-            return (False, None)
+            except asyncio.TimeoutError as err:
+                logger.exception("Timeout exception while doing an API call",
+                                 {"error": str(err), "method": method.value, "endpoint": endpoint})
+                return (False, None)
+            else:
+                return result
 
     async def balances(self) -> Optional[Balances]:
         """
