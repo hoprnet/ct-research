@@ -3,9 +3,9 @@ from datetime import datetime
 
 
 class MessageFormat:
-    pattern = "{relayer} {index} {inner_index} {multiplier} {timestamp}"
-    index = 0
+    params = ["relayer", "index", "inner_index", "multiplier", "timestamp"]
     range = int(1e5)
+    index = 0
 
     def __init__(self, relayer: str, index: str = None, inner_index: int = None, multiplier: int = None, timestamp: str = None ):
         self.relayer = relayer
@@ -20,24 +20,29 @@ class MessageFormat:
         self.__class__.index += 1
         self.__class__.index %= (self.__class__.range)
         return value
+
+    @classmethod
+    def pattern(self):
+        return ' '.join([f"{{{param}}}" for param in self.params])
         
     @classmethod
     def parse(cls, input_string: str):
         re_pattern = "^" + \
-            cls.pattern.replace("{", "(?P<").replace("}", ">.+)") + "$"
+            cls.pattern().replace("{", "(?P<").replace("}", ">.+)") + "$"
 
         match = re.compile(re_pattern).match(input_string)
         if not match:
             raise ValueError(
-                f"Input string format is incorrect. {input_string} incompatible with format {cls.pattern}"
+                f"Input string format is incorrect. {input_string} incompatible with format {cls.pattern()}"
             )
-        return cls(match.group("relayer"), match.group("index"), match.group("inner_index"), match.group("multiplier"), match.group("timestamp"))
+
+        return cls(*[match.group(param) for param in cls.params])
 
     def increase_inner_index(self):
         self.inner_index += 1
 
     def format(self):
-        return self.pattern.format_map(self.__dict__)
+        return self.pattern().format_map(self.__dict__)
     
     def bytes(self):
         return self.format().encode()
