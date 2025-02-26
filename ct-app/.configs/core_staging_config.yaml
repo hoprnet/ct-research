@@ -93,7 +93,12 @@ peer:
   initialSleep:
     mean: 10
     std: 2
-  messageMultiplier: 5
+
+  # Controls how many messages are batched at a time. Increasing this reduces
+  # the queue size but also privacy as the load gets less spread over time. 
+  # NOTE: Should be replaced by a dynamic approch, by setting the minimum delay
+  # acceptable before increasing the batch size accordingly (auto-mode)
+  messageMultiplier: 5 
 
 # =============================================================================
 # 

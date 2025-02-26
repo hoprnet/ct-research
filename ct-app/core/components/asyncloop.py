@@ -51,7 +51,10 @@ class AsyncLoop(metaclass=Singleton):
     @classmethod
     def run_in_thread(cls, callback: Callable, *args):
         def sync_wrapper(callback, *args):
-            asyncio.run(callback(*args))
+            try:
+                asyncio.run(callback(*args))
+            except Exception as err:
+                logger.exception("Failed to run task", {"task": callback.__name__, "error": err})
 
         threading.Thread(target=sync_wrapper, args=(callback, *args), daemon=True).start()
 
