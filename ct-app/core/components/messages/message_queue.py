@@ -34,5 +34,5 @@ class MessageQueue(metaclass=Singleton):
 
     @classmethod
     def clear(cls):
-        while not cls().size:
+        while cls().size:
             cls().get_sync()
