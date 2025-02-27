@@ -7,6 +7,8 @@ from core.components.decorators import connectguard, flagguard, formalin
 
 flag_dictionary = {"flags": {"fooclass": {"fooFlagguardFunc": 1, "fooFormalinFunc": 1}}}
 
+# FIXME: This whole file fails
+# The problem is that the test is not properly mocking the Parameters class
 
 class FooClass:
     def __init__(self):
@@ -14,8 +16,7 @@ class FooClass:
         self.connected = LockedVar("connected", False)
         self.running = False
         self.counter = 0
-        self.params = Parameters()
-        self.params.parse(flag_dictionary)
+        self.params = Parameters(flag_dictionary)
 
     @connectguard
     async def foo_connectguard_func(self):

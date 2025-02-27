@@ -157,8 +157,8 @@ class Peer:
         else:
             await asyncio.sleep(
                 random.normalvariate(
-                    self.params.peer.initialSleep.mean,
-                    self.params.peer.initialSleep.std,
+                    self.params.peer.sleep_mean_time,
+                    self.params.peer.sleep_std_time
                 )
             )
 

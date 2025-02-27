@@ -127,7 +127,7 @@ class Node:
         all_addresses = {
             p.address.native
             for p in await self.peers.get()
-            if not p.is_old(self.params.peer.minVersion)
+            if not p.is_old(self.params.peer.min_version)
         }
         addresses_without_channels = all_addresses - addresses_with_channels
 
@@ -136,7 +136,7 @@ class Node:
 
         for address in addresses_without_channels:
             AsyncLoop.add(NodeHelper.open_channel, self.address, self.api, address,
-                          self.params.channel.fundingAmount, publish_to_task_set=False)
+                          self.params.channel.funding_amount, publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
     async def close_incoming_channels(self):
@@ -197,7 +197,7 @@ class Node:
 
             if (
                 datetime.now() - timestamp
-            ).total_seconds() < self.params.channel.maxAgeSeconds:
+            ).total_seconds() < self.params.channel.max_age_seconds:
                 continue
 
             channels_to_close.append(channel_id)
@@ -224,18 +224,18 @@ class Node:
         low_balances = [
             c
             for c in out_opens
-            if int(c.balance) / 1e18 <= self.params.channel.minBalance
+            if int(c.balance) / 1e18 <= self.params.channel.min_balance
         ]
 
         logger.info("Starting funding of channels where balance is too low", 
-                    {"count": len(low_balances), "threshold": self.params.channel.minBalance})
+                    {"count": len(low_balances), "threshold": self.params.channel.min_balance})
 
         peer_ids = [p.address.hopr for p in await self.peers.get()]
 
         for channel in low_balances:
             if channel.destination_peer_id in peer_ids:
                 AsyncLoop.add(NodeHelper.fund_channel, self.address,
-                              self.api, channel, self.params.channel.fundingAmount, publish_to_task_set=False)
+                              self.api, channel, self.params.channel.funding_amount, publish_to_task_set=False)
 
     @master(flagguard, formalin, connectguard)
     async def retrieve_peers(self):
@@ -244,7 +244,7 @@ class Node:
         """
         results = await self.api.peers()
         peers = {Peer(item.peer_id, item.address, item.version) for item in results}
-        peers = {p for p in peers if not p.is_old(self.params.peer.minVersion)}
+        peers = {p for p in peers if not p.is_old(self.params.peer.min_version)}
 
         addresses_w_timestamp = {
             p.address.native: datetime.now() for p in peers}

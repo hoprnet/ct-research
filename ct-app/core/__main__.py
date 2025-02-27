@@ -1,4 +1,5 @@
 import logging
+import os
 
 import click
 import yaml
@@ -23,8 +24,7 @@ def main(configfile: str):
         config = yaml.safe_load(file)
 
     params = Parameters(config)
-
-    print(f"{params.as_dict=}")
+    params.subgraph.api_key = os.getenv("SUBGRAPH_API_KEY")
 
     # create the core and nodes instances
     nodes = Node.fromCredentials(*Utils.nodesCredentials("NODE_ADDRESS", "NODE_KEY"))

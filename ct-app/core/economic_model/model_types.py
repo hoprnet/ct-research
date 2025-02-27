@@ -1,7 +1,6 @@
 from enum import Enum
 
-from .economic_model_legacy import EconomicModelLegacy
-from .economic_model_sigmoid import EconomicModelSigmoid
+from core.components.parameters import LegacyParams, SigmoidParams
 
 
 class EconomicModelTypes(Enum):
@@ -11,6 +10,6 @@ class EconomicModelTypes(Enum):
     @property
     def model(self):
         return {
-            EconomicModelTypes.LEGACY: EconomicModelLegacy,
-            EconomicModelTypes.SIGMOID: EconomicModelSigmoid,
+            EconomicModelTypes.LEGACY: LegacyParams,
+            EconomicModelTypes.SIGMOID: SigmoidParams,
         }[self]

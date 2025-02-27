@@ -1,30 +1,34 @@
 import pytest
-from core.economic_model import (
-    Budget,
-    Coefficients,
-    EconomicModelLegacy,
-    Equation,
-    Equations,
-)
+
+from core.components.parameters import LegacyParams
+from core.economic_model import Budget
 
 
 @pytest.fixture
-def model(budget: Budget):
-    model = EconomicModelLegacy(
-        Equations(
-            Equation("a * x", "l <= x <= c"),
-            Equation("a * c + (x - c) ** (1 / b)", "x > c"),
-        ),
-        Coefficients(1, 1.4, 75000, 10000),
-        1,
-        20.0,
-    )
-    model.budget = budget
+def model() -> LegacyParams:
+    return LegacyParams({
+        "proportion": 1,
+        "apr": 20,
+        "coefficients": {
+            "a": 1,
+            "b": 1.4,
+            "c": 75000,
+            "l": 10000
+        },
+        "equations": {
+            "fx": {
+                "formula": "a * x",
+                "condition": "l <= x <= c"
+            },
+            "gx": {
+                "formula": "a * c + (x - c) ** (1 / b)",
+                "condition": "x > c"
+            }
+        }
+    })
 
-    return model
 
-
-def test_transformed_stake(model: EconomicModelLegacy):
+def test_transformed_stake(model: LegacyParams):
     assert model.transformed_stake(0) == 0
     assert model.transformed_stake(model.coefficients.l) == model.coefficients.l
     assert model.transformed_stake(model.coefficients.c) == model.coefficients.c
@@ -33,7 +37,7 @@ def test_transformed_stake(model: EconomicModelLegacy):
     )
 
 
-def test_message_count_for_reward(model: EconomicModelLegacy):
+def test_message_count_for_reward(model: LegacyParams):
     assert model.yearly_message_count(0) == 0, "No reward for 0 stake"
 
     assert round(

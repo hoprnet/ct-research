@@ -14,16 +14,11 @@ from core.api.response_objects import (
     ConnectedPeer,
 )
 from core.components import Parameters, Peer
+from core.components.parameters import LegacyParams
 
 # needs to be imported after the patches are applied
 from core.core import Core
-from core.economic_model import (
-    Budget,
-    Coefficients,
-    EconomicModelLegacy,
-    Equation,
-    Equations,
-)
+from core.economic_model import Budget
 from core.node import Node
 
 
@@ -74,17 +69,28 @@ def budget() -> Budget:
 
 
 @pytest.fixture
-def economic_model(budget: Budget) -> EconomicModelLegacy:
-    equations = Equations(
-        Equation("a * x", "l <= x <= c"),
-        Equation("a * c + (x - c) ** (1 / b)", "x > c"),
-    )
-    parameters = Coefficients(1, 1, 3, 0)
-
-    model = EconomicModelLegacy(equations, parameters, 1, 15)
-    model.budget = budget
-    return model
-
+def economic_model() -> LegacyParams:
+    return LegacyParams({
+        "proportion": 1,
+        "apr": 15,
+        "coefficients": {
+            "a": 1,
+            "b": 1,
+            "c": 3,
+            "l": 0
+        },
+        "equations": {
+            "fx": {
+                "formula": "a * x",
+                "condition": "l <= x <= c"
+            },
+            "gx": {
+                "formula": "a * c + (x - c) ** (1 / b)",
+                "condition": "x > c"
+            }
+        }
+    })
+    
 
 @pytest.fixture
 def peers_raw() -> list[dict]:
@@ -197,17 +203,10 @@ def channels(peers: set[Peer]) -> Channels:
 @pytest.fixture
 async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
 
-    params = Parameters()
+    
     with open("./test/test_config.yaml", "r") as file:
-        params.parse(yaml.safe_load(file))
-    setattr(params.subgraph, "apiKey", "foo_deployer_key")
-
-    setattr(params, "pg", Parameters())
-    setattr(params.pg, "user", "user")
-    setattr(params.pg, "password", "password")
-    setattr(params.pg, "host", "host")
-    setattr(params.pg, "port", "port")
-    setattr(params.pg, "database", "database")
+        params = Parameters(yaml.safe_load(file))
+    setattr(params.subgraph, "api_key", "foo_deployer_key")
 
     core = Core(nodes, params)
 
@@ -240,7 +239,7 @@ async def node(
 
     params = Parameters()
     with open("./test/test_config.yaml", "r") as file:
-        params.parse(yaml.safe_load(file))
+        params = Parameters(yaml.safe_load(file))
     setattr(params.subgraph, "apiKey", "foo_deployer_key")
 
     node.params = params

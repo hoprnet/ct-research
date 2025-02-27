@@ -1,4 +1,5 @@
 import logging
+from math import log, prod
 
 from core.components.logs import configure_logging
 
@@ -9,60 +10,63 @@ logger = logging.getLogger(__name__)
 class ExplicitParams:
     keys: dict[str, type] = {}
 
-    def __init__(self, data: dict):
+    def __init__(self, data: dict = {}):
         self.parse(data)
 
     def parse(self, data: dict):
         for name, type in self.keys.items():
             if value := data.get(name):
                 value = type(value)
+                if type is Flag:
+                    value = value.value
             setattr(self, name, value)
 
     @property
     def as_dict(self):
         return {k: v.as_dict if isinstance(v, ExplicitParams) else v for k, v in self.__dict__.items()}
 
-class FlagParam(ExplicitParams):
-    keys = {
-        "value": int
-    }
+
+class Flag:
+    def __init__(self, value: int):
+        self.value = value
+
 
 class FlagCoreParams(ExplicitParams):
     keys = {
-        "apply_economic_model": FlagParam,
-        "ticket_parameters": FlagParam,
-        "connected_peers": FlagParam,
-        "topology": FlagParam,
-        "rotate_subgraphs": FlagParam,
-        "peers_rewards": FlagParam,
-        "registered_nodes": FlagParam,
-        "allocations": FlagParam,
-        "eoa_balances": FlagParam,
-        "nft_holders": FlagParam,
-        "safe_fundings": FlagParam
+        "apply_economic_model": Flag,
+        "ticket_parameters": Flag,
+        "connected_peers": Flag,
+        "topology": Flag,
+        "rotate_subgraphs": Flag,
+        "peers_rewards": Flag,
+        "registered_nodes": Flag,
+        "allocations": Flag,
+        "eoa_balances": Flag,
+        "nft_holders": Flag,
+        "safe_fundings": Flag
     }
 
 
 class FlagNodeParams(ExplicitParams):
     keys = {
-        "healthcheck": FlagParam,
-        "retrieve_peers": FlagParam, 
-        "retrieve_channels": FlagParam,
-        "retrieve_balances": FlagParam, 
-        "open_channels": FlagParam,
-        "fund_channels": FlagParam,
-        "close_old_channels": FlagParam,
-        "close_pending_channels": FlagParam,
-        "close_incoming_channels": FlagParam,
-        "get_total_channel_funds": FlagParam,
-        "observe_message_queue": FlagParam,
-        "observe_relayed_messages": FlagParam,
+        "healthcheck": Flag,
+        "retrieve_peers": Flag,
+        "retrieve_channels": Flag,
+        "retrieve_balances": Flag,
+        "open_channels": Flag,
+        "fund_channels": Flag,
+        "close_old_channels": Flag,
+        "close_pending_channels": Flag,
+        "close_incoming_channels": Flag,
+        "get_total_channel_funds": Flag,
+        "observe_message_queue": Flag,
+        "observe_relayed_messages": Flag,
     }
 
 
 class FlagPeerParams(ExplicitParams):
     keys = {
-        "message_relay_request": FlagParam
+        "message_relay_request": Flag
     }
 
 
@@ -105,6 +109,29 @@ class LegacyParams(ExplicitParams):
         "equations": LegacyEquationsParams
     }
 
+    def transformed_stake(self, stake: float):
+        # convert parameters attribute to dictionary
+        kwargs = vars(self.coefficients)
+        kwargs.update({"x": stake})
+
+        for func in vars(self.equations).values():
+            if eval(func.condition, kwargs):
+                break
+        else:
+            return 0
+
+        return eval(func.formula, kwargs)
+
+    def yearly_message_count(self, stake: float, redeemed_rewards: float = 0):
+        """
+        Calculate the yearly message count a peer should receive based on the stake.
+        """
+        self.coefficients.c += redeemed_rewards
+        rewards = self.apr * self.transformed_stake(stake) / 100
+        self.coefficients.c -= redeemed_rewards
+
+        return rewards / self.budget.ticket_price * self.proportion
+
 
 class BucketParams(ExplicitParams):
     keys = {
@@ -113,6 +140,24 @@ class BucketParams(ExplicitParams):
         "upperbound": float,
         "offset": float
     }
+
+    def apr(self, x: float):
+        """
+        Calculate the APR for the bucket.
+        """
+        try:
+            apr = (
+                log(pow(self.upperbound / x, self.skewness) - 1) * self.flatness
+                + self.offset
+            )
+        except ValueError as err:
+            raise ValueError(f"Math domain error: {x=}, {vars(self)}") from err
+        except ZeroDivisionError as err:
+            raise ValueError("Zero division error") from err
+        except OverflowError as err:
+            raise ValueError("Overflow error") from err
+
+        return max(apr, 0)
 
 
 class BucketsParams(ExplicitParams):
@@ -126,11 +171,45 @@ class SigmoidParams(ExplicitParams):
     keys = {
         "proportion": float,
         "max_apr": float,
-        "network_capacity": int,
-        "total_token_supply": int,
         "offset": int,
-        "buckets": BucketsParams
+        "buckets": BucketsParams,
+        "network_capacity": int,
+        "total_token_supply": int
     }
+
+    def apr(
+        self,
+        xs: list[float],
+    ):
+        """
+        Calculate the APR for the economic model.
+        """
+        try:
+            apr = (
+                pow(
+                    prod(b.apr(x) for b, x in zip(vars(self.buckets).values(), xs)),
+                    1 / len(self.buckets),
+                )
+                + self.offset
+            )
+        except ValueError as err:
+            logger.exception("Value error in APR calculation", {"error": err})
+            apr = 0
+
+        if self.max_apr is not None:
+            apr = min(apr, self.max_apr)
+
+        return apr
+
+    def yearly_message_count(self, stake: float, xs: list[float]):
+        """
+        Calculate the yearly message count a peer should receive based on the stake.
+        """
+        apr = self.apr(xs)
+
+        rewards = apr * stake / 100.0
+
+        return rewards / self.budget.ticket_price * self.proportion
 
 
 class EconomicModelParams(ExplicitParams):
@@ -164,22 +243,19 @@ class FundingsParams(ExplicitParams):
     }
 
 
-class SubgraphEndpointInputsParams(ExplicitParams):
-    keys = {
-        "schedule_in": list[str]
-    }
-
-
 class SubgraphEndpointParams(ExplicitParams):
     keys = {
         "query_id": str,
         "slug": str,
-        "inputs": SubgraphEndpointInputsParams
+        "inputs": dict
     }
 
 
 class SubgraphParams(ExplicitParams):
     keys = {
+        "type": str,
+        "user_id": int,
+        "api_key": str,
         "mainnet_allocations": SubgraphEndpointParams,
         "gnosis_allocations": SubgraphEndpointParams,
         "hopr_on_mainnet": SubgraphEndpointParams,

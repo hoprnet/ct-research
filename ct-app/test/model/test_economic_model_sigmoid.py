@@ -1,71 +1,72 @@
 import pytest
 
-from core.components import Parameters
-from core.economic_model import Bucket, Budget, EconomicModelSigmoid
-
-
-def test_init_class():
-    config = {
-        "sigmoid": {
-            "proportion": 0.1,
-            "maxAPR": 15.0,
-            "offset": 10.0,
-            "buckets": {
-                "bucket_1": {
-                    "flatness": 1,
-                    "skewness": 2,
-                    "upperbound": 3,
-                    "offset": 0,
-                },
-                "bucket_2": {
-                    "flatness": 4,
-                    "skewness": 5,
-                    "upperbound": 6,
-                    "offset": 0,
-                },
-            },
-        }
-    }
-    params = Parameters()
-    params.parse(config)
-
-    economic_model = EconomicModelSigmoid.fromParameters(params.sigmoid)
-    bucket = economic_model.buckets[0]
-
-    assert len(economic_model.buckets) == len(config["sigmoid"]["buckets"])
-
-    for bucket in economic_model.buckets:
-        assert bucket.flatness == config["sigmoid"]["buckets"][bucket.name]["flatness"]
-        assert bucket.skewness == config["sigmoid"]["buckets"][bucket.name]["skewness"]
-        assert (
-            bucket.upperbound == config["sigmoid"]["buckets"][bucket.name]["upperbound"]
-        )
+from core.components.parameters import SigmoidParams
+from core.economic_model import Budget
 
 
 def test_values_mid_range():
-    assert (
-        EconomicModelSigmoid(
-            0, [Bucket("bucket_1", 1, 1, 1), Bucket("bucket_2", 1, 1, 0.5)], 20.0, 1
-        ).apr([0.5, 0.25])
-        == 0
-    )
+    economic_model = SigmoidParams({
+        "proportion": 1,
+        "max_apr": 20.0,
+        "offset": 0,
+        "buckets": {
+            "network_capacity": {
+                "flatness": 1,
+                "skewness": 1,
+                "upperbound": 1,
+                "offset": 0,
+            },
+            "economic_security": {
+                "flatness": 1,
+                "skewness": 1,
+                "upperbound": 0.5,
+                "offset": 0,
+            },
+        }
+    })
 
-    assert (
-        EconomicModelSigmoid(
-            10.0, [Bucket("bucket_1", 1, 1, 1), Bucket("bucket_2", 1, 1, 0.5)], 20.0, 1
-        ).apr([0.5, 0.25])
-        == 10
-    )
+    economic_model.offset = 0
+    assert economic_model.apr([0.5, 0.25]) == 0
+
+    economic_model.offset = 10
+    assert economic_model.apr([0.5, 0.25]) == 10 # fails because the order of buckets is not guaranteed
 
 
 def test_value_above_mid_range():
-    assert (
-        EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)], 20.0, 1).apr([0.75]) == 0
-    )
+    economic_model = SigmoidParams({
+        "proportion": 1,
+        "max_apr": 20.0,
+        "offset": 0,
+        "buckets": {
+            "network_capacity": {
+                "flatness": 1,
+                "skewness": 1,
+                "upperbound": 1,
+                "offset": 0,
+            }
+        }
+    })
+
+
+    assert economic_model.apr([0.75]) == 0
 
 
 def test_value_below_mid_range():
-    assert EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)], 20.0, 1).apr([0.25]) > 0
+    economic_model = SigmoidParams({
+        "proportion": 1,
+        "max_apr": 20.0,
+        "offset": 0,
+        "buckets": {
+            "network_capacity": {
+                "flatness": 1,
+                "skewness": 1,
+                "upperbound": 1,
+                "offset": 0,
+            }
+        }
+    })
+
+    assert economic_model.apr([0.25]) > 0
 
 
 def test_apr_composition():
