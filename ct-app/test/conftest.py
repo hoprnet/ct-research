@@ -18,7 +18,6 @@ from core.components.parameters import LegacyParams
 
 # needs to be imported after the patches are applied
 from core.core import Core
-from core.economic_model import Budget
 from core.node import Node
 
 
@@ -62,13 +61,6 @@ class SideEffect:
 
 
 @pytest.fixture
-def budget() -> Budget:
-    budget = Budget()
-    budget.ticket_price = 0.0001
-    return budget
-
-
-@pytest.fixture
 def economic_model() -> LegacyParams:
     return LegacyParams({
         "proportion": 1,
@@ -90,7 +82,7 @@ def economic_model() -> LegacyParams:
             }
         }
     })
-    
+
 
 @pytest.fixture
 def peers_raw() -> list[dict]:
@@ -203,15 +195,11 @@ def channels(peers: set[Peer]) -> Channels:
 @pytest.fixture
 async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
 
-    
     with open("./test/test_config.yaml", "r") as file:
         params = Parameters(yaml.safe_load(file))
     setattr(params.subgraph, "api_key", "foo_deployer_key")
 
     core = Core(nodes, params)
-
-    for model in core.models.values():
-        model.budget.ticket_price = 0.1
 
     return core
 

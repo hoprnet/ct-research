@@ -13,7 +13,8 @@ from core.components.logs import configure_logging
 from .mode import Mode
 from .url import URL
 
-SUBGRAPH_CALLS = Gauge("ct_subgraph_calls", "# of subgraph calls", ["slug", "type"])
+SUBGRAPH_CALLS = Gauge("ct_subgraph_calls",
+                       "# of subgraph calls", ["slug", "type"])
 SUBGRAPH_IN_USE = Gauge("ct_subgraph_in_use", "Subgraph in use", ["slug"])
 
 configure_logging()
@@ -69,9 +70,11 @@ class GraphQLProvider:
 
         try:
             async with aiohttp.ClientSession() as session, session.post(
-                self.url.url, json={"query": query, "variables": variable_values}
+                self.url.url, json={"query": query,
+                                    "variables": variable_values}
             ) as response:
-                SUBGRAPH_CALLS.labels(self.url.params.slug, self.url.mode).inc()
+                SUBGRAPH_CALLS.labels(
+                    self.url.params.slug, self.url.mode).inc()
                 return await response.json(), response.headers
         except TimeoutError as err:
             logger.error(f"Timeout error: {err}")
@@ -120,7 +123,8 @@ class GraphQLProvider:
                     self._execute(self._sku_query, kwargs), timeout=30
                 )
             except asyncio.TimeoutError:
-                logger.exception("Timeout error while fetching data from subgraph")
+                logger.exception(
+                    "Timeout error while fetching data from subgraph")
                 break
             except ProviderError as err:
                 logger.exception("ProviderError error", {"error": err})
@@ -145,9 +149,10 @@ class GraphQLProvider:
 
         try:
             if headers is not None:
-                attestations = json.loads(headers.getall("graph-attestation")[0])
+                attestations = json.loads(
+                    headers.getall("graph-attestation")[0])
                 logger.debug(
-            "Subgraph attestations", {"attestations": attestations}
+                    "Subgraph attestations", {"attestations": attestations}
                 )
         except UnboundLocalError:
             # raised if the headers variable is not defined

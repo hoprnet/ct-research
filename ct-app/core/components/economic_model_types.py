@@ -1,6 +1,6 @@
 from enum import Enum
 
-from core.components.parameters import LegacyParams, SigmoidParams
+from .parameters import LegacyParams, SigmoidParams
 
 
 class EconomicModelTypes(Enum):

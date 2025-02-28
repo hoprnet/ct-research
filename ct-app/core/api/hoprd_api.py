@@ -46,7 +46,6 @@ class HoprdAPI:
         self.headers = {"Authorization": f"Bearer {token}"}
         self.prefix = "/api/v3/"
 
-
     async def __call(
         self,
         method: HTTPMethod,
@@ -70,11 +69,11 @@ class HoprdAPI:
 
         except OSError as err:
             logger.exception("OSError while doing an API call",
-                         {"error": err, "method": method.value, "endpoint": endpoint})
+                             {"error": err, "method": method.value, "endpoint": endpoint})
 
         except Exception as err:
-            logger.exception("Exception while doing an API call", 
-                         {"error": err, "method": method.value, "endpoint": endpoint})
+            logger.exception("Exception while doing an API call",
+                             {"error": err, "method": method.value, "endpoint": endpoint})
 
         return (False, None)
 

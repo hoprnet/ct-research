@@ -18,9 +18,11 @@ from .components.node_helper import NodeHelper
 # region Metrics
 BALANCE = Gauge("ct_balance", "Node balance", ["peer_id", "token"])
 CHANNELS = Gauge("ct_channels", "Node channels", ["peer_id", "direction"])
-CHANNEL_FUNDS = Gauge("ct_channel_funds", "Total funds in out. channels", ["peer_id"])
+CHANNEL_FUNDS = Gauge("ct_channel_funds",
+                      "Total funds in out. channels", ["peer_id"])
 HEALTH = Gauge("ct_node_health", "Node health", ["peer_id"])
-MESSAGES_DELAYS = Histogram("ct_messages_delays", "Messages delays", ["sender","relayer"], buckets=[0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2.5])
+MESSAGES_DELAYS = Histogram("ct_messages_delays", "Messages delays", ["sender", "relayer"], buckets=[
+                            0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2.5])
 MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer"])
 PEERS_COUNT = Gauge("ct_peers_count", "Node peers", ["peer_id"])
 # endregion
@@ -32,7 +34,7 @@ logger = logging.getLogger(__name__)
 class Node:
     """
     A Node represents a single node in the network, managed by HOPR, and used to distribute rewards.
-    """ 
+    """
 
     def __init__(self, url: str, key: str):
         """
@@ -103,7 +105,7 @@ class Node:
 
         if balances is None:
             return None
-            
+
         if addr := self.address:
             for token, balance in vars(balances).items():
                 if balance is None:
@@ -131,8 +133,8 @@ class Node:
         }
         addresses_without_channels = all_addresses - addresses_with_channels
 
-
-        logger.info("Fetched nodes without open channels to them", {"count": len(addresses_without_channels)})
+        logger.info("Fetched nodes without open channels to them",
+                    {"count": len(addresses_without_channels)})
 
         for address in addresses_without_channels:
             AsyncLoop.add(NodeHelper.open_channel, self.address, self.api, address,
@@ -164,7 +166,8 @@ class Node:
             c for c in self.channels.outgoing if c.status.is_pending]
 
         if len(out_pendings) > 0:
-            logger.info("Starting closure of pending channels", {"count": len(out_pendings)})
+            logger.info("Starting closure of pending channels",
+                        {"count": len(out_pendings)})
 
         for channel in out_pendings:
             AsyncLoop.add(NodeHelper.close_pending_channel,
@@ -204,7 +207,7 @@ class Node:
 
         await self.peer_history.update(to_peer_history)
 
-        logger.info("Starting closure of dangling channels open with peer visible for too long", 
+        logger.info("Starting closure of dangling channels open with peer visible for too long",
                     {"count": len(channels_to_close)})
 
         for channel in channels_to_close:
@@ -227,7 +230,7 @@ class Node:
             if int(c.balance) / 1e18 <= self.params.channel.min_balance
         ]
 
-        logger.info("Starting funding of channels where balance is too low", 
+        logger.info("Starting funding of channels where balance is too low",
                     {"count": len(low_balances), "threshold": self.params.channel.min_balance})
 
         peer_ids = [p.address.hopr for p in await self.peers.get()]
@@ -243,8 +246,10 @@ class Node:
         Retrieve real peers from the network.
         """
         results = await self.api.peers()
-        peers = {Peer(item.peer_id, item.address, item.version) for item in results}
-        peers = {p for p in peers if not p.is_old(self.params.peer.min_version)}
+        peers = {Peer(item.peer_id, item.address, item.version)
+                 for item in results}
+        peers = {p for p in peers if not p.is_old(
+            self.params.peer.min_version)}
 
         addresses_w_timestamp = {
             p.address.native: datetime.now() for p in peers}
@@ -287,7 +292,7 @@ class Node:
         incoming_count = len(channels.incoming) if channels else 0
         outgoing_count = len(channels.outgoing) if channels else 0
 
-        logger.info("Scanned channels linked to the node", 
+        logger.info("Scanned channels linked to the node",
                     {"incoming": incoming_count, "outgoing": outgoing_count})
 
     @master(flagguard, formalin, connectguard)
@@ -303,9 +308,11 @@ class Node:
 
         results = await Utils.balanceInChannels(self.channels.outgoing)
 
-        total = results.get(self.address.hopr, dict()).get("channels_balance", 0)
+        total = results.get(self.address.hopr, dict()
+                            ).get("channels_balance", 0)
 
-        logger.info("Retrieved total amount stored in outgoing channels", {"amount": total})
+        logger.info("Retrieved total amount stored in outgoing channels", {
+                    "amount": total})
         CHANNEL_FUNDS.labels(self.address.hopr).set(total)
 
         return total
@@ -321,13 +328,14 @@ class Node:
             except ValueError as err:
                 logger.exception("Error while parsing message", {"error": err})
                 continue
-            
 
             if message.timestamp and message.relayer:
                 rtt = (m.timestamp - message.timestamp) / 1000
 
-                MESSAGES_DELAYS.labels(self.address.hopr, message.relayer).observe(rtt)
-                MESSAGES_STATS.labels("relayed", self.address.hopr, message.relayer).inc()
+                MESSAGES_DELAYS.labels(
+                    self.address.hopr, message.relayer).observe(rtt)
+                MESSAGES_STATS.labels(
+                    "relayed", self.address.hopr, message.relayer).inc()
 
     @master(flagguard, formalin, connectguard)
     async def observe_message_queue(self):
@@ -341,17 +349,17 @@ class Node:
 
         if self.channels is None:
             return
-            
+
         channels = [
             channel.destination_peer_id for channel in self.channels.outgoing]
 
         if message.relayer not in channels:
             return
 
-        AsyncLoop.add(self.api.send_message, 
-                      self.address.hopr, 
-                      message.format(), 
-                      [message.relayer], 
+        AsyncLoop.add(self.api.send_message,
+                      self.address.hopr,
+                      message.format(),
+                      [message.relayer],
                       publish_to_task_set=False)
 
         MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer).inc()

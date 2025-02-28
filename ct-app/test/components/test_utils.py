@@ -198,6 +198,7 @@ def test_allowManyNodePerSafe():
     assert peer_2.safe_address_count == 2
     assert peer_3.safe_address_count == 1
 
+
 @pytest.mark.asyncio
 async def test_balanceInChannels(channel_topology):
     results = await Utils.balanceInChannels(channel_topology)

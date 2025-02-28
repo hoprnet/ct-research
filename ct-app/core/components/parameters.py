@@ -1,6 +1,7 @@
 import logging
 from math import log, prod
 
+from core.api.response_objects import TicketPrice
 from core.components.logs import configure_logging
 
 configure_logging()
@@ -24,6 +25,9 @@ class ExplicitParams:
     @property
     def as_dict(self):
         return {k: v.as_dict if isinstance(v, ExplicitParams) else v for k, v in self.__dict__.items()}
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.as_dict})"
 
 
 class Flag:
@@ -122,7 +126,7 @@ class LegacyParams(ExplicitParams):
 
         return eval(func.formula, kwargs)
 
-    def yearly_message_count(self, stake: float, redeemed_rewards: float = 0):
+    def yearly_message_count(self, stake: float, ticket_price: TicketPrice, redeemed_rewards: float = 0):
         """
         Calculate the yearly message count a peer should receive based on the stake.
         """
@@ -130,7 +134,7 @@ class LegacyParams(ExplicitParams):
         rewards = self.apr * self.transformed_stake(stake) / 100
         self.coefficients.c -= redeemed_rewards
 
-        return rewards / self.budget.ticket_price * self.proportion
+        return rewards / ticket_price.value * self.proportion
 
 
 class BucketParams(ExplicitParams):
@@ -166,6 +170,17 @@ class BucketsParams(ExplicitParams):
         "network_capacity": BucketParams
     }
 
+    order = ["network_capacity", "economic_security"]
+
+    @property
+    def count(self):
+        return len(self.values)
+
+    @property
+    def values(self):
+        # return the values of the dictionary, by `order`
+        return [vars(self)[k] for k in self.order if vars(self)[k]]
+
 
 class SigmoidParams(ExplicitParams):
     keys = {
@@ -187,8 +202,8 @@ class SigmoidParams(ExplicitParams):
         try:
             apr = (
                 pow(
-                    prod(b.apr(x) for b, x in zip(vars(self.buckets).values(), xs)),
-                    1 / len(self.buckets),
+                    prod(b.apr(x) for b, x in zip(self.buckets.values, xs)),
+                    1 / self.buckets.count
                 )
                 + self.offset
             )
@@ -201,7 +216,7 @@ class SigmoidParams(ExplicitParams):
 
         return apr
 
-    def yearly_message_count(self, stake: float, xs: list[float]):
+    def yearly_message_count(self, stake: float, ticket_price: TicketPrice, xs: list[float]):
         """
         Calculate the yearly message count a peer should receive based on the stake.
         """
@@ -209,7 +224,7 @@ class SigmoidParams(ExplicitParams):
 
         rewards = apr * stake / 100.0
 
-        return rewards / self.budget.ticket_price * self.proportion
+        return rewards / ticket_price.value * self.proportion
 
 
 class EconomicModelParams(ExplicitParams):

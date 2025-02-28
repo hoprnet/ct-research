@@ -92,7 +92,6 @@ class Utils:
         for peer in peers:
             peer.safe_address_count = safe_counts[peer.safe.address]
 
-
     @classmethod
     async def balanceInChannels(cls, channels: list) -> dict[str, dict]:
         """

@@ -27,13 +27,15 @@ def main(configfile: str):
     params.subgraph.api_key = os.getenv("SUBGRAPH_API_KEY")
 
     # create the core and nodes instances
-    nodes = Node.fromCredentials(*Utils.nodesCredentials("NODE_ADDRESS", "NODE_KEY"))
+    nodes = Node.fromCredentials(
+        *Utils.nodesCredentials("NODE_ADDRESS", "NODE_KEY"))
 
     # start the prometheus client
     try:
         start_http_server(8080)
     except Exception as err:
-        logger.exception("Could not start the prometheus client on port 8080", {"error": err})
+        logger.exception(
+            "Could not start the prometheus client on port 8080", {"error": err})
     else:
         logger.info("Prometheus client started on port 8080")
 

@@ -62,6 +62,7 @@ class GetChannelsBody(ApiRequestObject):
     def __init__(self, full_topology: str, including_closed: str):
         super().__init__(vars())
 
+
 class SendMessageBody(ApiRequestObject):
     keys = {
         "body": "body",
@@ -73,11 +74,13 @@ class SendMessageBody(ApiRequestObject):
     def __init__(self, body: str, path: list[str], destination: str, tag: int):
         super().__init__(vars())
 
+
 class PopMessagesBody(ApiRequestObject):
     keys = {"tag": "tag"}
 
     def __init__(self, tag: int):
         super().__init__(vars())
+
 
 class GetPeersBody(ApiRequestObject):
     keys = {"quality": "quality"}

@@ -42,11 +42,13 @@ def flagguard(func):
 
     @functools.wraps(func)
     async def wrapper(self, *args, **kwargs):
-        class_flags = getattr(self.params.flags, self.__class__.__name__.lower())
+        class_flags = getattr(
+            self.params.flags, self.__class__.__name__.lower())
         flag = getattr(class_flags, func.__name__)
 
         if flag is None or flag is False:
-            logger.debug("Feature not enabled, skipping", {"feature": func.__name__})
+            logger.debug("Feature not enabled, skipping",
+                         {"feature": func.__name__})
             return
 
         return await func(self, *args, **kwargs)
@@ -62,7 +64,8 @@ def formalin(func):
 
     @functools.wraps(func)
     async def wrapper(self, *args, **kwargs):
-        class_flags = getattr(self.params.flags, self.__class__.__name__.lower())
+        class_flags = getattr(
+            self.params.flags, self.__class__.__name__.lower())
         delay = getattr(class_flags, func.__name__)
 
         if delay is True:
@@ -70,7 +73,8 @@ def formalin(func):
         if delay is False:
             delay = None
 
-        logger.debug("Running method continuously", {"method": func.__name__, "delay": delay})
+        logger.debug("Running method continuously", {
+                     "method": func.__name__, "delay": delay})
 
         while self.running:
             await func(self, *args, **kwargs)

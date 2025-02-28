@@ -10,7 +10,8 @@ class JSONFormatter:
         pass
 
     def format(self, record: logging.LogRecord):
-        timestamp = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(record.created)) + (".%03dZ" % (1000 * (record.created % 1)))
+        timestamp = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(
+            record.created)) + (".%03dZ" % (1000 * (record.created % 1)))
 
         result = {
             'timestamp':        timestamp,
@@ -25,7 +26,7 @@ class JSONFormatter:
         }
 
         if isinstance(record.args, dict):
-            result['fields']["args"] = record.args        
+            result['fields']["args"] = record.args
 
         if (record.exc_info):
             result['exception'] = traceback.format_exception(

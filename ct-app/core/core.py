@@ -4,6 +4,7 @@ import random
 
 from prometheus_client import Gauge
 
+from core.api.response_objects import TicketPrice
 from core.components.logs import configure_logging
 from core.components.parameters import ExplicitParams
 from core.subgraph.providers import GraphQLProvider
@@ -11,7 +12,7 @@ from core.subgraph.providers import GraphQLProvider
 from .api import HoprdAPI
 from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
 from .components.decorators import flagguard, formalin, master
-from .economic_model import EconomicModelTypes
+from .components.economic_model_types import EconomicModelTypes
 from .node import Node
 from .subgraph import URL, Type, entries
 
@@ -20,13 +21,12 @@ from .subgraph import URL, Type, entries
 # region Metrics
 ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
 MESSAGE_COUNT = Gauge(
-    "ct_message_count", "messages one should receive / year", [
-        "peer_id", "model"]
-)
+    "ct_message_count", "messages one should receive / year", ["peer_id", "model"])
 NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
 PEER_VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
 STAKE = Gauge("ct_peer_stake", "Stake", ["safe", "type"])
 SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
+TICKET_STATS = Gauge("ct_ticket_stats", "Ticket stats", ["type"])
 TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
 TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
 UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers", ["type"])
@@ -56,6 +56,7 @@ class Core:
         self.allocations_data = list[entries.Allocation]()
         self.eoa_balances_data = list[entries.Balance]()
         self.peers_rewards_data = dict[str, float]()
+        self.ticket_price: TicketPrice = None
 
         self.models: dict[EconomicModelTypes, ExplicitParams] = {
             EconomicModelTypes.LEGACY: self.params.economic_model.legacy,
@@ -321,6 +322,7 @@ class Core:
                 for model in self.models:
                     message_count[model] = self.models[model].yearly_message_count(
                         peer.split_stake,
+                        self.ticket_price,
                         model_input[model],
                     )
 
@@ -356,8 +358,8 @@ class Core:
                      "value": getattr(ticket_price, "value", None)})
 
         if ticket_price is not None:
-            for model in self.models.values():
-                model.budget.ticket_price = ticket_price.value
+            self.ticket_price = ticket_price
+            TICKET_STATS.labels("price").set(ticket_price.value)
 
     @master(flagguard, formalin)
     async def safe_fundings(self):

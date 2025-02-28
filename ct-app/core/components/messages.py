@@ -8,6 +8,7 @@ from .singleton import Singleton
 
 QUEUE_SIZE = Gauge("ct_queue_size", "Size of the message queue")
 
+
 class MessageFormat:
     pattern = "{relayer} {index} {timestamp}"
     index = 0
@@ -15,7 +16,8 @@ class MessageFormat:
 
     def __init__(self, relayer: str, index: str = None, timestamp: str = None):
         self.relayer = relayer
-        self.timestamp = int(float(timestamp)) if timestamp else int(datetime.now().timestamp()*1000)
+        self.timestamp = int(float(timestamp)) if timestamp else int(
+            datetime.now().timestamp()*1000)
         self.index = int(index) if index else self.message_index
 
     @property
@@ -24,7 +26,7 @@ class MessageFormat:
         self.__class__.index += 1
         self.__class__.index %= (self.__class__.range)
         return value
-        
+
     @classmethod
     def parse(cls, input_string: str):
         re_pattern = "^" + \
@@ -39,9 +41,10 @@ class MessageFormat:
 
     def format(self):
         return self.pattern.format_map(self.__dict__)
-    
+
     def bytes(self):
         return self.format().encode()
+
 
 class MessageQueue(metaclass=Singleton):
     def __init__(self):
