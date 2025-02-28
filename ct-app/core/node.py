@@ -60,7 +60,7 @@ class Node:
 
     @property
     def log_base_params(self):
-        return {"url": self.url,
+        return {"host": self.url,
                 "address": getattr(self.address, "native", None),
                 "peer_id": getattr(self.address, "hopr", None)}
 
