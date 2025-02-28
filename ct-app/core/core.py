@@ -5,7 +5,7 @@ import random
 from prometheus_client import Gauge
 
 from core.components.logs import configure_logging
-from core.subgraph.providers import GraphQLProvider
+from core.subgraph import GraphQLProvider
 
 from .api import HoprdAPI
 from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
@@ -85,6 +85,7 @@ class Core:
         """
         Checks the subgraph URLs and sets the subgraph mode in use (default, backup or none).
         """
+        logger.info("Rotating subgraphs")
         for provider in self.providers.values():
             await provider.test(self.params.subgraph.type)
 
@@ -160,7 +161,7 @@ class Core:
             STAKE.labels(node.safe.address, "additional_balance").set(node.safe.additional_balance)
 
         self.registered_nodes_data = results
-        logger.debug("Fetched registered nodes in the safe registry",{"count": len(results)})
+        logger.debug("Fetched registered nodes in the safe registry", {"count": len(results)})
         SUBGRAPH_SIZE.set(len(results))
 
     @master(flagguard, formalin)

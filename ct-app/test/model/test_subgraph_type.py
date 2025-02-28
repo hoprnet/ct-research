@@ -9,7 +9,7 @@ def test_callables():
     assert Mode.BACKUP in types
 
 
-def test_toInt():
-    assert Mode.toInt(Mode.NONE) == -1
-    assert Mode.toInt(Mode.DEFAULT) == 0
-    assert Mode.toInt(Mode.BACKUP) == 1
+def test_to_int():
+    assert Mode.to_int(Mode.NONE) == -1
+    assert Mode.to_int(Mode.DEFAULT) == 0
+    assert Mode.to_int(Mode.BACKUP) == 1
