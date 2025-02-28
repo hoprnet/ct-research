@@ -35,8 +35,8 @@ class HoprdAPI:
     ):
         if endpoint != "messages":
             logger.debug("Hitting API", {"host": self.host,
-                                        "method": method.value, "endpoint": endpoint,
-                                        "data": getattr(data, "as_dict", {})})
+                                         "method": method.value, "endpoint": endpoint,
+                                         "data": getattr(data, "as_dict", {})})
         try:
             headers = {"Content-Type": "application/json"}
             async with aiohttp.ClientSession(headers=self.headers) as s:
@@ -53,11 +53,11 @@ class HoprdAPI:
                     return (res.status // 200) == 1, data
         except OSError as err:
             logger.error("OSError while doing an API call",
-                             {"error": str(err), "method": method.value, "endpoint": endpoint})
+                         {"error": str(err), "host": self.host, "method": method.value, "endpoint": endpoint})
 
         except Exception as err:
             logger.error("Exception while doing an API call",
-                             {"error": str(err), "method": method.value, "endpoint": endpoint})
+                         {"error": str(err), "host": self.host, "method": method.value, "endpoint": endpoint})
 
         return (False, None)
 
@@ -78,14 +78,14 @@ class HoprdAPI:
             except aiohttp.ClientConnectionError as err:
                 backoff *= 2
                 logger.exception("ClientConnection exception while doing an API call.",
-                                 {"error": str(err), "method": method.value, "endpoint": endpoint, "backoff": backoff})
+                                 {"error": str(err), "host": self.host, "method": method.value, "endpoint": endpoint, "backoff": backoff})
                 if backoff > 10:
                     return (False, None)
                 await asyncio.sleep(backoff)
 
             except asyncio.TimeoutError as err:
                 logger.exception("Timeout exception while doing an API call",
-                                 {"error": str(err), "method": method.value, "endpoint": endpoint})
+                                 {"error": str(err), "host": self.host, "method": method.value, "endpoint": endpoint})
                 return (False, None)
             else:
                 return result
