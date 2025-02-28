@@ -6,13 +6,12 @@ from prometheus_client import Gauge
 
 from core.api.response_objects import TicketPrice
 from core.components.logs import configure_logging
-from core.components.parameters import ExplicitParams
+from core.components.parameters import LegacyParams, SigmoidParams
 from core.subgraph.providers import GraphQLProvider
 
 from .api import HoprdAPI
 from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
 from .components.decorators import flagguard, formalin, master
-from .components.economic_model_types import EconomicModelTypes
 from .node import Node
 from .subgraph import URL, Type, entries
 
@@ -57,11 +56,6 @@ class Core:
         self.eoa_balances_data = list[entries.Balance]()
         self.peers_rewards_data = dict[str, float]()
         self.ticket_price: TicketPrice = None
-
-        self.models: dict[EconomicModelTypes, ExplicitParams] = {
-            EconomicModelTypes.LEGACY: self.params.economic_model.legacy,
-            EconomicModelTypes.SIGMOID: self.params.economic_model.sigmoid,
-        }
 
         # Initialize the providers
         user_id = self.params.subgraph.user_id
@@ -303,31 +297,30 @@ class Core:
                 / self.params.economic_model.sigmoid.network_capacity
             )
 
-            model_input = {
-                EconomicModelTypes.LEGACY: 0,
-                EconomicModelTypes.SIGMOID: [economic_security, network_capacity],
-            }
             message_count = {
-                EconomicModelTypes.LEGACY: 0,
-                EconomicModelTypes.SIGMOID: 0,
-            }
+                model.__class__: 0 for model in self.params.economic_model.models}
+            model_input = {
+                model.__class__: 0 for model in self.params.economic_model.models}
+
+            model_input[SigmoidParams] = [economic_security, network_capacity]
+
             for peer in peers:
                 if peer.yearly_message_count is None:
                     continue
 
-                model_input[EconomicModelTypes.LEGACY] = self.peers_rewards_data.get(
+                model_input[LegacyParams] = self.peers_rewards_data.get(
                     peer.address.native, 0.0
                 )
 
-                for model in self.models:
-                    message_count[model] = self.models[model].yearly_message_count(
+                for model, name in self.params.economic_model.models.items():
+                    message_count[model.__class__] = model.yearly_message_count(
                         peer.split_stake,
                         self.ticket_price,
-                        model_input[model],
+                        model_input[model.__class__],
                     )
 
-                    MESSAGE_COUNT.labels(peer.address.hopr, model.name).set(
-                        message_count[model]
+                    MESSAGE_COUNT.labels(peer.address.hopr, name).set(
+                        message_count[model.__class__]
                     )
 
                 peer.yearly_message_count = sum(message_count.values())

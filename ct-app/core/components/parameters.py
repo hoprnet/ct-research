@@ -235,6 +235,10 @@ class EconomicModelParams(ExplicitParams):
         "sigmoid": SigmoidParams
     }
 
+    @property
+    def models(self):
+        return {v: k for k, v in vars(self).items() if isinstance(v, ExplicitParams)}
+
 
 class PeerParams(ExplicitParams):
     keys = {

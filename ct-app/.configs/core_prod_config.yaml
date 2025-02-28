@@ -91,6 +91,10 @@ peer:
   min_version: '2.2.1'
   sleep_mean_time: 30
   sleep_std_time: 2
+  # Controls how many messages are batched at a time. Increasing this reduces
+  # the queue size but also privacy as the load gets less spread over time. 
+  # NOTE: Should be replaced by a dynamic approch, by setting the minimum delay
+  # acceptable before increasing the batch size accordingly (auto-mode)
   message_multiplier: 1
 
 # =============================================================================
