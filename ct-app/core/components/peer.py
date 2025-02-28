@@ -5,9 +5,10 @@ from typing import Union
 from packaging.version import Version
 from prometheus_client import Gauge
 
-from . import AsyncLoop, MessageFormat, MessageQueue
 from .address import Address
+from .asyncloop import AsyncLoop
 from .decorators import flagguard, formalin, master
+from .messages import MessageFormat, MessageQueue
 
 CHANNEL_STAKE = Gauge("ct_peer_channels_balance",
                       "Balance in outgoing channels", ["peer_id"])
@@ -154,9 +155,11 @@ class Peer:
             return
 
         if delay := await self.message_delay:
-            message = MessageFormat(self.address.hopr)
-            await MessageQueue().buffer.put(message)
-            await asyncio.sleep(delay)
+            multiplier = self.params.peer.messageMultiplier
+            
+            message = MessageFormat(self.address.hopr, multiplier=multiplier)
+            await MessageQueue().put_async(message)
+            await asyncio.sleep(delay * multiplier)
         else:
             await asyncio.sleep(
                 random.normalvariate(

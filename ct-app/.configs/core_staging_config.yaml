@@ -48,7 +48,7 @@ economic_model:
 
   legacy:
     proportion: 1.0
-    apr: 0.0000008
+    apr: 0.000001
 
     coefficients:
       a: 1
@@ -68,7 +68,7 @@ economic_model:
     proportion: 0
     max_apr: 0.0000001
     network_capacity: 100
-    total_token_supply: 500
+    total_token_supply: 5000
 
     offset: 10
     buckets:
@@ -89,8 +89,13 @@ economic_model:
 # =============================================================================
 peer:
   min_version: '2.1.5'
-  sleep_mean_time: 30
+  sleep_mean_time: 10
   sleep_std_time: 2
+  # Controls how many messages are batched at a time. Increasing this reduces
+  # the queue size but also privacy as the load gets less spread over time. 
+  # NOTE: Should be replaced by a dynamic approch, by setting the minimum delay
+  # acceptable before increasing the batch size accordingly (auto-mode)
+  message_multiplier: 5 
 
 # =============================================================================
 # 
