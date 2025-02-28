@@ -265,6 +265,14 @@ class Node:
         Retrieve real peers from the network.
         """
         results = await self.api.peers()
+
+        if len(results) == 0:
+            logger.warning("No results while retrieving peers",
+                           self.log_base_params)
+            return
+        else:
+            logger.info("Scanned reachable peers", {
+                        "count": len(results), **self.log_base_params})
         peers = {Peer(item.peer_id, item.address, item.version)
                  for item in results}
         peers = {p for p in peers if not p.is_old(self.params.peer.minVersion)}
@@ -274,9 +282,6 @@ class Node:
 
         await self.peers.set(peers)
         await self.peer_history.update(addresses_w_timestamp)
-
-        logger.info("Scanned reachable peers", {
-                    "count": len(peers), **self.log_base_params})
 
         if addr := self.address:
             PEERS_COUNT.labels(addr.hopr).set(len(peers))
@@ -289,6 +294,8 @@ class Node:
         channels = await self.api.channels()
 
         if channels is None:
+            logger.warning("No results while retrieving channels",
+                           self.log_base_params)
             return
 
         if addr := self.address:
