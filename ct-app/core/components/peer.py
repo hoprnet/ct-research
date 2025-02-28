@@ -155,7 +155,7 @@ class Peer:
             return
 
         if delay := await self.message_delay:
-            multiplier = self.params.peer.messageMultiplier
+            multiplier = self.params.peer.message_multiplier
             
             message = MessageFormat(self.address.hopr, multiplier=multiplier)
             await MessageQueue().put_async(message)
