@@ -6,7 +6,7 @@ class Mode(Enum):
     BACKUP = "backup"
     NONE = "None"
 
-    def toInt(self):
+    def to_int(self):
         return {Mode.DEFAULT: 0, Mode.BACKUP: 1}.get(self, -1)
 
     @classmethod

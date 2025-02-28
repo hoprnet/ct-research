@@ -10,7 +10,7 @@ service:
 deployment:
   env: |
     - name: RUST_LOG
-      value: info
+      value: info,hopr_transport_p2p=debug
     - name: RUST_BACKTRACE
       value: full
     - name: HOPRD_LOG_FORMAT
