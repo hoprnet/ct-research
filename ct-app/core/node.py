@@ -267,13 +267,12 @@ class Node:
         results = await self.api.peers()
 
         if len(results) == 0:
-            logger.warning("No results while retrieving channels",
+            logger.warning("No results while retrieving peers",
                            self.log_base_params)
             return
         else:
             logger.info("Scanned reachable peers", {
                         "count": len(results), **self.log_base_params})
-
         peers = {Peer(item.peer_id, item.address, item.version)
                  for item in results}
         peers = {p for p in peers if not p.is_old(self.params.peer.minVersion)}
