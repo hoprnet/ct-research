@@ -11,6 +11,7 @@ from core.components.messages.message_format import MessageFormat
 CHANNELS_OPS = Gauge("ct_channel_operation",
                      "Channel operation", ["peer_id", "op"])
 
+MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer"])
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -80,5 +81,11 @@ class NodeHelper:
     @classmethod
     async def send_message(cls, initiator: Address, api: HoprdAPI, message: MessageFormat):
         for idx in range(message.multiplier):
-            await api.send_message(initiator.hopr, message.format(), [message.relayer])
+            message.set_timestamp()
+            ok = await api.send_message(initiator.hopr, message.format(), [message.relayer])
+
+            if ok:
+                MESSAGES_STATS.labels(
+                    "sent", initiator.hopr, message.relayer).inc()
+
             message.increase_inner_index()

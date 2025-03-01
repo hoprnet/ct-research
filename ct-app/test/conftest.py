@@ -133,13 +133,9 @@ async def nodes(
     peers_raw: list[dict],
     channels: Channels,
 ) -> list[Node]:
-    nodes = [
-        Node("localhost:9000", "random_key"),
-        Node("localhost:9001", "random_key"),
-        Node("localhost:9002", "random_key"),
-        Node("localhost:9003", "random_key"),
-        Node("localhost:9004", "random_key"),
-    ]
+    nodes = [Node(f"localhost:90{idx:02}", "random_key", idx)
+             for idx in range(5)]
+
     for idx, node in enumerate(nodes):
         mocker.patch.object(
             node.api, "get_address", return_value=Addresses(addresses[idx])
@@ -225,7 +221,7 @@ async def node(
     channels: Channels,
     addresses: dict,
 ) -> Node:
-    node = Node("localhost", "random_key")
+    node = Node("localhost", "random_key", 0)
 
     mocker.patch.object(node.api, "channels", return_value=channels)
     mocker.patch.object(

@@ -11,7 +11,7 @@ from .api import HoprdAPI
 from .components import LockedVar, Parameters, Peer, Utils
 from .components.decorators import connectguard, flagguard, formalin, master
 from .components.messages import MessageFormat, MessageQueue
-from .components.node_helper import NodeHelper
+from .components.node_helper import MESSAGES_STATS, NodeHelper
 
 # endregion
 
@@ -23,7 +23,6 @@ CHANNEL_FUNDS = Gauge("ct_channel_funds",
 HEALTH = Gauge("ct_node_health", "Node health", ["peer_id"])
 MESSAGES_DELAYS = Histogram("ct_messages_delays", "Messages delays", ["sender", "relayer"], buckets=[
                             0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2.5])
-MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer"])
 PEERS_COUNT = Gauge("ct_peers_count", "Node peers", ["peer_id"])
 # endregion
 
@@ -36,7 +35,7 @@ class Node:
     A Node represents a single node in the network, managed by HOPR, and used to distribute rewards.
     """
 
-    def __init__(self, url: str, key: str):
+    def __init__(self, url: str, key: str, queue_index: int):
         """
         Create a new Node with the specified url and key.
         :param url: The url of the node.
@@ -46,6 +45,7 @@ class Node:
 
         self.api: HoprdAPI = HoprdAPI(url, key)
         self.url = url
+        self.queue_index = queue_index
 
         self.peers = LockedVar("peers", set[Peer]())
         self.peer_history = LockedVar("peer_history", dict[str, datetime]())
@@ -372,27 +372,23 @@ class Node:
 
     @master(flagguard, formalin, connectguard)
     async def observe_message_queue(self):
-        message = await MessageQueue().get_async()
-        # TODO: maybe set the timestamp here ?
-
-        peers = [peer.address.hopr for peer in await self.peers.get()]
-
-        if message.relayer not in peers:
-            return
-
-        if self.channels is None:
-            return
+        message = await MessageQueue().async_get(self.queue_index)
 
         channels = [
-            channel.destination_peer_id for channel in self.channels.outgoing]
+            channel.destination_peer_id for channel in getattr(self.channels, "outgoing", [])]
+        peers = [peer.address.hopr for peer in await self.peers.get()]
 
-        if message.relayer not in channels:
+        if (message.relayer not in peers) or (message.relayer not in channels):
+            message.moved_count += 1
+            if message.moved_count < MessageQueue().count:
+                await MessageQueue().async_put(message, self.queue_index + 1)
+            else:
+                logger.warning("Message moved too many times",
+                               {"message": message.format(), **self.log_base_params})
             return
 
         AsyncLoop.add(NodeHelper.send_message, self.address,
                       self.api, message, publish_to_task_set=False)
-        MESSAGES_STATS.labels("sent", self.address.hopr,
-                              message.relayer).inc(message.multiplier)
 
     async def tasks(self):
         callbacks = [
@@ -414,4 +410,4 @@ class Node:
 
     @classmethod
     def fromCredentials(cls, addresses: list[str], keys: list[str]):
-        return [cls(address, key) for address, key in zip(addresses, keys)]
+        return [cls(address, key, idx) for idx, (address, key) in enumerate(zip(addresses, keys))]

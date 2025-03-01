@@ -10,9 +10,13 @@ class MessageFormat:
     def __init__(self, relayer: str, index: str = None, inner_index: int = None, multiplier: int = None, timestamp: str = None ):
         self.relayer = relayer
         self.index = int(index) if index else self.message_index
-        self.timestamp = int(float(timestamp)) if timestamp else int(datetime.now().timestamp()*1000)
+        if timestamp:
+            self.timestamp = int(float(timestamp))
+        else:
+            self.set_timestamp()
         self.multiplier = int(multiplier) if multiplier else 1
         self.inner_index = int(inner_index) if inner_index else 1
+        self.moved_count = 0
 
     @property
     def message_index(self):
@@ -37,6 +41,9 @@ class MessageFormat:
             )
 
         return cls(*[match.group(param) for param in cls.params])
+
+    def set_timestamp(self):
+        self.timestamp = int(datetime.now().timestamp()*1000)
 
     def increase_inner_index(self):
         self.inner_index += 1
