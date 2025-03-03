@@ -95,8 +95,8 @@ class Utils:
     @classmethod
     def exclude(cls, source_data: list, blacklist: list) -> list:
         """
-        Removes elements from a dictionary based on a blacklist.
-        :param source_data (dict): The dictionary to be updated.
+        Removes elements from a list based on a blacklist of addresses.
+        :param source_data (list): The list of objects with address attribute to be filtered.
         :param blacklist (list): A list containing the keys to be removed.
         :returns: A list containing the removed elements.
         """
