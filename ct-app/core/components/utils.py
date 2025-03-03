@@ -92,6 +92,26 @@ class Utils:
         for peer in peers:
             peer.safe_address_count = safe_counts[peer.safe.address]
 
+    @classmethod
+    def exclude(cls, source_data: list, blacklist: list) -> list:
+        """
+        Removes elements from a dictionary based on a blacklist.
+        :param source_data (dict): The dictionary to be updated.
+        :param blacklist (list): A list containing the keys to be removed.
+        :returns: A list containing the removed elements.
+        """
+
+        addresses = [peer.address for peer in source_data]
+        indexes = [addresses.index(item)
+                   for item in blacklist if item in addresses]
+
+        # Remove elements from the list
+        excluded = []
+        for index in sorted(indexes, reverse=True):
+            peer = source_data.pop(index)
+            excluded.append(peer)
+
+        return excluded
 
     @classmethod
     async def balanceInChannels(cls, channels: list) -> dict[str, dict]:
