@@ -253,7 +253,7 @@ class Core:
                 logger.warning("Not enough data to apply economic model")
                 return
 
-            Utils.exclude(peers, [node.address for node in self.node])
+            Utils.exclude(peers, [node.address for node in self.nodes])
 
             Utils.associateEntitiesToNodes(
                 self.allocations_data, self.registered_nodes_data
