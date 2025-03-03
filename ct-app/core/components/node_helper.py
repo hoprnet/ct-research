@@ -81,7 +81,7 @@ class NodeHelper:
     @classmethod
     async def send_message(cls, initiator: Address, api: HoprdAPI, message: MessageFormat):
         for idx in range(message.multiplier):
-            message.set_timestamp()
+            message.init_timestamp_with_now()
             ok = await api.send_message(initiator.hopr, message.format(), [message.relayer])
 
             if ok:

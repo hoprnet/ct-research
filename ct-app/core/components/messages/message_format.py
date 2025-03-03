@@ -13,7 +13,7 @@ class MessageFormat:
         if timestamp:
             self.timestamp = int(float(timestamp))
         else:
-            self.set_timestamp()
+            self.init_timestamp_with_now()
         self.multiplier = int(multiplier) if multiplier else 1
         self.inner_index = int(inner_index) if inner_index else 1
         self.moved_count = 0
