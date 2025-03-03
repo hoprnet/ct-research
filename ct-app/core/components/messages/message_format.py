@@ -42,7 +42,7 @@ class MessageFormat:
 
         return cls(*[match.group(param) for param in cls.params])
 
-    def set_timestamp(self):
+    def init_timestamp_with_now(self):
         self.timestamp = int(datetime.now().timestamp()*1000)
 
     def increase_inner_index(self):
