@@ -9,20 +9,14 @@ service:
 
 deployment:
   env: |
-    - name: RUST_LOG
-      value: info
-    - name: RUST_BACKTRACE
-      value: full
-    - name: HOPRD_LOG_FORMAT
-      value: json
     - name: HOPR_INTERNAL_LIBP2P_MSG_ACK_MAX_TOTAL_STREAMS
       value: "10000"
-
+  #   - name: RUST_LOG
+  #     value: debug,libp2p_swarm=debug,libp2p_mplex=debug,multistream_select=debug,libp2p_tcp=debug,libp2p_dns=info,sea_orm=info,sqlx=info
 config: |
   hopr:
     chain:
       network: rotsee
-      provider: https://gnosis.rpc-provider.prod.hoprnet.link
     strategy:
       on_fail_continue: true
       allow_recursive: false
