@@ -1,20 +1,13 @@
 replicas: 5
 network: dufour
-# testing with connectivity fixes and additional logging, this is based on 2.2.3
 # see https://console.cloud.google.com/artifacts/docker/hoprassociation/europe-west3/docker-images/hoprd?inv=1&invt=Abp4Wg&project=hoprassociation
-version: 2.2.3-pr.6875
+version: 2.2.3-pr.6898
 
 service:
   type: LoadBalancer
 
 deployment:
   env: |
-    - name: RUST_LOG
-      value: info
-    - name: RUST_BACKTRACE
-      value: full
-    - name: HOPRD_LOG_FORMAT
-      value: json
     - name: HOPR_INTERNAL_LIBP2P_MSG_ACK_MAX_TOTAL_STREAMS
       value: "10000"
     - name: HOPR_INTERNAL_LIBP2P_YAMUX_MAX_NUM_STREAMS
@@ -23,12 +16,12 @@ deployment:
       value: "512"
     - name: HOPR_INTERNAL_LIBP2P_SWARM_IDLE_TIMEOUT
       value: "300"
-
+  #   - name: RUST_LOG
+  #     value: debug,libp2p_swarm=debug,libp2p_mplex=debug,multistream_select=debug,libp2p_tcp=debug,libp2p_dns=info,sea_orm=info,sqlx=info
 config: |
   hopr:
     chain:
       network: dufour
-      provider: http://gnosis-rpc-provider.rpc-provider.svc:8545
     strategy:
       on_fail_continue: true
       allow_recursive: false
