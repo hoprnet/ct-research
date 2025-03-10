@@ -52,15 +52,13 @@ def test_peer_version():
         )
     ],
 )
-
 async def test_request_relay(exc_time: int, min_range: float, max_range: float):
     peers = {Peer(f"12D{num}", f"0x{num}", "2.1.0") for num in range(10)}
 
     params = Parameters({"flags": {"peer": {"requestRelay": True}}})
 
     for peer in peers:
-        rand_delay = round(random.random() *
-                           (max_range - min_range) + min_range, 1)
+        rand_delay = round(random.random() * (max_range - min_range) + min_range, 1)
         peer.yearly_message_count = SECONDS_IN_YEAR / rand_delay
 
         peer.params = params

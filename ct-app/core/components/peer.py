@@ -10,11 +10,13 @@ from .asyncloop import AsyncLoop
 from .decorators import flagguard, formalin, master
 from .messages import MessageFormat, MessageQueue
 
-CHANNEL_STAKE = Gauge("ct_peer_channels_balance",
-                      "Balance in outgoing channels", ["peer_id"])
+CHANNEL_STAKE = Gauge(
+    "ct_peer_channels_balance", "Balance in outgoing channels", ["peer_id"]
+)
 DELAY = Gauge("ct_peer_delay", "Delay between two messages", ["peer_id"])
 NODES_LINKED_TO_SAFE_COUNT = Gauge(
-    "ct_peer_safe_count", "Number of nodes linked to the safes", ["peer_id", "safe"])
+    "ct_peer_safe_count", "Number of nodes linked to the safes", ["peer_id", "safe"]
+)
 SECONDS_IN_A_NON_LEAP_YEAR = 365 * 24 * 60 * 60
 
 
@@ -73,8 +75,7 @@ class Peer:
     @channel_balance.setter
     def channel_balance(self, value):
         self._channel_balance = value
-        CHANNEL_STAKE.labels(self.address.hopr).set(
-            value if value is not None else 0)
+        CHANNEL_STAKE.labels(self.address.hopr).set(value if value is not None else 0)
 
     @property
     def node_address(self) -> str:
@@ -90,8 +91,9 @@ class Peer:
     @safe_address_count.setter
     def safe_address_count(self, value: int):
         self._safe_address_count = value
-        NODES_LINKED_TO_SAFE_COUNT.labels(
-            self.address.hopr, self.safe.address).set(value)
+        NODES_LINKED_TO_SAFE_COUNT.labels(self.address.hopr, self.safe.address).set(
+            value
+        )
 
     @property
     def split_stake(self) -> float:
@@ -156,15 +158,14 @@ class Peer:
 
         if delay := await self.message_delay:
             multiplier = self.params.peer.message_multiplier
-            
+
             message = MessageFormat(self.address.hopr, multiplier=multiplier)
             await MessageQueue().put_async(message)
             await asyncio.sleep(delay * multiplier)
         else:
             await asyncio.sleep(
                 random.normalvariate(
-                    self.params.peer.sleep_mean_time,
-                    self.params.peer.sleep_std_time
+                    self.params.peer.sleep_mean_time, self.params.peer.sleep_std_time
                 )
             )
 

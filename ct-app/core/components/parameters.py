@@ -11,7 +11,9 @@ logger = logging.getLogger(__name__)
 class ExplicitParams:
     keys: dict[str, type] = {}
 
-    def __init__(self, data: dict = {}):
+    def __init__(self, data: dict | None = None):
+        if data is None:
+            data = {}
         self.parse(data)
 
     def parse(self, data: dict):
@@ -24,7 +26,10 @@ class ExplicitParams:
 
     @property
     def as_dict(self):
-        return {k: v.as_dict if isinstance(v, ExplicitParams) else v for k, v in self.__dict__.items()}
+        return {
+            k: v.as_dict if isinstance(v, ExplicitParams) else v
+            for k, v in self.__dict__.items()
+        }
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.as_dict})"
@@ -47,7 +52,7 @@ class FlagCoreParams(ExplicitParams):
         "allocations": Flag,
         "eoa_balances": Flag,
         "nft_holders": Flag,
-        "safe_fundings": Flag
+        "safe_fundings": Flag,
     }
 
 
@@ -69,17 +74,11 @@ class FlagNodeParams(ExplicitParams):
 
 
 class FlagPeerParams(ExplicitParams):
-    keys = {
-        "message_relay_request": Flag
-    }
+    keys = {"message_relay_request": Flag}
 
 
 class FlagParams(ExplicitParams):
-    keys = {
-        "core": FlagCoreParams,
-        "node": FlagNodeParams,
-        "peer": FlagPeerParams
-    }
+    keys = {"core": FlagCoreParams, "node": FlagNodeParams, "peer": FlagPeerParams}
 
 
 class LegacyCoefficientsParams(ExplicitParams):
@@ -110,7 +109,7 @@ class LegacyParams(ExplicitParams):
         "proportion": float,
         "apr": float,
         "coefficients": LegacyCoefficientsParams,
-        "equations": LegacyEquationsParams
+        "equations": LegacyEquationsParams,
     }
 
     def transformed_stake(self, stake: float):
@@ -126,7 +125,9 @@ class LegacyParams(ExplicitParams):
 
         return eval(func.formula, kwargs)
 
-    def yearly_message_count(self, stake: float, ticket_price: TicketPrice, redeemed_rewards: float = 0):
+    def yearly_message_count(
+        self, stake: float, ticket_price: TicketPrice, redeemed_rewards: float = 0
+    ):
         """
         Calculate the yearly message count a peer should receive based on the stake.
         """
@@ -138,12 +139,7 @@ class LegacyParams(ExplicitParams):
 
 
 class BucketParams(ExplicitParams):
-    keys = {
-        "flatness": float,
-        "skewness": float,
-        "upperbound": float,
-        "offset": float
-    }
+    keys = {"flatness": float, "skewness": float, "upperbound": float, "offset": float}
 
     def apr(self, x: float):
         """
@@ -165,10 +161,7 @@ class BucketParams(ExplicitParams):
 
 
 class BucketsParams(ExplicitParams):
-    keys = {
-        "economic_security": BucketParams,
-        "network_capacity": BucketParams
-    }
+    keys = {"economic_security": BucketParams, "network_capacity": BucketParams}
 
     order = ["network_capacity", "economic_security"]
 
@@ -189,7 +182,7 @@ class SigmoidParams(ExplicitParams):
         "offset": int,
         "buckets": BucketsParams,
         "network_capacity": int,
-        "total_token_supply": int
+        "total_token_supply": int,
     }
 
     def apr(
@@ -203,7 +196,7 @@ class SigmoidParams(ExplicitParams):
             apr = (
                 pow(
                     prod(b.apr(x) for b, x in zip(self.buckets.values, xs)),
-                    1 / self.buckets.count
+                    1 / self.buckets.count,
                 )
                 + self.offset
             )
@@ -216,7 +209,9 @@ class SigmoidParams(ExplicitParams):
 
         return apr
 
-    def yearly_message_count(self, stake: float, ticket_price: TicketPrice, xs: list[float]):
+    def yearly_message_count(
+        self, stake: float, ticket_price: TicketPrice, xs: list[float]
+    ):
         """
         Calculate the yearly message count a peer should receive based on the stake.
         """
@@ -232,7 +227,7 @@ class EconomicModelParams(ExplicitParams):
         "min_safe_allowance": float,
         "nft_threshold": float,
         "legacy": LegacyParams,
-        "sigmoid": SigmoidParams
+        "sigmoid": SigmoidParams,
     }
 
     @property
@@ -245,30 +240,20 @@ class PeerParams(ExplicitParams):
         "min_version": str,
         "sleep_mean_time": int,
         "sleep_std_time": int,
-        "message_multiplier": int
+        "message_multiplier": int,
     }
 
 
 class ChannelParams(ExplicitParams):
-    keys = {
-        "min_balance": float,
-        "funding_amount": float,
-        "max_age_seconds": int
-    }
+    keys = {"min_balance": float, "funding_amount": float, "max_age_seconds": int}
 
 
 class FundingsParams(ExplicitParams):
-    keys = {
-        "constant": float
-    }
+    keys = {"constant": float}
 
 
 class SubgraphEndpointParams(ExplicitParams):
-    keys = {
-        "query_id": str,
-        "slug": str,
-        "inputs": dict
-    }
+    keys = {"query_id": str, "slug": str, "inputs": dict}
 
 
 class SubgraphParams(ExplicitParams):
@@ -283,7 +268,7 @@ class SubgraphParams(ExplicitParams):
         "safes_balance": SubgraphEndpointParams,
         "fundings": SubgraphEndpointParams,
         "rewards": SubgraphEndpointParams,
-        "staking": SubgraphEndpointParams
+        "staking": SubgraphEndpointParams,
     }
 
 
@@ -294,5 +279,5 @@ class Parameters(ExplicitParams):
         "peer": PeerParams,
         "channel": ChannelParams,
         "fundings": FundingsParams,
-        "subgraph": SubgraphParams
+        "subgraph": SubgraphParams,
     }

@@ -1,4 +1,3 @@
-
 from core.subgraph.entries import Safe
 
 from .environment_utils import EnvironmentUtils
@@ -119,7 +118,6 @@ class Utils:
                     "channels_balance": 0,
                 }
 
-            results[c.source_peer_id]["channels_balance"] += int(
-                c.balance) / 1e18
+            results[c.source_peer_id]["channels_balance"] += int(c.balance) / 1e18
 
         return results

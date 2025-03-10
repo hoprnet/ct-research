@@ -62,26 +62,17 @@ class SideEffect:
 
 @pytest.fixture
 def economic_model() -> LegacyParams:
-    return LegacyParams({
-        "proportion": 1,
-        "apr": 15,
-        "coefficients": {
-            "a": 1,
-            "b": 1,
-            "c": 3,
-            "l": 0
-        },
-        "equations": {
-            "fx": {
-                "formula": "a * x",
-                "condition": "l <= x <= c"
+    return LegacyParams(
+        {
+            "proportion": 1,
+            "apr": 15,
+            "coefficients": {"a": 1, "b": 1, "c": 3, "l": 0},
+            "equations": {
+                "fx": {"formula": "a * x", "condition": "l <= x <= c"},
+                "gx": {"formula": "a * c + (x - c) ** (1 / b)", "condition": "x > c"},
             },
-            "gx": {
-                "formula": "a * c + (x - c) ** (1 / b)",
-                "condition": "x > c"
-            }
         }
-    })
+    )
 
 
 @pytest.fixture
@@ -143,13 +134,12 @@ async def nodes(
             node.api, "get_address", return_value=Addresses(addresses[idx])
         )
         mocker.patch.object(node.api, "channels", return_value=channels)
-        mocker.patch.object(node.api, "balances",
-                            side_effect=SideEffect().node_balance)
+        mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
         mocker.patch.object(
             node.api,
             "peers",
             return_value=[
-                ConnectedPeer(peer) for peer in peers_raw[:idx] + peers_raw[idx + 1:]
+                ConnectedPeer(peer) for peer in peers_raw[:idx] + peers_raw[idx + 1 :]
             ],
         )
 
@@ -218,17 +208,15 @@ async def node(
     mocker.patch.object(
         node.api, "peers", return_value=[ConnectedPeer(peer) for peer in peers_raw[1:]]
     )
-    mocker.patch.object(node.api, "get_address",
-                        return_value=Addresses(addresses[0]))
-    mocker.patch.object(node.api, "balances",
-                        side_effect=SideEffect().node_balance)
+    mocker.patch.object(node.api, "get_address", return_value=Addresses(addresses[0]))
+    mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
     # mocker.patch.object(node.api, "send_message", return_value=1)
     mocker.patch.object(node.api, "healthyz", return_value=True)
 
     params = Parameters()
     with open("./test/test_config.yaml", "r") as file:
         params = Parameters(yaml.safe_load(file))
-    setattr(params.subgraph, "apiKey", "foo_deployer_key")
+    setattr(params.subgraph, "api_key", "foo_deployer_key")
 
     node.params = params
 

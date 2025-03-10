@@ -1,8 +1,7 @@
 class SubgraphEntry:
     def __str__(self):
         cls = self.__class__.__name__
-        fields = ", ".join(f"{field}={value}" for field,
-                           value in vars(self).items())
+        fields = ", ".join(f"{field}={value}" for field, value in vars(self).items())
 
         return f"{cls}({fields})"
 

@@ -24,9 +24,6 @@ class FooParams(ExplicitParams):
         "flags": FooFlagParams,
     }
 
-# FIXME: This whole file fails
-# The problem is that the test is not properly mocking the Parameters class
-
 
 class FooClass:
     def __init__(self):
@@ -35,7 +32,8 @@ class FooClass:
         self.running = False
         self.counter = 0
         self.params = FooParams(
-            {"flags": {"fooclass": {"foo_flagguard_func": 1, "foo_formalin_func": 1}}})
+            {"flags": {"fooclass": {"foo_flagguard_func": 1, "foo_formalin_func": 1}}}
+        )
 
     @connectguard
     async def foo_connectguard_func(self):

@@ -23,6 +23,7 @@ def test_parse_message():
     assert decoded.multiplier == encoded.multiplier
     assert decoded.inner_index == encoded.inner_index
 
+
 def test_increase_inner_index():
     encoded = MessageFormat(relayer)
     decoded = MessageFormat.parse(encoded.format())
@@ -49,6 +50,6 @@ def test_increase_message_index():
 def test_loop_message_index():
     MessageFormat.index = 0
     MessageFormat.range = 5
-    messages = [MessageFormat(relayer) for _ in range(MessageFormat.range+1)]
+    messages = [MessageFormat(relayer) for _ in range(MessageFormat.range + 1)]
     indexes = [message.index for message in messages]
     assert indexes == list(range(MessageFormat.range)) + [0]
