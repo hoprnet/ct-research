@@ -5,6 +5,8 @@ backup:
 
 thresholds:
   network_size_allowed_offset: 10
+  relayed_messages_ratio: 0.7
+  sent_messages_ratio: 0.7
 
 ctdapp:
   nameOverride: ""

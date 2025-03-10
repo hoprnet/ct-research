@@ -7,7 +7,7 @@ from prometheus_client import Gauge
 from core.api.response_objects import TicketPrice
 from core.components.logs import configure_logging
 from core.components.parameters import LegacyParams, SigmoidParams
-from core.subgraph.providers import GraphQLProvider
+from core.subgraph import GraphQLProvider
 
 from .api import HoprdAPI
 from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
@@ -23,6 +23,8 @@ MESSAGE_COUNT = Gauge(
     "ct_message_count", "messages one should receive / year", ["peer_id", "model"])
 NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
 PEER_VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
+REDEEMED_REWARDS = Gauge("ct_redeemed_rewards",
+                         "Redeemed rewards", ["address"])
 STAKE = Gauge("ct_peer_stake", "Stake", ["safe", "type"])
 SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
 TICKET_STATS = Gauge("ct_ticket_stats", "Ticket stats", ["type"])
@@ -85,6 +87,7 @@ class Core:
         """
         Checks the subgraph URLs and sets the subgraph mode in use (default, backup or none).
         """
+        logger.info("Rotating subgraphs")
         for provider in self.providers.values():
             await provider.test(self.params.subgraph.type)
 
@@ -337,6 +340,8 @@ class Core:
         for acc in await self.providers[Type.REWARDS].get():
             account = entries.Account.fromSubgraphResult(acc)
             results[account.address] = account.redeemed_value
+            REDEEMED_REWARDS.labels(account.address).set(
+                account.redeemed_value)
 
         self.peers_rewards_data = results
         logger.debug("Fetched peers rewards amounts", {"count": len(results)})
