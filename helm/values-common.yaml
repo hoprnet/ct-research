@@ -6,33 +6,6 @@ deployment:
     requests:
       cpu: 200m
       memory: 250Mi
-  startupProbe: |
-    failureThreshold: 800
-    httpGet:
-      path: /startedz
-      port: 3001
-      scheme: HTTP
-    periodSeconds: 60
-    successThreshold: 1
-    timeoutSeconds: 5
-  readinessProbe: |
-    failureThreshold: 800
-    httpGet:
-      path: /readyz
-      port: 3001
-      scheme: HTTP
-    periodSeconds: 60
-    successThreshold: 1
-    timeoutSeconds: 5
-  livenessProbe: |
-    failureThreshold: 3
-    httpGet:
-      path: /healthyz
-      port: 3001
-      scheme: HTTP
-    periodSeconds: 5
-    successThreshold: 1
-    timeoutSeconds: 5
 
 identityPool:
   funding:
