@@ -23,6 +23,7 @@ MESSAGE_COUNT = Gauge(
 )
 NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
 PEER_VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
+REDEEMED_REWARDS = Gauge("ct_redeemed_rewards", "Redeemed rewards", ["address"])
 STAKE = Gauge("ct_peer_stake", "Stake", ["safe", "type"])
 SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
 TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
@@ -337,6 +338,7 @@ class Core:
         for acc in await self.providers[Type.REWARDS].get():
             account = entries.Account.fromSubgraphResult(acc)
             results[account.address] = account.redeemed_value
+            REDEEMED_REWARDS.labels(account.address).set(account.redeemed_value)
 
         self.peers_rewards_data = results
         logger.debug("Fetched peers rewards amounts", {"count": len(results)})
