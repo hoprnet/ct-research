@@ -103,7 +103,7 @@ spec:
             description: >-
               Amount of sent messages doesn't match the expected amount
             summary: Not sending enough messages
-          expr: sum(rate(hopr_packets_count{namespace="ctdapp", type="sent"}[30s])) / sum(1 / (ct_peer_delay != 0)) < 0.95
+          expr: sum(rate(hopr_packets_count{namespace="ctdapp", type="sent"}[30s])) / sum(1 / (ct_peer_delay != 0)) < {{ .Values.thresholds.sent_messages_ratio }}
           for: 10m
           labels:
             severity: warning
@@ -114,7 +114,7 @@ spec:
             description: >-
               Amount of relayed messages doesn't match the amount of sent messages
             summary: Missing relayed messages
-          expr: sum(rate(hopr_packets_count{namespace="ctdapp", type="received"}[30s])) / sum(rate(hopr_packets_count{namespace="ctdapp", type="sent"}[30s])) < 0.90
+          expr: sum(rate(hopr_packets_count{namespace="ctdapp", type="received"}[30s])) / sum(rate(hopr_packets_count{namespace="ctdapp", type="sent"}[30s])) < {{ .Values.thresholds.relayed_messages_ratio }}
           for: 10m
           labels:
             severity: warning
