@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class ExplicitParams:
     keys: dict[str, type] = {}
 
-    def __init__(self, data: dict | None = None):
+    def __init__(self, data: dict = None):
         if data is None:
             data = {}
         self.parse(data)
