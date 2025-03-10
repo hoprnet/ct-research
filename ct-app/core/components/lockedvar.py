@@ -1,10 +1,14 @@
 import asyncio
+import logging
 from typing import Any
 
-from .baseclass import Base
+from core.components.logs import configure_logging
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 
-class LockedVar(Base):
+class LockedVar:
     """
     A class that represents a locked variable that can be accessed and modified. Any operation on the variable is asynchroneous and locked. The type of the variable can be inferred or set manually.
     """
@@ -58,15 +62,11 @@ class LockedVar(Base):
         This method is meant to be used with dictionaries.
         """
         if self.type and not isinstance(value, self.type):
-            self.warning(
+            logger.warning(
                 f"Trying to change value of type {type(value)} to {self.type}, ignoring"
             )
         async with self.lock:
             try:
                 self.value.update(value)
-            except AttributeError as e:
-                raise AttributeError("Trying to call 'update' on non-dict value") from e
-
-    @property
-    def log_prefix(self):
-        return f"lockedvar({self.name})"
+            except AttributeError as err:
+                raise AttributeError("Trying to call 'update' on non-dict value") from err

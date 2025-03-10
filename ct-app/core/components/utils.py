@@ -1,11 +1,10 @@
-from core.model.subgraph.entries import Safe
 
-from .baseclass import Base
-from .channelstatus import ChannelStatus
+from core.subgraph.entries import Safe
+
 from .environment_utils import EnvironmentUtils
 
 
-class Utils(Base):
+class Utils:
     @classmethod
     def nodesCredentials(
         cls, address_prefix: str, keyenv: str
@@ -30,10 +29,19 @@ class Utils(Base):
         allocations: list,
         eoa_balances: dict,
     ):
+        def filter_func(item, true_value):
+            if item is None:
+                return False
+            if not hasattr(item, "address") or not (hasattr, true_value, "address"):
+                return False
+            if item.address is None or true_value.node_address is None:
+                return False
+
+            return item.address.lower() == true_value.node_address.lower()
+
         for peer in peers:
-            address = peer.node_address
-            topo = next(filter(lambda t: t.address == address, topology), None)
-            node = next(filter(lambda n: n.address == address, nodes), None)
+            topo = next(filter(lambda t: filter_func(t, peer), topology), None)
+            node = next(filter(lambda n: filter_func(n, peer), nodes), None)
 
             peer.safe = getattr(node, "safe", Safe.default())
 
@@ -53,8 +61,6 @@ class Utils(Base):
                 peer.channel_balance = topo.channels_balance
             else:
                 peer.yearly_message_count = None
-
-        cls().info("Merged topology, peers, and safes data.")
 
     @classmethod
     def associateEntitiesToNodes(cls, entities, nodes):
@@ -86,27 +92,6 @@ class Utils(Base):
         for peer in peers:
             peer.safe_address_count = safe_counts[peer.safe.address]
 
-    @classmethod
-    def exclude(cls, source_data: list, blacklist: list, text: str = "") -> list:
-        """
-        Removes elements from a dictionary based on a blacklist.
-        :param source_data (dict): The dictionary to be updated.
-        :param blacklist (list): A list containing the keys to be removed.
-        :returns: A list containing the removed elements.
-        """
-
-        addresses = [peer.address for peer in source_data]
-        indexes = [addresses.index(item) for item in blacklist if item in addresses]
-
-        # Remove elements from the list
-        excluded = []
-        for index in sorted(indexes, reverse=True):
-            peer = source_data.pop(index)
-            excluded.append(peer)
-
-        cls().info(f"Excluded {text} ({len(excluded)} entries).")
-
-        return excluded
 
     @classmethod
     async def balanceInChannels(cls, channels: list) -> dict[str, dict]:
@@ -126,7 +111,7 @@ class Utils(Base):
             ):
                 continue
 
-            if c.status != ChannelStatus.Open:
+            if not c.status.is_open:
                 continue
 
             if c.source_peer_id not in results:
@@ -135,6 +120,7 @@ class Utils(Base):
                     "channels_balance": 0,
                 }
 
-            results[c.source_peer_id]["channels_balance"] += int(c.balance) / 1e18
+            results[c.source_peer_id]["channels_balance"] += int(
+                c.balance) / 1e18
 
         return results

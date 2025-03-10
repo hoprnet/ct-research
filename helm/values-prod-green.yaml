@@ -1,12 +1,15 @@
-replicas: 5
+replicas: 0
 network: dufour
-version: "2.1.2"
+# testing with connectivity debug logging, this is based on 2.2.3
+version: 2.2.3-pr.6869
+
+service:
+  type: LoadBalancer
 
 config: |
   hopr:
     chain:
       network: dufour
-      provider: http://gnosis-rpc-provider.rpc-provider.svc:8545
     strategy:
       on_fail_continue: true
       allow_recursive: false

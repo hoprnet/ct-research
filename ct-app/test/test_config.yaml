@@ -33,12 +33,11 @@ flags:
 
     getTotalChannelFunds: Off
     
-    watchMessageQueue: On
-    relayedMessagesToDB: 120
+    observeMessageQueue: On # should only be On / Off
+    observeRelayedMessages: On # should only be On / Off
 
   peer:
     messageRelayRequest: Off
-    sentMessagesToDB: Off
 
 # =============================================================================
 # 
@@ -84,19 +83,15 @@ economicModel:
         skewness: 0.72
         upperbound: 1.0
         offset: 4.08
-
-# =============================================================================
-# 
-# =============================================================================
-storage:
-  value: 5 # wxHOPR
-  timeout: 43200 # seconds
-  
+        
 # =============================================================================
 # 
 # =============================================================================
 peer:
   minVersion: '2.0.7'
+  initialSleep:
+    mean: 30
+    std: 2
 
 # =============================================================================
 # 

@@ -1,12 +1,18 @@
+import logging
+
 import click
 import yaml
 from prometheus_client import start_http_server
 
-from .components import AsyncLoop, Base, Parameters, Utils
+from core.components.logs import configure_logging
+
+from .components import AsyncLoop, Parameters, Utils
 from .components.messages import MessageQueue
 from .core import Core
-from .model.database import DatabaseConnection
 from .node import Node
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 
 @click.command()
@@ -26,18 +32,16 @@ def main(configfile: str):
     # start the prometheus client
     try:
         start_http_server(8080)
-    except Exception as e:
-        Base.logger.error(f"Could not start the prometheus client on port 8080: {e}")
+    except Exception as err:
+        logger.exception("Could not start the prometheus client on port 8080", {"error": err})
     else:
-        Base.logger.info("Prometheus client started on port 8080")
+        logger.info("Prometheus client started on port 8080")
 
-    DatabaseConnection.open(params.pg)
+    core = Core(nodes, params)
 
-    AsyncLoop.run(Core(nodes, params).start)
+    AsyncLoop.run(core.start, core.stop)
 
     MessageQueue.clear()
-
-    DatabaseConnection.close()
 
 
 if __name__ == "__main__":

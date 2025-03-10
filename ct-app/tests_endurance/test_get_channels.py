@@ -1,7 +1,13 @@
+import logging
+
+from core.api import HoprdAPI
 from core.components import EnvironmentUtils
-from core.components.hoprd_api import HoprdAPI
+from core.components.logs import configure_logging
 
 from . import EnduranceTest, Metric
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 
 class GetChannels(EnduranceTest):
@@ -13,7 +19,7 @@ class GetChannels(EnduranceTest):
                 "API_URL"), EnvironmentUtils.envvar("API_KEY")
         )
         self.recipient = await self.api.get_address()
-        self.info(f"Connected to node {self.recipient.hopr}")
+        logger.info(f"Connected to node {self.recipient.hopr}")
 
     async def task(self) -> bool:
         success = await self.api.channels() is not None
@@ -28,12 +34,18 @@ class GetChannels(EnduranceTest):
 
     def metrics(self):
         # Messages counts
-        succesfull_queries = Metric(
-            "Expected messages",
+        expected_calls = Metric(
+            "Expected calls",
             len(self.results),
+        )
+
+        successful_calls = Metric(
+            "Successful calls",
+            sum(self.results),
         )
 
         # Export metrics
         return [
-            succesfull_queries,
+            expected_calls,
+            successful_calls,
         ]

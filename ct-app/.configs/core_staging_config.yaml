@@ -4,41 +4,40 @@
 # =============================================================================
 flags:
   core: 
-    rotateSubgraphs: 300
-    peersRewards: 120
-    ticketParameters: 120
+    applyEconomicModel: 30
+    ticketParameters: 60
 
-    connectedPeers: 120
-    registeredNodes: 600
-    topology: 60
-    allocations: 600
-    EOABalances: 600
-    NFTHolders: 600
-    
-    applyEconomicModel: 120
-    
-    safeFundings: 600
+    connectedPeers: 30
+    topology: 30
 
+    rotateSubgraphs: 60
+
+    peersRewards: 300
+    registeredNodes: 300
+    allocations: 300
+    EOABalances: 300
+    NFTHolders: 300
+    safeFundings: 300
+    
   node:
-    healthcheck: 60
-    retrievePeers: 120
-    retrieveChannels: 60
-    retrieveBalances: 120
+    healthcheck: 15
+    retrievePeers: 60
+    retrieveChannels: 120
+    retrieveBalances: 300
 
-    openChannels: 900
-    fundChannels: 900
-    closeOldChannels: 900
-    closePendingChannels: 900
+    openChannels: 300
+    fundChannels: 300
+    closeOldChannels: 300
+    closePendingChannels: 300
     closeIncomingChannels: Off
 
     getTotalChannelFunds: 300
 
-    watchMessageQueue: On  # should only be On / Off
-    relayedMessagesToDB: 120
+    observeMessageQueue: On # should only be On / Off
+    observeRelayedMessages: 15
 
   peer:
     messageRelayRequest: On # should only be On / Off
-    sentMessagesToDB: 120
     
 # =============================================================================
 # 
@@ -49,8 +48,8 @@ economicModel:
 
   legacy:
     proportion: 1.0
-    apr: 0.000005
-    
+    apr: 0.000001
+
     coefficients:
       a: 1
       b: 1.4
@@ -70,14 +69,14 @@ economicModel:
 
     maxAPR: 0.0000001
     networkCapacity: 100
-    totalTokenSupply: 200
+    totalTokenSupply: 5000
 
     offset: 10
     buckets:
       economicSecurity:
         flatness: 1.65
         skewness: 1.50
-        upperbound: 0.5
+        upperbound: 0.75
         offset: 0
 
       networkCapacity:
@@ -89,25 +88,24 @@ economicModel:
 # =============================================================================
 # 
 # =============================================================================
-storage:
-  count: 1000
-  timeout: 3600 # seconds
-
-# =============================================================================
-# 
-# =============================================================================
 peer:
-  minVersion: '2.1.0'
+  minVersion: '2.1.5'
   initialSleep:
-    mean: 30
+    mean: 10
     std: 2
+
+  # Controls how many messages are batched at a time. Increasing this reduces
+  # the queue size but also privacy as the load gets less spread over time. 
+  # NOTE: Should be replaced by a dynamic approch, by setting the minimum delay
+  # acceptable before increasing the batch size accordingly (auto-mode)
+  messageMultiplier: 5 
 
 # =============================================================================
 # 
 # =============================================================================
 channel:
   minBalance: 0.05
-  fundingAmount: 0.2
+  fundingAmount: 0.1
   maxAgeSeconds: 86400
 
 # =============================================================================

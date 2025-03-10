@@ -3,6 +3,7 @@ export $(grep -v '^#' .env | xargs)
 
 env=${1:-staging}
 count=${2:-1}
+deployment=${3:-auto}
 
 
 healthyz() { echo $(curl -s -o /dev/null -w "%{http_code}" "$1/healthyz"); }
@@ -17,7 +18,9 @@ check_deployment() {
     fi
 }
 
-deployment=$(check_deployment $HOST_FORMAT $env)
+if [ $deployment == "auto" ]; then
+    deployment=$(check_deployment $HOST_FORMAT $env)
+fi
 
 # Node parameters
 for i in $(seq 1 $count); do
@@ -25,5 +28,9 @@ for i in $(seq 1 $count); do
     export NODE_KEY_${i}=$TOKEN
 done
 
+# create log folder
+mkdir -p .logs
+time=$(date '+%Y%m%d_%H%M%S')
+
 echo "Starting core in $env mode"
-python -m core --configfile ./.configs/core_${env}_config.yaml 2>&1 | tee logs_core.log
+python -m core --configfile ./.configs/core_${env}_config.yaml 2>&1 | tee ".logs/core_$time.log"

@@ -1,15 +1,16 @@
 import asyncio
 
 import pytest
-from core.components import Base, LockedVar, Parameters
+
+from core.components import LockedVar, Parameters
 from core.components.decorators import connectguard, flagguard, formalin
 
 flag_dictionary = {"flags": {"fooclass": {"fooFlagguardFunc": 1, "fooFormalinFunc": 1}}}
 
 
-class FooClass(Base):
+class FooClass:
     def __init__(self):
-        super().__init__()
+        pass
         self.connected = LockedVar("connected", False)
         self.running = False
         self.counter = 0

@@ -1,12 +1,22 @@
 replicas: 0
 network: rotsee
-version: singapore-latest
+# testing with connectivity fixes and additional logging, this is based on 2.2.3
+# see https://console.cloud.google.com/artifacts/docker/hoprassociation/europe-west3/docker-images/hoprd?inv=1&invt=Abp4Wg&project=hoprassociation
+version: 2.2.3-pr.6875
 
+service:
+  type: LoadBalancer
+
+deployment:
+  env: |
+    - name: HOPR_INTERNAL_LIBP2P_MSG_ACK_MAX_TOTAL_STREAMS
+      value: "10000"
+  #   - name: RUST_LOG
+  #     value: debug,libp2p_swarm=debug,libp2p_mplex=debug,multistream_select=debug,libp2p_tcp=debug,libp2p_dns=info,sea_orm=info,sqlx=info
 config: |
   hopr:
     chain:
       network: rotsee
-      provider: https://gnosis.rpc-provider.prod.hoprnet.link
     strategy:
       on_fail_continue: true
       allow_recursive: false

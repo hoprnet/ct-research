@@ -1,10 +1,8 @@
 import os
 from typing import Any
 
-from .baseclass import Base
 
-
-class EnvironmentUtils(Base):
+class EnvironmentUtils:
     @classmethod
     def envvarWithPrefix(cls, prefix: str, type=str) -> dict[str, Any]:
         var_dict = {
