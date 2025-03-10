@@ -4,7 +4,6 @@ import logging
 from typing import Optional
 
 import aiohttp
-
 from core.components.logs import configure_logging
 
 from . import request_objects as request
@@ -34,9 +33,16 @@ class HoprdAPI:
         data: request.ApiRequestObject = None,
     ):
         if endpoint != "messages":
-            logger.debug("Hitting API", {"host": self.host,
-                                         "method": method.value, "endpoint": endpoint,
-                                         "data": getattr(data, "as_dict", {})})
+            logger.debug(
+                "Hitting API",
+                {
+                    "host": self.host,
+                    "method": method.value,
+                    "endpoint": endpoint,
+                    "data": getattr(data, "as_dict", {}),
+                },
+            )
+            logger.info(f"{logger.name}")
         try:
             headers = {"Content-Type": "application/json"}
             async with aiohttp.ClientSession(headers=self.headers) as s:
@@ -52,12 +58,26 @@ class HoprdAPI:
 
                     return (res.status // 200) == 1, data
         except OSError as err:
-            logger.error("OSError while doing an API call",
-                         {"error": str(err), "host": self.host, "method": method.value, "endpoint": endpoint})
+            logger.error(
+                "OSError while doing an API call",
+                {
+                    "error": str(err),
+                    "host": self.host,
+                    "method": method.value,
+                    "endpoint": endpoint,
+                },
+            )
 
         except Exception as err:
-            logger.error("Exception while doing an API call",
-                         {"error": str(err), "host": self.host, "method": method.value, "endpoint": endpoint})
+            logger.error(
+                "Exception while doing an API call",
+                {
+                    "error": str(err),
+                    "host": self.host,
+                    "method": method.value,
+                    "endpoint": endpoint,
+                },
+            )
 
         return (False, None)
 
@@ -77,15 +97,30 @@ class HoprdAPI:
                 )
             except aiohttp.ClientConnectionError as err:
                 backoff *= 2
-                logger.exception("ClientConnection exception while doing an API call.",
-                                 {"error": str(err), "host": self.host, "method": method.value, "endpoint": endpoint, "backoff": backoff})
+                logger.exception(
+                    "ClientConnection exception while doing an API call.",
+                    {
+                        "error": str(err),
+                        "host": self.host,
+                        "method": method.value,
+                        "endpoint": endpoint,
+                        "backoff": backoff,
+                    },
+                )
                 if backoff > 10:
                     return (False, None)
                 await asyncio.sleep(backoff)
 
             except asyncio.TimeoutError as err:
-                logger.exception("Timeout exception while doing an API call",
-                                 {"error": str(err), "host": self.host, "method": method.value, "endpoint": endpoint})
+                logger.exception(
+                    "Timeout exception while doing an API call",
+                    {
+                        "error": str(err),
+                        "host": self.host,
+                        "method": method.value,
+                        "endpoint": endpoint,
+                    },
+                )
                 return (False, None)
             else:
                 return result
@@ -109,7 +144,9 @@ class HoprdAPI:
         """
         data = request.OpenChannelBody(amount, peer_address)
 
-        is_ok, resp = await self.__call_api(HTTPMethod.POST, "channels", data, timeout=90)
+        is_ok, resp = await self.__call_api(
+            HTTPMethod.POST, "channels", data, timeout=90
+        )
         return response.OpenedChannel(resp) if is_ok else None
 
     async def fund_channel(self, channel_id: str, amount: float) -> bool:
@@ -132,7 +169,9 @@ class HoprdAPI:
         :param: channel_id: str
         :return: bool
         """
-        is_ok, _ = await self.__call_api(HTTPMethod.DELETE, f"channels/{channel_id}", timeout=90)
+        is_ok, _ = await self.__call_api(
+            HTTPMethod.DELETE, f"channels/{channel_id}", timeout=90
+        )
         return is_ok
 
     async def channels(self) -> response.Channels:
@@ -209,7 +248,11 @@ class HoprdAPI:
         :return: TicketPrice
         """
         is_ok, resp = await self.__call_api(HTTPMethod.GET, "node/configuration")
-        return response.TicketPrice(response.Configuration(json.loads(resp)).as_dict) if is_ok else None
+        return (
+            response.TicketPrice(response.Configuration(json.loads(resp)).as_dict)
+            if is_ok
+            else None
+        )
 
     async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
         """
@@ -220,7 +263,11 @@ class HoprdAPI:
         is_ok, resp = await self.__call_api(
             HTTPMethod.POST, "messages/pop-all", data=request.PopMessagesBody(tag)
         )
-        return [response.Message(item) for item in resp.get("messages", [])] if is_ok else []
+        return (
+            [response.Message(item) for item in resp.get("messages", [])]
+            if is_ok
+            else []
+        )
 
     async def healthyz(self, timeout: int = 20) -> bool:
         """

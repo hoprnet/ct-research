@@ -92,10 +92,13 @@ class Parameters:
             pass
 
         return value
-    
+
     @property
     def as_dict(self):
-        return {k: v.as_dict if isinstance(v, type(self)) else v for k, v in self.__dict__.items()}
+        return {
+            k: v.as_dict if isinstance(v, type(self)) else v
+            for k, v in self.__dict__.items()
+        }
 
     def __repr__(self):
         return str(self.__dict__)

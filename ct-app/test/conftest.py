@@ -145,13 +145,12 @@ async def nodes(
             node.api, "get_address", return_value=Addresses(addresses[idx])
         )
         mocker.patch.object(node.api, "channels", return_value=channels)
-        mocker.patch.object(node.api, "balances",
-                            side_effect=SideEffect().node_balance)
+        mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
         mocker.patch.object(
             node.api,
             "peers",
             return_value=[
-                ConnectedPeer(peer) for peer in peers_raw[:idx] + peers_raw[idx + 1:]
+                ConnectedPeer(peer) for peer in peers_raw[:idx] + peers_raw[idx + 1 :]
             ],
         )
 
@@ -231,10 +230,8 @@ async def node(
     mocker.patch.object(
         node.api, "peers", return_value=[ConnectedPeer(peer) for peer in peers_raw[1:]]
     )
-    mocker.patch.object(node.api, "get_address",
-                        return_value=Addresses(addresses[0]))
-    mocker.patch.object(node.api, "balances",
-                        side_effect=SideEffect().node_balance)
+    mocker.patch.object(node.api, "get_address", return_value=Addresses(addresses[0]))
+    mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
     # mocker.patch.object(node.api, "send_message", return_value=1)
     mocker.patch.object(node.api, "healthyz", return_value=True)
 

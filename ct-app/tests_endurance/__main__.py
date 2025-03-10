@@ -59,15 +59,13 @@ def main(configfile: str):
         num_stages = len(stages)
         stage_results = []
         for stage_idx, stage in enumerate(stages, 1):
-            EnduranceTest.bold(
-                f"stage [{stage_idx}/{num_stages}]", prefix="\t")
+            EnduranceTest.bold(f"stage [{stage_idx}/{num_stages}]", prefix="\t")
 
             try:
                 success = eval(value.get("executor"))(**stage)()
             except Exception as e:
-                EnduranceTest.error(
-                    f"{e.__class__.__name__}: {e}", prefix="\t")
-                success = (False, 'Exception raised')
+                EnduranceTest.error(f"{e.__class__.__name__}: {e}", prefix="\t")
+                success = (False, "Exception raised")
 
             stage_results.append(success)
             display_success(success)
@@ -80,7 +78,7 @@ def main(configfile: str):
         del_envvars(env.keys())
 
     successful_scenarios = sum(scenarios_results)
-    print("." * int(os.get_terminal_size().columns * 3/4))
+    print("." * int(os.get_terminal_size().columns * 3 / 4))
     display_results(successful_scenarios, num_scenarios, "scenario")
 
     del_envvars(["LOG_LEVEL", "LOG_ENABLED"])
@@ -89,11 +87,10 @@ def main(configfile: str):
 
 def display_success(result: tuple[bool, str]):
     match result:
-        case(True, _):
+        case (True, _):
             EnduranceTest.success("Test successful", prefix="\t", end="\n" * 2)
-        case(False, message):
-            EnduranceTest.error(
-                f"Test failed: {message}", prefix="\t", end="\n" * 2)
+        case (False, message):
+            EnduranceTest.error(f"Test failed: {message}", prefix="\t", end="\n" * 2)
 
 
 def display_results(hit: int, total: int, element: str):

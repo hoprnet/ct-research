@@ -43,7 +43,7 @@ class EnduranceTest(object):
         """
 
         while True:
-            await asyncio.sleep(1/12)
+            await asyncio.sleep(1 / 12)
 
             completed_tasks = sum(task.done() for task in self.tasks)
             duration = time.time() - self.start_time
@@ -52,14 +52,13 @@ class EnduranceTest(object):
             duration_f = timedelta(seconds=int(duration))
             exp_duration_f = timedelta(seconds=int(self.duration))
 
-            suffix_string = f"{completed_tasks}/{len(self.tasks)-1} " + \
-                f"[{duration_f}/{exp_duration_f}]"
+            suffix_string = (
+                f"{completed_tasks}/{len(self.tasks)-1} "
+                + f"[{duration_f}/{exp_duration_f}]"
+            )
 
             bar_length = os.get_terminal_size().columns - len(suffix_string) - 1
-            hash_count = int(
-                completed_tasks / (len(self.tasks) - 1) *
-                bar_length
-            )
+            hash_count = int(completed_tasks / (len(self.tasks) - 1) * bar_length)
             dash_count = bar_length - hash_count
 
             print(f"\r{'█'*hash_count}{'▒'*dash_count} {suffix_string}", end="")
@@ -91,8 +90,7 @@ class EnduranceTest(object):
 
         for it in range(self.iterations):
             self.tasks.add(
-                asyncio.create_task(self.delayed_task(
-                    getattr(self, "task"), it))
+                asyncio.create_task(self.delayed_task(getattr(self, "task"), it))
             )
 
         self.start_time = time.time()
