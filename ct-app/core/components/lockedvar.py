@@ -69,4 +69,6 @@ class LockedVar:
             try:
                 self.value.update(value)
             except AttributeError as err:
-                raise AttributeError("Trying to call 'update' on non-dict value") from err
+                raise AttributeError(
+                    "Trying to call 'update' on non-dict value"
+                ) from err

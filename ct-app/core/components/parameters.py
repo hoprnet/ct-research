@@ -1,101 +1,283 @@
 import logging
+from math import log, prod
 
+from core.api.response_objects import TicketPrice
 from core.components.logs import configure_logging
-
-from .environment_utils import EnvironmentUtils as Utils
 
 configure_logging()
 logger = logging.getLogger(__name__)
 
 
-class Parameters:
-    """
-    Class that represents a set of parameters that can be accessed and modified. The parameters are stored in a dictionary and can be accessed and modified using the dot notation. The parameters can be loaded from environment variables with a specified prefix.
-    """
+class ExplicitParams:
+    keys: dict[str, type] = {}
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, data: dict = None):
+        if data is None:
+            data = {}
+        self.parse(data)
 
-    def parse(self, data: dict, entrypoint=False):
-        for key, value in data.items():
-            subparams = type(self)()
-            key = key.replace("-", "_")
+    def parse(self, data: dict):
+        for name, type in self.keys.items():
+            if value := data.get(name):
+                value = type(value)
+                if type is Flag:
+                    value = value.value
+            setattr(self, name, value)
 
-            setattr(self, key, subparams)
-            if isinstance(value, dict):
-                subparams.parse(value)
-            else:
-                setattr(self, key, value)
-
-        if entrypoint:
-            logger.debug("Loaded config from file", {"config": self.as_dict})
-
-    def overrides(self, prefix: str):
-        for key, value in Utils.envvarWithPrefix(prefix).items():
-            path = key.replace(prefix, "").lower().split("_")
-            parent = self
-
-            for p in path:
-                raw_attrs = dir(parent)
-                attrs = list(map(lambda str: str.lower(), raw_attrs))
-
-                if p.lower() in attrs:
-                    param_name = raw_attrs[attrs.index(p)]
-                    child = getattr(parent, param_name)
-
-                    if isinstance(child, type(self)):
-                        parent = child
-                    else:
-                        setattr(parent, param_name, self._convert(value))
-                else:
-                    raise KeyError(f"Key {key} not found in parameters")
-
-    def from_env(self, *prefixes: list[str]):
-        for prefix in prefixes:
-            subparams_name: str = prefix.lower().strip("_")
-            raw_attrs = dir(self)
-            attrs = list(map(lambda str: str.lower(), raw_attrs))
-
-            if subparams_name in attrs:
-                subparams = getattr(self, raw_attrs[attrs.index(subparams_name)])
-            else:
-                subparams = type(self)()
-
-            self._parse_env_vars(prefix, subparams)
-
-            setattr(self, subparams_name, subparams)
-
-    def _parse_env_vars(self, prefix, subparams):
-        for key, value in Utils.envvarWithPrefix(prefix).items():
-            k = self._format_key(key, prefix)
-            value = self._convert(value)
-            setattr(subparams, k, value)
-
-    def _format_key(self, key, prefix):
-        k = key.replace(prefix, "").lower()
-        k = k.replace("_", " ").title().replace(" ", "")
-        k = k[0].lower() + k[1:]
-        return k
-
-    def _convert(self, value: str):
-        try:
-            value = float(value)
-        except ValueError:
-            pass
-
-        try:
-            integer = int(value)
-            if integer == value:
-                value = integer
-
-        except ValueError:
-            pass
-
-        return value
-    
     @property
     def as_dict(self):
-        return {k: v.as_dict if isinstance(v, type(self)) else v for k, v in self.__dict__.items()}
+        return {
+            k: v.as_dict if isinstance(v, ExplicitParams) else v
+            for k, v in self.__dict__.items()
+        }
 
     def __repr__(self):
-        return str(self.__dict__)
+        return f"{self.__class__.__name__}({self.as_dict})"
+
+
+class Flag:
+    def __init__(self, value: int):
+        self.value = value
+
+
+class FlagCoreParams(ExplicitParams):
+    keys = {
+        "apply_economic_model": Flag,
+        "ticket_parameters": Flag,
+        "connected_peers": Flag,
+        "topology": Flag,
+        "rotate_subgraphs": Flag,
+        "peers_rewards": Flag,
+        "registered_nodes": Flag,
+        "allocations": Flag,
+        "eoa_balances": Flag,
+        "nft_holders": Flag,
+        "safe_fundings": Flag,
+    }
+
+
+class FlagNodeParams(ExplicitParams):
+    keys = {
+        "healthcheck": Flag,
+        "retrieve_peers": Flag,
+        "retrieve_channels": Flag,
+        "retrieve_balances": Flag,
+        "open_channels": Flag,
+        "fund_channels": Flag,
+        "close_old_channels": Flag,
+        "close_pending_channels": Flag,
+        "close_incoming_channels": Flag,
+        "get_total_channel_funds": Flag,
+        "observe_message_queue": Flag,
+        "observe_relayed_messages": Flag,
+    }
+
+
+class FlagPeerParams(ExplicitParams):
+    keys = {"message_relay_request": Flag}
+
+
+class FlagParams(ExplicitParams):
+    keys = {"core": FlagCoreParams, "node": FlagNodeParams, "peer": FlagPeerParams}
+
+
+class LegacyCoefficientsParams(ExplicitParams):
+    keys = {
+        "a": float,
+        "b": float,
+        "c": float,
+        "l": float,
+    }
+
+
+class LegacyEquationParams(ExplicitParams):
+    keys = {
+        "formula": str,
+        "condition": str,
+    }
+
+
+class LegacyEquationsParams(ExplicitParams):
+    keys = {
+        "fx": LegacyEquationParams,
+        "gx": LegacyEquationParams,
+    }
+
+
+class LegacyParams(ExplicitParams):
+    keys = {
+        "proportion": float,
+        "apr": float,
+        "coefficients": LegacyCoefficientsParams,
+        "equations": LegacyEquationsParams,
+    }
+
+    def transformed_stake(self, stake: float):
+        # convert parameters attribute to dictionary
+        kwargs = vars(self.coefficients)
+        kwargs.update({"x": stake})
+
+        for func in vars(self.equations).values():
+            if eval(func.condition, kwargs):
+                break
+        else:
+            return 0
+
+        return eval(func.formula, kwargs)
+
+    def yearly_message_count(
+        self, stake: float, ticket_price: TicketPrice, redeemed_rewards: float = 0
+    ):
+        """
+        Calculate the yearly message count a peer should receive based on the stake.
+        """
+        self.coefficients.c += redeemed_rewards
+        rewards = self.apr * self.transformed_stake(stake) / 100
+        self.coefficients.c -= redeemed_rewards
+
+        return rewards / ticket_price.value * self.proportion
+
+
+class BucketParams(ExplicitParams):
+    keys = {"flatness": float, "skewness": float, "upperbound": float, "offset": float}
+
+    def apr(self, x: float):
+        """
+        Calculate the APR for the bucket.
+        """
+        try:
+            apr = (
+                log(pow(self.upperbound / x, self.skewness) - 1) * self.flatness
+                + self.offset
+            )
+        except ValueError as err:
+            raise ValueError(f"Math domain error: {x=}, {vars(self)}") from err
+        except ZeroDivisionError as err:
+            raise ValueError("Zero division error") from err
+        except OverflowError as err:
+            raise ValueError("Overflow error") from err
+
+        return max(apr, 0)
+
+
+class BucketsParams(ExplicitParams):
+    keys = {"economic_security": BucketParams, "network_capacity": BucketParams}
+
+    order = ["network_capacity", "economic_security"]
+
+    @property
+    def count(self):
+        return len(self.values)
+
+    @property
+    def values(self):
+        # return the values of the dictionary, by `order`
+        return [vars(self)[k] for k in self.order if vars(self)[k]]
+
+
+class SigmoidParams(ExplicitParams):
+    keys = {
+        "proportion": float,
+        "max_apr": float,
+        "offset": int,
+        "buckets": BucketsParams,
+        "network_capacity": int,
+        "total_token_supply": int,
+    }
+
+    def apr(
+        self,
+        xs: list[float],
+    ):
+        """
+        Calculate the APR for the economic model.
+        """
+        try:
+            apr = (
+                pow(
+                    prod(b.apr(x) for b, x in zip(self.buckets.values, xs)),
+                    1 / self.buckets.count,
+                )
+                + self.offset
+            )
+        except ValueError as err:
+            logger.exception("Value error in APR calculation", {"error": err})
+            apr = 0
+
+        if self.max_apr is not None:
+            apr = min(apr, self.max_apr)
+
+        return apr
+
+    def yearly_message_count(
+        self, stake: float, ticket_price: TicketPrice, xs: list[float]
+    ):
+        """
+        Calculate the yearly message count a peer should receive based on the stake.
+        """
+        apr = self.apr(xs)
+
+        rewards = apr * stake / 100.0
+
+        return rewards / ticket_price.value * self.proportion
+
+
+class EconomicModelParams(ExplicitParams):
+    keys = {
+        "min_safe_allowance": float,
+        "nft_threshold": float,
+        "legacy": LegacyParams,
+        "sigmoid": SigmoidParams,
+    }
+
+    @property
+    def models(self):
+        return {v: k for k, v in vars(self).items() if isinstance(v, ExplicitParams)}
+
+
+class PeerParams(ExplicitParams):
+    keys = {
+        "min_version": str,
+        "sleep_mean_time": int,
+        "sleep_std_time": int,
+        "message_multiplier": int,
+    }
+
+
+class ChannelParams(ExplicitParams):
+    keys = {"min_balance": float, "funding_amount": float, "max_age_seconds": int}
+
+
+class FundingsParams(ExplicitParams):
+    keys = {"constant": float}
+
+
+class SubgraphEndpointParams(ExplicitParams):
+    keys = {"query_id": str, "slug": str, "inputs": dict}
+
+
+class SubgraphParams(ExplicitParams):
+    keys = {
+        "type": str,
+        "user_id": int,
+        "api_key": str,
+        "mainnet_allocations": SubgraphEndpointParams,
+        "gnosis_allocations": SubgraphEndpointParams,
+        "hopr_on_mainnet": SubgraphEndpointParams,
+        "hopr_on_gnosis": SubgraphEndpointParams,
+        "safes_balance": SubgraphEndpointParams,
+        "fundings": SubgraphEndpointParams,
+        "rewards": SubgraphEndpointParams,
+        "staking": SubgraphEndpointParams,
+    }
+
+
+class Parameters(ExplicitParams):
+    keys = {
+        "flags": FlagParams,
+        "economic_model": EconomicModelParams,
+        "peer": PeerParams,
+        "channel": ChannelParams,
+        "fundings": FundingsParams,
+        "subgraph": SubgraphParams,
+    }

@@ -2,29 +2,45 @@ import asyncio
 
 import pytest
 
-from core.components import LockedVar, Parameters
 from core.components.decorators import connectguard, flagguard, formalin
+from core.components.parameters import ExplicitParams, Flag
 
-flag_dictionary = {"flags": {"fooclass": {"fooFlagguardFunc": 1, "fooFormalinFunc": 1}}}
+
+class FooClassParams(ExplicitParams):
+    keys = {
+        "foo_flagguard_func": Flag,
+        "foo_formalin_func": Flag,
+    }
+
+
+class FooFlagParams(ExplicitParams):
+    keys = {
+        "fooclass": FooClassParams,
+    }
+
+
+class FooParams(ExplicitParams):
+    keys = {
+        "flags": FooFlagParams,
+    }
 
 
 class FooClass:
     def __init__(self):
         pass
-        self.connected = LockedVar("connected", False)
+        self.connected = False
         self.running = False
         self.counter = 0
-        self.params = Parameters()
-        self.params.parse(flag_dictionary)
+        self.params = FooParams(
+            {"flags": {"fooclass": {"foo_flagguard_func": 1, "foo_formalin_func": 1}}}
+        )
 
     @connectguard
     async def foo_connectguard_func(self):
-        await asyncio.sleep(0.1)
         return True
 
     @flagguard
     async def foo_flagguard_func(self):
-        await asyncio.sleep(0.1)
         return True
 
     @flagguard
@@ -52,10 +68,10 @@ async def test_connectguard(foo_class: FooClass):
 
 @pytest.mark.asyncio
 async def test_flagguard(foo_class: FooClass):
-    foo_class.params.flags.fooclass.fooFlagguardFunc = None
+    foo_class.params.flags.fooclass.foo_flagguard_func = None
     assert await foo_class.foo_flagguard_func() is None
 
-    foo_class.params.flags.fooclass.fooFlagguardFunc = 1
+    foo_class.params.flags.fooclass.foo_flagguard_func = 1
     assert await foo_class.foo_flagguard_func() is True
 
 
@@ -74,5 +90,5 @@ async def test_formalin(foo_class: FooClass):
 
         assert foo_class.counter == expected_count
 
-    await setup_test(1, 0, 1)
-    await setup_test(1.3, 0.5, 2)
+    await setup_test(1, 0, 10)
+    await setup_test(1.4, 0.5, 3)

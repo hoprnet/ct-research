@@ -4,13 +4,14 @@ import random
 
 from prometheus_client import Gauge
 
+from core.api.response_objects import TicketPrice
 from core.components.logs import configure_logging
+from core.components.parameters import LegacyParams, SigmoidParams
 from core.subgraph import GraphQLProvider
 
 from .api import HoprdAPI
 from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
 from .components.decorators import flagguard, formalin, master
-from .economic_model import EconomicModelTypes
 from .node import Node
 from .subgraph import URL, Type, entries
 
@@ -19,14 +20,14 @@ from .subgraph import URL, Type, entries
 # region Metrics
 ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
 MESSAGE_COUNT = Gauge(
-    "ct_message_count", "messages one should receive / year", [
-        "peer_id", "model"]
+    "ct_message_count", "messages one should receive / year", ["peer_id", "model"]
 )
 NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
 PEER_VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
 REDEEMED_REWARDS = Gauge("ct_redeemed_rewards", "Redeemed rewards", ["address"])
 STAKE = Gauge("ct_peer_stake", "Stake", ["safe", "type"])
 SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
+TICKET_STATS = Gauge("ct_ticket_stats", "Ticket stats", ["type"])
 TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
 TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
 UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers", ["type"])
@@ -56,15 +57,14 @@ class Core:
         self.allocations_data = list[entries.Allocation]()
         self.eoa_balances_data = list[entries.Balance]()
         self.peers_rewards_data = dict[str, float]()
+        self.ticket_price: TicketPrice = None
 
-        self.models = {
-            m: m.model.fromParameters(
-                getattr(self.params.economicModel, m.value))
-            for m in EconomicModelTypes
-        }
-
+        # Initialize the providers
+        user_id = self.params.subgraph.user_id
+        api_key = self.params.subgraph.api_key
         self.providers: dict[Type, GraphQLProvider] = {
-            s: s.provider(URL(self.params.subgraph, s.value)) for s in Type
+            s: s.provider(URL(user_id, api_key, getattr(self.params.subgraph, s.value)))
+            for s in Type
         }
 
         self.running = False
@@ -112,8 +112,7 @@ class Core:
                     counts["known"] += 1
 
                     # update peer version if it has been succesfully retrieved
-                    new_version = visible_peers[visible_peers.index(
-                        peer)].version
+                    new_version = visible_peers[visible_peers.index(peer)].version
                     if new_version.major != 0:
                         peer.version = new_version
 
@@ -138,8 +137,7 @@ class Core:
                 UNIQUE_PEERS.labels(key).set(value)
 
             for peer in current_peers:
-                PEER_VERSION.labels(peer.address.hopr,
-                                    str(peer.version)).set(1)
+                PEER_VERSION.labels(peer.address.hopr, str(peer.version)).set(1)
 
     @master(flagguard, formalin)
     async def registered_nodes(self):
@@ -159,10 +157,14 @@ class Core:
         for node in results:
             STAKE.labels(node.safe.address, "balance").set(node.safe.balance)
             STAKE.labels(node.safe.address, "allowance").set(node.safe.allowance)
-            STAKE.labels(node.safe.address, "additional_balance").set(node.safe.additional_balance)
+            STAKE.labels(node.safe.address, "additional_balance").set(
+                node.safe.additional_balance
+            )
 
         self.registered_nodes_data = results
-        logger.debug("Fetched registered nodes in the safe registry", {"count": len(results)})
+        logger.debug(
+            "Fetched registered nodes in the safe registry", {"count": len(results)}
+        )
         SUBGRAPH_SIZE.set(len(results))
 
     @master(flagguard, formalin)
@@ -248,8 +250,7 @@ class Core:
         """
         async with self.all_peers as peers:
             if not all(
-                [len(self.topology_data), len(
-                    self.registered_nodes_data), len(peers)]
+                [len(self.topology_data), len(self.registered_nodes_data), len(peers)]
             ):
                 logger.warning("Not enough data to apply economic model")
                 return
@@ -273,11 +274,11 @@ class Core:
 
             for p in peers:
                 if not p.is_eligible(
-                    self.params.economicModel.minSafeAllowance,
-                    self.models[EconomicModelTypes.LEGACY].coefficients.l,
+                    self.params.economic_model.min_safe_allowance,
+                    self.params.economic_model.legacy.coefficients.l,
                     self.ct_nodes_addresses,
                     self.nft_holders_data,
-                    self.params.economicModel.NFTThreshold,
+                    self.params.economic_model.nft_threshold,
                 ):
                     p.yearly_message_count = None
 
@@ -285,37 +286,39 @@ class Core:
                 sum(
                     [p.split_stake for p in peers if p.yearly_message_count is not None]
                 )
-                / self.params.economicModel.sigmoid.totalTokenSupply
+                / self.params.economic_model.sigmoid.total_token_supply
             )
             network_capacity = (
                 len([p for p in peers if p.yearly_message_count is not None])
-                / self.params.economicModel.sigmoid.networkCapacity
+                / self.params.economic_model.sigmoid.network_capacity
             )
 
-            model_input = {
-                EconomicModelTypes.LEGACY: 0,
-                EconomicModelTypes.SIGMOID: [economic_security, network_capacity],
-            }
             message_count = {
-                EconomicModelTypes.LEGACY: 0,
-                EconomicModelTypes.SIGMOID: 0,
+                model.__class__: 0 for model in self.params.economic_model.models
             }
+            model_input = {
+                model.__class__: 0 for model in self.params.economic_model.models
+            }
+
+            model_input[SigmoidParams] = [economic_security, network_capacity]
+
             for peer in peers:
                 if peer.yearly_message_count is None:
                     continue
 
-                model_input[EconomicModelTypes.LEGACY] = self.peers_rewards_data.get(
+                model_input[LegacyParams] = self.peers_rewards_data.get(
                     peer.address.native, 0.0
                 )
 
-                for model in self.models:
-                    message_count[model] = self.models[model].yearly_message_count(
+                for model, name in self.params.economic_model.models.items():
+                    message_count[model.__class__] = model.yearly_message_count(
                         peer.split_stake,
-                        model_input[model],
+                        self.ticket_price,
+                        model_input[model.__class__],
                     )
 
-                    MESSAGE_COUNT.labels(peer.address.hopr, model.name).set(
-                        message_count[model]
+                    MESSAGE_COUNT.labels(peer.address.hopr, name).set(
+                        message_count[model.__class__]
                     )
 
                 peer.yearly_message_count = sum(message_count.values())
@@ -341,11 +344,13 @@ class Core:
         Gets the ticket price from the api. They are used in the economic model to calculate the number of messages to send to a peer.
         """
         ticket_price = await self.api.ticket_price()
-        logger.debug("Fetched ticket price", {"value": getattr(ticket_price,"value", None)})
-        
+        logger.debug(
+            "Fetched ticket price", {"value": getattr(ticket_price, "value", None)}
+        )
+
         if ticket_price is not None:
-            for model in self.models.values():
-                model.budget.ticket_price = ticket_price.value
+            self.ticket_price = ticket_price
+            TICKET_STATS.labels("price").set(ticket_price.value)
 
     @master(flagguard, formalin)
     async def safe_fundings(self):
@@ -364,7 +369,10 @@ class Core:
         amount = sum([float(item["amount"]) for item in entries])
 
         TOTAL_FUNDING.set(amount + self.params.fundings.constant)
-        logger.debug("Fetched all safe fund events", {"amount": amount, "constant": self.params.fundings.constant})
+        logger.debug(
+            "Fetched all safe fund events",
+            {"amount": amount, "constant": self.params.fundings.constant},
+        )
 
     async def start(self):
         """

@@ -14,16 +14,10 @@ from core.api.response_objects import (
     ConnectedPeer,
 )
 from core.components import Parameters, Peer
+from core.components.parameters import LegacyParams
 
 # needs to be imported after the patches are applied
 from core.core import Core
-from core.economic_model import (
-    Budget,
-    Coefficients,
-    EconomicModelLegacy,
-    Equation,
-    Equations,
-)
 from core.node import Node
 
 
@@ -67,23 +61,18 @@ class SideEffect:
 
 
 @pytest.fixture
-def budget() -> Budget:
-    budget = Budget()
-    budget.ticket_price = 0.0001
-    return budget
-
-
-@pytest.fixture
-def economic_model(budget: Budget) -> EconomicModelLegacy:
-    equations = Equations(
-        Equation("a * x", "l <= x <= c"),
-        Equation("a * c + (x - c) ** (1 / b)", "x > c"),
+def economic_model() -> LegacyParams:
+    return LegacyParams(
+        {
+            "proportion": 1,
+            "apr": 15,
+            "coefficients": {"a": 1, "b": 1, "c": 3, "l": 0},
+            "equations": {
+                "fx": {"formula": "a * x", "condition": "l <= x <= c"},
+                "gx": {"formula": "a * c + (x - c) ** (1 / b)", "condition": "x > c"},
+            },
+        }
     )
-    parameters = Coefficients(1, 1, 3, 0)
-
-    model = EconomicModelLegacy(equations, parameters, 1, 15)
-    model.budget = budget
-    return model
 
 
 @pytest.fixture
@@ -145,13 +134,12 @@ async def nodes(
             node.api, "get_address", return_value=Addresses(addresses[idx])
         )
         mocker.patch.object(node.api, "channels", return_value=channels)
-        mocker.patch.object(node.api, "balances",
-                            side_effect=SideEffect().node_balance)
+        mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
         mocker.patch.object(
             node.api,
             "peers",
             return_value=[
-                ConnectedPeer(peer) for peer in peers_raw[:idx] + peers_raw[idx + 1:]
+                ConnectedPeer(peer) for peer in peers_raw[:idx] + peers_raw[idx + 1 :]
             ],
         )
 
@@ -197,22 +185,11 @@ def channels(peers: set[Peer]) -> Channels:
 @pytest.fixture
 async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
 
-    params = Parameters()
     with open("./test/test_config.yaml", "r") as file:
-        params.parse(yaml.safe_load(file))
-    setattr(params.subgraph, "apiKey", "foo_deployer_key")
-
-    setattr(params, "pg", Parameters())
-    setattr(params.pg, "user", "user")
-    setattr(params.pg, "password", "password")
-    setattr(params.pg, "host", "host")
-    setattr(params.pg, "port", "port")
-    setattr(params.pg, "database", "database")
+        params = Parameters(yaml.safe_load(file))
+    setattr(params.subgraph, "api_key", "foo_deployer_key")
 
     core = Core(nodes, params)
-
-    for model in core.models.values():
-        model.budget.ticket_price = 0.1
 
     return core
 
@@ -231,17 +208,15 @@ async def node(
     mocker.patch.object(
         node.api, "peers", return_value=[ConnectedPeer(peer) for peer in peers_raw[1:]]
     )
-    mocker.patch.object(node.api, "get_address",
-                        return_value=Addresses(addresses[0]))
-    mocker.patch.object(node.api, "balances",
-                        side_effect=SideEffect().node_balance)
+    mocker.patch.object(node.api, "get_address", return_value=Addresses(addresses[0]))
+    mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
     # mocker.patch.object(node.api, "send_message", return_value=1)
     mocker.patch.object(node.api, "healthyz", return_value=True)
 
     params = Parameters()
     with open("./test/test_config.yaml", "r") as file:
-        params.parse(yaml.safe_load(file))
-    setattr(params.subgraph, "apiKey", "foo_deployer_key")
+        params = Parameters(yaml.safe_load(file))
+    setattr(params.subgraph, "api_key", "foo_deployer_key")
 
     node.params = params
 
