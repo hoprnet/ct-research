@@ -287,7 +287,7 @@ class Node:
             "Starting funding of channels where balance is too low",
             {
                 "count": len(low_balances),
-                "threshold": self.params.channel.minBalance,
+                "threshold": self.params.channel.min_balance,
                 **self.log_base_params,
             },
         )
