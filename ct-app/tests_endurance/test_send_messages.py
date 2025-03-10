@@ -12,6 +12,7 @@ CHARS = "0123456789abcdefghijklmnopqrstuvwxyz "
 
 configure_logging()
 logger = logging.getLogger(__name__)
+logging.getLogger("core.api.hoprd_api").setLevel(logging.WARNING)
 
 
 class SendMessages(EnduranceTest):
@@ -20,8 +21,7 @@ class SendMessages(EnduranceTest):
         self.tag = random.randint(0, 2**16 - 1)
 
         self.api = HoprdAPI(
-            EnvironmentUtils.envvar(
-                "API_URL"), EnvironmentUtils.envvar("API_KEY")
+            EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY")
         )
         self.recipient = await self.api.get_address()
 
@@ -64,11 +64,10 @@ class SendMessages(EnduranceTest):
             self.message_tag,
         )
 
-        self.results.append(200 <= success < 300)
+        self.results.append(success is not None)
 
     async def on_end(self):
-        sleep_time = EnvironmentUtils.envvar(
-            "DELAY_BEFORE_INBOX_CHECK", type=float)
+        sleep_time = EnvironmentUtils.envvar("DELAY_BEFORE_INBOX_CHECK", type=float)
 
         if sum(self.results) > 0:
             logger.info(f"Waiting {sleep_time}s for messages to be relayed")

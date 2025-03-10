@@ -7,10 +7,21 @@ class MessageFormat:
     range = int(1e5)
     index = 0
 
-    def __init__(self, relayer: str, index: str = None, inner_index: int = None, multiplier: int = None, timestamp: str = None ):
+    def __init__(
+        self,
+        relayer: str,
+        index: str = None,
+        inner_index: int = None,
+        multiplier: int = None,
+        timestamp: str = None,
+    ):
         self.relayer = relayer
         self.index = int(index) if index else self.message_index
-        self.timestamp = int(float(timestamp)) if timestamp else int(datetime.now().timestamp()*1000)
+        self.timestamp = (
+            int(float(timestamp))
+            if timestamp
+            else int(datetime.now().timestamp() * 1000)
+        )
         self.multiplier = int(multiplier) if multiplier else 1
         self.inner_index = int(inner_index) if inner_index else 1
 
@@ -18,17 +29,16 @@ class MessageFormat:
     def message_index(self):
         value = self.__class__.index
         self.__class__.index += 1
-        self.__class__.index %= (self.__class__.range)
+        self.__class__.index %= self.__class__.range
         return value
 
     @classmethod
     def pattern(self):
-        return ' '.join([f"{{{param}}}" for param in self.params])
-        
+        return " ".join([f"{{{param}}}" for param in self.params])
+
     @classmethod
     def parse(cls, input_string: str):
-        re_pattern = "^" + \
-            cls.pattern().replace("{", "(?P<").replace("}", ">.+)") + "$"
+        re_pattern = "^" + cls.pattern().replace("{", "(?P<").replace("}", ">.+)") + "$"
 
         match = re.compile(re_pattern).match(input_string)
         if not match:
@@ -43,6 +53,6 @@ class MessageFormat:
 
     def format(self):
         return self.pattern().format_map(self.__dict__)
-    
+
     def bytes(self):
         return self.format().encode()

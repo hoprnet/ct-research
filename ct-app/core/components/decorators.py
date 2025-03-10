@@ -12,10 +12,12 @@ def master(*decorators):
     """
     Decorator to combine multiple decorators into one
     """
+
     def decorator(func):
         for decorator in reversed(decorators):
             func = decorator(func)
         return func
+
     return decorator
 
 
@@ -45,23 +47,28 @@ def flagguard(func):
         func_name_clean = func.__name__.replace("_", "").lower()
 
         if not hasattr(self.params, "flags"):
-            logger.error("No class listed in config file as might contain long running tasks")
+            logger.error(
+                "No class listed in config file as might contain long running tasks"
+            )
             return
 
         if not hasattr(self.params.flags, self.__class__.__name__.lower()):
-            logger.error("Class not listed in config file as might contain long running tasks",
-                         {"class": self.__class__.__name__.lower()})
+            logger.error(
+                "Class not listed in config file as might contain long running tasks",
+                {"class": self.__class__.__name__.lower()},
+            )
             return
 
-        class_flags = getattr(
-            self.params.flags, self.__class__.__name__.lower())
+        class_flags = getattr(self.params.flags, self.__class__.__name__.lower())
 
         params_raw = dir(class_flags)
         params_clean = list(map(lambda s: s.lower(), params_raw))
 
         if func_name_clean not in params_clean:
-            logger.error("Method not listed in config file as a long running task", 
-                         {"method": func.__name__})
+            logger.error(
+                "Method not listed in config file as a long running task",
+                {"method": func.__name__},
+            )
             return
 
         index = params_clean.index(func_name_clean)
@@ -85,15 +92,17 @@ def formalin(func):
     @functools.wraps(func)
     async def wrapper(self, *args, **kwargs):
         func_name_clean = func.__name__.replace("_", "").lower()
-        
-        class_flags = getattr(
-            self.params.flags, self.__class__.__name__.lower())
+
+        class_flags = getattr(self.params.flags, self.__class__.__name__.lower())
 
         params_raw = dir(class_flags)
         params_clean = list(map(lambda s: s.lower(), params_raw))
 
         if func_name_clean not in params_clean:
-            logger.error("Method not listed in config file as a long running task", {"method": func.__name__})
+            logger.error(
+                "Method not listed in config file as a long running task",
+                {"method": func.__name__},
+            )
             return
 
         index = params_clean.index(func_name_clean)
@@ -104,7 +113,9 @@ def formalin(func):
         if delay is False:
             delay = None
 
-        logger.debug("Running method continuously", {"method": func.__name__, "delay": delay})
+        logger.debug(
+            "Running method continuously", {"method": func.__name__, "delay": delay}
+        )
 
         while self.running:
             await func(self, *args, **kwargs)

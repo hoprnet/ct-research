@@ -33,7 +33,9 @@ def main(configfile: str):
     try:
         start_http_server(8080)
     except Exception as err:
-        logger.exception("Could not start the prometheus client on port 8080", {"error": err})
+        logger.exception(
+            "Could not start the prometheus client on port 8080", {"error": err}
+        )
     else:
         logger.info("Prometheus client started on port 8080")
 

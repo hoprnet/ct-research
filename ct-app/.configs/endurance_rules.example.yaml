@@ -20,4 +20,3 @@ logs:
 global_env:
   API_URL: <API_URL>
   API_KEY: <API_KEY>
-  PROGRESS_BAR_LENGTH: 50
