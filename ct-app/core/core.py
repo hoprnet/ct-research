@@ -18,8 +18,7 @@ from .subgraph import URL, Type, entries
 # region Metrics
 ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
 MESSAGE_COUNT = Gauge(
-    "ct_message_count", "messages one should receive / year", [
-        "peer_id", "model"]
+    "ct_message_count", "messages one should receive / year", ["peer_id", "model"]
 )
 NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
 PEER_VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
@@ -57,8 +56,7 @@ class Core:
         self.peers_rewards_data = dict[str, float]()
 
         self.models = {
-            m: m.model.fromParameters(
-                getattr(self.params.economicModel, m.value))
+            m: m.model.fromParameters(getattr(self.params.economicModel, m.value))
             for m in EconomicModelTypes
         }
 
@@ -111,8 +109,7 @@ class Core:
                     counts["known"] += 1
 
                     # update peer version if it has been succesfully retrieved
-                    new_version = visible_peers[visible_peers.index(
-                        peer)].version
+                    new_version = visible_peers[visible_peers.index(peer)].version
                     if new_version.major != 0:
                         peer.version = new_version
 
@@ -137,8 +134,7 @@ class Core:
                 UNIQUE_PEERS.labels(key).set(value)
 
             for peer in current_peers:
-                PEER_VERSION.labels(peer.address.hopr,
-                                    str(peer.version)).set(1)
+                PEER_VERSION.labels(peer.address.hopr, str(peer.version)).set(1)
 
     @master(flagguard, formalin)
     async def registered_nodes(self):
@@ -254,8 +250,7 @@ class Core:
         """
         async with self.all_peers as peers:
             if not all(
-                [len(self.topology_data), len(
-                    self.registered_nodes_data), len(peers)]
+                [len(self.topology_data), len(self.registered_nodes_data), len(peers)]
             ):
                 logger.warning("Not enough data to apply economic model")
                 return
@@ -375,6 +370,7 @@ class Core:
         TOTAL_FUNDING.set(amount + self.params.fundings.constant)
         logger.debug("Fetched all safe fund events", {
                      "amount": amount, "constant": self.params.fundings.constant})
+
 
     async def start(self):
         """

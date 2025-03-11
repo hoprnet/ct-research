@@ -3,7 +3,7 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 import aiohttp
 from prometheus_client import Gauge
@@ -13,8 +13,7 @@ from core.components.logs import configure_logging
 from .mode import Mode
 from .url import URL
 
-SUBGRAPH_CALLS = Gauge("ct_subgraph_calls",
-                       "# of subgraph calls", ["slug", "type"])
+SUBGRAPH_CALLS = Gauge("ct_subgraph_calls", "# of subgraph calls", ["slug", "type"])
 SUBGRAPH_IN_USE = Gauge("ct_subgraph_in_use", "Subgraph in use", ["slug"])
 
 configure_logging()
@@ -47,7 +46,7 @@ class GraphQLProvider:
         if self.default_key is None:
             self.default_key = keys
 
-    def _load_query(self, path: Union[str, Path], extra_inputs: list[str] = []) -> str:
+    def _load_query(self, path: str | Path, extra_inputs: list[str] = []) -> str:
         """
         Loads a graphql query from a file.
         :param path: Path to the file. The path must be relative to the ct-app folder.
@@ -70,11 +69,9 @@ class GraphQLProvider:
 
         try:
             async with aiohttp.ClientSession() as session, session.post(
-                self.url.url, json={"query": query,
-                                    "variables": variable_values}
+                self.url.url, json={"query": query, "variables": variable_values}
             ) as response:
-                SUBGRAPH_CALLS.labels(
-                    self.url.params.slug, self.url.mode).inc()
+                SUBGRAPH_CALLS.labels(self.url.params.slug, self.url.mode).inc()
                 return await response.json(), response.headers
         except TimeoutError as err:
             logger.error("Timeout error", {"error": str(err)})
@@ -92,18 +89,40 @@ class GraphQLProvider:
         kwargs.update({"first": 1, "skip": 0})
 
         try:
-            logger.debug("Testing subgraph endpoint", {
-                "url": self.url.url, "mode": self.url.mode.value, "key": key, **kwargs})
+            logger.debug(
+                "Testing subgraph endpoint",
+                {
+                    "url": self.url.url,
+                    "mode": self.url.mode.value,
+                    "key": key,
+                    **kwargs,
+                },
+            )
             response, _ = await asyncio.wait_for(
                 self._execute(self._sku_query, kwargs), timeout=30
             )
         except asyncio.TimeoutError:
-            logger.error("Query timeout occurred", {
-                         "url": self.url.url, "mode": self.url.mode.value, "key": key, **kwargs})
+            logger.error(
+                "Query timeout occurred",
+                {
+                    "url": self.url.url,
+                    "mode": self.url.mode.value,
+                    "key": key,
+                    **kwargs,
+                },
+            )
             return False
         except ProviderError as err:
-            logger.error("ProviderError error",
-                         {"error": str(err), "url": self.url.url, "mode": self.url.mode.value, "key": key, **kwargs})
+            logger.error(
+                "ProviderError error",
+                {
+                    "error": str(err),
+                    "url": self.url.url,
+                    "mode": self.url.mode.value,
+                    "key": key,
+                    **kwargs,
+                },
+            )
             return False
 
         return key in response.get("data", [])
@@ -127,8 +146,7 @@ class GraphQLProvider:
                     self._execute(self._sku_query, kwargs), timeout=30
                 )
             except asyncio.TimeoutError:
-                logger.exception(
-                    "Timeout error while fetching data from subgraph")
+                logger.exception("Timeout error while fetching data from subgraph")
                 break
             except ProviderError as err:
                 logger.exception("ProviderError error", {"error": str(err)})
@@ -143,8 +161,10 @@ class GraphQLProvider:
             try:
                 content = response.get("data", dict()).get(key, [])
             except Exception as err:
-                logger.error("Error while fetching data from subgraph", {
-                             "error": str(err), "data": response})
+                logger.error(
+                    "Error while fetching data from subgraph",
+                    {"error": str(err), "data": response},
+                )
                 break
             data.extend(content)
 
@@ -154,11 +174,8 @@ class GraphQLProvider:
 
         try:
             if headers is not None:
-                attestations = json.loads(
-                    headers.getall("graph-attestation")[0])
-                logger.debug(
-                    "Subgraph attestations", {"attestations": attestations}
-                )
+                attestations = json.loads(headers.getall("graph-attestation")[0])
+                logger.debug("Subgraph attestations", {"attestations": attestations})
         except UnboundLocalError:
             # raised if the headers variable is not defined
             pass
@@ -216,11 +233,16 @@ class GraphQLProvider:
                 self.url.mode = Mode.NONE
 
         if self.url.mode == Mode.NONE:
-            logger.warning(
-                f"No subgraph available for '{self.url.params.slug}'")
+            logger.warning(f"No subgraph available for '{self.url.params.slug}'")
 
-        logger.debug("Subgraph endpoint probing done", {
-            "url": self.url.url, "mode": self.url.mode.value, "result": result, **kwargs})
-        SUBGRAPH_IN_USE.labels(self.url.params.slug).set(
-            self.url.mode.to_int())
+        logger.debug(
+            "Subgraph endpoint probing done",
+            {
+                "url": self.url.url,
+                "mode": self.url.mode.value,
+                "result": result,
+                **kwargs,
+            },
+        )
+        SUBGRAPH_IN_USE.labels(self.url.params.slug).set(self.url.mode.to_int())
         return self.url.mode

@@ -16,8 +16,7 @@ class FundChannels(EnduranceTest):
     async def on_start(self):
         self.results = []
         self.api = HoprdAPI(
-            EnvironmentUtils.envvar(
-                "API_URL"), EnvironmentUtils.envvar("API_KEY")
+            EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY")
         )
 
         self.address = await self.api.get_address()

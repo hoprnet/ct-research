@@ -37,7 +37,7 @@ class Safe(SubgraphEntry):
             safe["id"],
             safe["balance"]["wxHoprBalance"],
             safe["allowance"]["wxHoprAllowance"],
-            [owner["owner"]["id"]for owner in safe["owners"]],
+            [owner["owner"]["id"] for owner in safe["owners"]],
         )
 
     @classmethod
@@ -45,5 +45,7 @@ class Safe(SubgraphEntry):
         """
         Create a new Safe with default values.
         """
-        address = "1x" + "".join([str(hex(random.randint(0, 15)))[2] for _ in range(40)])
+        address = "1x" + "".join(
+            [str(hex(random.randint(0, 15)))[2] for _ in range(40)]
+        )
         return cls(address, "1", "0", [])
