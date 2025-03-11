@@ -1,6 +1,5 @@
 import asyncio
 import random
-from typing import Union
 
 from packaging.version import Version
 from prometheus_client import Gauge
@@ -10,9 +9,13 @@ from .asyncloop import AsyncLoop
 from .decorators import flagguard, formalin, master
 from .messages import MessageFormat, MessageQueue
 
-CHANNEL_STAKE = Gauge("ct_peer_channels_balance", "Balance in outgoing channels", ["peer_id"])
+CHANNEL_STAKE = Gauge(
+    "ct_peer_channels_balance", "Balance in outgoing channels", ["peer_id"]
+)
 DELAY = Gauge("ct_peer_delay", "Delay between two messages", ["peer_id"])
-NODES_LINKED_TO_SAFE_COUNT = Gauge("ct_peer_safe_count", "Number of nodes linked to the safes", ["peer_id", "safe"])
+NODES_LINKED_TO_SAFE_COUNT = Gauge(
+    "ct_peer_safe_count", "Number of nodes linked to the safes", ["peer_id", "safe"]
+)
 
 SECONDS_IN_A_NON_LEAP_YEAR = 365 * 24 * 60 * 60
 
@@ -41,7 +44,7 @@ class Peer:
         self.params = None
         self.running = False
 
-    def is_old(self, min_version: Union[str, Version]):
+    def is_old(self, min_version: str | Version):
         """
         Check if the peer's version is older than the specified version.
         :param min_version: The minimum version to check against.
@@ -56,7 +59,7 @@ class Peer:
         return self._version
 
     @version.setter
-    def version(self, value: Union[str, Version]):
+    def version(self, value: str | Version):
         if not isinstance(value, Version):
             try:
                 value = Version(value)
@@ -88,7 +91,9 @@ class Peer:
     @safe_address_count.setter
     def safe_address_count(self, value: int):
         self._safe_address_count = value
-        NODES_LINKED_TO_SAFE_COUNT.labels(self.address.hopr, self.safe.address).set(value)
+        NODES_LINKED_TO_SAFE_COUNT.labels(self.address.hopr, self.safe.address).set(
+            value
+        )
 
     @property
     def split_stake(self) -> float:
@@ -153,7 +158,7 @@ class Peer:
 
         if delay := await self.message_delay:
             multiplier = self.params.peer.messageMultiplier
-            
+
             message = MessageFormat(self.address.hopr, multiplier=multiplier)
             await MessageQueue().put_async(message)
             await asyncio.sleep(delay * multiplier)

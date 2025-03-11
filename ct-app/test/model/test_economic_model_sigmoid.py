@@ -114,8 +114,5 @@ def test_yearly_message_count(budget: Budget):
     assert model.apr([0.5, 0.25]) == 10
 
     assert model.yearly_message_count(stake, [0.5, 0.25]) == round(
-        model.apr([0.5, 0.25])
-        / 100
-        * stake
-        / (budget.ticket_price)
+        model.apr([0.5, 0.25]) / 100 * stake / (budget.ticket_price)
     )

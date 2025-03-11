@@ -22,10 +22,12 @@ def _convert(value: Any):
 
     return value
 
+
 def try_to_lower(value: Any):
     if isinstance(value, str):
         return value.lower()
     return value
+
 
 class ApiResponseObject:
     def __init__(self, data: dict):
@@ -84,8 +86,7 @@ class Infos(ApiResponseObject):
 
 
 class ConnectedPeer(ApiResponseObject):
-    keys = {"address": "peerAddress",
-            "peer_id": "peerId", "version": "reportedVersion"}
+    keys = {"address": "peerAddress", "peer_id": "peerId", "version": "reportedVersion"}
 
     def post_init(self):
         self.address = try_to_lower(self.address)
@@ -104,10 +105,10 @@ class Channel(ApiResponseObject):
 
     def post_init(self):
         self.status = ChannelStatus.fromString(self.status)
-        
+
         self.destination_address = try_to_lower(self.destination_address)
         self.source_address = try_to_lower(self.source_address)
-        
+
 
 class TicketPrice(ApiResponseObject):
     keys = {"value": "price"}
@@ -117,9 +118,7 @@ class TicketPrice(ApiResponseObject):
 
 
 class Configuration(ApiResponseObject):
-    keys = {
-        "price": "hopr/protocol/outgoing_ticket_price"
-    }
+    keys = {"price": "hopr/protocol/outgoing_ticket_price"}
 
     def post_init(self):
         self.price = float(self.price.split()[0])
@@ -132,8 +131,10 @@ class OpenedChannel(ApiResponseObject):
 class Message(ApiResponseObject):
     keys = {"body": "body", "timestamp": "receivedAt"}
 
+
 class SendMessageAck(ApiResponseObject):
-    keys =  {"timestamp": "timestamp"}
+    keys = {"timestamp": "timestamp"}
+
 
 class Channels:
     def __init__(self, data: dict):

@@ -16,7 +16,6 @@ class Account(SubgraphEntry):
         self.address = address.lower() if address is not None else None
         self.redeemed_value = float(redeemed_value)
 
-
     @classmethod
     def fromSubgraphResult(cls, account: dict):
         """
