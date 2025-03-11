@@ -13,8 +13,8 @@
     in rec {
       devShell = pkgs.mkShell {
         buildInputs = with pkgs; [
-          python310
-          python310Packages.venvShellHook
+          python312
+          python312Packages.venvShellHook
         ];
 
         venvDir = "./.venv";
