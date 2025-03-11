@@ -19,8 +19,24 @@ class Address:
         :param address: The address of the peer.
         """
         self.hopr = hopr
-        self.native = native.lower() if native is not None else None
+        self.native = native
         PEER.labels(self.hopr, self.native).set(1)
+
+    @property
+    def hopr(self):
+        return self._hopr
+
+    @hopr.setter
+    def hopr(self, value: str):
+        self._hopr = value
+
+    @property
+    def native(self):
+        return self._native
+
+    @native.setter
+    def native(self, value: str):
+        self._native = value.lower() if value is not None else None
 
     def __eq__(self, other):
         return self.hopr == other.hopr and self.native == other.native

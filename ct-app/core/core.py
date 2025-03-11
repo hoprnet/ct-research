@@ -2,10 +2,9 @@
 import logging
 import random
 
-from prometheus_client import Gauge
-
 from core.components.logs import configure_logging
 from core.subgraph import GraphQLProvider
+from prometheus_client import Gauge
 
 from .api import HoprdAPI
 from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
@@ -154,15 +153,14 @@ class Core:
 
         for node in results:
             STAKE.labels(node.safe.address, "balance").set(node.safe.balance)
-            STAKE.labels(node.safe.address, "allowance").set(node.safe.allowance)
+            STAKE.labels(node.safe.address, "allowance").set(
+                node.safe.allowance)
             STAKE.labels(node.safe.address, "additional_balance").set(
-                node.safe.additional_balance
-            )
+                node.safe.additional_balance)
 
         self.registered_nodes_data = results
-        logger.debug(
-            "Fetched registered nodes in the safe registry", {"count": len(results)}
-        )
+        logger.debug("Fetched registered nodes in the safe registry", {
+                     "count": len(results)})
         SUBGRAPH_SIZE.set(len(results))
 
     @master(flagguard, formalin)
@@ -209,17 +207,20 @@ class Core:
         for account in await self.providers[Type.MAINNET_BALANCES].get(
             id_in=list(balances.keys())
         ):
-            balances[account["id"].lower()] += float(account["totalBalance"]) / 1e18
+            balances[account["id"].lower(
+            )] += float(account["totalBalance"]) / 1e18
 
         for account in await self.providers[Type.GNOSIS_BALANCES].get(
             id_in=list(balances.keys())
         ):
-            balances[account["id"].lower()] += float(account["totalBalance"]) / 1e18
+            balances[account["id"].lower(
+            )] += float(account["totalBalance"]) / 1e18
 
         self.eoa_balances_data = [
             entries.Balance(key, value) for key, value in balances.items()
         ]
-        logger.debug("Fetched investors EOA balances", {"count": len(balances)})
+        logger.debug("Fetched investors EOA balances",
+                     {"count": len(balances)})
 
     @master(flagguard, formalin)
     async def topology(self):
@@ -238,7 +239,8 @@ class Core:
             for arg in (await Utils.balanceInChannels(channels.all)).items()
         ]
 
-        logger.debug("Fetched all topology links", {"count": len(self.topology_data)})
+        logger.debug("Fetched all topology links", {
+                     "count": len(self.topology_data)})
         TOPOLOGY_SIZE.set(len(self.topology_data))
 
     @master(flagguard, formalin)
@@ -269,7 +271,7 @@ class Core:
             )
 
             Utils.allowManyNodePerSafe(peers)
-
+            
             for p in peers:
                 if not p.is_eligible(
                     self.params.economicModel.minSafeAllowance,
@@ -319,8 +321,10 @@ class Core:
 
                 peer.yearly_message_count = sum(message_count.values())
 
-            eligible_count = sum([p.yearly_message_count is not None for p in peers])
-            logger.info("Generated the eligible nodes set", {"count": eligible_count})
+            eligible_count = sum(
+                [p.yearly_message_count is not None for p in peers])
+            logger.info("Generated the eligible nodes set",
+                        {"count": eligible_count})
             ELIGIBLE_PEERS.set(eligible_count)
 
     @master(flagguard, formalin)
@@ -340,9 +344,8 @@ class Core:
         Gets the ticket price from the api. They are used in the economic model to calculate the number of messages to send to a peer.
         """
         ticket_price = await self.api.ticket_price()
-        logger.debug(
-            "Fetched ticket price", {"value": getattr(ticket_price, "value", None)}
-        )
+        logger.debug("Fetched ticket price", {
+                     "value": getattr(ticket_price, "value", None)})
 
         if ticket_price is not None:
             for model in self.models.values():
@@ -365,10 +368,9 @@ class Core:
         amount = sum([float(item["amount"]) for item in entries])
 
         TOTAL_FUNDING.set(amount + self.params.fundings.constant)
-        logger.debug(
-            "Fetched all safe fund events",
-            {"amount": amount, "constant": self.params.fundings.constant},
-        )
+        logger.debug("Fetched all safe fund events", {
+                     "amount": amount, "constant": self.params.fundings.constant})
+
 
     async def start(self):
         """

@@ -2,13 +2,13 @@
 import logging
 from datetime import datetime
 
-from prometheus_client import Gauge, Histogram
-
 from core.components.asyncloop import AsyncLoop
 from core.components.logs import configure_logging
+from prometheus_client import Gauge, Histogram
 
 from .api import HoprdAPI
 from .components import LockedVar, Parameters, Peer, Utils
+from .components.address import Address
 from .components.decorators import connectguard, flagguard, formalin, master
 from .components.messages import MessageFormat, MessageQueue
 from .components.node_helper import NodeHelper
@@ -92,8 +92,8 @@ class Node:
                 "No results while retrieving addresses", self.log_base_params
             )
             return
+        self.address = Address(addresses.hopr, addresses.native)
 
-        self.address = addresses
         logger.debug("Retrieved addresses", self.log_base_params)
 
         return self.address
