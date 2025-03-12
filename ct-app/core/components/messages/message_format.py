@@ -16,6 +16,7 @@ class MessageFormat:
         multiplier: int = None,
         timestamp: str = None,
     ):
+        self.size = int(size)
         self.relayer = relayer
         self.index = int(index) if index else self.message_index
         self.timestamp = (
@@ -25,7 +26,6 @@ class MessageFormat:
         )
         self.multiplier = int(multiplier) if multiplier else 1
         self.inner_index = int(inner_index) if inner_index else 1
-        self.size = size
 
     @property
     def message_index(self):
