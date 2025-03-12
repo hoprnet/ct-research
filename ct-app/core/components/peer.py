@@ -4,7 +4,6 @@ import random
 from packaging.version import Version
 from prometheus_client import Gauge
 
-from . import AsyncLoop, MessageFormat, MessageQueue
 from .address import Address
 from .asyncloop import AsyncLoop
 from .decorators import flagguard, formalin, master
@@ -160,7 +159,10 @@ class Peer:
         if delay := await self.message_delay:
             multiplier = self.params.peer.messageMultiplier
             message = MessageFormat(
-                self.params.sessions.packetSize, self.address.hopr, multiplier=multiplier)
+                self.params.sessions.packetSize,
+                self.address.hopr,
+                multiplier=multiplier,
+            )
             await MessageQueue().put_async(message)
             # 2x delay as the loopback session hops twice by the relay
             await asyncio.sleep(delay * multiplier * 2)

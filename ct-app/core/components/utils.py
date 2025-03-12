@@ -129,7 +129,7 @@ class Utils:
         try:
             with open(file, "r") as f:
                 source_code = f.read()
-            
+
             tree = ast.parse(source_code)
         except FileNotFoundError as e:
             cls().error(f"Could not find file {file}: {e}")
@@ -141,19 +141,27 @@ class Utils:
         keepalive_methods = []
 
         for node in ast.walk(tree):
-            if not isinstance(node, ast.FunctionDef) and not isinstance(node, ast.AsyncFunctionDef):
+            if not isinstance(node, ast.FunctionDef) and not isinstance(
+                node, ast.AsyncFunctionDef
+            ):
                 continue
-            
+
             for decorator in node.decorator_list:
                 try:
                     if isinstance(decorator, ast.Call):
-                        args_name = [arg.id for arg in decorator.args if isinstance(arg, ast.Name)]
+                        args_name = [
+                            arg.id
+                            for arg in decorator.args
+                            if isinstance(arg, ast.Name)
+                        ]
 
-                        if not hasattr(decorator.func, 'id') or (decorator.func.id != target and target not in args_name):
+                        if not hasattr(decorator.func, "id") or (
+                            decorator.func.id != target and target not in args_name
+                        ):
                             continue
 
                     elif isinstance(decorator, ast.Name):
-                        if not hasattr(decorator, 'id') or decorator.id != target:
+                        if not hasattr(decorator, "id") or decorator.id != target:
                             continue
                     else:
                         continue
@@ -162,5 +170,5 @@ class Utils:
 
                 keepalive_methods.append(node.name)
                 break
-        
+
         return keepalive_methods

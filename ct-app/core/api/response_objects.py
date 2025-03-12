@@ -129,7 +129,6 @@ class OpenedChannel(ApiResponseObject):
     keys = {"channel_id": "channelId", "receipt": "transactionReceipt"}
 
 
-
 class Channels:
     def __init__(self, data: dict):
         self.all = [Channel(channel) for channel in data.get("all", [])]
@@ -142,7 +141,7 @@ class Channels:
     def __repr__(self):
         return str(self)
 
-      
+
 class Session(ApiResponseObject):
     keys = {
         "ip": "ip",

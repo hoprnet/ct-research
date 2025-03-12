@@ -3,7 +3,7 @@ from datetime import datetime
 
 
 class MessageFormat:
-    params = ["relayer", "index", "inner_index", "multiplier", "timestamp"]
+    params = ["size", "relayer", "index", "inner_index", "multiplier", "timestamp"]
     range = int(1e5)
     index = 0
 
@@ -60,5 +60,10 @@ class MessageFormat:
         message_as_bytes = self.format().encode()
 
         if len(message_as_bytes) > self.size:
-            raise ValueError(f"Encoded message is exceeds specified size ({len(message_as_bytes)} > {self.size})")
+            raise ValueError(
+                f"Encoded message is exceeds specified size ({len(message_as_bytes)} > {self.size})"
+            )
         return message_as_bytes + b"\0" * (self.size - len(message_as_bytes))
+
+    def __repr__(self):
+        return f"{self.__class__.__name__} ({', '.join([f'{param}={getattr(self, param)}' for param in self.params])})"

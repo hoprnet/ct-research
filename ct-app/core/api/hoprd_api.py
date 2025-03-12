@@ -241,7 +241,9 @@ class HoprdAPI:
             else None
         )
 
-    async def get_sessions(self, protocol: Protocol = Protocol.UDP) -> list[response.Session]:
+    async def get_sessions(
+        self, protocol: Protocol = Protocol.UDP
+    ) -> list[response.Session]:
         """
         Lists existing Session listeners for the given IP protocol
         :param: protocol: Protocol
@@ -258,7 +260,7 @@ class HoprdAPI:
         destination: str,
         relayer: str,
         listen_host: str = ":0",
-        protocol: Protocol = Protocol.UDP
+        protocol: Protocol = Protocol.UDP,
     ) -> Optional[response.Session]:
         """
         Creates a new client session returning the given session listening host & port over TCP or UDP.
@@ -269,7 +271,8 @@ class HoprdAPI:
         :return: Session
         """
         capabilities_body = request.SessionCapabilitiesBody(
-            protocol.retransmit, protocol.segment)
+            protocol.retransmit, protocol.segment
+        )
         target_body = request.SessionTargetBody()
         path_body = request.SessionPathBodyRelayers([relayer])
 
@@ -287,7 +290,7 @@ class HoprdAPI:
 
         return request.Session(response) if is_ok else None
 
-    async def close_session(self, session: request.Session) -> bool:
+    async def close_session(self, session: response.Session) -> bool:
         """
         Closes an existing Sessino listener for the given IP protocol, IP and port.
         :param: session: Session

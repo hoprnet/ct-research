@@ -26,7 +26,9 @@ def main(configfile: str):
     params.overrides("OVERRIDE")
 
     # create the core and nodes instances
-    nodes = [Node(*pair) for pair in zip(*Utils.nodesCredentials("NODE_ADDRESS", "NODE_KEY"))]
+    nodes = [
+        Node(*pair) for pair in zip(*Utils.nodesCredentials("NODE_ADDRESS", "NODE_KEY"))
+    ]
 
     # start the prometheus client
     try:
@@ -41,6 +43,7 @@ def main(configfile: str):
     core = Core(nodes, params)
 
     AsyncLoop.run(core.start, core.stop)
+
 
 if __name__ == "__main__":
     main()

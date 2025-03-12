@@ -74,5 +74,5 @@ class SessionToSocket:
             data, _ = self.socket.recvfrom(size)
         except Exception:
             data = b""
-            
+
         return data

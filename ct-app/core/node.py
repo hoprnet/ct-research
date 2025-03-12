@@ -190,8 +190,14 @@ class Node:
             {"count": len(in_opens), **self.log_base_params},
         )
         for channel in in_opens:
-            AsyncLoop.add(NodeHelper.close_channel,
-                          self.address, self.api, channel, "incoming_closed", publish_to_task_set=False)
+            AsyncLoop.add(
+                NodeHelper.close_channel,
+                self.address,
+                self.api,
+                channel,
+                "incoming_closed",
+                publish_to_task_set=False,
+            )
 
     @master(flagguard, formalin, connectguard)
     async def close_pending_channels(self):
@@ -210,8 +216,14 @@ class Node:
             )
 
         for channel in out_pendings:
-            AsyncLoop.add(NodeHelper.close_channel,
-                          self.address, self.api, channel, "pending_closed", publish_to_task_set=False)
+            AsyncLoop.add(
+                NodeHelper.close_channel,
+                self.address,
+                self.api,
+                channel,
+                "pending_closed",
+                publish_to_task_set=False,
+            )
 
     @master(flagguard, formalin, connectguard)
     async def close_old_channels(self):
@@ -226,9 +238,7 @@ class Node:
         channels_to_close: list[str] = []
 
         address_to_channel = {
-            c.destination_address: c
-            for c in self.channels.outgoing
-            if c.status.is_open
+            c.destination_address: c for c in self.channels.outgoing if c.status.is_open
         }
 
         for address, channel in address_to_channel.items():
@@ -253,8 +263,14 @@ class Node:
         )
 
         for channel in channels_to_close:
-            AsyncLoop.add(NodeHelper.close_channel,
-                          self.address, self.api, channel, "old_closed", publish_to_task_set=False)
+            AsyncLoop.add(
+                NodeHelper.close_channel,
+                self.address,
+                self.api,
+                channel,
+                "old_closed",
+                publish_to_task_set=False,
+            )
 
     @master(flagguard, formalin, connectguard)
     async def fund_channels(self):
@@ -410,8 +426,9 @@ class Node:
                 if message.timestamp and message.relayer:
                     rtt = (m.timestamp - message.timestamp) / 1000
 
-                    MESSAGES_DELAYS.labels(
-                        self.address.hopr, message.relayer).observe(rtt)
+                    MESSAGES_DELAYS.labels(self.address.hopr, message.relayer).observe(
+                        rtt
+                    )
                     MESSAGES_STATS.labels(
                         "relayed", self.address.hopr, message.relayer
                     ).inc()
@@ -432,31 +449,37 @@ class Node:
             self.session_management[message.relayer].send(message.bytes)
             message.increase_inner_index()
 
-        MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer).inc(message.multiplier)
-        
+        MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer).inc(
+            message.multiplier
+        )
+
     @master(flagguard, formalin, connectguard)
     async def close_sessions(self):
         active_sessions = await self.api.get_sessions(Protocol.UDP)
 
         to_remove = [
-            peer_id for peer_id, s in self.session_management.items() 
+            peer_id
+            for peer_id, s in self.session_management.items()
             if s.session not in active_sessions
         ]
 
         for peer_id in to_remove:
-            AsyncLoop.add(NodeHelper.close_session, 
-                          self.address, self.api, peer_id,
-                          self.session_management.pop(peer_id),
-                          publish_to_task_set=False)
-            
+            AsyncLoop.add(
+                NodeHelper.close_session,
+                self.address,
+                self.api,
+                peer_id,
+                self.session_management.pop(peer_id),
+                publish_to_task_set=False,
+            )
+
     async def open_sessions(self, allowed_addresses: list[Address]):
         allowed_peer_ids = set([address.hopr for address in allowed_addresses])
         peer_ids_with_session = set(self.session_management.keys())
         without_session_peer_ids = allowed_peer_ids - peer_ids_with_session
 
         for peer_id in without_session_peer_ids:
-            AsyncLoop.add(self.open_session, peer_id,
-                          publish_to_task_set=False)
+            AsyncLoop.add(self.open_session, peer_id, publish_to_task_set=False)
 
     async def open_session(self, relayer: str):
         if session := await NodeHelper.open_session(self.address, self.api, relayer):
@@ -464,4 +487,7 @@ class Node:
 
     @property
     def tasks(self):
-        return [getattr(self, method) for method in Utils.decorated_methods(__file__, "formalin")]
+        return [
+            getattr(self, method)
+            for method in Utils.decorated_methods(__file__, "formalin")
+        ]

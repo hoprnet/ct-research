@@ -62,7 +62,6 @@ class GetChannelsBody(ApiRequestObject):
         super().__init__(vars())
 
 
-
 class GetPeersBody(ApiRequestObject):
     keys = {"quality": "quality"}
 
@@ -141,4 +140,3 @@ class DeleteSessionBody(ApiRequestObject):
 
     def __init__(self, ip: str, port: str):
         super().__init__(vars())
-
