@@ -12,6 +12,7 @@ CHARS = "0123456789abcdefghijklmnopqrstuvwxyz "
 
 configure_logging()
 logger = logging.getLogger(__name__)
+logging.getLogger("core.api.hoprd_api").setLevel(logging.WARNING)
 
 
 class SendMessages(EnduranceTest):
@@ -63,7 +64,7 @@ class SendMessages(EnduranceTest):
             self.message_tag,
         )
 
-        self.results.append(200 <= success < 300)
+        self.results.append(success is not None)
 
     async def on_end(self):
         sleep_time = EnvironmentUtils.envvar("DELAY_BEFORE_INBOX_CHECK", type=float)

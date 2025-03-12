@@ -1,6 +1,5 @@
 import asyncio
 import random
-from typing import Union
 
 from packaging.version import Version
 from prometheus_client import Gauge
@@ -44,7 +43,7 @@ class Peer:
         self.params = None
         self.running = False
 
-    def is_old(self, min_version: Union[str, Version]):
+    def is_old(self, min_version: str | Version):
         """
         Check if the peer's version is older than the specified version.
         :param min_version: The minimum version to check against.
@@ -59,7 +58,7 @@ class Peer:
         return self._version
 
     @version.setter
-    def version(self, value: Union[str, Version]):
+    def version(self, value: str | Version):
         if not isinstance(value, Version):
             try:
                 value = Version(value)

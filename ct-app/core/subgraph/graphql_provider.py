@@ -3,7 +3,7 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 import aiohttp
 from prometheus_client import Gauge
@@ -46,7 +46,7 @@ class GraphQLProvider:
         if self.default_key is None:
             self.default_key = keys
 
-    def _load_query(self, path: Union[str, Path], extra_inputs: list[str] = []) -> str:
+    def _load_query(self, path: str | Path, extra_inputs: list[str] = []) -> str:
         """
         Loads a graphql query from a file.
         :param path: Path to the file. The path must be relative to the ct-app folder.
