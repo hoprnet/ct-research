@@ -16,7 +16,6 @@ DELAY = Gauge("ct_peer_delay", "Delay between two messages", ["peer_id"])
 NODES_LINKED_TO_SAFE_COUNT = Gauge(
     "ct_peer_safe_count", "Number of nodes linked to the safes", ["peer_id", "safe"]
 )
-
 SECONDS_IN_A_NON_LEAP_YEAR = 365 * 24 * 60 * 60
 
 
@@ -157,7 +156,7 @@ class Peer:
             return
 
         if delay := await self.message_delay:
-            multiplier = self.params.peer.messageMultiplier
+            multiplier = self.params.peer.message_multiplier
 
             message = MessageFormat(self.address.hopr, multiplier=multiplier)
             await MessageQueue().put_async(message)
@@ -165,8 +164,7 @@ class Peer:
         else:
             await asyncio.sleep(
                 random.normalvariate(
-                    self.params.peer.initialSleep.mean,
-                    self.params.peer.initialSleep.std,
+                    self.params.peer.sleep_mean_time, self.params.peer.sleep_std_time
                 )
             )
 

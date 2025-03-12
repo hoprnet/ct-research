@@ -2,9 +2,10 @@
 import logging
 from datetime import datetime
 
+from prometheus_client import Gauge, Histogram
+
 from core.components.asyncloop import AsyncLoop
 from core.components.logs import configure_logging
-from prometheus_client import Gauge, Histogram
 
 from .api import HoprdAPI
 from .components import LockedVar, Parameters, Peer, Utils
@@ -152,7 +153,7 @@ class Node:
         all_addresses = {
             p.address.native
             for p in await self.peers.get()
-            if not p.is_old(self.params.peer.minVersion)
+            if not p.is_old(self.params.peer.min_version)
         }
         addresses_without_channels = all_addresses - addresses_with_channels
 
@@ -167,7 +168,7 @@ class Node:
                 self.address,
                 self.api,
                 address,
-                self.params.channel.fundingAmount,
+                self.params.channel.funding_amount,
                 publish_to_task_set=False,
             )
 
@@ -246,7 +247,7 @@ class Node:
 
             if (
                 datetime.now() - timestamp
-            ).total_seconds() < self.params.channel.maxAgeSeconds:
+            ).total_seconds() < self.params.channel.max_age_seconds:
                 continue
 
             channels_to_close.append(channel_id)
@@ -280,14 +281,14 @@ class Node:
         low_balances = [
             c
             for c in out_opens
-            if int(c.balance) / 1e18 <= self.params.channel.minBalance
+            if int(c.balance) / 1e18 <= self.params.channel.min_balance
         ]
 
         logger.info(
             "Starting funding of channels where balance is too low",
             {
                 "count": len(low_balances),
-                "threshold": self.params.channel.minBalance,
+                "threshold": self.params.channel.min_balance,
                 **self.log_base_params,
             },
         )
@@ -301,7 +302,7 @@ class Node:
                     self.address,
                     self.api,
                     channel,
-                    self.params.channel.fundingAmount,
+                    self.params.channel.funding_amount,
                     publish_to_task_set=False,
                 )
 
@@ -321,7 +322,7 @@ class Node:
                 {"count": len(results), **self.log_base_params},
             )
         peers = {Peer(item.peer_id, item.address, item.version) for item in results}
-        peers = {p for p in peers if not p.is_old(self.params.peer.minVersion)}
+        peers = {p for p in peers if not p.is_old(self.params.peer.min_version)}
 
         addresses_w_timestamp = {p.address.native: datetime.now() for p in peers}
 

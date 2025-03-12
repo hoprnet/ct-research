@@ -1,12 +1,14 @@
 import logging
+import os
 
 import click
 import yaml
 from prometheus_client import start_http_server
 
 from core.components.logs import configure_logging
+from core.components.parameters import Parameters
 
-from .components import AsyncLoop, Parameters, Utils
+from .components import AsyncLoop, Utils
 from .components.messages import MessageQueue
 from .core import Core
 from .node import Node
@@ -21,10 +23,11 @@ def main(configfile: str):
     with open(configfile, "r") as file:
         config = yaml.safe_load(file)
 
-    params = Parameters()
-    params.parse(config, entrypoint=True)
-    params.from_env("SUBGRAPH", "PG")
-    params.overrides("OVERRIDE")
+    params = Parameters(config)
+    logger.debug("Safe parameters loaded", {"params": params.as_dict})
+    
+    params.subgraph.api_key = os.getenv("SUBGRAPH_API_KEY")
+    logger.debug("API key loaded")
 
     # create the core and nodes instances
     nodes = Node.fromCredentials(*Utils.nodesCredentials("NODE_ADDRESS", "NODE_KEY"))
