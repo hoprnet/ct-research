@@ -4,6 +4,8 @@ from test.decorators_patches import patches
 
 import pytest
 import yaml
+from pytest_mock import MockerFixture
+
 from core.api.response_objects import (
     Addresses,
     Balances,
@@ -23,7 +25,6 @@ from core.economic_model import (
     Equations,
 )
 from core.node import Node
-from pytest_mock import MockerFixture
 
 
 class SideEffect:
@@ -144,13 +145,12 @@ async def nodes(
             node.api, "get_address", return_value=Addresses(addresses[idx])
         )
         mocker.patch.object(node.api, "channels", return_value=channels)
-        mocker.patch.object(node.api, "balances",
-                            side_effect=SideEffect().node_balance)
+        mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
         mocker.patch.object(
             node.api,
             "peers",
             return_value=[
-                ConnectedPeer(peer) for peer in peers_raw[:idx] + peers_raw[idx + 1:]
+                ConnectedPeer(peer) for peer in peers_raw[:idx] + peers_raw[idx + 1 :]
             ],
         )
 
@@ -230,10 +230,8 @@ async def node(
     mocker.patch.object(
         node.api, "peers", return_value=[ConnectedPeer(peer) for peer in peers_raw[1:]]
     )
-    mocker.patch.object(node.api, "get_address",
-                        return_value=Addresses(addresses[0]))
-    mocker.patch.object(node.api, "balances",
-                        side_effect=SideEffect().node_balance)
+    mocker.patch.object(node.api, "get_address", return_value=Addresses(addresses[0]))
+    mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
     # mocker.patch.object(node.api, "send_message", return_value=1)
     mocker.patch.object(node.api, "healthyz", return_value=True)
 

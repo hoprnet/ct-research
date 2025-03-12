@@ -1,15 +1,17 @@
 import asyncio
 import logging
+import os
 import pprint
 import time
 from datetime import timedelta
-from logging import getLogger
 
 from core.components import EnvironmentUtils
+from core.components.logs import configure_logging
 
 from .metric import Metric
 
-log = getLogger("ct-app")
+configure_logging()
+logger = logging.getLogger(__name__)
 
 
 class EnduranceTest(object):
@@ -26,14 +28,11 @@ class EnduranceTest(object):
         self.results = None
         self.execution_time = None
         self.metric_list: list[Metric] = []
-        self._progress_bar_length = EnvironmentUtils.envvar(
-            "PROGRESS_BAR_LENGTH", type=int, default=50
-        )
 
-        log.setLevel(
+        logger.setLevel(
             getattr(logging, EnvironmentUtils.envvar("LOG_LEVEL", default="INFO"))
         )
-        log.disabled = not EnvironmentUtils.envvar(
+        logger.disabled = not EnvironmentUtils.envvar(
             "LOG_ENABLED", type=bool, default=True
         )
 
@@ -44,34 +43,32 @@ class EnduranceTest(object):
         """
 
         while True:
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(1 / 12)
 
             completed_tasks = sum(task.done() for task in self.tasks)
-
-            hash_count = int(
-                completed_tasks / (len(self.tasks) - 1) * self._progress_bar_length
-            )
-            dash_count = self._progress_bar_length - hash_count
             duration = time.time() - self.start_time
 
             # format duration to mm:ss using time library
             duration_f = timedelta(seconds=int(duration))
             exp_duration_f = timedelta(seconds=int(self.duration))
 
-            str_to_print = (
-                f"\r|{'#'*hash_count}{' '*dash_count}| "
-                + f"{completed_tasks}/{len(self.tasks)-1} "
+            suffix_string = (
+                f"{completed_tasks}/{len(self.tasks)-1} "
                 + f"[{duration_f}/{exp_duration_f}]"
             )
-            print(str_to_print, end="")
+
+            bar_length = os.get_terminal_size().columns - len(suffix_string) - 1
+            hash_count = int(completed_tasks / (len(self.tasks) - 1) * bar_length)
+            dash_count = bar_length - hash_count
+
+            print(f"\r{'█'*hash_count}{'▒'*dash_count} {suffix_string}", end="")
 
             if completed_tasks == len(self.tasks) - 1:
                 break
 
-        print("\r" + " " * len(str_to_print), end="\r")
-
+        print("\r" + " " * os.get_terminal_size().columns, end="\r")
         plural = "s" if completed_tasks > 1 else ""
-        self.info(f"Executed {completed_tasks} task{plural} in {duration_f}")
+        logger.info(f"Executed {completed_tasks} task{plural} in {duration_f}")
 
     async def delayed_task(self, task, iteration: int):
         await asyncio.sleep((iteration + 1) / self.rate)
@@ -143,7 +140,7 @@ class EnduranceTest(object):
         )
 
     def success_flag(self):
-        self.warning(
+        logger.warning(
             "Method `success_flag` not implemented. "
             + "Please create it with the following signature:\n"
             + "def success_flag(self): -> bool"
@@ -151,7 +148,7 @@ class EnduranceTest(object):
         return True
 
     def metrics(self):
-        self.warning(
+        logger.warning(
             "Method `metrics` not implemented. "
             + "Please create it with the following signature:\n"
             + "def metrics(self): -> list[Metric]"

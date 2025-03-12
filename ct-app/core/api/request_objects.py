@@ -25,8 +25,7 @@ class ApiRequestObject:
 
     @property
     def as_header_string(self) -> str:
-        attrs_as_dict = {value: getattr(self, key)
-                         for key, value in self.keys.items()}
+        attrs_as_dict = {value: getattr(self, key) for key, value in self.keys.items()}
         return "&".join([f"{k}={v}" for k, v in attrs_as_dict.items()])
 
     def post_init(self):
@@ -61,6 +60,7 @@ class GetChannelsBody(ApiRequestObject):
 
     def __init__(self, full_topology: str, including_closed: str):
         super().__init__(vars())
+
 
 
 class GetPeersBody(ApiRequestObject):

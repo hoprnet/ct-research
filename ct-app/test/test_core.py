@@ -1,6 +1,7 @@
 import inspect
 
 import pytest
+
 from core.components import Peer
 
 from .conftest import Core

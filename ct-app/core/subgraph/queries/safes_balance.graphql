@@ -1,5 +1,5 @@
-safes(first: $first, skip: $skip, where: {registeredNodesInNetworkRegistry_: {node_not: ""}}) {
-    registeredNodesInNetworkRegistry { 
+safes(first: $first, skip: $skip, where: {registeredNodesInSafeRegistry_: {node_not: ""}}) {
+    registeredNodesInSafeRegistry { 
         node { 
             id 
         } 

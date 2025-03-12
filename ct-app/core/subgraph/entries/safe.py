@@ -13,10 +13,10 @@ class Safe(SubgraphEntry):
         :param balance: The balance of the safe.
         :param allowance: The allowance of the safe.
         """
-        self.address = address
+        self.address = address.lower() if address is not None else None
         self.balance = float(balance) if balance else 0
         self.allowance = float(allowance) if allowance else 0
-        self.owners = owners
+        self.owners = [owner.lower() for owner in owners if owner is not None]
         self.additional_balance = 0
 
     @property
@@ -44,5 +44,7 @@ class Safe(SubgraphEntry):
         """
         Create a new Safe with default values.
         """
-        address = "1x" + "".join([str(hex(random.randint(0, 15)))[2] for _ in range(40)])
+        address = "1x" + "".join(
+            [str(hex(random.randint(0, 15)))[2] for _ in range(40)]
+        )
         return cls(address, "1", "0", [])

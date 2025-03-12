@@ -1,77 +1,104 @@
+import logging
 from typing import Optional
 
 from prometheus_client import Gauge
 
 from core.api.hoprd_api import HoprdAPI
 from core.api.response_objects import Channel, Session
-from core.baseclass import Base
 from core.components.address import Address
+from core.components.logs import configure_logging
 from core.components.session_to_socket import SessionToSocket
 
 CHANNELS_OPS = Gauge("ct_channel_operation", "Channel operation", ["peer_id", "op"])
-SESSION_OPS = Gauge("ct_session_operation", "Session operation", ["source", "relayer", "op", "success"])
+SESSION_OPS = Gauge(
+    "ct_session_operation", "Session operation", ["source", "relayer", "op", "success"]
+)
 
-class NodeHelper(Base):
+
+configure_logging()
+logger = logging.getLogger(__name__)
+
+
+class NodeHelper:
     @classmethod
-    async def open_channel(cls, initiator: Address, api: HoprdAPI, address: str, amount: int):
-        cls().debug(f"Opening channel from {initiator} to {address}")
+    async def open_channel(
+        cls, initiator: Address, api: HoprdAPI, address: str, amount: int
+    ):
+        log_params = {"from": initiator.hopr, "to": address, "amount": amount}
+        logger.debug("Opening channel", log_params)
         channel = await api.open_channel(address, f"{int(amount*1e18):d}")
 
         if channel is not None:
-            cls().info(f"Opened channel to {address}")
+            logger.info("Opened channel", log_params)
             CHANNELS_OPS.labels(initiator.hopr, "opened").inc()
         else:
-            cls().warning(f"Failed to open channel from {initiator} to {address}")
+            logger.warning(f"Failed to open channel to {address}", log_params)
 
     @classmethod
-    async def close_channel(cls, initiator: Address, api: HoprdAPI, channel: Channel, label: str):
-        cls().debug(
-            f"Closing channel from {initiator}: {channel.id} with label '{label}'")
+    async def close_channel(
+        cls, initiator: Address, api: HoprdAPI, channel: Channel, type: str
+    ):
+        logs_params = {"from": initiator.hopr, "channel": channel.id}
+        logger.debug(f"Closing {type} channel", logs_params)
+
         ok = await api.close_channel(channel.id)
 
         if ok:
-            cls().info(f"Closed channel {channel.id}  with label '{label}'")
-            CHANNELS_OPS.labels(initiator.hopr, label).inc()
+            logger.info(f"Closed {type} channel", logs_params)
+            CHANNELS_OPS.labels(initiator.hopr, type).inc()
         else:
-            cls().warning(f"Failed to close channel {channel.id} with label '{label}'")
+            logger.warning(f"Failed to close {type}", logs_params)
 
     @classmethod
-    async def fund_channel(cls, initiator: Address, api: HoprdAPI, channel: Channel, amount: int):
-        cls().debug(f"Funding channel from {initiator}: {channel.id}")
+    async def fund_channel(
+        cls, initiator: Address, api: HoprdAPI, channel: Channel, amount: int
+    ):
+        logs_params = {"from": initiator.hopr, "channel": channel.id, "amount": amount}
+        logger.debug("Funding channel", logs_params)
+
         ok = await api.fund_channel(channel.id, amount * 1e18)
 
         if ok:
-            cls().info(f"Funded channel {channel.id}")
+            logger.info("Funded channel", logs_params)
             CHANNELS_OPS.labels(initiator.hopr, "fund").inc()
         else:
-            cls().warning(f"Failed to fund channel {channel.id}")
-
+            logger.warning("Failed to fund channel", logs_params)
 
     @classmethod
-    async def open_session(cls, initiator: Address, api: HoprdAPI, relayer: str) -> Optional[Session]:
-        cls().debug(f"Opening session from {initiator} for {relayer}")
+    async def open_session(
+        cls, initiator: Address, api: HoprdAPI, relayer: str
+    ) -> Optional[Session]:
+        logs_params = {"from": initiator.hopr, "relayer": relayer}
+        logger.debug("Opening session", logs_params)
+
         session = await api.post_session(initiator.hopr, relayer)
-        
+
         if session is not None:
-            cls().debug(f"Opened session from {initiator.hopr} for {relayer}: {session}")
+            logger.debug("Opened session", logs_params + session)
             SESSION_OPS.labels(initiator.hopr, relayer, "opened", "yes").inc()
         else:
-            cls().warning(f"Failed to open a session from {initiator.hopr} for {relayer}")
+            logger.warning("Failed to open a session", logs_params)
             SESSION_OPS.labels(initiator.hopr, relayer, "opened", "no").inc()
 
         return session
 
     @classmethod
-    async def close_session(cls, initiator: Address, api: HoprdAPI, relayer: str, sess_to_socket: SessionToSocket):
-        cls().debug(f"Closing the session from {initiator} for {relayer}")
+    async def close_session(
+        cls,
+        initiator: Address,
+        api: HoprdAPI,
+        relayer: str,
+        sess_to_socket: SessionToSocket,
+    ):
+        logs_params = {"from": initiator.hopr, "relayer": relayer}
+        logger.debug("Closing the session", logs_params)
+
         ok = await api.close_session(sess_to_socket.session)
 
         if ok:
-            cls().debug(f"Closed the session from {initiator.hopr} for {relayer}")
+            logger.debug("Closed the session", logs_params)
             SESSION_OPS.labels(initiator.hopr, relayer, "closed", "yes").inc()
             sess_to_socket.socket.close()
         else:
-            cls().warning(f"Failed to close the session from {initiator.hopr} for {relayer}")
+            logger.warning("Failed to close the session", logs_params)
             SESSION_OPS.labels(initiator.hopr, relayer, "closed", "no").inc()
-
-    

@@ -4,24 +4,24 @@
 # =============================================================================
 flags:
   core: 
-    rotateSubgraphs: 300
-    peersRewards: 600
-    ticketParameters: 120
+    applyEconomicModel: 30
+    ticketParameters: 60
 
-    connectedPeers: 120
-    registeredNodes: 600
-    topology: 600
-    allocations: 600
-    EOABalances: 600
-    NFTHolders: 600
-    
-    applyEconomicModel: 60
+    connectedPeers: 30
+    topology: 30
 
-    safeFundings: 600
+    rotateSubgraphs: 60
+
+    peersRewards: 300
+    registeredNodes: 300
+    allocations: 300
+    EOABalances: 300
+    NFTHolders: 300
+    safeFundings: 300
     
   node:
-    healthcheck: 30
-    retrievePeers: 120
+    healthcheck: 15
+    retrievePeers: 60
     retrieveChannels: 120
     retrieveBalances: 300
 
@@ -89,11 +89,17 @@ economicModel:
 # 
 # =============================================================================
 peer:
-  minVersion: '2.1.5'
+  minVersion: '2.2.1'
   initialSleep:
     mean: 30
     std: 2
-    
+
+  # Controls how many messages are batched at a time. Increasing this reduces
+  # the queue size but also privacy as the load gets less spread over time. 
+  # NOTE: Should be replaced by a dynamic approch, by setting the minimum delay
+  # acceptable before increasing the batch size accordingly (auto-mode)
+  messageMultiplier: 1
+
 # =============================================================================
 # 
 # =============================================================================

@@ -1,9 +1,13 @@
+import logging
 from math import log, pow, prod
 
-from core.baseclass import Base
+from core.components.logs import configure_logging
 from core.components.parameters import Parameters
 
 from .budget import Budget
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 
 class Bucket:
@@ -30,12 +34,12 @@ class Bucket:
                 log(pow(self.upperbound / x, self.skewness) - 1) * self.flatness
                 + self.offset
             )
-        except ValueError as e:
-            raise ValueError(f"Math domain error: {x=}, {vars(self)}") from e
-        except ZeroDivisionError as e:
-            raise ValueError("Zero division error") from e
-        except OverflowError as e:
-            raise ValueError("Overflow error") from e
+        except ValueError as err:
+            raise ValueError(f"Math domain error: {x=}, {vars(self)}") from err
+        except ZeroDivisionError as err:
+            raise ValueError("Zero division error") from err
+        except OverflowError as err:
+            raise ValueError("Overflow error") from err
 
         return max(apr, 0)
 
@@ -50,7 +54,7 @@ class Bucket:
         )
 
 
-class EconomicModelSigmoid(Base):
+class EconomicModelSigmoid:
     def __init__(
         self, offset: float, buckets: list[Bucket], max_apr: float, proportion: float
     ):
@@ -78,8 +82,8 @@ class EconomicModelSigmoid(Base):
                 )
                 + self.offset
             )
-        except ValueError as e:
-            self.error(f"Value error in APR calculation: {e}")
+        except ValueError as err:
+            logger.exception("Value error in APR calculation", {"error": err})
             apr = 0
 
         if self.max_apr is not None:

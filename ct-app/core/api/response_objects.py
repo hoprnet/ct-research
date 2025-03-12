@@ -23,6 +23,12 @@ def _convert(value: Any):
     return value
 
 
+def try_to_lower(value: Any):
+    if isinstance(value, str):
+        return value.lower()
+    return value
+
+
 class ApiResponseObject:
     def __init__(self, data: dict):
         for key, value in self.keys.items():
@@ -75,10 +81,15 @@ class Balances(ApiResponseObject):
 class Infos(ApiResponseObject):
     keys = {"hopr_node_safe": "hoprNodeSafe"}
 
+    def post_init(self):
+        self.hopr_node_safe = try_to_lower(self.hopr_node_safe)
+
 
 class ConnectedPeer(ApiResponseObject):
-    keys = {"address": "peerAddress",
-            "peer_id": "peerId", "version": "reportedVersion"}
+    keys = {"address": "peerAddress", "peer_id": "peerId", "version": "reportedVersion"}
+
+    def post_init(self):
+        self.address = try_to_lower(self.address)
 
 
 class Channel(ApiResponseObject):
@@ -95,10 +106,9 @@ class Channel(ApiResponseObject):
     def post_init(self):
         self.status = ChannelStatus.fromString(self.status)
 
-        if isinstance(self.destination_address, str):
-            self.destination_address = self.destination_address.lower()
-        if isinstance(self.source_address, str):
-            self.source_address = self.source_address.lower()
+        self.destination_address = try_to_lower(self.destination_address)
+        self.source_address = try_to_lower(self.source_address)
+
 
 class TicketPrice(ApiResponseObject):
     keys = {"value": "price"}
@@ -108,9 +118,7 @@ class TicketPrice(ApiResponseObject):
 
 
 class Configuration(ApiResponseObject):
-    keys = {
-        "price": "hopr/protocol/outgoing_ticket_price"
-    }
+    keys = {"price": "hopr/protocol/outgoing_ticket_price"}
 
     def post_init(self):
         if isinstance(self.price, str):

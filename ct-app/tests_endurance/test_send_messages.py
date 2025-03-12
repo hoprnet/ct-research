@@ -1,12 +1,18 @@
 import asyncio
+import logging
 import random
 
 from core.api import HoprdAPI
 from core.components import EnvironmentUtils
+from core.components.logs import configure_logging
 
 from . import EnduranceTest, Metric
 
 CHARS = "0123456789abcdefghijklmnopqrstuvwxyz "
+
+configure_logging()
+logger = logging.getLogger(__name__)
+logging.getLogger("core.api.hoprd_api").setLevel(logging.WARNING)
 
 
 class SendMessages(EnduranceTest):
@@ -15,8 +21,7 @@ class SendMessages(EnduranceTest):
         self.tag = random.randint(0, 2**16 - 1)
 
         self.api = HoprdAPI(
-            EnvironmentUtils.envvar(
-                "API_URL"), EnvironmentUtils.envvar("API_KEY")
+            EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY")
         )
         self.recipient = await self.api.get_address()
 
@@ -42,12 +47,12 @@ class SendMessages(EnduranceTest):
         self.relayer = channel.destination_peer_id
         self.message_tag = random.randint(1024, 32768)
 
-        self.info(f"Connected to node {self.recipient.hopr}")
-        self.info(f"relayer: {self.relayer}", prefix="\t")
-        self.info(f"channel: {channel.id}", prefix="\t")
-        self.info(f"status : {channel.status}", prefix="\t")
-        self.info(f"balance: {channel.balance}HOPR", prefix="\t")
-        self.info(f"tag    : {self.tag}", prefix="\t")
+        logger.info(f"Connected to node {self.recipient.hopr}")
+        logger.info(f"\trelayer: {self.relayer}")
+        logger.info(f"\tchannel: {channel.id}")
+        logger.info(f"\tstatus : {channel.status}")
+        logger.info(f"\tbalance: {channel.balance}HOPR")
+        logger.info(f"\ttag    : {self.tag}")
 
         await self.api.messages_pop_all(self.message_tag)
 
@@ -59,17 +64,16 @@ class SendMessages(EnduranceTest):
             self.message_tag,
         )
 
-        self.results.append(200 <= success < 300)
+        self.results.append(success is not None)
 
     async def on_end(self):
-        sleep_time = EnvironmentUtils.envvar(
-            "DELAY_BEFORE_INBOX_CHECK", type=float)
+        sleep_time = EnvironmentUtils.envvar("DELAY_BEFORE_INBOX_CHECK", type=float)
 
         if sum(self.results) > 0:
-            self.info(f"Waiting {sleep_time}s for messages to be relayed")
+            logger.info(f"Waiting {sleep_time}s for messages to be relayed")
             await asyncio.sleep(sleep_time)
         else:
-            self.warning("No messages were relayed, skipping wait")
+            logger.warning("No messages were relayed, skipping wait")
 
         inbox = await self.api.messages_pop_all(
             self.message_tag,

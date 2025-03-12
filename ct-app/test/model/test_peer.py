@@ -2,8 +2,9 @@ import asyncio
 import random
 
 import pytest
-from core.components import MessageQueue, Parameters, Peer
 from packaging.version import Version
+
+from core.components import MessageQueue, Parameters, Peer
 
 SECONDS_IN_YEAR = 365 * 24 * 60 * 60
 
@@ -58,8 +59,7 @@ async def test_request_relay(exc_time: int, min_range: float, max_range: float):
     params.parse({"flags": {"peer": {"requestRelay": True}}})
 
     for peer in peers:
-        rand_delay = round(random.random() *
-                           (max_range - min_range) + min_range, 1)
+        rand_delay = round(random.random() * (max_range - min_range) + min_range, 1)
         peer.yearly_message_count = SECONDS_IN_YEAR / rand_delay
 
         peer.params = params
@@ -67,14 +67,14 @@ async def test_request_relay(exc_time: int, min_range: float, max_range: float):
 
     await asyncio.sleep(exc_time)
 
-    buffer = MessageQueue().buffer
+    queue = MessageQueue()
 
     calls_and_delays = {
         p.address.hopr: {"calls": 0, "delay": await p.message_delay} for p in peers
     }
 
-    while buffer.qsize() > 0:
-        calls_and_delays[await buffer.get()]["calls"] += 1
+    while queue.size > 0:
+        calls_and_delays[await queue.get_async()]["calls"] += 1
 
     durations = [
         (values["calls"] + 1) * values["delay"] for values in calls_and_delays.values()

@@ -13,7 +13,7 @@ class Balance(SubgraphEntry):
         :param address: The address of the EOA.
         :param balance: The balance of the EOA.
         """
-        self.address = address
+        self.address = address.lower() if address is not None else None
         self.balance = float(balance) if balance else 0
         self.linked_safes: set[Safe] = set()
 

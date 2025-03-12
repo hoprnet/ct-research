@@ -14,7 +14,7 @@ class Topology(SubgraphEntry):
         :param channels_balance: The peer's outgoing channels total balance.
         """
         self.peer_id: str = peer_id
-        self.address = address
+        self.address = address.lower() if address is not None else None
         self.channels_balance = channels_balance
 
     @classmethod
@@ -24,5 +24,4 @@ class Topology(SubgraphEntry):
         :param peer_id: The peer's peerId.
         :param value: The dictionary to create the Topology from.
         """
-
         return cls(peer_id, value["source_node_address"], value["channels_balance"])

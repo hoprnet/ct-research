@@ -1,24 +1,27 @@
 import asyncio
 import random
-from typing import Union
 
-from core.baseclass import Base
 from packaging.version import Version
 from prometheus_client import Gauge
 
 from . import AsyncLoop, MessageFormat, MessageQueue
 from .address import Address
+from .asyncloop import AsyncLoop
 from .decorators import flagguard, formalin, master
+from .messages import MessageFormat, MessageQueue
 
-
-STAKE = Gauge("ct_peer_stake", "Stake", ["peer_id", "type"])
-SAFE_COUNT = Gauge("ct_peer_safe_count", "Number of safes", ["peer_id"])
+CHANNEL_STAKE = Gauge(
+    "ct_peer_channels_balance", "Balance in outgoing channels", ["peer_id"]
+)
 DELAY = Gauge("ct_peer_delay", "Delay between two messages", ["peer_id"])
+NODES_LINKED_TO_SAFE_COUNT = Gauge(
+    "ct_peer_safe_count", "Number of nodes linked to the safes", ["peer_id", "safe"]
+)
 
 SECONDS_IN_A_NON_LEAP_YEAR = 365 * 24 * 60 * 60
 
 
-class Peer(Base):
+class Peer:
     """
     Representation of a peer in the network. A peer is a node that is part of the network and not hosted by HOPR.
     """
@@ -32,17 +35,17 @@ class Peer(Base):
         """
         self.address = Address(id, address)
         self.version = version
-        self.channel_balance = None
 
         self.safe = None
         self._safe_address_count = None
+        self._channel_balance = None
 
         self.yearly_message_count = 0
 
         self.params = None
         self.running = False
 
-    def is_old(self, min_version: Union[str, Version]):
+    def is_old(self, min_version: str | Version):
         """
         Check if the peer's version is older than the specified version.
         :param min_version: The minimum version to check against.
@@ -57,7 +60,7 @@ class Peer(Base):
         return self._version
 
     @version.setter
-    def version(self, value: Union[str, Version]):
+    def version(self, value: str | Version):
         if not isinstance(value, Version):
             try:
                 value = Version(value)
@@ -65,6 +68,15 @@ class Peer(Base):
                 value = Version("0.0.0")
 
         self._version = value
+
+    @property
+    def channel_balance(self):
+        return self._channel_balance
+
+    @channel_balance.setter
+    def channel_balance(self, value):
+        self._channel_balance = value
+        CHANNEL_STAKE.labels(self.address.hopr).set(value if value is not None else 0)
 
     @property
     def node_address(self) -> str:
@@ -80,7 +92,9 @@ class Peer(Base):
     @safe_address_count.setter
     def safe_address_count(self, value: int):
         self._safe_address_count = value
-        SAFE_COUNT.labels(self.address.hopr).set(value)
+        NODES_LINKED_TO_SAFE_COUNT.labels(self.address.hopr, self.safe.address).set(
+            value
+        )
 
     @property
     def split_stake(self) -> float:
@@ -96,7 +110,6 @@ class Peer(Base):
         split_stake = float(self.safe.total_balance) / float(
             self.safe_address_count
         ) + float(self.channel_balance)
-        STAKE.labels(self.address.hopr, "split").set(split_stake)
 
         return split_stake
 
@@ -145,11 +158,12 @@ class Peer(Base):
             return
 
         if delay := await self.message_delay:
+            multiplier = self.params.peer.messageMultiplier
             message = MessageFormat(
-                self.address.hopr, self.params.sessions.packetSize)
-            await MessageQueue().buffer.put(message)
+                self.params.sessions.packetSize, self.address.hopr, multiplier=multiplier)
+            await MessageQueue().put_async(message)
             # 2x delay as the loopback session hops twice by the relay
-            await asyncio.sleep(delay * 2)
+            await asyncio.sleep(delay * multiplier * 2)
 
         else:
             await asyncio.sleep(
@@ -175,7 +189,3 @@ class Peer(Base):
 
     def __hash__(self):
         return hash(self.address)
-
-    @property
-    def log_prefix(self) -> str:
-        return f"peer ..{self.address.hopr[-5:]}"
