@@ -121,19 +121,12 @@ class Configuration(ApiResponseObject):
     keys = {"price": "hopr/protocol/outgoing_ticket_price"}
 
     def post_init(self):
-        self.price = float(self.price.split()[0])
+        if isinstance(self.price, str):
+            self.price = float(self.price.split()[0])
 
 
 class OpenedChannel(ApiResponseObject):
     keys = {"channel_id": "channelId", "receipt": "transactionReceipt"}
-
-
-class Message(ApiResponseObject):
-    keys = {"body": "body", "timestamp": "receivedAt"}
-
-
-class SendMessageAck(ApiResponseObject):
-    keys = {"timestamp": "timestamp"}
 
 
 class Channels:
@@ -147,3 +140,12 @@ class Channels:
 
     def __repr__(self):
         return str(self)
+
+
+class Session(ApiResponseObject):
+    keys = {
+        "ip": "ip",
+        "port": "port",
+        "protocol": "protocol",
+        "target": "target",
+    }

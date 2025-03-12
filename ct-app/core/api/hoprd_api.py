@@ -4,11 +4,13 @@ import logging
 from typing import Optional
 
 import aiohttp
+
 from core.components.logs import configure_logging
 
 from . import request_objects as request
 from . import response_objects as response
 from .http_method import HTTPMethod
+from .protocol import Protocol
 
 MESSAGE_TAG = 0x1245
 
@@ -219,21 +221,6 @@ class HoprdAPI:
         is_ok, resp = await self.__call_api(HTTPMethod.GET, "account/addresses")
         return response.Addresses(resp) if is_ok else None
 
-    async def send_message(
-        self, destination: str, message: str, hops: list[str], tag: int = MESSAGE_TAG
-    ) -> Optional[response.SendMessageAck]:
-        """
-        Sends a message to the given destination.
-        :param: destination: str
-        :param: message: str
-        :param: hops: list[str]
-        :param: tag: int = 0x0320
-        :return: bool
-        """
-        data = request.SendMessageBody(message, hops, destination, tag)
-        is_ok, resp = await self.__call_api(HTTPMethod.POST, "messages", data=data)
-        return response.SendMessageAck(resp) if is_ok else None
-
     async def node_info(self) -> Optional[response.Infos]:
         """
         Gets informations about the HOPRd node.
@@ -254,20 +241,67 @@ class HoprdAPI:
             else None
         )
 
-    async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
+    async def get_sessions(
+        self, protocol: Protocol = Protocol.UDP
+    ) -> list[response.Session]:
         """
-        Pop all messages from the inbox
-        :param: tag = 0x0320
-        :return: list
+        Lists existing Session listeners for the given IP protocol
+        :param: protocol: Protocol
+        :return: list[Session]
         """
-        is_ok, resp = await self.__call_api(
-            HTTPMethod.POST, "messages/pop-all", data=request.PopMessagesBody(tag)
+        is_ok, response = await self.__call_api(
+            HTTPMethod.GET, f"session/{protocol.name.lower()}"
         )
-        return (
-            [response.Message(item) for item in resp.get("messages", [])]
-            if is_ok
-            else []
+
+        return [response.Session(s) for s in response] if is_ok else None
+
+    async def post_session(
+        self,
+        destination: str,
+        relayer: str,
+        listen_host: str = ":0",
+        protocol: Protocol = Protocol.UDP,
+    ) -> Optional[response.Session]:
+        """
+        Creates a new client session returning the given session listening host & port over TCP or UDP.
+        :param: destination: PeerID of the recipient
+        :param: relayer: PeerID of the relayer
+        :param: listen_host: str
+        :param: protocol: Protocol (UDP or TCP)
+        :return: Session
+        """
+        capabilities_body = request.SessionCapabilitiesBody(
+            protocol.retransmit, protocol.segment
         )
+        target_body = request.SessionTargetBody()
+        path_body = request.SessionPathBodyRelayers([relayer])
+
+        data = request.CreateSessionBody(
+            capabilities_body.as_array,
+            destination,
+            listen_host,
+            path_body.as_dict,
+            target_body.as_dict,
+        )
+
+        is_ok, response = await self.__call_api(
+            HTTPMethod.POST, f"session/{protocol.name.lower()}", data
+        )
+
+        return request.Session(response) if is_ok else None
+
+    async def close_session(self, session: response.Session) -> bool:
+        """
+        Closes an existing Sessino listener for the given IP protocol, IP and port.
+        :param: session: Session
+        """
+        data = response.DeleteSessionBody(session.ip, session.port)
+
+        is_ok, _ = await self.__call_api(
+            HTTPMethod.DELETE, f"session/{session.protocol}", data
+        )
+
+        return is_ok
 
     async def healthyz(self, timeout: int = 20) -> bool:
         """
