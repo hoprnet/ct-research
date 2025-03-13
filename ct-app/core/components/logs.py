@@ -19,8 +19,8 @@ class JSONFormatter:
             "level": record.levelname,
             "short_message": record.msg % record.args,
             "threadId": record.threadName,
-            "line": record.lineno,
-            "file": record.filename,
+            "_line": record.lineno,
+            "_file": record.filename,
             "_fields": {}
         }
 
