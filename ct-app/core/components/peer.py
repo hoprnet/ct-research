@@ -6,7 +6,7 @@ from prometheus_client import Gauge
 
 from .address import Address
 from .asyncloop import AsyncLoop
-from .decorators import flagguard, formalin, master
+from .decorators import keepalive
 from .messages import MessageFormat, MessageQueue
 
 CHANNEL_STAKE = Gauge(
@@ -150,7 +150,7 @@ class Peer:
 
         return True
 
-    @master(flagguard, formalin)
+    @keepalive
     async def message_relay_request(self):
         if self.address is None:
             return

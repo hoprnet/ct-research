@@ -25,7 +25,7 @@ def main(configfile: str):
 
     params = Parameters(config)
     logger.debug("Safe parameters loaded", {"params": params.as_dict})
-    
+
     params.subgraph.api_key = os.getenv("SUBGRAPH_API_KEY")
     logger.debug("API key loaded")
 

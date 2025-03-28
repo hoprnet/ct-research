@@ -11,7 +11,7 @@ from core.subgraph import GraphQLProvider
 
 from .api import HoprdAPI
 from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
-from .components.decorators import flagguard, formalin, master
+from .components.decorators import keepalive
 from .node import Node
 from .subgraph import URL, Type, entries
 
@@ -81,7 +81,7 @@ class Core:
     def ct_nodes_addresses(self) -> list[Address]:
         return [node.address for node in self.nodes]
 
-    @master(flagguard, formalin)
+    @keepalive
     async def rotate_subgraphs(self):
         """
         Checks the subgraph URLs and sets the subgraph mode in use (default, backup or none).
@@ -90,7 +90,7 @@ class Core:
         for provider in self.providers.values():
             await provider.test(self.params.subgraph.type)
 
-    @master(flagguard, formalin)
+    @keepalive
     async def connected_peers(self):
         """
         Aggregates the peers from all nodes and sets the all_peers LockedVar.
@@ -139,7 +139,7 @@ class Core:
             for peer in current_peers:
                 PEER_VERSION.labels(peer.address.hopr, str(peer.version)).set(1)
 
-    @master(flagguard, formalin)
+    @keepalive
     async def registered_nodes(self):
         """
         Gets all registered nodes in the Network Registry.
@@ -167,7 +167,7 @@ class Core:
         )
         SUBGRAPH_SIZE.set(len(results))
 
-    @master(flagguard, formalin)
+    @keepalive
     async def nft_holders(self):
         """
         Gets all NFT holders.
@@ -181,7 +181,7 @@ class Core:
         logger.debug("Fetched NFT holders", {"count": len(results)})
         NFT_HOLDERS.set(len(results))
 
-    @master(flagguard, formalin)
+    @keepalive
     async def allocations(self):
         """
         Gets all allocations for the investors.
@@ -197,7 +197,7 @@ class Core:
         self.allocations_data = results
         logger.debug("Fetched investors allocations", {"counts": len(results)})
 
-    @master(flagguard, formalin)
+    @keepalive
     async def eoa_balances(self):
         """
         Gets the EOA balances on Gnosis and Mainnet for the investors.
@@ -223,7 +223,7 @@ class Core:
         ]
         logger.debug("Fetched investors EOA balances", {"count": len(balances)})
 
-    @master(flagguard, formalin)
+    @keepalive
     async def topology(self):
         """
         Gets a dictionary containing all unique source_peerId-source_address links
@@ -243,7 +243,7 @@ class Core:
         logger.debug("Fetched all topology links", {"count": len(self.topology_data)})
         TOPOLOGY_SIZE.set(len(self.topology_data))
 
-    @master(flagguard, formalin)
+    @keepalive
     async def apply_economic_model(self):
         """
         Applies the economic model to the eligible peers (after multiple filtering layers).
@@ -327,7 +327,7 @@ class Core:
             logger.info("Generated the eligible nodes set", {"count": eligible_count})
             ELIGIBLE_PEERS.set(eligible_count)
 
-    @master(flagguard, formalin)
+    @keepalive
     async def peers_rewards(self):
         results = dict()
         for acc in await self.providers[Type.REWARDS].get():
@@ -338,7 +338,7 @@ class Core:
         self.peers_rewards_data = results
         logger.debug("Fetched peers rewards amounts", {"count": len(results)})
 
-    @master(flagguard, formalin)
+    @keepalive
     async def ticket_parameters(self):
         """
         Gets the ticket price from the api. They are used in the economic model to calculate the number of messages to send to a peer.
@@ -352,7 +352,7 @@ class Core:
             self.ticket_price = ticket_price
             TICKET_STATS.labels("price").set(ticket_price.value)
 
-    @master(flagguard, formalin)
+    @keepalive
     async def safe_fundings(self):
         """
         Gets the total amount that was sent to CT safes.

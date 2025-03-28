@@ -1,6 +1,6 @@
 .PHONY: run       
 run:
-	@./scripts/run.sh
+	@./scripts/run.sh staging 5
 
 .PHONY: endurance
 endurance:
@@ -9,6 +9,7 @@ endurance:
 .PHONY: fmt
 fmt:
 	@black .
+	@ruff check .
 
 .PHONY: test
 test:

@@ -37,26 +37,7 @@ def connectguard(func):
     return wrapper
 
 
-def flagguard(func):
-    """
-    Decorator to check if the feature is enabled before running it
-    """
-
-    @functools.wraps(func)
-    async def wrapper(self, *args, **kwargs):
-        class_flags = getattr(self.params.flags, self.__class__.__name__.lower())
-        flag = getattr(class_flags, func.__name__)
-
-        if flag is None or flag is False:
-            logger.debug("Feature not enabled, skipping", {"feature": func.__name__})
-            return
-
-        return await func(self, *args, **kwargs)
-
-    return wrapper
-
-
-def formalin(func):
+def keepalive(func):
     """
     Decorator to log the start of a function, make it run until stopped, and delay the
     next iteration
@@ -64,13 +45,21 @@ def formalin(func):
 
     @functools.wraps(func)
     async def wrapper(self, *args, **kwargs):
-        class_flags = getattr(self.params.flags, self.__class__.__name__.lower())
-        delay = getattr(class_flags, func.__name__)
+        class_flags = getattr(self.params.flags, self.__class__.__name__.lower(), {})
+        delay = getattr(class_flags, func.__name__, None)
 
-        if delay is True:
-            delay = 0
+        if delay is None:
+            logger.warning(
+                "Feature not found in the config file, skipping",
+                {"feature": func.__name__},
+            )
+            return
+
         if delay is False:
-            delay = None
+            logger.debug("Feature not enabled, skipping", {"feature": func.__name__})
+            return
+
+        delay = 0 if delay is True else delay
 
         logger.debug(
             "Running method continuously", {"method": func.__name__, "delay": delay}
@@ -79,8 +68,6 @@ def formalin(func):
         while self.running:
             await func(self, *args, **kwargs)
 
-            if delay is None:
-                break
             await asyncio.sleep(delay)
 
     return wrapper
