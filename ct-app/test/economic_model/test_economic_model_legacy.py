@@ -1,7 +1,6 @@
 import pytest
-
 from core.api.response_objects import TicketPrice
-from core.components.parameters import LegacyParams
+from core.components.config_parser.economic_model import LegacyParams
 
 
 @pytest.fixture

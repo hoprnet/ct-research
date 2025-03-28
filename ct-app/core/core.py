@@ -2,15 +2,15 @@
 import logging
 import random
 
+from core.api.response_objects import TicketPrice
+from core.components.config_parser import LegacyParams, SigmoidParams
+from core.components.logs import configure_logging
+from core.subgraph import GraphQLProvider
 from prometheus_client import Gauge
 
-from core.api.response_objects import TicketPrice
-from core.components.logs import configure_logging
-from core.components.parameters import LegacyParams, SigmoidParams
-from core.subgraph import GraphQLProvider
-
 from .api import HoprdAPI
-from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
+from .components import Address, AsyncLoop, LockedVar, Peer, Utils
+from .components.config_parser import Parameters
 from .components.decorators import keepalive
 from .node import Node
 from .subgraph import URL, Type, entries

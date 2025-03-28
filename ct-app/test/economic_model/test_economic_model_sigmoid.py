@@ -1,9 +1,8 @@
 from copy import deepcopy
 
 import pytest
-
 from core.api.response_objects import TicketPrice
-from core.components.parameters import BucketParams, SigmoidParams
+from core.components.config_parser.economic_model import BucketParams, SigmoidParams
 
 
 def test_values_mid_range():

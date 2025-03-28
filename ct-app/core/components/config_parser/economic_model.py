@@ -4,82 +4,10 @@ from math import log, prod
 from core.api.response_objects import TicketPrice
 from core.components.logs import configure_logging
 
+from .base_classes import ExplicitParams
+
 configure_logging()
 logger = logging.getLogger(__name__)
-
-
-class ExplicitParams:
-    keys: dict[str, type] = {}
-
-    def __init__(self, data: dict = None):
-        if data is None:
-            data = {}
-        self.parse(data)
-
-    def parse(self, data: dict):
-        for name, type in self.keys.items():
-            if value := data.get(name):
-                value = type(value)
-                if type is Flag:
-                    value = value.value
-            setattr(self, name, value)
-
-    @property
-    def as_dict(self):
-        return {
-            k: v.as_dict if isinstance(v, ExplicitParams) else v
-            for k, v in self.__dict__.items()
-        }
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self.as_dict})"
-
-
-class Flag:
-    def __init__(self, value: int):
-        self.value = value
-
-
-class FlagCoreParams(ExplicitParams):
-    keys = {
-        "apply_economic_model": Flag,
-        "ticket_parameters": Flag,
-        "connected_peers": Flag,
-        "topology": Flag,
-        "rotate_subgraphs": Flag,
-        "peers_rewards": Flag,
-        "registered_nodes": Flag,
-        "allocations": Flag,
-        "eoa_balances": Flag,
-        "nft_holders": Flag,
-        "safe_fundings": Flag,
-    }
-
-
-class FlagNodeParams(ExplicitParams):
-    keys = {
-        "healthcheck": Flag,
-        "retrieve_peers": Flag,
-        "retrieve_channels": Flag,
-        "retrieve_balances": Flag,
-        "open_channels": Flag,
-        "fund_channels": Flag,
-        "close_old_channels": Flag,
-        "close_pending_channels": Flag,
-        "close_incoming_channels": Flag,
-        "get_total_channel_funds": Flag,
-        "observe_message_queue": Flag,
-        "observe_relayed_messages": Flag,
-    }
-
-
-class FlagPeerParams(ExplicitParams):
-    keys = {"message_relay_request": Flag}
-
-
-class FlagParams(ExplicitParams):
-    keys = {"core": FlagCoreParams, "node": FlagNodeParams, "peer": FlagPeerParams}
-
 
 class LegacyCoefficientsParams(ExplicitParams):
     keys = {
@@ -139,7 +67,8 @@ class LegacyParams(ExplicitParams):
 
 
 class BucketParams(ExplicitParams):
-    keys = {"flatness": float, "skewness": float, "upperbound": float, "offset": float}
+    keys = {"flatness": float, "skewness": float,
+            "upperbound": float, "offset": float}
 
     def apr(self, x: float):
         """
@@ -161,7 +90,8 @@ class BucketParams(ExplicitParams):
 
 
 class BucketsParams(ExplicitParams):
-    keys = {"economic_security": BucketParams, "network_capacity": BucketParams}
+    keys = {"economic_security": BucketParams,
+            "network_capacity": BucketParams}
 
     order = ["network_capacity", "economic_security"]
 
@@ -233,51 +163,3 @@ class EconomicModelParams(ExplicitParams):
     @property
     def models(self):
         return {v: k for k, v in vars(self).items() if isinstance(v, ExplicitParams)}
-
-
-class PeerParams(ExplicitParams):
-    keys = {
-        "min_version": str,
-        "sleep_mean_time": int,
-        "sleep_std_time": int,
-        "message_multiplier": int,
-    }
-
-
-class ChannelParams(ExplicitParams):
-    keys = {"min_balance": float, "funding_amount": float, "max_age_seconds": int}
-
-
-class FundingsParams(ExplicitParams):
-    keys = {"constant": float}
-
-
-class SubgraphEndpointParams(ExplicitParams):
-    keys = {"query_id": str, "slug": str, "inputs": dict}
-
-
-class SubgraphParams(ExplicitParams):
-    keys = {
-        "type": str,
-        "user_id": int,
-        "api_key": str,
-        "mainnet_allocations": SubgraphEndpointParams,
-        "gnosis_allocations": SubgraphEndpointParams,
-        "hopr_on_mainnet": SubgraphEndpointParams,
-        "hopr_on_gnosis": SubgraphEndpointParams,
-        "safes_balance": SubgraphEndpointParams,
-        "fundings": SubgraphEndpointParams,
-        "rewards": SubgraphEndpointParams,
-        "staking": SubgraphEndpointParams,
-    }
-
-
-class Parameters(ExplicitParams):
-    keys = {
-        "flags": FlagParams,
-        "economic_model": EconomicModelParams,
-        "peer": PeerParams,
-        "channel": ChannelParams,
-        "fundings": FundingsParams,
-        "subgraph": SubgraphParams,
-    }

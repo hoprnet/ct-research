@@ -3,10 +3,9 @@ import os
 
 import click
 import yaml
-from prometheus_client import start_http_server
-
+from core.components.config_parser import Parameters
 from core.components.logs import configure_logging
-from core.components.parameters import Parameters
+from prometheus_client import start_http_server
 
 from .components import AsyncLoop, Utils
 from .components.messages import MessageQueue

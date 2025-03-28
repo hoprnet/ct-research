@@ -1,0 +1,18 @@
+from .base_classes import ExplicitParams
+from .channel import ChannelParams
+from .economic_model import EconomicModelParams
+from .flags import FlagParams
+from .funding import FundingParams
+from .peer import PeerParams
+from .subgraph import SubgraphParams
+
+
+class Parameters(ExplicitParams):
+    keys: dict[str, type] = {
+        "flags": FlagParams,
+        "economic_model": EconomicModelParams,
+        "peer": PeerParams,
+        "channel": ChannelParams,
+        "fundings": FundingParams,
+        "subgraph": SubgraphParams,
+    }

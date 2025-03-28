@@ -1,4 +1,4 @@
-from core.components.parameters import SubgraphEndpointParams
+from core.components.config_parser import SubgraphEndpointParams
 
 from .mode import Mode
 

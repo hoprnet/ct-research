@@ -4,8 +4,6 @@ from test.decorators_patches import patches
 
 import pytest
 import yaml
-from pytest_mock import MockerFixture
-
 from core.api.response_objects import (
     Addresses,
     Balances,
@@ -13,12 +11,13 @@ from core.api.response_objects import (
     Channels,
     ConnectedPeer,
 )
-from core.components import Parameters, Peer
-from core.components.parameters import LegacyParams
+from core.components import Peer
+from core.components.config_parser import LegacyParams, Parameters
 
 # needs to be imported after the patches are applied
 from core.core import Core
 from core.node import Node
+from pytest_mock import MockerFixture
 
 
 class SideEffect:

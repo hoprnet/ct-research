@@ -1,9 +1,8 @@
 import asyncio
 
 import pytest
-
+from core.components.config_parser.base_classes import ExplicitParams, Flag
 from core.components.decorators import connectguard, keepalive
-from core.components.parameters import ExplicitParams, Flag
 
 
 class FooClassParams(ExplicitParams):
