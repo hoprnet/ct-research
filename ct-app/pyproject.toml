@@ -20,11 +20,13 @@ members = [
 
 [dependency-groups]
 dev = [
-    "test"
+    "ruff>=0.11.4",
+    "test",
 ]
 lint = [
     "black==25.1.0",
 ]
+
 
 [tool.uv]
 default-groups = "all"

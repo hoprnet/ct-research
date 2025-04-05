@@ -24,7 +24,7 @@ check_deployment() {
 for arg in "$@"; do
     case $arg in
         --env=*)
-            env="${arg#* }"
+            env="${arg#*=}"
             shift
             ;;
         --count=*)
@@ -78,5 +78,5 @@ done
 mkdir -p $log_folder
 time=$(date '+%Y%m%d_%H%M%S')
 
-echo "Starting core in $env mode"
-python -m core --configfile ./.configs/core_${env}_config.yaml 2>&1 | tee "$log_folder/core_$time.log"
+echo "Starting core in $env mode ($count nodes), storing logs in $log_folder"
+uv run -m core --configfile ./.configs/core_${env}_config.yaml 2>&1 | tee "$log_folder/core_$time.log"

@@ -13,4 +13,4 @@ fmt:
 
 .PHONY: test
 test:
-	pytest
+	uv run -m pytest

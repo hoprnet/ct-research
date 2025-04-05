@@ -29,12 +29,12 @@ jobs:
       - name: Lint with ruff
         working-directory: ct-app
         run: |
-          nix develop -c ruff check . --output-format=github --ignore E501 --target-version=py39
+          nix develop -c ruff check . --output-format=github --ignore E501 --target-version=py312
 
       - name: Test with pytest
         working-directory: ct-app
         run: |
-          nix develop -c pytest test
+          nix develop -c uv run -m pytest test
 
   image:
     name: Build and push container image
