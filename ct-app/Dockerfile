@@ -9,5 +9,5 @@ WORKDIR /code
 COPY . .
 RUN chmod +x ./scripts/run.sh
 
-# update pip and install dependencies
+# install dependencies
 RUN uv sync
