@@ -12,19 +12,7 @@
       pkgs = import nixpkgs { inherit system; };
     in rec {
       devShell = pkgs.mkShell {
-        buildInputs = with pkgs; [
-          python312
-          python312Packages.venvShellHook
-        ];
-
-        venvDir = "./.venv";
-        postVenvCreation = ''
-          unset SOURCE_DATE_EPOCH
-          pip install -U pip setuptools wheel
-          pip install -r requirements.txt
-        '' + pkgs.lib.optionalString pkgs.stdenv.isLinux ''
-          autoPatchelf ./.venv
-        '';
+        shellHook = "uv sync";
       };
     }
   );

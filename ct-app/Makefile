@@ -8,7 +8,8 @@ endurance:
 
 .PHONY: fmt
 fmt:
-	@black .
+	@uvx ruff check
+	@uvx black .
 
 .PHONY: test
 test:

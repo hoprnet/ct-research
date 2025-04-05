@@ -5,5 +5,5 @@ exclude_also =
     if __name__ == .__main__.:
 
 omit = 
-    test/*
+    test*/*
     hoprd_api.py

@@ -11,6 +11,7 @@ def test_equal_addresses():
     assert address1 != address3
     assert address1 != address4
 
+
 def test_address_in():
     address1 = Address("hopr_address", "native_address")
     address2 = Address("hopr_address", "native_address")
