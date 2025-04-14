@@ -1,6 +1,6 @@
 .PHONY: run       
 run:
-	@./scripts/run.sh staging 5
+	@./scripts/run.sh --env=staging --count=1
 
 .PHONY: endurance
 endurance:
@@ -8,9 +8,9 @@ endurance:
 
 .PHONY: fmt
 fmt:
-	@black .
-	@ruff check .
+	@uvx ruff check
+	@uvx black .
 
 .PHONY: test
 test:
-	pytest
+	uv run -m pytest
