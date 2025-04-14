@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export $(grep -v '^#' .env | xargs)
+
 # Default values
 env="staging"
 count=1
