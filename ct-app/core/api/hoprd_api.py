@@ -42,7 +42,6 @@ class HoprdAPI:
                     "data": getattr(data, "as_dict", {}),
                 },
             )
-            logger.info(f"{logger.name}")
         try:
             headers = {"Content-Type": "application/json"}
             async with aiohttp.ClientSession(headers=self.headers) as s:
