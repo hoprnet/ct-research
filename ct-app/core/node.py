@@ -415,7 +415,7 @@ class Node:
 
             for m in messages:
                 try:
-                    message = MessageFormat.parse(m.body)
+                    message = MessageFormat.parse(m)
                 except ValueError as err:
                     logger.exception(
                         "Error while parsing message",
