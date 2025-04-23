@@ -17,11 +17,12 @@ class JSONFormatter:
         result = {
             "timestamp": timestamp,
             "level": record.levelname,
-            "short_message": record.msg % record.args,
             "threadId": record.threadName,
             "_line": record.lineno,
             "_file": record.filename,
-            "_fields": {}
+            "_fields": {
+                "message": record.msg % record.args
+            }
         }
 
         if isinstance(record.args, dict):
