@@ -40,12 +40,15 @@ class MessageFormat:
 
     @classmethod
     def parse(cls, input_string: str):
+        if len(input_string) == 0:
+            raise ValueError("Input string is empty")
+            
         re_pattern = "^" + cls.pattern().replace("{", "(?P<").replace("}", ">.+)") + "$"
 
         match = re.compile(re_pattern).match(input_string)
         if not match:
             raise ValueError(
-                f"Input string format is incorrect. {input_string} incompatible with format {cls.pattern()}"
+                f"Input string format is incorrect. `{input_string}` incompatible with format {cls.pattern()}"
             )
 
         return cls(*[match.group(param) for param in cls.params])
