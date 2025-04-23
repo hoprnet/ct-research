@@ -1,4 +1,5 @@
 # region Imports
+import asyncio
 import logging
 from datetime import datetime
 
@@ -437,6 +438,11 @@ class Node:
     async def observe_message_queue(self):
         message: MessageFormat = await MessageQueue().get_async()
         # TODO: maybe set the timestamp here ?
+
+        if self.channels is None:
+            logger.warning("No channels found yet")
+            asyncio.sleep(5)
+            return
 
         peers = [peer.address.hopr for peer in await self.peers.get()]
         channels = [channel.destination_peer_id for channel in self.channels.outgoing]
