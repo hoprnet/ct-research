@@ -133,10 +133,3 @@ class SessionTargetBody(ApiRequestObject):
 
     def __init__(self, service: int = 0):
         super().__init__(vars())
-
-
-class DeleteSessionBody(ApiRequestObject):
-    keys = {"ip": "listeningIp", "port": "port"}
-
-    def __init__(self, ip: str, port: str):
-        super().__init__(vars())

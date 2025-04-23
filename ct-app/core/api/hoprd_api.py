@@ -248,11 +248,11 @@ class HoprdAPI:
         :param: protocol: Protocol
         :return: list[Session]
         """
-        is_ok, response = await self.__call_api(
+        is_ok, resp = await self.__call_api(
             HTTPMethod.GET, f"session/{protocol.name.lower()}"
         )
 
-        return [response.Session(s) for s in response] if is_ok else None
+        return [response.Session(s) for s in resp] if is_ok else None
 
     async def post_session(
         self,
@@ -283,21 +283,19 @@ class HoprdAPI:
             target_body.as_dict,
         )
 
-        is_ok, response = await self.__call_api(
+        is_ok, resp = await self.__call_api(
             HTTPMethod.POST, f"session/{protocol.name.lower()}", data
         )
 
-        return request.Session(response) if is_ok else None
+        return response.Session(resp) if is_ok else None
 
     async def close_session(self, session: response.Session) -> bool:
         """
         Closes an existing Sessino listener for the given IP protocol, IP and port.
         :param: session: Session
         """
-        data = response.DeleteSessionBody(session.ip, session.port)
-
         is_ok, _ = await self.__call_api(
-            HTTPMethod.DELETE, f"session/{session.protocol}", data
+            HTTPMethod.DELETE, f"session/{session.protocol}/{session.ip}/{session.port}"
         )
 
         return is_ok

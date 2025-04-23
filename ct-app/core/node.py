@@ -446,7 +446,7 @@ class Node:
                 return
 
         for _ in range(message.multiplier):
-            self.session_management[message.relayer].send(message.bytes)
+            self.session_management[message.relayer].send(message.bytes())
             message.increase_inner_index()
 
         MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer).inc(

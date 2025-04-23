@@ -74,7 +74,7 @@ class NodeHelper:
         session = await api.post_session(initiator.hopr, relayer)
 
         if session is not None:
-            logger.debug("Opened session", logs_params + session)
+            logger.debug("Opened session", {**logs_params, **session.as_dict})
             SESSION_OPS.labels(initiator.hopr, relayer, "opened", "yes").inc()
         else:
             logger.warning("Failed to open a session", logs_params)
