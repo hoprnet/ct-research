@@ -442,7 +442,7 @@ class Node:
 
         if self.channels is None:
             logger.warning("No channels found yet")
-            asyncio.sleep(5)
+            await asyncio.sleep(5)
             return
 
         peers = [peer.address.hopr for peer in await self.peers.get()]
