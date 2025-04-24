@@ -426,7 +426,7 @@ class Node:
                     continue
 
                 if message.timestamp and message.relayer:
-                    rtt = (m.timestamp - message.timestamp) / 1000
+                    rtt = (datetime.now() - message.timestamp) / 1000
 
                     MESSAGES_DELAYS.labels(self.address.hopr, message.relayer).observe(
                         rtt
