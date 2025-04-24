@@ -5,9 +5,9 @@ from core.api.response_objects import Session
 
 
 class SessionToSocket:
-    def __init__(self, session: Session, timeout: int = 5):
+    def __init__(self, session: Session, host: str, timeout: int = 5):
         self.session = session
-        self.connect_address = session.ip
+        self.connect_address = host
 
         try:
             self.socket, self.conn = self.create_socket(timeout)
@@ -63,7 +63,7 @@ class SessionToSocket:
         else:
             raise ValueError(f"Invalid protocol: {self.session.protocol}")
 
-    def receive(self, size: int) -> bytes:
+    def receive(self, size: int) -> str:
         """
         Receives data from the peer.
         """
@@ -75,4 +75,4 @@ class SessionToSocket:
         except Exception:
             data = b""
 
-        return data
+        return data.rstrip(b"\0").decode()

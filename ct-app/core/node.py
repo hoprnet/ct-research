@@ -1,6 +1,7 @@
 # region Imports
 import asyncio
 import logging
+import re
 from datetime import datetime
 
 from prometheus_client import Gauge, Histogram
@@ -412,7 +413,7 @@ class Node:
             buffer_size: int = (
                 self.params.sessions.packetSize * self.params.sessions.numPackets
             )
-            messages = s.receive(buffer_size).decode().split("\n")
+            messages = s.receive(buffer_size).split("\n")
 
             for m in messages:
                 try:
@@ -488,8 +489,16 @@ class Node:
             AsyncLoop.add(self.open_session, peer_id, publish_to_task_set=False)
 
     async def open_session(self, relayer: str):
-        if session := await NodeHelper.open_session(self.address, self.api, relayer):
-            self.session_management[relayer] = SessionToSocket(session)
+        if session := await NodeHelper.open_session(
+            self.address,
+            self.api,
+            relayer,
+            self.p2p_endpoint,
+        ):
+            self.session_management[relayer] = SessionToSocket(
+                session,
+                self.p2p_endpoint,
+            )
 
     @property
     def tasks(self):
@@ -497,3 +506,16 @@ class Node:
             getattr(self, method)
             for method in Utils.decorated_methods(__file__, "formalin")
         ]
+
+    @property
+    def p2p_endpoint(self):
+        if not hasattr(self, "_p2p_endpoint"):
+            pattern = r"ctdapp-([a-zA-Z]+)-node-(\d+)\.ctdapp\.([a-zA-Z]+)\."
+
+            if match := re.search(pattern, self.url):
+                deployment, index, environment = match.groups()
+                self._p2p_endpoint = f"ctdapp-{deployment}-node-{index}-p2p.ctdapp.{environment}.hoprnet.link"
+            else:
+                self._p2p_endpoint = self.url
+
+        return self._p2p_endpoint

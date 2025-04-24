@@ -4,7 +4,7 @@ from typing import Optional
 from prometheus_client import Gauge
 
 from core.api.hoprd_api import HoprdAPI
-from core.api.response_objects import Channel, Session
+from core.api.response_objects import Channel, Session, SessionFailure
 from core.components.address import Address
 from core.components.logs import configure_logging
 from core.components.session_to_socket import SessionToSocket
@@ -66,21 +66,27 @@ class NodeHelper:
 
     @classmethod
     async def open_session(
-        cls, initiator: Address, api: HoprdAPI, relayer: str
+        cls, initiator: Address, api: HoprdAPI, relayer: str, listen_host: str
     ) -> Optional[Session]:
-        logs_params = {"from": initiator.hopr, "relayer": relayer}
+        logs_params = {
+            "from": initiator.hopr,
+            "relayer": relayer,
+            "listen_host": listen_host,
+        }
         logger.debug("Opening session", logs_params)
 
-        session = await api.post_session(initiator.hopr, relayer)
-
-        if session is not None:
-            logger.debug("Opened session", {**logs_params, **session.as_dict})
-            SESSION_OPS.labels(initiator.hopr, relayer, "opened", "yes").inc()
-        else:
-            logger.warning("Failed to open a session", logs_params)
-            SESSION_OPS.labels(initiator.hopr, relayer, "opened", "no").inc()
-
-        return session
+        session = await api.post_session(initiator.hopr, relayer, listen_host)
+        match session:
+            case Session():
+                logger.debug("Opened session", {**logs_params, **session.as_dict})
+                SESSION_OPS.labels(initiator.hopr, relayer, "opened", "yes").inc()
+                return session
+            case SessionFailure():
+                logger.warning(
+                    "Failed to open a session", {**logs_params, **session.as_dict}
+                )
+                SESSION_OPS.labels(initiator.hopr, relayer, "opened", "no").inc()
+                return None
 
     @classmethod
     async def close_session(

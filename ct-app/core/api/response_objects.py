@@ -51,7 +51,7 @@ class ApiResponseObject:
 
     @property
     def as_dict(self) -> dict:
-        return {key: getattr(self, key) for key in self.keys.keys()}
+        return {key: str(getattr(self, key)) for key in self.keys.keys()}
 
     def __str__(self):
         return str(self.__dict__)
@@ -149,3 +149,7 @@ class Session(ApiResponseObject):
         "protocol": "protocol",
         "target": "target",
     }
+
+
+class SessionFailure(ApiResponseObject):
+    keys = {"status": "status", "error": "error"}

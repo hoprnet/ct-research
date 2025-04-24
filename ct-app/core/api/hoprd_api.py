@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from typing import Optional
+from typing import Optional, Union
 
 import aiohttp
 
@@ -260,7 +260,7 @@ class HoprdAPI:
         relayer: str,
         listen_host: str = ":0",
         protocol: Protocol = Protocol.UDP,
-    ) -> Optional[response.Session]:
+    ) -> Union[response.Session, response.SessionFailure]:
         """
         Creates a new client session returning the given session listening host & port over TCP or UDP.
         :param: destination: PeerID of the recipient
@@ -287,7 +287,7 @@ class HoprdAPI:
             HTTPMethod.POST, f"session/{protocol.name.lower()}", data
         )
 
-        return response.Session(resp) if is_ok else None
+        return response.Session(resp) if is_ok else response.SessionFailure(resp)
 
     async def close_session(self, session: response.Session) -> bool:
         """

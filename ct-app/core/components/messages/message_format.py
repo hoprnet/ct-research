@@ -42,7 +42,7 @@ class MessageFormat:
     def parse(cls, input_string: str):
         if len(input_string) == 0:
             raise ValueError("Input string is empty")
-            
+
         re_pattern = "^" + cls.pattern().replace("{", "(?P<").replace("}", ">.+)") + "$"
 
         match = re.compile(re_pattern).match(input_string)
@@ -67,6 +67,13 @@ class MessageFormat:
                 f"Encoded message is exceeds specified size ({len(message_as_bytes)} > {self.size})"
             )
         return message_as_bytes + b"\0" * (self.size - len(message_as_bytes))
+
+    def __eq__(self, other):
+        if not isinstance(other, MessageFormat):
+            return False
+        return all(
+            getattr(self, param) == getattr(other, param) for param in self.params
+        )
 
     def __repr__(self):
         return f"{self.__class__.__name__} ({', '.join([f'{param}={getattr(self, param)}' for param in self.params])})"
