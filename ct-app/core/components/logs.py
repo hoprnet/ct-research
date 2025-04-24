@@ -20,13 +20,15 @@ class JSONFormatter:
             "threadId": record.threadName,
             "_line": record.lineno,
             "_file": record.filename,
-            "_fields": {
+            "fields": {
                 "message": record.msg % record.args
             }
         }
 
         if isinstance(record.args, dict):
-            result["_fields"]["args"] = record.args
+            for key, value in record.args.items():
+                result["fields"][key] = value
+
 
         if record.exc_info:
             result["full_message"] = traceback.format_exception(
