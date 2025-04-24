@@ -18,8 +18,8 @@ class JSONFormatter:
             "timestamp": timestamp,
             "level": record.levelname,
             "threadId": record.threadName,
-            "_line": record.lineno,
-            "_file": record.filename,
+            "log_file": record.filename,
+            "log_line": record.lineno,
             "fields": {
                 "message": record.msg % record.args
             }
