@@ -1,11 +1,12 @@
 import socket
+from typing import Optional
 
 from core.api.protocol import Protocol
 from core.api.response_objects import Session
 
 
 class SessionToSocket:
-    def __init__(self, session: Session, host: str, timeout: int = 5):
+    def __init__(self, session: Session, host: str, timeout: int = 0.05):
         self.session = session
         self.connect_address = host
 
@@ -63,16 +64,17 @@ class SessionToSocket:
         else:
             raise ValueError(f"Invalid protocol: {self.session.protocol}")
 
-    def receive(self, size: int) -> str:
+    def receive(self, size: int) -> Optional[list[str]]:
         """
-        Receives data from the peer.
+        Receives data from the peer. In case off multiple message in the same packet, which should
+        not happen, they are already split and returned as a list.
         """
         if self.session.protocol != Protocol.UDP:
             raise ValueError(f"Invalid protocol: {self.session.protocol}")
 
         try:
             data, _ = self.socket.recvfrom(size)
+            return data.rstrip(b"\0").decode().split("\n")
         except Exception:
-            data = b""
+            return None
 
-        return data.rstrip(b"\0").decode()

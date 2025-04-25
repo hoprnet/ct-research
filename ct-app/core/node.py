@@ -409,24 +409,28 @@ class Node:
         if self.address is None:
             return
 
-        for relayer, s in self.session_management.items():
+        for _, s in self.session_management.items():
             buffer_size: int = (
                 self.params.sessions.packetSize * self.params.sessions.numPackets
             )
-            messages = s.receive(buffer_size).split("\n")
+            messages = s.receive(buffer_size)
+
+            if messages is None:
+                continue
 
             for m in messages:
                 try:
                     message = MessageFormat.parse(m)
                 except ValueError as err:
-                    logger.exception(
+                    logger.error(
                         "Error while parsing message",
                         {"error": err, **self.log_base_params},
                     )
                     continue
 
                 if message.timestamp and message.relayer:
-                    rtt = (datetime.now() - message.timestamp) / 1000
+                    rtt = (int(datetime.now().timestamp() * 1000) -
+                           message.timestamp) / 1000
 
                     MESSAGES_DELAYS.labels(self.address.hopr, message.relayer).observe(
                         rtt
