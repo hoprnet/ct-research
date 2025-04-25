@@ -512,14 +512,23 @@ class Node:
         ]
 
     @property
-    def p2p_endpoint(self):
-        if not hasattr(self, "_p2p_endpoint"):
-            pattern = r"ctdapp-([a-zA-Z]+)-node-(\d+)\.ctdapp\.([a-zA-Z]+)\."
+    def p2p_endpoint(self):        
+        if hasattr(self, "_p2p_endpoint"):
+            return self._p2p_endpoint
 
-            if match := re.search(pattern, self.url):
-                deployment, index, environment = match.groups()
-                self._p2p_endpoint = f"ctdapp-{deployment}-node-{index}-p2p.ctdapp.{environment}.hoprnet.link"
-            else:
-                self._p2p_endpoint = self.url.split("//")[1].split(":")[0]
+        
+        if match := re.search(r"ctdapp-([a-zA-Z]+)-node-(\d+)\.ctdapp\.([a-zA-Z]+)", self.url):
+            deployment, index, environment = match.groups()
+            self._p2p_endpoint = f"ctdapp-{deployment}-node-{index}-p2p.ctdapp.{environment}.hoprnet.link"
+        elif match := re.search(r"ctdapp-([a-zA-Z]+)-node-(\d+)-p2p-tcp", self.url):
+            deployment, index = match.groups()
+            environment = self.params.environment
+            self._p2p_endpoint = f"ctdapp-{deployment}-node-{index}-p2p.ctdapp.{environment}.hoprnet.link"
+        else:
+            self._p2p_endpoint = self.url
+            logger.warning(
+                "No match found for p2p endpoint, using url",
+                {"url": self.url, **self.log_base_params},
+            )
 
         return self._p2p_endpoint
