@@ -429,8 +429,9 @@ class Node:
                     continue
 
                 if message.timestamp and message.relayer:
-                    rtt = (int(datetime.now().timestamp() * 1000) -
-                           message.timestamp) / 1000
+                    rtt = (
+                        int(datetime.now().timestamp() * 1000) - message.timestamp
+                    ) / 1000
 
                     MESSAGES_DELAYS.labels(self.address.hopr, message.relayer).observe(
                         rtt
@@ -512,12 +513,13 @@ class Node:
         ]
 
     @property
-    def p2p_endpoint(self):        
+    def p2p_endpoint(self):
         if hasattr(self, "_p2p_endpoint"):
             return self._p2p_endpoint
 
-        
-        if match := re.search(r"ctdapp-([a-zA-Z]+)-node-(\d+)\.ctdapp\.([a-zA-Z]+)", self.url):
+        if match := re.search(
+            r"ctdapp-([a-zA-Z]+)-node-(\d+)\.ctdapp\.([a-zA-Z]+)", self.url
+        ):
             deployment, index, environment = match.groups()
             self._p2p_endpoint = f"ctdapp-{deployment}-node-{index}-p2p.ctdapp.{environment}.hoprnet.link"
         elif match := re.search(r"ctdapp-([a-zA-Z]+)-node-(\d+)-p2p-tcp", self.url):

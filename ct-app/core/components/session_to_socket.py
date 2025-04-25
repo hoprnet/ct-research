@@ -77,4 +77,3 @@ class SessionToSocket:
             return data.rstrip(b"\0").decode().split("\n")
         except Exception:
             return None
-
