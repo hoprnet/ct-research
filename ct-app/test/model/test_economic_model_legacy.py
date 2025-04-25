@@ -1,4 +1,5 @@
 import pytest
+
 from core.economic_model import (
     Budget,
     Coefficients,

@@ -116,8 +116,7 @@ class Peer:
     async def message_delay(self) -> float:
         value = None
         if self.yearly_message_count is not None and self.yearly_message_count > 0:
-            # 2x delay as the loopback session hops twice by the relay
-            value = SECONDS_IN_A_NON_LEAP_YEAR / self.yearly_message_count * 2
+            value = SECONDS_IN_A_NON_LEAP_YEAR / self.yearly_message_count
 
         DELAY.labels(self.address.hopr).set(value if value is not None else 0)
 
