@@ -486,9 +486,19 @@ class Node:
             )
 
     async def open_sessions(self, allowed_addresses: list[Address]):
+        if self.channels is None:
+            logger.warning("No channels found yet", self.log_base_params)
+            return
+
+        peer_ids_with_channels = set(
+            [c.destination_peer_id for c in self.channels.outgoing]
+        )
+
         allowed_peer_ids = set([address.hopr for address in allowed_addresses])
         peer_ids_with_session = set(self.session_management.keys())
-        without_session_peer_ids = allowed_peer_ids - peer_ids_with_session
+        without_session_peer_ids = peer_ids_with_channels.intersection(
+            allowed_peer_ids - peer_ids_with_session
+        )
 
         for peer_id in without_session_peer_ids:
             AsyncLoop.add(self.open_session, peer_id, publish_to_task_set=False)

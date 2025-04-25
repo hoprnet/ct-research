@@ -113,8 +113,8 @@ class HoprdAPI:
                 await asyncio.sleep(backoff)
 
             except asyncio.TimeoutError as err:
-                logger.exception(
-                    "Timeout exception while doing an API call",
+                logger.error(
+                    "Timeout error while doing an API call",
                     {
                         "error": str(err),
                         "host": self.host,
@@ -286,7 +286,8 @@ class HoprdAPI:
         is_ok, resp = await self.__call_api(
             HTTPMethod.POST, f"session/{protocol.name.lower()}", data
         )
-
+        if resp is None:
+            resp = json.dumps({"error": "client error", "status": "CLIENT_ERROR"})
         return response.Session(resp) if is_ok else response.SessionFailure(resp)
 
     async def close_session(self, session: response.Session) -> bool:
