@@ -287,7 +287,7 @@ class HoprdAPI:
             HTTPMethod.POST, f"session/{protocol.name.lower()}", data
         )
         if resp is None:
-            resp = json.dumps({"error": "client error", "status": "CLIENT_ERROR"})
+            resp = {"error": "client error", "status": "CLIENT_ERROR"}
         return response.Session(resp) if is_ok else response.SessionFailure(resp)
 
     async def close_session(self, session: response.Session) -> bool:
