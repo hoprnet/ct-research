@@ -520,6 +520,6 @@ class Node:
                 deployment, index, environment = match.groups()
                 self._p2p_endpoint = f"ctdapp-{deployment}-node-{index}-p2p.ctdapp.{environment}.hoprnet.link"
             else:
-                self._p2p_endpoint = self.url
+                self._p2p_endpoint = self.url.split("//")[1].split(":")[0]
 
         return self._p2p_endpoint
