@@ -1,4 +1,4 @@
-from core.components import Parameters
+from core.components.config_parser import Parameters
 
 
 def main():
