@@ -1,13 +1,12 @@
 import logging
 from typing import Optional
 
-from prometheus_client import Gauge
-
 from core.api.hoprd_api import HoprdAPI
 from core.api.response_objects import Channel, Session, SessionFailure
 from core.components.address import Address
 from core.components.logs import configure_logging
 from core.components.session_to_socket import SessionToSocket
+from prometheus_client import Gauge
 
 CHANNELS_OPS = Gauge("ct_channel_operation", "Channel operation", ["peer_id", "op"])
 SESSION_OPS = Gauge(
@@ -108,3 +107,17 @@ class NodeHelper:
         else:
             logger.warning("Failed to close the session", logs_params)
             SESSION_OPS.labels(initiator.hopr, relayer, "closed", "no").inc()
+
+    @classmethod
+    async def close_session_blindly(cls, initator: Address, api: HoprdAPI, session:  Session):
+        logs_params = {"from": initator.hopr, "session": session.id}
+        logger.debug("Closing the session blindly", logs_params)
+
+        ok = await api.close_session(session)
+
+        if ok:
+            logger.info("Closed the session blindly", logs_params)
+            SESSION_OPS.labels(initator.hopr, session.relayer, "closed", "yes").inc()
+        else:
+            logger.warning("Failed to close the session blindly", logs_params)
+            SESSION_OPS.labels(initator.hopr, session.relayer, "closed", "no").inc()
