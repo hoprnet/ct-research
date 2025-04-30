@@ -397,8 +397,10 @@ class Core:
         """
         logger.info("CTCore started", {"num_nodes": len(self.nodes)})
 
-        [await node._healthcheck() for node in self.nodes]
-        [await node.close_sessions_blindly() for node in self.nodes]
+        await AsyncLoop.gather_any([node._healthcheck() for node in self.nodes])
+        await AsyncLoop.gather_any(
+            [node.close_sessions_blindly() for node in self.nodes]
+        )
 
         AsyncLoop.update(sum([node.tasks for node in self.nodes], []))
         AsyncLoop.update(self.tasks)
