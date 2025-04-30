@@ -4,9 +4,10 @@ import logging
 import re
 from datetime import datetime
 
+from prometheus_client import Gauge, Histogram
+
 from core.components.asyncloop import AsyncLoop
 from core.components.logs import configure_logging
-from prometheus_client import Gauge, Histogram
 
 from .api import HoprdAPI, Protocol
 from .components import LockedVar, Parameters, Peer, Utils
@@ -465,34 +466,41 @@ class Node:
         )
 
     @master(flagguard, formalin, connectguard)
-    async def close_sessions(self, blindly: bool = False):
+    async def close_sessions(self):
         active_sessions = await self.api.get_sessions(Protocol.UDP)
-        
-        if blindly:
-            for session in active_sessions:
-                AsyncLoop.add(
-                    NodeHelper.close_session_blindly,
-                    self.address,
-                    self.api,
-                    session,
-                    publish_to_task_set=False,
-                )
-        else:
-            to_remove = [
-                peer_id
-                for peer_id, s in self.session_management.items()
-                if s.session not in active_sessions
-            ]
 
-            for peer_id in to_remove:
-                AsyncLoop.add(
-                    NodeHelper.close_session,
-                    self.address,
-                    self.api,
-                    peer_id,
-                    self.session_management.pop(peer_id),
-                    publish_to_task_set=False,
-                )
+        to_remove = [
+            peer_id
+            for peer_id, s in self.session_management.items()
+            if s.session not in active_sessions
+        ]
+
+        for peer_id in to_remove:
+            AsyncLoop.add(
+                NodeHelper.close_session,
+                self.address,
+                self.api,
+                peer_id,
+                self.session_management.pop(peer_id),
+                publish_to_task_set=False,
+            )
+
+    async def close_sessions_blindly(self):
+        """
+        Close all sessions without checking if they are active, or if a socket is associated.
+        Also, doesn't remove the session from the session_management dict.
+        This method should run on startup to clean up any old sessions.
+        """
+        active_sessions = await self.api.get_sessions(Protocol.UDP)
+
+        for session in active_sessions:
+            AsyncLoop.add(
+                NodeHelper.close_session_blindly,
+                self.address,
+                self.api,
+                session,
+                publish_to_task_set=False,
+            )
 
     async def open_sessions(self, allowed_addresses: list[Address]):
         if self.channels is None:
