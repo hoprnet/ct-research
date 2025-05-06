@@ -1,13 +1,13 @@
 # region Imports
 import asyncio
 import logging
-import re
 from datetime import datetime
 
 from prometheus_client import Gauge, Histogram
 
 from core.components.asyncloop import AsyncLoop
 from core.components.logs import configure_logging
+from core.components.pattern_matcher import PatternMatcher
 
 from .api import HoprdAPI, Protocol
 from .components import LockedVar, Parameters, Peer, Utils
@@ -413,32 +413,29 @@ class Node:
             buffer_size: int = (
                 self.params.sessions.packetSize * self.params.sessions.numPackets
             )
-            messages = s.receive(buffer_size)
+            encoded_message = s.receive(buffer_size)
 
-            if messages is None:
+            if encoded_message is None:
                 continue
 
-            for m in messages:
-                try:
-                    message = MessageFormat.parse(m)
-                except ValueError as err:
-                    logger.error(
-                        "Error while parsing message",
-                        {"error": err, **self.log_base_params},
-                    )
-                    continue
+            try:
+                message = MessageFormat.parse(encoded_message)
+            except ValueError as err:
+                logger.error(
+                    "Error while parsing message",
+                    {"error": str(err), **self.log_base_params},
+                )
+                continue
 
-                if message.timestamp and message.relayer:
-                    rtt = (
-                        int(datetime.now().timestamp() * 1000) - message.timestamp
-                    ) / 1000
+            if message.timestamp and message.relayer:
+                rtt = (
+                    int(datetime.now().timestamp() * 1000) - message.timestamp
+                ) / 1000
 
-                    MESSAGES_DELAYS.labels(self.address.hopr, message.relayer).observe(
-                        rtt
-                    )
-                    MESSAGES_STATS.labels(
-                        "relayed", self.address.hopr, message.relayer
-                    ).inc()
+                MESSAGES_DELAYS.labels(self.address.hopr, message.relayer).observe(rtt)
+                MESSAGES_STATS.labels(
+                    "relayed", self.address.hopr, message.relayer
+                ).inc()
 
     @master(flagguard, formalin, connectguard)
     async def observe_message_queue(self):
@@ -544,20 +541,23 @@ class Node:
         if hasattr(self, "_p2p_endpoint"):
             return self._p2p_endpoint
 
-        if match := re.search(
-            r"ctdapp-([a-zA-Z]+)-node-(\d+)\.ctdapp\.([a-zA-Z]+)", self.url
-        ):
-            deployment, index, environment = match.groups()
-            self._p2p_endpoint = f"ctdapp-{deployment}-node-{index}-p2p.ctdapp.{environment}.hoprnet.link"
-        elif match := re.search(r"ctdapp-([a-zA-Z]+)-node-(\d+)-p2p-tcp", self.url):
-            deployment, index = match.groups()
-            environment = self.params.environment
-            self._p2p_endpoint = f"ctdapp-{deployment}-node-{index}-p2p.ctdapp.{environment}.hoprnet.link"
+        target_url = "ctdapp-{}-node-{}-p2p.ctdapp.{}.hoprnet.link"
+        patterns = [
+            PatternMatcher(r"ctdapp-([a-zA-Z]+)-node-(\d+)\.ctdapp\.([a-zA-Z]+)"),
+            PatternMatcher(
+                r"ctdapp-([a-zA-Z]+)-node-(\d+)-p2p-tcp", self.params.environment
+            ),
+        ]
+
+        for pattern in patterns:
+            if groups := pattern.search(self.url):
+                self._p2p_endpoint = target_url.format(*groups)
+                break
         else:
-            self._p2p_endpoint = self.url
             logger.warning(
                 "No match found for p2p endpoint, using url",
                 {"url": self.url, **self.log_base_params},
             )
+            self._p2p_endpoint = self.url
 
         return self._p2p_endpoint

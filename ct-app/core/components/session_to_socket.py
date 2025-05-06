@@ -64,7 +64,7 @@ class SessionToSocket:
         else:
             raise ValueError(f"Invalid protocol: {self.session.protocol}")
 
-    def receive(self, size: int) -> Optional[list[str]]:
+    def receive(self, size: int) -> Optional[str]:
         """
         Receives data from the peer. In case off multiple message in the same packet, which should
         not happen, they are already split and returned as a list.
@@ -74,6 +74,6 @@ class SessionToSocket:
 
         try:
             data, _ = self.socket.recvfrom(size)
-            return data.rstrip(b"\0").decode().split("\n")
+            return data.rstrip(b"\0").decode()
         except Exception:
             return None
