@@ -3,7 +3,15 @@ from datetime import datetime
 
 
 class MessageFormat:
-    params = ["size", "relayer", "index", "inner_index", "multiplier", "timestamp"]
+    params = [
+        "size",
+        "relayer",
+        "sender",
+        "index",
+        "inner_index",
+        "multiplier",
+        "timestamp",
+    ]
     range = int(1e5)
     index = 0
 
@@ -11,12 +19,14 @@ class MessageFormat:
         self,
         size: int,
         relayer: str,
+        sender: str = None,
         index: str = None,
         inner_index: int = None,
         multiplier: int = None,
         timestamp: str = None,
     ):
         self.size = int(size)
+        self.sender = sender
         self.relayer = relayer
         self.index = int(index) if index else self.message_index
         self.timestamp = (
@@ -76,4 +86,4 @@ class MessageFormat:
         )
 
     def __repr__(self):
-        return f"{self.__class__.__name__} ({', '.join([f'{param}={getattr(self, param)}' for param in self.params])})"
+        return f"{self.__class__.__name__}({', '.join([f'{param}={getattr(self, param)}' for param in self.params])})"

@@ -39,8 +39,7 @@ flags:
 
     closeSessions: 30
 
-    observeMessageQueue: On  # should only be On / Off
-    observeRelayedMessages: 10
+    observeMessageQueue: On # should only be On / Off
 
   peer:
     messageRelayRequest: On # should only be On / Off
@@ -104,7 +103,7 @@ peer:
   # the queue size but also privacy as the load gets less spread over time. 
   # NOTE: Should be replaced by a dynamic approch, by setting the minimum delay
   # acceptable before increasing the batch size accordingly (auto-mode)
-  messageMultiplier: 10
+  messageMultiplier: 1
 
 # =============================================================================
 # 
@@ -119,7 +118,7 @@ channel:
 # =============================================================================
 sessions:
   packetSize: 462 # TODO 3.0: change to 762
-  numPackets: 10
+  numPackets: 2
 
 # =============================================================================
 # 

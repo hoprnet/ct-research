@@ -1,9 +1,9 @@
 import asyncio
 import logging
 import os
-import random
 import re
 import sys
+from random import randint
 
 from dotenv import load_dotenv
 from lib.state import State
@@ -17,13 +17,16 @@ from core.components.session_to_socket import SessionToSocket
 
 load_dotenv()
 
+PACKET_SIZE = 462
+NUM_SENDING = 1
+AGGREGATED_MESSAGES = 3
 
 logger = logging.getLogger("core.api.hoprd_api")
 logger.setLevel(logging.INFO)
 
 
 async def main(relayer: str = "12D3KooWPq6mC6uewNRANc4YRcigkP1bEUKUFkLX2fBB6deP32Z7"):
-    host = os.getenv("HOST_FORMAT") % ("green", "1", "staging")
+    host = os.getenv("HOST_FORMAT") % ("green", randint(1, 5), "staging")
     token = os.getenv("TOKEN")
 
     pattern = r"ctdapp-([a-zA-Z]+)-node-(\d+)\.ctdapp\.([a-zA-Z]+)\."
@@ -70,14 +73,28 @@ async def main(relayer: str = "12D3KooWPq6mC6uewNRANc4YRcigkP1bEUKUFkLX2fBB6deP3
             return
 
     # send data through socket
-    socket = SessionToSocket(session, p2p_host)
-    message = MessageFormat(random.randint(100, 462), relayer, 1, 1, 1)
+    socket = SessionToSocket(session, p2p_host, 0.1)
+    for _ in range(NUM_SENDING):
+        message = MessageFormat(AGGREGATED_MESSAGES * PACKET_SIZE, relayer, 1, 1, 1)
+        message.sender = own_addresses.hopr
 
-    size = socket.send(message.bytes())
-    data = socket.receive(size)
-    received = MessageFormat.parse(data)
-
-    print(State.fromBool(received == message), "Received message back")
+        size = socket.send(message.bytes())
+        print(
+            State.SUCCESS,
+            f"Sent message\n\t {size} bytes, {size / PACKET_SIZE:.1f} HOPR packets",
+        )
+        if (
+            (response := socket.receive(size))
+            and (data := response[0])
+            and (recv_size := response[1])
+        ):
+            received = MessageFormat.parse(data)
+            print(
+                State.fromBool(received == message),
+                f"Received message\n\t {recv_size} bytes, {recv_size / PACKET_SIZE:.1f} HOPR packets",
+            )
+        else:
+            print(State.FAILURE, "No message received")
 
     # close session
     if session:

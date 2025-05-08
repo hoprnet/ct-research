@@ -252,7 +252,7 @@ class HoprdAPI:
             HTTPMethod.GET, f"session/{protocol.name.lower()}"
         )
 
-        return [response.Session(s) for s in resp] if is_ok else None
+        return [response.Session(s) for s in resp] if is_ok else []
 
     async def post_session(
         self,

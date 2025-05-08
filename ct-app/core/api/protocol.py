@@ -14,7 +14,7 @@ class TCPProtocol(ProtocolTemplate):
 
 class UDPProtocol(ProtocolTemplate):
     def __init__(self):
-        super().__init__(retransmit=False, segment=False)
+        super().__init__(retransmit=False, segment=True)
 
 
 class Protocol(Enum):

@@ -3,7 +3,7 @@ import asyncio
 import logging
 from datetime import datetime
 
-from prometheus_client import Gauge, Histogram
+from prometheus_client import Gauge
 
 from core.components.asyncloop import AsyncLoop
 from core.components.logs import configure_logging
@@ -24,13 +24,6 @@ BALANCE = Gauge("ct_balance", "Node balance", ["peer_id", "token"])
 CHANNELS = Gauge("ct_channels", "Node channels", ["peer_id", "direction"])
 CHANNEL_FUNDS = Gauge("ct_channel_funds", "Total funds in out. channels", ["peer_id"])
 HEALTH = Gauge("ct_node_health", "Node health", ["peer_id"])
-MESSAGES_DELAYS = Histogram(
-    "ct_messages_delays",
-    "Messages delays",
-    ["sender", "relayer"],
-    buckets=[0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2.5],
-)
-MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer"])
 PEERS_COUNT = Gauge("ct_peers_count", "Node peers", ["peer_id"])
 # endregion
 
@@ -402,45 +395,8 @@ class Node:
         return total
 
     @master(flagguard, formalin, connectguard)
-    async def observe_relayed_messages(self):
-        """
-        Check the inbox for messages.
-        """
-        if self.address is None:
-            return
-
-        for _, s in self.session_management.items():
-            buffer_size: int = (
-                self.params.sessions.packetSize * self.params.sessions.numPackets
-            )
-            encoded_message = s.receive(buffer_size)
-
-            if encoded_message is None:
-                continue
-
-            try:
-                message = MessageFormat.parse(encoded_message)
-            except ValueError as err:
-                logger.error(
-                    "Error while parsing message",
-                    {"error": str(err), **self.log_base_params},
-                )
-                continue
-
-            if message.timestamp and message.relayer:
-                rtt = (
-                    int(datetime.now().timestamp() * 1000) - message.timestamp
-                ) / 1000
-
-                MESSAGES_DELAYS.labels(self.address.hopr, message.relayer).observe(rtt)
-                MESSAGES_STATS.labels(
-                    "relayed", self.address.hopr, message.relayer
-                ).inc()
-
-    @master(flagguard, formalin, connectguard)
     async def observe_message_queue(self):
         message: MessageFormat = await MessageQueue().get_async()
-        # TODO: maybe set the timestamp here ?
 
         if self.channels is None:
             logger.warning("No channels found yet")
@@ -454,13 +410,14 @@ class Node:
             if message.relayer not in checklist:
                 return
 
-        for _ in range(message.multiplier):
-            self.session_management[message.relayer].send(message.bytes())
+        message.sender = self.address.hopr
+        for _ in range(5):
+            AsyncLoop.add(
+                self.session_management[message.relayer].send_and_receive,
+                message,
+                publish_to_task_set=False,
+            )
             message.increase_inner_index()
-
-        MESSAGES_STATS.labels("sent", self.address.hopr, message.relayer).inc(
-            message.multiplier
-        )
 
     @master(flagguard, formalin, connectguard)
     async def close_sessions(self):
@@ -482,7 +439,7 @@ class Node:
                 publish_to_task_set=False,
             )
 
-    async def close_sessions_blindly(self):
+    async def close_all_sessions(self):
         """
         Close all sessions without checking if they are active, or if a socket is associated.
         Also, doesn't remove the session from the session_management dict.
@@ -525,8 +482,7 @@ class Node:
             self.p2p_endpoint,
         ):
             self.session_management[relayer] = SessionToSocket(
-                session,
-                self.p2p_endpoint,
+                session, self.p2p_endpoint
             )
 
     @property

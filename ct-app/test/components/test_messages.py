@@ -1,6 +1,7 @@
 from core.components.messages import MessageFormat
 
-relayer = "12D3KooWPq6mC6uewNRANc4YRcigkP1bEUKUFkLX2fBB6deP32Z7s"
+relayer = "12D3KooWPq6mC6uewNRANc4YRcigkP1bEUKUFkLX2fBB6deP32Zr"
+sender = "12D3KooWJ6mC6uewNRANc4YRcigkP1bEUKUFkLX2fBB6deP32Zs"
 default_size = 1000
 
 
@@ -15,10 +16,11 @@ def test_create_message():
 
 
 def test_parse_message():
-    encoded = MessageFormat(default_size, relayer, multiplier=10)
+    encoded = MessageFormat(default_size, relayer, sender, multiplier=10)
     decoded = MessageFormat.parse(encoded.format())
 
     assert decoded.relayer == encoded.relayer
+    assert decoded.sender == encoded.sender
     assert decoded.timestamp == encoded.timestamp
     assert decoded.index == encoded.index
     assert decoded.multiplier == encoded.multiplier
