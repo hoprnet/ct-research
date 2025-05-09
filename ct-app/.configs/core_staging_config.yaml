@@ -53,7 +53,7 @@ economicModel:
 
   legacy:
     proportion: 1.0
-    apr: 0.000003
+    apr: 0.000002
 
     coefficients:
       a: 1
