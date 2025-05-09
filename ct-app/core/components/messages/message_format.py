@@ -4,7 +4,7 @@ from datetime import datetime
 
 class MessageFormat:
     params = [
-        "size",
+        "packet_size",
         "relayer",
         "sender",
         "index",
@@ -17,7 +17,7 @@ class MessageFormat:
 
     def __init__(
         self,
-        size: int,
+        packet_size: int,
         relayer: str,
         sender: str = None,
         index: str = None,
@@ -25,7 +25,7 @@ class MessageFormat:
         multiplier: int = None,
         timestamp: str = None,
     ):
-        self.size = int(size)
+        self.packet_size = int(packet_size)
         self.sender = sender
         self.relayer = relayer
         self.index = int(index) if index else self.message_index
@@ -37,6 +37,10 @@ class MessageFormat:
         self.multiplier = int(multiplier) if multiplier else 1
         self.inner_index = int(inner_index) if inner_index else 1
 
+    @property
+    def size(self):
+        return self.packet_size * self.multiplier
+        
     @property
     def message_index(self):
         value = self.__class__.index

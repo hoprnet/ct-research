@@ -411,7 +411,7 @@ class Node:
                 return
 
         message.sender = self.address.hopr
-        for _ in range(5):
+        for _ in range(self.params.sessions.batchSize):
             AsyncLoop.add(
                 self.session_management[message.relayer].send_and_receive,
                 message,

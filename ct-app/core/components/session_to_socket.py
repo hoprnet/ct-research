@@ -116,8 +116,8 @@ class SessionToSocket:
         rtt = (timestamp - message.timestamp) / 1000
 
         # convert to number of messages instead of bytes
-        sent_count = sent_size / 476
-        recv_count = recv_size / 476
+        sent_count = sent_size / message.packet_size
+        recv_count = recv_size / message.packet_size
 
         MESSAGES_STATS.labels("sent", message.sender, message.relayer).inc(sent_count)
         MESSAGES_STATS.labels("relayed", message.sender, message.relayer).inc(

@@ -53,7 +53,7 @@ economicModel:
 
   legacy:
     proportion: 1.0
-    apr: 0.0000015
+    apr: 0.000003
 
     coefficients:
       a: 1
@@ -118,7 +118,8 @@ channel:
 # =============================================================================
 sessions:
   packetSize: 462 # TODO 3.0: change to 762
-  numPackets: 2
+  aggregatedPackets: 2
+  batchSize: 5
 
 # =============================================================================
 # 

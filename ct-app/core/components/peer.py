@@ -157,14 +157,14 @@ class Peer:
             return
 
         if delay := await self.message_delay:
-            multiplier: int = self.params.sessions.numPackets
+            multiplier: int = self.params.sessions.aggregatedPackets
             message = MessageFormat(
-                self.params.sessions.packetSize * multiplier,
+                self.params.sessions.packetSize,
                 self.address.hopr,
                 multiplier=multiplier,
             )
             await MessageQueue().put_async(message)
-            await asyncio.sleep(delay * multiplier * 5)
+            await asyncio.sleep(delay * multiplier * self.params.sessions.batchSize)
 
         else:
             await asyncio.sleep(
