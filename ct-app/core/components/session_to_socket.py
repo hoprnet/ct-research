@@ -21,7 +21,7 @@ MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer"])
 
 class SessionToSocket:
     def __init__(
-        self, session: Session, connect_address: str, timeout: Optional[int] = 0.2
+        self, session: Session, connect_address: str, timeout: Optional[int] = 0.05
     ):
         self.session = session
         self.connect_address = connect_address
@@ -116,8 +116,8 @@ class SessionToSocket:
         rtt = (timestamp - message.timestamp) / 1000
 
         # convert to number of messages instead of bytes
-        sent_count = sent_size / message.multiplier
-        recv_count = recv_size / message.multiplier
+        sent_count = sent_size / 476
+        recv_count = recv_size / 476
 
         MESSAGES_STATS.labels("sent", message.sender, message.relayer).inc(sent_count)
         MESSAGES_STATS.labels("relayed", message.sender, message.relayer).inc(
