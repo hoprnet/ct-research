@@ -21,12 +21,37 @@ members = [
 [dependency-groups]
 dev = [
     "ruff>=0.11.4",
+    "dotenv>=0.9.9",
     "test",
 ]
 lint = [
     "black==25.1.0",
 ]
 
+## will be enabled in a future PR to avoid overloading the changes
+# [tool.black]
+# line-length = 120
+# target-version = ['py312']
+# include = '\.pyi?$'
 
-[tool.uv]
-default-groups = "all"
+# [tool.ruff]
+# line-length = 120
+# # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
+# lint.select = ["E", "F"]
+# lint.ignore = []
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+minversion = "7.0"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+addopts = ["-ra", "-q"]
+
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+
+log_level = "INFO"
+log_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
+log_date_format = "%Y-%m-%d %H:%M:%S"

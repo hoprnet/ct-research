@@ -7,7 +7,6 @@ from prometheus_client import start_http_server
 from core.components.logs import configure_logging
 
 from .components import AsyncLoop, Parameters, Utils
-from .components.messages import MessageQueue
 from .core import Core
 from .node import Node
 
@@ -23,11 +22,13 @@ def main(configfile: str):
 
     params = Parameters()
     params.parse(config, entrypoint=True)
-    params.from_env("SUBGRAPH", "PG")
+    params.from_env("SUBGRAPH")
     params.overrides("OVERRIDE")
 
     # create the core and nodes instances
-    nodes = Node.fromCredentials(*Utils.nodesCredentials("NODE_ADDRESS", "NODE_KEY"))
+    nodes = [
+        Node(*pair) for pair in zip(*Utils.nodesCredentials("NODE_ADDRESS", "NODE_KEY"))
+    ]
 
     # start the prometheus client
     try:
@@ -42,8 +43,6 @@ def main(configfile: str):
     core = Core(nodes, params)
 
     AsyncLoop.run(core.start, core.stop)
-
-    MessageQueue.clear()
 
 
 if __name__ == "__main__":
