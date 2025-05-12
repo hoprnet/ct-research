@@ -117,7 +117,7 @@ channel:
 # 
 # =============================================================================
 sessions:
-  packetSize: 462 # TODO 3.0: change to 762
+  packetSize: 450 # TODO 3.0: change to 762
   aggregatedPackets: 3
   batchSize: 5
 
