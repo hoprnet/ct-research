@@ -1,7 +1,5 @@
 class Metric:
-    def __init__(
-        self, text: str, value: float, suffix: str = "", cdt: bool or str = None
-    ):
+    def __init__(self, text: str, value: float, suffix: str = "", cdt: bool or str = None):
         """
         Initialisation of the class.
         """

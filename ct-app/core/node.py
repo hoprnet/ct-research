@@ -87,9 +87,7 @@ class Node:
         addresses = await self.api.get_address()
 
         if addresses is None:
-            logger.warning(
-                "No results while retrieving addresses", self.log_base_params
-            )
+            logger.warning("No results while retrieving addresses", self.log_base_params)
             return
         self.address = Address(addresses.hopr, addresses.native)
 
@@ -127,9 +125,7 @@ class Node:
             return None
 
         if addr := self.address:
-            logger.debug(
-                "Retrieved balances", {**vars(balances), **self.log_base_params}
-            )
+            logger.debug("Retrieved balances", {**vars(balances), **self.log_base_params})
             for token, balance in vars(balances).items():
                 if balance is None:
                     continue
@@ -243,9 +239,7 @@ class Node:
                 to_peer_history[address] = datetime.now()
                 continue
 
-            if (
-                datetime.now() - timestamp
-            ).total_seconds() < self.params.channel.maxAgeSeconds:
+            if (datetime.now() - timestamp).total_seconds() < self.params.channel.maxAgeSeconds:
                 continue
 
             channels_to_close.append(channel)
@@ -278,9 +272,7 @@ class Node:
         out_opens = [c for c in self.channels.outgoing if c.status.is_open]
 
         low_balances = [
-            c
-            for c in out_opens
-            if int(c.balance) / 1e18 <= self.params.channel.minBalance
+            c for c in out_opens if int(c.balance) / 1e18 <= self.params.channel.minBalance
         ]
 
         logger.info(
@@ -344,9 +336,7 @@ class Node:
 
         if addr := self.address:
             channels.outgoing = [
-                c
-                for c in channels.all
-                if c.source_peer_id == addr.hopr and not c.status.is_closed
+                c for c in channels.all if c.source_peer_id == addr.hopr and not c.status.is_closed
             ]
             channels.incoming = [
                 c
@@ -461,9 +451,7 @@ class Node:
             logger.warning("No channels found yet", self.log_base_params)
             return
 
-        peer_ids_with_channels = set(
-            [c.destination_peer_id for c in self.channels.outgoing]
-        )
+        peer_ids_with_channels = set([c.destination_peer_id for c in self.channels.outgoing])
 
         allowed_peer_ids = set([address.hopr for address in allowed_addresses])
         peer_ids_with_session = set(self.session_management.keys())
@@ -481,16 +469,11 @@ class Node:
             relayer,
             self.p2p_endpoint,
         ):
-            self.session_management[relayer] = SessionToSocket(
-                session, self.p2p_endpoint
-            )
+            self.session_management[relayer] = SessionToSocket(session, self.p2p_endpoint)
 
     @property
     def tasks(self):
-        return [
-            getattr(self, method)
-            for method in Utils.decorated_methods(__file__, "formalin")
-        ]
+        return [getattr(self, method) for method in Utils.decorated_methods(__file__, "formalin")]
 
     @property
     def p2p_endpoint(self):
@@ -500,9 +483,7 @@ class Node:
         target_url = "ctdapp-{}-node-{}-p2p.ctdapp.{}.hoprnet.link"
         patterns = [
             PatternMatcher(r"ctdapp-([a-zA-Z]+)-node-(\d+)\.ctdapp\.([a-zA-Z]+)"),
-            PatternMatcher(
-                r"ctdapp-([a-zA-Z]+)-node-(\d+)-p2p-tcp", self.params.environment
-            ),
+            PatternMatcher(r"ctdapp-([a-zA-Z]+)-node-(\d+)-p2p-tcp", self.params.environment),
         ]
 
         for pattern in patterns:

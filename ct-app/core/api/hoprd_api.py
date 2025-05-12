@@ -145,9 +145,7 @@ class HoprdAPI:
         """
         data = request.OpenChannelBody(amount, peer_address)
 
-        is_ok, resp = await self.__call_api(
-            HTTPMethod.POST, "channels", data, timeout=90
-        )
+        is_ok, resp = await self.__call_api(HTTPMethod.POST, "channels", data, timeout=90)
         return response.OpenedChannel(resp) if is_ok else None
 
     async def fund_channel(self, channel_id: str, amount: float) -> bool:
@@ -170,9 +168,7 @@ class HoprdAPI:
         :param: channel_id: str
         :return: bool
         """
-        is_ok, _ = await self.__call_api(
-            HTTPMethod.DELETE, f"channels/{channel_id}", timeout=90
-        )
+        is_ok, _ = await self.__call_api(HTTPMethod.DELETE, f"channels/{channel_id}", timeout=90)
         return is_ok
 
     async def channels(self) -> response.Channels:
@@ -182,9 +178,7 @@ class HoprdAPI:
         """
         params = request.GetChannelsBody("true", "false")
 
-        is_ok, resp = await self.__call_api(
-            HTTPMethod.GET, f"channels?{params.as_header_string}"
-        )
+        is_ok, resp = await self.__call_api(HTTPMethod.GET, f"channels?{params.as_header_string}")
         return response.Channels(resp) if is_ok else None
 
     async def peers(
@@ -200,9 +194,7 @@ class HoprdAPI:
         """
         params = request.GetPeersBody(quality)
 
-        is_ok, resp = await self.__call_api(
-            HTTPMethod.GET, f"node/peers?{params.as_header_string}"
-        )
+        is_ok, resp = await self.__call_api(HTTPMethod.GET, f"node/peers?{params.as_header_string}")
 
         if not is_ok:
             return []
@@ -240,17 +232,13 @@ class HoprdAPI:
             else None
         )
 
-    async def get_sessions(
-        self, protocol: Protocol = Protocol.UDP
-    ) -> list[response.Session]:
+    async def get_sessions(self, protocol: Protocol = Protocol.UDP) -> list[response.Session]:
         """
         Lists existing Session listeners for the given IP protocol
         :param: protocol: Protocol
         :return: list[Session]
         """
-        is_ok, resp = await self.__call_api(
-            HTTPMethod.GET, f"session/{protocol.name.lower()}"
-        )
+        is_ok, resp = await self.__call_api(HTTPMethod.GET, f"session/{protocol.name.lower()}")
 
         return [response.Session(s) for s in resp] if is_ok else []
 
@@ -262,7 +250,7 @@ class HoprdAPI:
         protocol: Protocol = Protocol.UDP,
     ) -> Union[response.Session, response.SessionFailure]:
         """
-        Creates a new client session returning the given session listening host & port over TCP or UDP.
+        Creates a new session returning the session listening host & port over TCP or UDP.
         :param: destination: PeerID of the recipient
         :param: relayer: PeerID of the relayer
         :param: listen_host: str
@@ -303,7 +291,7 @@ class HoprdAPI:
 
     async def healthyz(self, timeout: int = 20) -> bool:
         """
-        Checks if the node is healthy. Return True if `healthyz` returns 200 after max `timeout` seconds.
+        Checks if the node is healthy. Return True if `healthyz` returns 200 before timeout.
         """
         return await HoprdAPI.checkStatus(f"{self.host}/healthyz", 200, timeout)
 

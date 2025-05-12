@@ -44,7 +44,5 @@ class Safe(SubgraphEntry):
         """
         Create a new Safe with default values.
         """
-        address = "1x" + "".join(
-            [str(hex(random.randint(0, 15)))[2] for _ in range(40)]
-        )
+        address = "1x" + "".join([str(hex(random.randint(0, 15)))[2] for _ in range(40)])
         return cls(address, "1", "0", [])

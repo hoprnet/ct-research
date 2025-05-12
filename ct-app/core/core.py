@@ -37,7 +37,8 @@ logger = logging.getLogger(__name__)
 
 class Core:
     """
-    The Core class represents the main class of the application. It is responsible for managing the nodes, the economic model and the distribution of rewards.
+    The Core class represents the main class of the application. It is responsible for managing
+    the nodes, the economic model and the distribution of rewards.
     """
 
     def __init__(self, nodes: list[Node], params: Parameters):
@@ -155,14 +156,10 @@ class Core:
         for node in results:
             STAKE.labels(node.safe.address, "balance").set(node.safe.balance)
             STAKE.labels(node.safe.address, "allowance").set(node.safe.allowance)
-            STAKE.labels(node.safe.address, "additional_balance").set(
-                node.safe.additional_balance
-            )
+            STAKE.labels(node.safe.address, "additional_balance").set(node.safe.additional_balance)
 
         self.registered_nodes_data = results
-        logger.debug(
-            "Fetched registered nodes in the safe registry", {"count": len(results)}
-        )
+        logger.debug("Fetched registered nodes in the safe registry", {"count": len(results)})
         SUBGRAPH_SIZE.set(len(results))
 
     @master(flagguard, formalin)
@@ -183,7 +180,8 @@ class Core:
     async def allocations(self):
         """
         Gets all allocations for the investors.
-        The amount per investor is then added to their stake before dividing it by the number of nodes they are running.
+        The amount per investor is then added to their stake before dividing it by the number
+        of nodes they are running.
         """
         results = list[entries.Allocation]()
         for account in await self.providers[Type.MAINNET_ALLOCATIONS].get():
@@ -206,19 +204,13 @@ class Core:
 
         balances = {alloc.address: 0 for alloc in self.allocations_data}
 
-        for account in await self.providers[Type.MAINNET_BALANCES].get(
-            id_in=list(balances.keys())
-        ):
+        for account in await self.providers[Type.MAINNET_BALANCES].get(id_in=list(balances.keys())):
             balances[account["id"].lower()] += float(account["totalBalance"]) / 1e18
 
-        for account in await self.providers[Type.GNOSIS_BALANCES].get(
-            id_in=list(balances.keys())
-        ):
+        for account in await self.providers[Type.GNOSIS_BALANCES].get(id_in=list(balances.keys())):
             balances[account["id"].lower()] += float(account["totalBalance"]) / 1e18
 
-        self.eoa_balances_data = [
-            entries.Balance(key, value) for key, value in balances.items()
-        ]
+        self.eoa_balances_data = [entries.Balance(key, value) for key, value in balances.items()]
         logger.debug("Fetched investors EOA balances", {"count": len(balances)})
 
     @master(flagguard, formalin)
@@ -247,18 +239,12 @@ class Core:
         Applies the economic model to the eligible peers (after multiple filtering layers).
         """
         async with self.all_peers as peers:
-            if not all(
-                [len(self.topology_data), len(self.registered_nodes_data), len(peers)]
-            ):
+            if not all([len(self.topology_data), len(self.registered_nodes_data), len(peers)]):
                 logger.warning("Not enough data to apply economic model")
                 return
 
-            Utils.associateEntitiesToNodes(
-                self.allocations_data, self.registered_nodes_data
-            )
-            Utils.associateEntitiesToNodes(
-                self.eoa_balances_data, self.registered_nodes_data
-            )
+            Utils.associateEntitiesToNodes(self.allocations_data, self.registered_nodes_data)
+            Utils.associateEntitiesToNodes(self.eoa_balances_data, self.registered_nodes_data)
 
             await Utils.mergeDataSources(
                 self.topology_data,
@@ -281,9 +267,7 @@ class Core:
                     p.yearly_message_count = None
 
             economic_security = (
-                sum(
-                    [p.split_stake for p in peers if p.yearly_message_count is not None]
-                )
+                sum([p.split_stake for p in peers if p.yearly_message_count is not None])
                 / self.params.economicModel.sigmoid.totalTokenSupply
             )
             network_capacity = (
@@ -313,9 +297,7 @@ class Core:
                         model_input[model],
                     )
 
-                    MESSAGE_COUNT.labels(peer.address.hopr, model.name).set(
-                        message_count[model]
-                    )
+                    MESSAGE_COUNT.labels(peer.address.hopr, model.name).set(message_count[model])
 
                 peer.yearly_message_count = sum(message_count.values())
 
@@ -337,12 +319,11 @@ class Core:
     @master(flagguard, formalin)
     async def ticket_parameters(self):
         """
-        Gets the ticket price from the api. They are used in the economic model to calculate the number of messages to send to a peer.
+        Gets the ticket price from the api.
+        They are used in the economic model to calculate the number of messages to send to a peer.
         """
         ticket_price = await self.api.ticket_price()
-        logger.debug(
-            "Fetched ticket price", {"value": getattr(ticket_price, "value", None)}
-        )
+        logger.debug("Fetched ticket price", {"value": getattr(ticket_price, "value", None)})
 
         if ticket_price is not None:
             for model in self.models.values():
@@ -386,10 +367,7 @@ class Core:
 
     @property
     def tasks(self):
-        return [
-            getattr(self, method)
-            for method in Utils.decorated_methods(__file__, "formalin")
-        ]
+        return [getattr(self, method) for method in Utils.decorated_methods(__file__, "formalin")]
 
     async def start(self):
         """

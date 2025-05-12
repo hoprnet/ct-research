@@ -59,7 +59,8 @@ class MessageFormat:
         match = re.compile(re_pattern).match(input_string)
         if not match:
             raise ValueError(
-                f"Input string format is incorrect. `{input_string}` incompatible with format {cls.pattern()}"
+                f"Input string format is incorrect. `{input_string}`"
+                + "incompatible with format {cls.pattern()}"
             )
 
         return cls(*[match.group(param) for param in cls.params])
@@ -88,9 +89,8 @@ class MessageFormat:
     def __eq__(self, other):
         if not isinstance(other, MessageFormat):
             return False
-        return all(
-            getattr(self, param) == getattr(other, param) for param in self.params
-        )
+        return all(getattr(self, param) == getattr(other, param) for param in self.params)
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({', '.join([f'{param}={getattr(self, param)}' for param in self.params])})"
+        attrs_as_strs = [f"{param}={getattr(self, param)}" for param in self.params]
+        return f"{self.__class__.__name__}({', '.join(attrs_as_strs)})"

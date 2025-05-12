@@ -30,10 +30,7 @@ class Bucket:
         Calculate the APR for the bucket.
         """
         try:
-            apr = (
-                log(pow(self.upperbound / x, self.skewness) - 1) * self.flatness
-                + self.offset
-            )
+            apr = log(pow(self.upperbound / x, self.skewness) - 1) * self.flatness + self.offset
         except ValueError as err:
             raise ValueError(f"Math domain error: {x=}, {vars(self)}") from err
         except ZeroDivisionError as err:
@@ -55,9 +52,7 @@ class Bucket:
 
 
 class EconomicModelSigmoid:
-    def __init__(
-        self, offset: float, buckets: list[Bucket], max_apr: float, proportion: float
-    ):
+    def __init__(self, offset: float, buckets: list[Bucket], max_apr: float, proportion: float):
         """
         Initialisation of the class.
         """
