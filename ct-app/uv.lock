@@ -139,7 +139,7 @@ wheels = [
 
 [[package]]
 name = "core"
-version = "3.8.0"
+version = "3.11.0"
 source = { virtual = "core" }
 dependencies = [
     { name = "click" },
@@ -160,7 +160,7 @@ requires-dist = [
 
 [[package]]
 name = "core-api"
-version = "1.0.0"
+version = "1.1.0"
 source = { virtual = "core/api" }
 dependencies = [
     { name = "aiohttp" },
@@ -171,7 +171,7 @@ requires-dist = [{ name = "aiohttp", specifier = ">=3.10.11" }]
 
 [[package]]
 name = "core-components"
-version = "1.0.0"
+version = "1.0.1"
 source = { virtual = "core/components" }
 dependencies = [
     { name = "janus" },
@@ -584,7 +584,7 @@ wheels = [
 
 [[package]]
 name = "test"
-version = "3.8.0"
+version = "3.11.0"
 source = { virtual = "test" }
 dependencies = [
     { name = "pytest" },
