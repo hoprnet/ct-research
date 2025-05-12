@@ -29,11 +29,12 @@ class MessageFormat:
         self.sender = sender
         self.relayer = relayer
         self.index = int(index) if index else self.message_index
-        self.timestamp = (
-            int(float(timestamp))
-            if timestamp
-            else int(datetime.now().timestamp() * 1000)
-        )
+
+        if timestamp:
+            timestamp = int(float(timestamp))
+        else:
+            self.update_timestamp()
+            
         self.multiplier = int(multiplier) if multiplier else 1
         self.inner_index = int(inner_index) if inner_index else 1
 
@@ -81,6 +82,9 @@ class MessageFormat:
                 f"Encoded message is exceeds specified size ({len(message_as_bytes)} > {self.size})"
             )
         return message_as_bytes + b"\0" * (self.size - len(message_as_bytes))
+
+    def update_timestamp(self):
+        self.timestamp = int(datetime.now().timestamp() * 1000)
 
     def __eq__(self, other):
         if not isinstance(other, MessageFormat):

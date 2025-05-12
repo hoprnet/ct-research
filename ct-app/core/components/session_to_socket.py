@@ -100,7 +100,7 @@ class SessionToSocket:
             return None, 0, None
 
     async def send_and_receive(self, message: MessageFormat) -> float:
-        # TODO: maybe set the timestamp here ?
+        message.update_timestamp()
 
         sent_size = self.send(message.bytes())
         MESSAGES_STATS.labels("sent", message.sender, message.relayer).inc(
