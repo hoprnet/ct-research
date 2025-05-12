@@ -9,6 +9,7 @@ from .base_classes import ExplicitParams
 configure_logging()
 logger = logging.getLogger(__name__)
 
+
 class LegacyCoefficientsParams(ExplicitParams):
     keys = {
         "a": float,
@@ -67,8 +68,7 @@ class LegacyParams(ExplicitParams):
 
 
 class BucketParams(ExplicitParams):
-    keys = {"flatness": float, "skewness": float,
-            "upperbound": float, "offset": float}
+    keys = {"flatness": float, "skewness": float, "upperbound": float, "offset": float}
 
     def apr(self, x: float):
         """
@@ -90,8 +90,7 @@ class BucketParams(ExplicitParams):
 
 
 class BucketsParams(ExplicitParams):
-    keys = {"economic_security": BucketParams,
-            "network_capacity": BucketParams}
+    keys = {"economic_security": BucketParams, "network_capacity": BucketParams}
 
     order = ["network_capacity", "economic_security"]
 

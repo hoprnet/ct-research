@@ -2,6 +2,8 @@
 # =============================================================================
 # 
 # =============================================================================
+environment: test
+
 flags:
   core: 
     apply_economic_model: 30
@@ -10,8 +12,8 @@ flags:
     connected_peers: 30
     topology: 30
 
-    open_sessions: 30
     rotate_subgraphs: 30
+    open_sessions: 30
 
     peers_rewards: 30
     registered_nodes: 30
@@ -105,8 +107,9 @@ channel:
 # 
 # =============================================================================
 sessions:
-  packetSize: 472
-  numPackets: 3
+  packet_size: 472
+  num_packets: 3
+  batch_size: 5
   
 # =============================================================================
 # 

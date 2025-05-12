@@ -412,7 +412,7 @@ class Node:
                 return
 
         message.sender = self.address.hopr
-        for _ in range(self.params.sessions.batchSize):
+        for _ in range(self.params.sessions.batch_size):
             AsyncLoop.add(
                 self.session_management[message.relayer].send_and_receive,
                 message,
@@ -490,7 +490,7 @@ class Node:
     def tasks(self):
         return [
             getattr(self, method)
-            for method in Utils.decorated_methods(__file__, "formalin")
+            for method in Utils.decorated_methods(__file__, "keepalive")
         ]
 
     @property

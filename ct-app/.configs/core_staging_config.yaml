@@ -107,9 +107,9 @@ channel:
 # 
 # =============================================================================
 sessions:
-  packetSize: 452 # TODO 3.0: change to 762
-  aggregatedPackets: 3
-  batchSize: 5
+  packet_size: 452 # TODO 3.0: change to 762
+  aggregated_packets: 3
+  batch_size: 5
 
 # =============================================================================
 # 

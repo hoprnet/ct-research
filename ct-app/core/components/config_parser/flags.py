@@ -8,6 +8,7 @@ class FlagCoreParams(ExplicitParams):
         "connected_peers": Flag,
         "topology": Flag,
         "rotate_subgraphs": Flag,
+        "open_sessions": Flag,
         "peers_rewards": Flag,
         "registered_nodes": Flag,
         "allocations": Flag,
@@ -30,7 +31,7 @@ class FlagNodeParams(ExplicitParams):
         "close_incoming_channels": Flag,
         "get_total_channel_funds": Flag,
         "observe_message_queue": Flag,
-        "observe_relayed_messages": Flag,
+        "close_sessions": Flag,
     }
 
 
@@ -39,5 +40,4 @@ class FlagPeerParams(ExplicitParams):
 
 
 class FlagParams(ExplicitParams):
-    keys = {"core": FlagCoreParams,
-            "node": FlagNodeParams, "peer": FlagPeerParams}
+    keys = {"core": FlagCoreParams, "node": FlagNodeParams, "peer": FlagPeerParams}

@@ -94,11 +94,6 @@ peer:
   min_version: '2.2.1'
   sleep_mean_time: 30
   sleep_std_time: 2
-  # Controls how many messages are batched at a time. Increasing this reduces
-  # the queue size but also privacy as the load gets less spread over time. 
-  # NOTE: Should be replaced by a dynamic approch, by setting the minimum delay
-  # acceptable before increasing the batch size accordingly (auto-mode)
-  message_multiplier: 1
 
 # =============================================================================
 # 
@@ -112,9 +107,9 @@ channel:
 # 
 # =============================================================================
 sessions:
-  packetSize: 462 # TODO 3.0: change to 762
-  aggregatedPackets: 10
-  batchSize: 5
+  packet_size: 462 # TODO 3.0: change to 762
+  aggregated_packets: 10
+  batch_size: 5
 
 # =============================================================================
 # 

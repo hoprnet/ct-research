@@ -6,5 +6,4 @@ class PeerParams(ExplicitParams):
         "min_version": str,
         "sleep_mean_time": int,
         "sleep_std_time": int,
-        "message_multiplier": int,
     }
