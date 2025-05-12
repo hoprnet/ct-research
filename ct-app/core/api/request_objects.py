@@ -93,9 +93,10 @@ class SessionCapabilitiesBody(ApiRequestObject):
     keys = {
         "retransmission": "Retransmission",
         "segmentation": "Segmentation",
+        "no_delay": "NoDelay",
     }
 
-    def __init__(self, retransmission: bool, segmentation: bool):
+    def __init__(self, retransmission: bool, segmentation: bool, no_delay: bool):
         super().__init__(vars())
 
     @property

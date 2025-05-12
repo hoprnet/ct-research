@@ -2,19 +2,20 @@ from enum import Enum
 
 
 class ProtocolTemplate:
-    def __init__(self, retransmit: bool, segment: bool):
+    def __init__(self, retransmit: bool, segment: bool, no_delay: bool):
         self.retransmit = retransmit
         self.segment = segment
+        self.no_delay = no_delay
 
 
 class TCPProtocol(ProtocolTemplate):
     def __init__(self):
-        super().__init__(retransmit=True, segment=True)
+        super().__init__(retransmit=True, segment=True, no_delay=True)
 
 
 class UDPProtocol(ProtocolTemplate):
     def __init__(self):
-        super().__init__(retransmit=False, segment=True)
+        super().__init__(retransmit=False, segment=True, no_delay=True)
 
 
 class Protocol(Enum):
@@ -37,6 +38,10 @@ class Protocol(Enum):
     @property
     def retransmit(self):
         return self.value.retransmit
+
+    @property
+    def no_delay(self):
+        return self.value.no_delay
 
     def __eq__(self, other):
         if isinstance(other, str):

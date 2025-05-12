@@ -270,7 +270,7 @@ class HoprdAPI:
         :return: Session
         """
         capabilities_body = request.SessionCapabilitiesBody(
-            protocol.retransmit, protocol.segment
+            protocol.retransmit, protocol.segment, protocol.no_delay
         )
         target_body = request.SessionTargetBody()
         path_body = request.SessionPathBodyRelayers([relayer])

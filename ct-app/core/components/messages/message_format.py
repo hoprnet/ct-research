@@ -40,7 +40,7 @@ class MessageFormat:
     @property
     def size(self):
         return self.packet_size * self.multiplier
-        
+
     @property
     def message_index(self):
         value = self.__class__.index
