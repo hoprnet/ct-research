@@ -17,8 +17,7 @@ class ExplicitParams:
     @property
     def as_dict(self):
         return {
-            k: v.as_dict if isinstance(v, ExplicitParams) else v
-            for k, v in self.__dict__.items()
+            k: v.as_dict if isinstance(v, ExplicitParams) else v for k, v in self.__dict__.items()
         }
 
     def __repr__(self):

@@ -1,6 +1,6 @@
 [project]
 name = "ct-app"
-version = "3.10.0"
+version = "3.10.1"
 requires-python = ">=3.12"
 dependencies = ["core"]
 
@@ -28,17 +28,15 @@ lint = [
     "black==25.1.0",
 ]
 
-## will be enabled in a future PR to avoid overloading the changes
-# [tool.black]
-# line-length = 120
-# target-version = ['py312']
-# include = '\.pyi?$'
+[tool.black]
+line-length = 100
+target-version = ['py312']
+include = '\.pyi?$'
 
-# [tool.ruff]
-# line-length = 120
-# # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
-# lint.select = ["E", "F"]
-# lint.ignore = []
+[tool.ruff]
+line-length = 100
+lint.select = ["E", "F"]
+lint.ignore = []
 
 [tool.pytest.ini_options]
 testpaths = ["test"]

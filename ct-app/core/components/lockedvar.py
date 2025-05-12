@@ -10,15 +10,18 @@ logger = logging.getLogger(__name__)
 
 class LockedVar:
     """
-    A class that represents a locked variable that can be accessed and modified. Any operation on the variable is asynchroneous and locked. The type of the variable can be inferred or set manually.
+    A class that represents a locked variable that can be accessed and modified.
+    Any operation on the variable is asynchroneous and locked.
+    The type of the variable can be inferred or set manually.
     """
 
     def __init__(self, name: str, value: Any, infer_type: bool = True):
         """
-        Create a new LockedVar with the specified name and value. If infer_type is True, the type of the value will be inferred and stored, otherwise it will be None.
+        Create a new LockedVar with the specified name and value. If infer_type is True, the type of
+        the value will be inferred and stored, otherwise it will be None.
 
         :param name: The name of the variable, for logging purposes.
-        :param value: The initial value of the variable. The type of the value will be inferred if infer_type is True.
+        :param value: The initial value of the variable.
         :param infer_type: Whether to infer the type of the initial value or not.
         """
         self.name = name
@@ -44,31 +47,27 @@ class LockedVar:
 
     async def set(self, value: Any):
         """
-        Asynchronously set the value of the variable in a locked manner. If the type of the value is different from the type of the variable, a TypeError will be raised.
+        Asynchronously set the value of the variable in a locked manner.
+        If the type of the value is different from the type of the variable, a TypeError is raised.
 
         :param value: The new value of the variable.
         """
         if self.type and not isinstance(value, self.type):
-            raise TypeError(
-                f"Trying to set value of type {type(value)} to {self.type}, ignoring"
-            )
+            raise TypeError(f"Trying to set value of type {type(value)} to {self.type}, ignoring")
 
         async with self.lock:
             self.value = value
 
     async def update(self, value: Any):
         """
-        Asynchronously update the value of the variable with the specified value in a locked manner. If the type of the value is different from the type of the variable, a TypeError will be raised.
+        Asynchronously update the value of the variable with the specified value in a locked manner.
+        If the type of the value is different from the type of the variable, a TypeError is raised.
         This method is meant to be used with dictionaries.
         """
         if self.type and not isinstance(value, self.type):
-            logger.warning(
-                f"Trying to change value of type {type(value)} to {self.type}, ignoring"
-            )
+            logger.warning(f"Trying to change value of type {type(value)} to {self.type}, ignoring")
         async with self.lock:
             try:
                 self.value.update(value)
             except AttributeError as err:
-                raise AttributeError(
-                    "Trying to call 'update' on non-dict value"
-                ) from err
+                raise AttributeError("Trying to call 'update' on non-dict value") from err

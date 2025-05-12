@@ -10,9 +10,7 @@ class ApiRequestObject:
         kwargs.pop("self", None)
 
         if set(kwargs.keys()) != set(self.keys.keys()):
-            raise ValueError(
-                f"Keys mismatch: {set(kwargs.keys())} != {set(self.keys.keys())}"
-            )
+            raise ValueError(f"Keys mismatch: {set(kwargs.keys())} != {set(self.keys.keys())}")
 
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -101,9 +99,7 @@ class SessionCapabilitiesBody(ApiRequestObject):
 
     @property
     def as_array(self) -> list:
-        return [
-            self.keys[var] for var in vars(self) if var in self.keys and vars(self)[var]
-        ]
+        return [self.keys[var] for var in vars(self) if var in self.keys and vars(self)[var]]
 
 
 class SessionPathBodyRelayers(ApiRequestObject):

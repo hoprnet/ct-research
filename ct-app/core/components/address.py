@@ -14,7 +14,8 @@ class Address:
 
     def __init__(self, hopr: str, native: str):
         """
-        Create a new Address with the specified id and address. The `hopr` refers the the peerId, and the `native` refers to the native address of a node.
+        Create a new Address with the specified id and address. The `hopr` refers the the peerId,
+        and the `native` refers to the native address of a node.
         :param id: The id of the peer.
         :param address: The address of the peer.
         """

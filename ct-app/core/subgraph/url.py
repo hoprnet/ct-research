@@ -18,10 +18,13 @@ class URL:
         }
 
     def _construct_default(self):
-        return f"https://gateway-arbitrum.network.thegraph.com/api/{self.deployer_key}/subgraphs/id/{self.params.query_id}"
+        base = "https://gateway-arbitrum.network.thegraph.com/api/%s/subgraphs/id/%s"
+        return base % (self.deployer_key, self.params.query_id)
 
     def _construct_backup(self):
-        return f"https://api.studio.thegraph.com/query/{self.user_id}/{self.params.slug}/{getattr(self.params, 'version','version/latest')}"
+        base = "https://api.studio.thegraph.com/query/%s/%s/%s"
+        version = getattr(self.params, "version", "version/latest")
+        return base % (self.user_id, self.params.slug, version)
 
     def __getitem__(self, index: Mode) -> str:
         return self._urls.get(index, None)

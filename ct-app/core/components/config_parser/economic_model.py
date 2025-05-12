@@ -75,10 +75,7 @@ class BucketParams(ExplicitParams):
         Calculate the APR for the bucket.
         """
         try:
-            apr = (
-                log(pow(self.upperbound / x, self.skewness) - 1) * self.flatness
-                + self.offset
-            )
+            apr = log(pow(self.upperbound / x, self.skewness) - 1) * self.flatness + self.offset
         except ValueError as err:
             raise ValueError(f"Math domain error: {x=}, {vars(self)}") from err
         except ZeroDivisionError as err:
@@ -138,9 +135,7 @@ class SigmoidParams(ExplicitParams):
 
         return apr
 
-    def yearly_message_count(
-        self, stake: float, ticket_price: TicketPrice, xs: list[float]
-    ):
+    def yearly_message_count(self, stake: float, ticket_price: TicketPrice, xs: list[float]):
         """
         Calculate the yearly message count a peer should receive based on the stake.
         """

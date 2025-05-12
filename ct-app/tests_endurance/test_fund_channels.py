@@ -15,9 +15,7 @@ logger = logging.getLogger(__name__)
 class FundChannels(EnduranceTest):
     async def on_start(self):
         self.results = []
-        self.api = HoprdAPI(
-            EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY")
-        )
+        self.api = HoprdAPI(EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY"))
 
         self.address = await self.api.get_address()
         logger.info(f"Connected to node '...{self.address.hopr[-10:]}'")
@@ -25,9 +23,7 @@ class FundChannels(EnduranceTest):
         # get channel
         channels = await self.api.channels()
         open_channels = [
-            c
-            for c in channels
-            if c.status.is_open and c.source_peer_id == self.address.hopr
+            c for c in channels if c.status.is_open and c.source_peer_id == self.address.hopr
         ]
 
         if len(open_channels) == 0:
@@ -51,9 +47,7 @@ class FundChannels(EnduranceTest):
             while True:
                 channels = await self.api.channels()
                 channel = channels[
-                    [
-                        c.id for c in channels if c.source_peer_id == self.address.hopr
-                    ].index(id)
+                    [c.id for c in channels if c.source_peer_id == self.address.hopr].index(id)
                 ]
                 if channel.balance != balance:
                     break
@@ -76,8 +70,6 @@ class FundChannels(EnduranceTest):
         exp_fundings = Metric("Expected fundings", len(self.results), "x")
         initial_balance = Metric("Initial balance", self.inital_balance)
 
-        final_balance = Metric(
-            "Final balance", self.final_balance, cdt=f"!= {initial_balance.v}"
-        )
+        final_balance = Metric("Final balance", self.final_balance, cdt=f"!= {initial_balance.v}")
 
         return [exp_fundings, initial_balance, final_balance]

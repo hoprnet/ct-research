@@ -22,9 +22,7 @@ def test_transformed_stake(model: LegacyParams):
     assert model.transformed_stake(0) == 0
     assert model.transformed_stake(model.coefficients.l) == model.coefficients.l
     assert model.transformed_stake(model.coefficients.c) == model.coefficients.c
-    assert model.transformed_stake(model.coefficients.c * 2) < (
-        model.coefficients.c * 2
-    )
+    assert model.transformed_stake(model.coefficients.c * 2) < (model.coefficients.c * 2)
 
 
 def test_message_count_for_reward(model: LegacyParams):
@@ -33,18 +31,15 @@ def test_message_count_for_reward(model: LegacyParams):
     assert model.yearly_message_count(0, ticket_price) == 0, "No reward for 0 stake"
 
     assert round(
-        model.yearly_message_count(model.coefficients.l, ticket_price)
-        / model.coefficients.l,
+        model.yearly_message_count(model.coefficients.l, ticket_price) / model.coefficients.l,
         2,
     ) == round(
-        model.yearly_message_count(model.coefficients.c, ticket_price)
-        / model.coefficients.c,
+        model.yearly_message_count(model.coefficients.c, ticket_price) / model.coefficients.c,
         2,
     ), "Linear result in [l, c] range"
 
     assert round(
-        model.yearly_message_count(model.coefficients.c, ticket_price)
-        / model.coefficients.c,
+        model.yearly_message_count(model.coefficients.c, ticket_price) / model.coefficients.c,
         2,
     ) < round(
         2

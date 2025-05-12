@@ -60,9 +60,7 @@ class ApiResponseObject:
         return str(self)
 
     def __eq__(self, other):
-        return all(
-            getattr(self, key) == getattr(other, key) for key in self.keys.keys()
-        )
+        return all(getattr(self, key) == getattr(other, key) for key in self.keys.keys())
 
 
 class Addresses(ApiResponseObject):

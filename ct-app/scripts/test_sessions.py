@@ -32,9 +32,7 @@ async def main(relayer: str = "12D3KooWPq6mC6uewNRANc4YRcigkP1bEUKUFkLX2fBB6deP3
     pattern = r"ctdapp-([a-zA-Z]+)-node-(\d+)\.ctdapp\.([a-zA-Z]+)\."
     if match := re.search(pattern, host):
         deployment, index, environment = match.groups()
-        p2p_host = (
-            f"ctdapp-{deployment}-node-{index}-p2p.ctdapp.{environment}.hoprnet.link"
-        )
+        p2p_host = f"ctdapp-{deployment}-node-{index}-p2p.ctdapp.{environment}.hoprnet.link"
     else:
         p2p_host = host
 
@@ -91,7 +89,7 @@ async def main(relayer: str = "12D3KooWPq6mC6uewNRANc4YRcigkP1bEUKUFkLX2fBB6deP3
             received = MessageFormat.parse(data)
             print(
                 State.fromBool(received == message),
-                f"Received message\n\t {recv_size} bytes, {recv_size / PACKET_SIZE:.1f} HOPR packets",
+                f"Received message\n\t{recv_size} bytes, {recv_size / PACKET_SIZE:.1f} packets",
             )
         else:
             print(State.FAILURE, "No message received")

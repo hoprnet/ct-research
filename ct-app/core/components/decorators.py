@@ -61,9 +61,7 @@ def keepalive(func):
 
         delay = 0 if delay is True else delay
 
-        logger.debug(
-            "Running method continuously", {"method": func.__name__, "delay": delay}
-        )
+        logger.debug("Running method continuously", {"method": func.__name__, "delay": delay})
 
         while self.running:
             await func(self, *args, **kwargs)
