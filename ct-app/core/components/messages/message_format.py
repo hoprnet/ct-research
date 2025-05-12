@@ -34,7 +34,7 @@ class MessageFormat:
             timestamp = int(float(timestamp))
         else:
             self.update_timestamp()
-            
+
         self.multiplier = int(multiplier) if multiplier else 1
         self.inner_index = int(inner_index) if inner_index else 1
 
