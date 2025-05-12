@@ -37,6 +37,11 @@ class AsyncLoop(metaclass=Singleton):
 
     @classmethod
     def add(cls, callback: Callable, *args, publish_to_task_set: bool = True):
+        """
+        Schedules a coroutine for execution in the event loop.
+        
+        If task creation fails, logs the exception. Optionally adds the created task to the internal task set for tracking; otherwise, attaches a callback to cancel the task if it is not completed.
+        """
         try:
             task = asyncio.ensure_future(callback(*args))
         except Exception as err:
@@ -50,6 +55,11 @@ class AsyncLoop(metaclass=Singleton):
 
     @classmethod
     def run_in_thread(cls, callback: Callable, *args):
+        """
+        Runs a coroutine function in a separate daemon thread.
+        
+        The specified coroutine function is executed asynchronously in its own thread, allowing it to run independently of the main event loop. Any exceptions raised during execution are logged.
+        """
         def sync_wrapper(callback, *args):
             try:
                 asyncio.run(callback(*args))
@@ -60,6 +70,11 @@ class AsyncLoop(metaclass=Singleton):
 
     @classmethod
     async def gather(cls):
+        """
+        Waits for all tracked asynchronous tasks to complete.
+        
+        This method asynchronously gathers all tasks currently managed by the AsyncLoop instance and waits for their completion.
+        """
         await asyncio.gather(*cls().tasks)
 
     @classmethod

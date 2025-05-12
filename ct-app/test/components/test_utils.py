@@ -83,6 +83,12 @@ def test_nodesCredentials():
 @pytest.mark.asyncio
 async def test_mergeDataSources():
 
+    """
+    Tests merging of topology, peer, node, and allocation data sources into peer objects.
+    
+    Verifies that after merging, all peers are assigned safes and that the additional balance
+    on each peer's safe reflects the correct allocation distribution.
+    """
     topology_list = [
         entries.Topology("peer_id_1", "address_1", 1),
         entries.Topology("peer_id_2", "address_2", 2),
@@ -122,6 +128,12 @@ async def test_mergeDataSources():
 
 
 def test_associateEntitiesToNodes_with_allocations():
+    """
+    Tests that allocations are correctly linked to safes owned by their respective owners.
+    
+    Verifies that after associating allocations with nodes, each allocation's `linked_safes`
+    set contains the safe addresses corresponding to its owner.
+    """
     allocations = [
         entries.Allocation("owner_1", "0", f"{100*1e18:.0f}"),
         entries.Allocation("owner_2", "0", f"{250*1e18:.0f}"),
@@ -142,6 +154,11 @@ def test_associateEntitiesToNodes_with_allocations():
 
 
 def test_associateEntitiesToNodes_with_eoa_balances():
+    """
+    Tests that balances are correctly associated with safes owned by their respective owners.
+    
+    Verifies that after associating balances to nodes, each balance's `linked_safes` set contains the safe addresses owned by the balance's owner.
+    """
     balances = [
         entries.Balance("owner_1", f"{100*1e18:.0f}"),
         entries.Balance("owner_2", f"{250*1e18:.0f}"),

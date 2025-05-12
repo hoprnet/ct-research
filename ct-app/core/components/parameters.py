@@ -16,6 +16,9 @@ class Parameters:
     """
 
     def __init__(self):
+        """
+        Initializes a new Parameters instance.
+        """
         super().__init__()
 
     def parse(self, data: dict, entrypoint=False):
@@ -97,7 +100,13 @@ class Parameters:
 
     @property
     def as_dict(self):
+        """
+        Returns a dictionary representation of the parameters, recursively converting nested Parameters instances.
+        """
         return {k: v.as_dict if isinstance(v, type(self)) else v for k, v in self.__dict__.items()}
 
     def __repr__(self):
+        """
+        Returns a string representation of the parameter attributes as a dictionary.
+        """
         return str(self.__dict__)

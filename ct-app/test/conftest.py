@@ -49,11 +49,19 @@ class SideEffect:
     @staticmethod
     def generator_inbox_messages():
         # yields a list of 10 random characters repeated 2 to 10 times
+        """
+        Generates an infinite sequence of lists containing random inbox messages.
+        
+        Each yielded value is a list of 2 to 10 sublists, where each sublist consists of 10 random lowercase letters or spaces.
+        """
         yield from repeat(
             [choices("abcdefghijklmnopqrstuvwxyz ", k=10) for _ in range(randint(2, 10))]
         )
 
     def send_message_success(self, *args, **kwargs):
+        """
+        Returns the next simulated result for a message send operation, indicating success or failure.
+        """
         return next(self.it_send_message_success)
 
     def node_balance(self, *args, **kwargs):
@@ -100,6 +108,11 @@ def peers_raw() -> list[dict]:
 
 @pytest.fixture
 def peers(peers_raw: list[dict]) -> set[Peer]:
+    """
+    Converts raw peer data into a set of Peer objects with randomized balances.
+    
+    Each Peer is assigned a random safe balance between 100 and 200, and a channel balance between 10 and 50.
+    """
     peers = [
         Peer(peer["peerId"], peer["peerAddress"], peer["reportedVersion"]) for peer in peers_raw
     ]
@@ -129,6 +142,14 @@ async def nodes(
     peers_raw: list[dict],
     channels: Channels,
 ) -> list[Node]:
+    """
+    Creates and configures a list of five mocked Node instances for testing.
+    
+    Each node is assigned unique addresses, mocked API methods for channels, balances, peers, health status, and ticket price, and asynchronously retrieves its address. The nodes are set up to simulate a network environment with interconnected peers and channels.
+    
+    Returns:
+        A list of five configured Node instances.
+    """
     nodes = [
         Node("localhost:9000", "random_key"),
         Node("localhost:9001", "random_key"),

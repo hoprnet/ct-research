@@ -53,6 +53,11 @@ def test_peer_version():
     ],
 )
 async def test_request_relay(exc_time: int, min_range: float, max_range: float):
+    """
+    Tests that message relay calls among peers are distributed within expected timing bounds.
+    
+    Simulates a set of peers with randomized message delays, waits for a specified time, and verifies that the difference between the maximum and minimum relay durations does not exceed twice the maximum delay range.
+    """
     peers = {Peer(f"12D{num}", f"0x{num}", "2.1.0") for num in range(10)}
 
     params = Parameters()

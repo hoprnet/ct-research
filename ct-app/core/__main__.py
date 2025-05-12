@@ -17,6 +17,11 @@ logger = logging.getLogger(__name__)
 @click.command()
 @click.option("--configfile", help="The .yaml configuration file to use")
 def main(configfile: str):
+    """
+    Runs the main CLI command to initialize and start the core service.
+    
+    Loads configuration from a YAML file, applies environment and override parameters, initializes node credentials, starts a Prometheus metrics server on port 8080, and launches the core asynchronous lifecycle.
+    """
     with open(configfile, "r") as file:
         config = yaml.safe_load(file)
 

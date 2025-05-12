@@ -42,7 +42,10 @@ class Safe(SubgraphEntry):
     @classmethod
     def default(cls):
         """
-        Create a new Safe with default values.
+        Creates a Safe instance with a random address and default balance, allowance, and owners.
+        
+        Returns:
+            A Safe object with a randomly generated 40-character hexadecimal address, balance set to "1", allowance set to "0", and an empty owners list.
         """
         address = "1x" + "".join([str(hex(random.randint(0, 15)))[2] for _ in range(40)])
         return cls(address, "1", "0", [])

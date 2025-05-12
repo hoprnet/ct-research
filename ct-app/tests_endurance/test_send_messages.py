@@ -17,6 +17,11 @@ logging.getLogger("core.api.hoprd_api").setLevel(logging.WARNING)
 
 class SendMessages(EnduranceTest):
     async def on_start(self):
+        """
+        Initializes the test by selecting an open channel, setting up the relayer, and clearing previous messages.
+        
+        Retrieves the recipient address, filters for open channels, selects a relayer (either from environment variables or randomly), assigns a message tag, and clears any existing messages with that tag to prepare for message sending.
+        """
         self.results = []
         self.tag = random.randint(0, 2**16 - 1)
 

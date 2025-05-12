@@ -21,6 +21,16 @@ MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer"])
 
 class SessionToSocket:
     def __init__(self, session: Session, connect_address: str, timeout: Optional[int] = 0.05):
+        """
+        Initializes a SessionToSocket instance for UDP communication with a given session.
+        
+        Attempts to create a UDP socket for the specified session and connection address, applying the provided timeout. Raises a ValueError if socket creation fails or the protocol is invalid.
+        
+        Args:
+            session: The session object containing protocol and port information.
+            connect_address: The address to connect the socket to.
+            timeout: Optional socket timeout in seconds (default is 0.05).
+        """
         self.session = session
         self.connect_address = connect_address
 

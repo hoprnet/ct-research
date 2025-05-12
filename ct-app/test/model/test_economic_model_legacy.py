@@ -33,6 +33,11 @@ def test_transformed_stake(model: EconomicModelLegacy):
 
 
 def test_message_count_for_reward(model: EconomicModelLegacy):
+    """
+    Tests that the yearly_message_count method returns expected values for different stake amounts.
+    
+    Verifies that the method returns zero for zero stake, behaves linearly within the [l, c] range, and exhibits non-linear behavior above this range.
+    """
     assert model.yearly_message_count(0) == 0, "No reward for 0 stake"
 
     assert round(

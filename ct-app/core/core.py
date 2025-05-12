@@ -42,6 +42,11 @@ class Core:
     """
 
     def __init__(self, nodes: list[Node], params: Parameters):
+        """
+        Initializes the Core instance with nodes, parameters, data containers, economic models, and subgraph providers.
+        
+        Associates the provided parameters with each node, prepares internal data structures for peers, topology, nodes, NFT holders, allocations, balances, and rewards, instantiates economic models from parameters, and sets up GraphQL providers for subgraph access.
+        """
         super().__init__()
 
         self.params = params
@@ -141,7 +146,9 @@ class Core:
     @master(flagguard, formalin)
     async def registered_nodes(self):
         """
-        Gets all registered nodes in the Network Registry.
+        Retrieves all registered nodes from the Network Registry subgraph and updates related metrics.
+        
+        Fetches registered nodes for each safe, updates Prometheus metrics for stake balances, and stores the results internally.
         """
 
         results = list[entries.Node]()
@@ -179,9 +186,9 @@ class Core:
     @master(flagguard, formalin)
     async def allocations(self):
         """
-        Gets all allocations for the investors.
-        The amount per investor is then added to their stake before dividing it by the number
-        of nodes they are running.
+        Retrieves and aggregates allocation data for all investors from mainnet and Gnosis subgraphs.
+        
+        The total allocation per investor is later combined with their stake and divided by the number of nodes they operate.
         """
         results = list[entries.Allocation]()
         for account in await self.providers[Type.MAINNET_ALLOCATIONS].get():
@@ -196,7 +203,9 @@ class Core:
     @master(flagguard, formalin)
     async def eoa_balances(self):
         """
-        Gets the EOA balances on Gnosis and Mainnet for the investors.
+        Retrieves and aggregates EOA balances for investor safes from Gnosis and Mainnet.
+        
+        Fetches externally owned account balances for all investor safes using both Gnosis and Mainnet subgraphs, sums the balances for each address, and stores the results.
         """
         if len(self.allocations_data) == 0:
             logger.info("No EOA address found for investors safes")
@@ -236,7 +245,9 @@ class Core:
     @master(flagguard, formalin)
     async def apply_economic_model(self):
         """
-        Applies the economic model to the eligible peers (after multiple filtering layers).
+        Applies the economic model to determine yearly message counts for eligible peers.
+        
+        Filters peers based on eligibility criteria, associates allocation and balance data, merges data sources, and computes yearly message counts using multiple economic models. Updates Prometheus metrics for message counts and eligible peers.
         """
         async with self.all_peers as peers:
             if not all([len(self.topology_data), len(self.registered_nodes_data), len(peers)]):
@@ -319,8 +330,9 @@ class Core:
     @master(flagguard, formalin)
     async def ticket_parameters(self):
         """
-        Gets the ticket price from the api.
-        They are used in the economic model to calculate the number of messages to send to a peer.
+        Fetches the current ticket price from the API and updates economic models.
+        
+        The ticket price is used by economic models to determine the number of messages to send to each peer.
         """
         ticket_price = await self.api.ticket_price()
         logger.debug("Fetched ticket price", {"value": getattr(ticket_price, "value", None)})
@@ -367,11 +379,16 @@ class Core:
 
     @property
     def tasks(self):
+        """
+        Returns a list of all methods in the current file decorated with 'formalin'.
+        
+        Each method is returned as a bound method of this instance.
+        """
         return [getattr(self, method) for method in Utils.decorated_methods(__file__, "formalin")]
 
     async def start(self):
         """
-        Start the node.
+        Starts the core service, performing health checks, closing sessions, and launching asynchronous tasks for all nodes.
         """
         logger.info("CTCore started", {"num_nodes": len(self.nodes)})
 

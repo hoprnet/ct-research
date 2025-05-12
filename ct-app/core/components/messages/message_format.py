@@ -51,6 +51,18 @@ class MessageFormat:
 
     @classmethod
     def parse(cls, input_string: str):
+        """
+        Parses a formatted message string and returns a MessageFormat instance.
+        
+        Args:
+            input_string: The message string to parse.
+        
+        Returns:
+            A new MessageFormat instance initialized with values extracted from the input string.
+        
+        Raises:
+            ValueError: If the input string is empty or does not match the expected message format.
+        """
         if len(input_string) == 0:
             raise ValueError("Input string is empty")
 
@@ -87,10 +99,22 @@ class MessageFormat:
             self.timestamp = int(datetime.now().timestamp() * 1000)
 
     def __eq__(self, other):
+        """
+        Checks if this MessageFormat instance is equal to another by comparing all parameters.
+        
+        Args:
+            other: The object to compare with.
+        
+        Returns:
+            True if all parameters match and the other object is a MessageFormat instance; otherwise, False.
+        """
         if not isinstance(other, MessageFormat):
             return False
         return all(getattr(self, param) == getattr(other, param) for param in self.params)
 
     def __repr__(self):
+        """
+        Returns a string representation of the MessageFormat instance with all parameter values.
+        """
         attrs_as_strs = [f"{param}={getattr(self, param)}" for param in self.params]
         return f"{self.__class__.__name__}({', '.join(attrs_as_strs)})"

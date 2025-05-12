@@ -39,11 +39,20 @@ def connectguard(func):
 
 def flagguard(func):
     """
-    Decorator to check if the feature is enabled before running it
+    Asynchronous decorator that checks if a feature flag is enabled before executing the method.
+    
+    The decorator verifies the presence and value of a feature flag corresponding to the method in the instance's configuration. If the flag is missing, disabled, or not properly configured, the method is skipped and an error is logged. If the flag is enabled, the method is executed.
     """
 
     @functools.wraps(func)
     async def wrapper(self, *args, **kwargs):
+        """
+        Checks if a feature flag is enabled for the method before execution.
+        
+        If the required flags configuration or method-specific flag is missing or disabled,
+        the method is not executed and an error is logged. Otherwise, the method is awaited
+        and its result is returned.
+        """
         func_name_clean = func.__name__.replace("_", "").lower()
 
         if not hasattr(self.params, "flags"):
@@ -83,12 +92,18 @@ def flagguard(func):
 
 def formalin(func):
     """
-    Decorator to log the start of a function, make it run until stopped, and delay the
-    next iteration
+    Decorator that repeatedly executes an asynchronous method while the instance is running.
+    
+    The decorated method is invoked in a loop as long as the instance's `running` attribute is `True`. The delay between iterations is determined by a class-specific flag in `params.flags` corresponding to the method name. If the flag is `True`, the method runs continuously with no delay; if `False`, it runs only once. If the flag is a numeric value, it specifies the delay in seconds between executions. The method is skipped if it is not listed in the configuration flags.
     """
 
     @functools.wraps(func)
     async def wrapper(self, *args, **kwargs):
+        """
+        Continuously executes an asynchronous method while the instance is running, with optional delay.
+        
+        Retrieves a delay value from class-specific flags and repeatedly runs the decorated method as long as the instance's `running` attribute is `True`. If the delay is `None`, the method runs only once; if the delay is a number, it waits for that duration between executions.
+        """
         func_name_clean = func.__name__.replace("_", "").lower()
 
         class_flags = getattr(self.params.flags, self.__class__.__name__.lower())

@@ -5,6 +5,11 @@ from core.economic_model import Bucket, Budget, EconomicModelSigmoid
 
 
 def test_init_class():
+    """
+    Tests initialization of EconomicModelSigmoid from configuration parameters.
+    
+    Verifies that the number of buckets and their attributes (flatness, skewness, upperbound) in the model match the provided configuration.
+    """
     config = {
         "sigmoid": {
             "proportion": 0.1,
@@ -41,6 +46,11 @@ def test_init_class():
 
 
 def test_values_mid_range():
+    """
+    Tests that the APR calculation for mid-range utilization values returns the model's offset.
+    
+    Verifies that when the offset is 0, APR is 0, and when the offset is 10, APR is 10 for the given utilization values.
+    """
     assert (
         EconomicModelSigmoid(
             0, [Bucket("bucket_1", 1, 1, 1), Bucket("bucket_2", 1, 1, 0.5)], 20.0, 1
@@ -57,26 +67,48 @@ def test_values_mid_range():
 
 
 def test_value_above_mid_range():
+    """
+    Tests that the APR is zero for utilization above the mid-range in a single-bucket model.
+    
+    Asserts that when a single bucket with offset 1 receives a utilization value of 0.75, the APR returned by the model is 0.
+    """
     assert EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)], 20.0, 1).apr([0.75]) == 0
 
 
 def test_value_below_mid_range():
+    """
+    Tests that the APR is positive for utilization values below the mid-range in a single-bucket model.
+    """
     assert EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)], 20.0, 1).apr([0.25]) > 0
 
 
 def test_apr_composition():
+    """
+    Tests that the APR for a single-bucket model matches the APR for a two-bucket model with duplicated buckets and utilization values.
+    """
     assert EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)], 20.0, 1).apr(
         [0.25]
     ) == EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)] * 2, 20.0, 1).apr([0.25] * 2)
 
 
 def test_out_of_bounds_values():
+    """
+    Tests that APR is zero when utilization is at or below the bucket's upper bound.
+    
+    Verifies that the `apr` method of `EconomicModelSigmoid` returns 0 for utilization values equal to or less than the bucket's upper bound.
+    """
     assert EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 0.5, 0)], 20.0, 1).apr([0.5]) == 0
 
     assert EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 0.5, 0)], 20.0, 1).apr([0]) == 0
 
 
 def test_bucket_apr():
+    """
+    Tests the APR calculation and boundary error handling of a Bucket instance.
+    
+    Verifies that APR is positive within the valid range, zero at specific midpoints, and that
+    a ValueError is raised when APR is requested at the lower and upper bounds.
+    """
     bucket = Bucket("bucket", 1, 1, 0.5, 0)
 
     with pytest.raises(ValueError):

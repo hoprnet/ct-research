@@ -9,10 +9,14 @@ class Utils:
     @classmethod
     def nodesCredentials(cls, address_prefix: str, keyenv: str) -> tuple[list[str], list[str]]:
         """
-        Returns a tuple containing the addresses and keys of the nodes.
-        :param address_prefix: The prefix of the environment variables containing addresses.
-        :param keyenv: The prefix of the environment variables containing keys.
-        :returns: A tuple containing the addresses and keys.
+        Retrieves node addresses and keys from environment variables with specified prefixes.
+        
+        Args:
+            address_prefix: Prefix for environment variables containing node addresses.
+            keyenv: Prefix for environment variables containing node keys.
+        
+        Returns:
+            A tuple of two lists: the first with node addresses, the second with node keys.
         """
         addresses = EnvironmentUtils.envvarWithPrefix(address_prefix).values()
         keys = EnvironmentUtils.envvarWithPrefix(keyenv).values()
@@ -124,6 +128,11 @@ class Utils:
 
     @classmethod
     def decorated_methods(cls, file: str, target: str):
+        """
+        Finds function names in a Python file that are decorated with a specified decorator.
+        
+        Parses the given source file and returns a list of function or async function names that are decorated with the target decorator, either directly or as an argument in a decorator call. Returns an empty list if the file is not found or contains syntax errors.
+        """
         try:
             with open(file, "r") as f:
                 source_code = f.read()

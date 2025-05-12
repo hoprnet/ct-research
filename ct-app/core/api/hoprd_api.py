@@ -138,10 +138,14 @@ class HoprdAPI:
         self, peer_address: str, amount: str
     ) -> Optional[response.OpenedChannel]:
         """
-        Opens a channel with the given peer_address and amount.
-        :param: peer_address: str
-        :param: amount: str
-        :return: channel id: str | undefined
+        Opens a payment channel with a specified peer and amount.
+        
+        Args:
+            peer_address: The address of the peer to open the channel with.
+            amount: The amount to fund the channel.
+        
+        Returns:
+            An OpenedChannel response object if successful, otherwise None.
         """
         data = request.OpenChannelBody(amount, peer_address)
 
@@ -150,10 +154,14 @@ class HoprdAPI:
 
     async def fund_channel(self, channel_id: str, amount: float) -> bool:
         """
-        Funds a given channel.
-        :param: channel_id: str
-        :param: amount: float
-        :return: bool
+        Funds an existing payment channel with the specified amount.
+        
+        Args:
+            channel_id: The identifier of the channel to fund.
+            amount: The amount to add to the channel.
+        
+        Returns:
+            True if the channel was successfully funded, False otherwise.
         """
         data = request.FundChannelBody(amount)
 
@@ -164,17 +172,23 @@ class HoprdAPI:
 
     async def close_channel(self, channel_id: str) -> bool:
         """
-        Closes a given channel.
-        :param: channel_id: str
-        :return: bool
+        Closes a payment channel by its ID.
+        
+        Args:
+            channel_id: The identifier of the channel to close.
+        
+        Returns:
+            True if the channel was closed successfully, False otherwise.
         """
         is_ok, _ = await self.__call_api(HTTPMethod.DELETE, f"channels/{channel_id}", timeout=90)
         return is_ok
 
     async def channels(self) -> response.Channels:
         """
-        Returns all channels.
-        :return: channels: list
+        Retrieves all payment channels for the node.
+        
+        Returns:
+            A Channels response object if successful; otherwise, None.
         """
         params = request.GetChannelsBody("true", "false")
 
@@ -186,11 +200,13 @@ class HoprdAPI:
         quality: float = 0.5,
     ) -> list[response.ConnectedPeer]:
         """
-        Returns a list of peers.
-        :param: param: list or str = "peerId"
-        :param: status: str = "connected"
-        :param: quality: int = 0..1
-        :return: peers: list
+        Retrieves a list of connected peers filtered by a quality threshold.
+        
+        Args:
+            quality: Minimum quality score (between 0 and 1) to filter peers.
+        
+        Returns:
+            A list of ConnectedPeer objects representing peers with a quality above the specified threshold.
         """
         params = request.GetPeersBody(quality)
 
@@ -222,8 +238,10 @@ class HoprdAPI:
 
     async def ticket_price(self) -> Optional[response.TicketPrice]:
         """
-        Gets the ticket price set in the configuration file.
-        :return: TicketPrice
+        Retrieves the ticket price from the node's configuration.
+        
+        Returns:
+            A TicketPrice object if the request is successful; otherwise, None.
         """
         is_ok, resp = await self.__call_api(HTTPMethod.GET, "node/configuration")
         return (
@@ -234,9 +252,13 @@ class HoprdAPI:
 
     async def get_sessions(self, protocol: Protocol = Protocol.UDP) -> list[response.Session]:
         """
-        Lists existing Session listeners for the given IP protocol
-        :param: protocol: Protocol
-        :return: list[Session]
+        Retrieves all active session listeners for the specified protocol.
+        
+        Args:
+            protocol: The IP protocol to filter sessions by (default is UDP).
+        
+        Returns:
+            A list of Session objects representing the current session listeners for the given protocol. Returns an empty list if the request fails.
         """
         is_ok, resp = await self.__call_api(HTTPMethod.GET, f"session/{protocol.name.lower()}")
 
@@ -250,12 +272,16 @@ class HoprdAPI:
         protocol: Protocol = Protocol.UDP,
     ) -> Union[response.Session, response.SessionFailure]:
         """
-        Creates a new session returning the session listening host & port over TCP or UDP.
-        :param: destination: PeerID of the recipient
-        :param: relayer: PeerID of the relayer
-        :param: listen_host: str
-        :param: protocol: Protocol (UDP or TCP)
-        :return: Session
+        Creates a new session with the specified destination, relayer, listening host, and protocol.
+        
+        Args:
+            destination: PeerID of the session recipient.
+            relayer: PeerID of the relayer node.
+            listen_host: Host and port to listen on (default is ":0").
+            protocol: Protocol to use for the session (UDP or TCP).
+        
+        Returns:
+            A Session object if creation succeeds, or a SessionFailure object on failure.
         """
         capabilities_body = request.SessionCapabilitiesBody(
             protocol.retransmit, protocol.segment, protocol.no_delay
@@ -291,7 +317,13 @@ class HoprdAPI:
 
     async def healthyz(self, timeout: int = 20) -> bool:
         """
-        Checks if the node is healthy. Return True if `healthyz` returns 200 before timeout.
+        Checks if the node is healthy by verifying a 200 response from the /healthyz endpoint.
+        
+        Args:
+            timeout: Maximum time in seconds to wait for a healthy response.
+        
+        Returns:
+            True if the node responds with HTTP 200 before the timeout; otherwise, False.
         """
         return await HoprdAPI.checkStatus(f"{self.host}/healthyz", 200, timeout)
 

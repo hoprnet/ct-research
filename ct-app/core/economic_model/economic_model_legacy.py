@@ -85,6 +85,15 @@ class EconomicModelLegacy:
 
     @classmethod
     def fromParameters(cls, parameters: Parameters):
+        """
+        Creates an instance of the class using values extracted from a Parameters object.
+        
+        Args:
+        	parameters: The Parameters object containing equations, coefficients, proportion, and APR.
+        
+        Returns:
+        	An instance of the class initialized with the extracted values.
+        """
         return cls(
             Equations.fromParameters(parameters.equations),
             Coefficients.fromParameters(parameters.coefficients),
@@ -93,4 +102,7 @@ class EconomicModelLegacy:
         )
 
     def __repr__(self):
+        """
+        Returns a string representation of the EconomicModelLegacy instance, including its equations, coefficients, and budget.
+        """
         return f"EconomicModelLegacy({self.equations}, {self.coefficients}, {self.budget})"

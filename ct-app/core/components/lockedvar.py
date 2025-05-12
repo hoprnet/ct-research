@@ -17,12 +17,9 @@ class LockedVar:
 
     def __init__(self, name: str, value: Any, infer_type: bool = True):
         """
-        Create a new LockedVar with the specified name and value. If infer_type is True, the type of
-        the value will be inferred and stored, otherwise it will be None.
-
-        :param name: The name of the variable, for logging purposes.
-        :param value: The initial value of the variable.
-        :param infer_type: Whether to infer the type of the initial value or not.
+        Initializes a LockedVar instance with a name, initial value, and optional type enforcement.
+        
+        If infer_type is True, the type of the initial value is stored for future type checks.
         """
         self.name = name
         self.value = value
@@ -47,10 +44,10 @@ class LockedVar:
 
     async def set(self, value: Any):
         """
-        Asynchronously set the value of the variable in a locked manner.
-        If the type of the value is different from the type of the variable, a TypeError is raised.
-
-        :param value: The new value of the variable.
+        Sets the variable's value asynchronously with type enforcement.
+        
+        Raises:
+            TypeError: If the new value's type does not match the stored type.
         """
         if self.type and not isinstance(value, self.type):
             raise TypeError(f"Trying to set value of type {type(value)} to {self.type}, ignoring")
@@ -60,9 +57,15 @@ class LockedVar:
 
     async def update(self, value: Any):
         """
-        Asynchronously update the value of the variable with the specified value in a locked manner.
-        If the type of the value is different from the type of the variable, a TypeError is raised.
-        This method is meant to be used with dictionaries.
+        Asynchronously updates the current value using the provided value's data.
+        
+        If the stored value supports the `update()` method (such as a dictionary), merges in the contents of `value` while holding the lock. Logs a warning if the type of `value` differs from the stored type. Raises an AttributeError if the current value does not support `update()`.
+        
+        Args:
+            value: Data to update the current value with.
+        
+        Raises:
+            AttributeError: If the current value does not support the `update()` method.
         """
         if self.type and not isinstance(value, self.type):
             logger.warning(f"Trying to change value of type {type(value)} to {self.type}, ignoring")

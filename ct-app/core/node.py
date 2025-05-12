@@ -82,7 +82,10 @@ class Node:
 
     async def retrieve_address(self):
         """
-        Retrieve the address of the node.
+        Fetches and sets the node's HOPR and native addresses from the API.
+        
+        Returns:
+            The node's address as an Address object, or None if retrieval fails.
         """
         addresses = await self.api.get_address()
 
@@ -116,7 +119,9 @@ class Node:
     @master(flagguard, formalin, connectguard)
     async def retrieve_balances(self):
         """
-        Retrieve the balances of the node.
+        Retrieves and updates the node's token balances.
+        
+        Fetches the current balances from the node's API, logs the results, and updates Prometheus metrics for each token. Returns the balances object or None if retrieval fails.
         """
         balances = await self.api.balances()
 
@@ -219,7 +224,9 @@ class Node:
     @master(flagguard, formalin, connectguard)
     async def close_old_channels(self):
         """
-        Close channels that have been open for too long.
+        Closes outgoing channels that have been open longer than the configured maximum age.
+        
+        Channels are selected for closure based on their open duration as tracked in peer history.
         """
         if self.channels is None:
             return
@@ -264,7 +271,9 @@ class Node:
     @master(flagguard, formalin, connectguard)
     async def fund_channels(self):
         """
-        Fund channels that are below minimum threshold.
+        Funds outgoing channels whose balances are below the configured minimum threshold.
+        
+        Identifies open outgoing channels with balances under the minimum, then schedules asynchronous funding tasks for those channels whose destination peer is recognized.
         """
         if self.channels is None:
             return
@@ -326,7 +335,9 @@ class Node:
     @master(flagguard, formalin, connectguard)
     async def retrieve_channels(self):
         """
-        Retrieve all channels.
+        Retrieves all channels associated with the node and updates internal state.
+        
+        Fetches channel data from the API, separates incoming and outgoing channels related to the node, updates Prometheus metrics for channel counts, and logs the results.
         """
         channels = await self.api.channels()
 
@@ -447,6 +458,12 @@ class Node:
             )
 
     async def open_sessions(self, allowed_addresses: list[Address]):
+        """
+        Opens sessions for allowed peers that have outgoing channels but no active session.
+        
+        For each allowed address with an outgoing channel and no existing session, schedules
+        an asynchronous task to open a session.
+        """
         if self.channels is None:
             logger.warning("No channels found yet", self.log_base_params)
             return
@@ -463,6 +480,12 @@ class Node:
             AsyncLoop.add(self.open_session, peer_id, publish_to_task_set=False)
 
     async def open_session(self, relayer: str):
+        """
+        Opens a session with the specified relayer and stores it in session management if successful.
+        
+        Args:
+            relayer: The peer ID of the relayer to open a session with.
+        """
         if session := await NodeHelper.open_session(
             self.address,
             self.api,
@@ -473,10 +496,21 @@ class Node:
 
     @property
     def tasks(self):
+        """
+        Returns a list of methods decorated with the "formalin" decorator in this file.
+        
+        These methods are typically used for task management within the node.
+        """
         return [getattr(self, method) for method in Utils.decorated_methods(__file__, "formalin")]
 
     @property
     def p2p_endpoint(self):
+        """
+        Determines and returns the node's P2P endpoint URL.
+        
+        Attempts to match the node's URL against known patterns to construct the P2P endpoint.
+        If no pattern matches, falls back to returning the original URL.
+        """
         if hasattr(self, "_p2p_endpoint"):
             return self._p2p_endpoint
 

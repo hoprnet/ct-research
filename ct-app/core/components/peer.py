@@ -26,11 +26,12 @@ class Peer:
 
     def __init__(self, id: str, address: str, version: str):
         """
-        Create a new Peer with the specified id, address and version. The id refers to the peerId,
-        the address refers to the native address of a node.
-        :param id: The peer's peerId
-        :param address: The peer's native address
-        :param version: The reported peer's version
+        Initializes a Peer instance with a peer ID, native address, and version.
+        
+        Args:
+            id: The unique identifier for the peer (peerId).
+            address: The native address of the peer node.
+            version: The reported version string of the peer.
         """
         self.address = Address(id, address)
         self.version = version
@@ -90,11 +91,27 @@ class Peer:
 
     @safe_address_count.setter
     def safe_address_count(self, value: int):
+        """
+        Sets the number of node addresses linked to the safe and updates the corresponding metric.
+        
+        Args:
+            value: The count of node addresses associated with the safe.
+        """
         self._safe_address_count = value
         NODES_LINKED_TO_SAFE_COUNT.labels(self.address.hopr, self.safe.address).set(value)
 
     @property
     def split_stake(self) -> float:
+        """
+        Calculates the peer's effective stake by combining a share of the safe's total balance and the channel balance.
+        
+        Raises:
+            ValueError: If the safe balance, channel balance, or safe address count is not set.
+        
+        Returns:
+            The sum of the safe's total balance divided by the number of safe addresses and the channel balance as a float.
+            Returns 0 if the yearly message count is not set.
+        """
         if self.safe.balance is None:
             raise ValueError("Safe balance not set")
         if self.channel_balance is None:

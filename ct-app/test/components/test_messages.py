@@ -51,6 +51,11 @@ def test_increase_message_index():
 
 
 def test_loop_message_index():
+    """
+    Tests that the MessageFormat index loops back to 0 after reaching the specified range.
+    
+    Creates more MessageFormat instances than the defined range and verifies that the index attribute cycles correctly.
+    """
     MessageFormat.index = 0
     MessageFormat.range = 5
     messages = [MessageFormat(default_size, relayer) for _ in range(MessageFormat.range + 1)]

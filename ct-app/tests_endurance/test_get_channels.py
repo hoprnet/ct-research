@@ -12,6 +12,11 @@ logger = logging.getLogger(__name__)
 
 class GetChannels(EnduranceTest):
     async def on_start(self):
+        """
+        Initializes the test by setting up result tracking and connecting to the API node.
+        
+        Creates an empty list to store test results, initializes the API client using environment variables, retrieves the node address asynchronously, and logs the connected node's identifier.
+        """
         self.results = []
 
         self.api = HoprdAPI(EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY"))

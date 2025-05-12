@@ -26,6 +26,11 @@ logger.setLevel(logging.INFO)
 
 
 async def main(relayer: str = "12D3KooWPq6mC6uewNRANc4YRcigkP1bEUKUFkLX2fBB6deP32Z7"):
+    """
+    Performs an end-to-end test of session management and message transmission using HoprdAPI.
+    
+    Establishes a connection to a HOPR node, closes any existing sessions, opens a new session with a specified relayer, sends and receives test messages over a socket, and verifies session cleanup. Prints the outcome of each step to indicate success or failure.
+    """
     host = os.getenv("HOST_FORMAT") % ("green", randint(1, 5), "staging")
     token = os.getenv("TOKEN")
 

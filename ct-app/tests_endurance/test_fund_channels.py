@@ -14,6 +14,12 @@ logger = logging.getLogger(__name__)
 
 class FundChannels(EnduranceTest):
     async def on_start(self):
+        """
+        Initializes the test by connecting to the API, retrieving the node address, and selecting a random open channel.
+        
+        Raises:
+            RuntimeError: If no open channels are found for the node.
+        """
         self.results = []
         self.api = HoprdAPI(EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY"))
 
@@ -43,6 +49,11 @@ class FundChannels(EnduranceTest):
         self.results.append(success)
 
     async def on_end(self):
+        """
+        Waits for the selected channel's balance to change, updating the final balance or timing out.
+        
+        If the channel's balance does not change within the specified timeout, sets the final balance to the initial balance.
+        """
         async def balance_changed(id: str, balance: str):
             while True:
                 channels = await self.api.channels()
@@ -67,6 +78,11 @@ class FundChannels(EnduranceTest):
             self.final_balance = self.inital_balance
 
     def metrics(self) -> list[Metric]:
+        """
+        Returns a list of metrics summarizing the number of fundings and channel balances.
+        
+        The metrics include the expected number of fundings, the initial channel balance, and the final channel balance, with a condition that the final balance should differ from the initial balance.
+        """
         exp_fundings = Metric("Expected fundings", len(self.results), "x")
         initial_balance = Metric("Initial balance", self.inital_balance)
 

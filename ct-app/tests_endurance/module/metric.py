@@ -1,7 +1,13 @@
 class Metric:
     def __init__(self, text: str, value: float, suffix: str = "", cdt: bool or str = None):
         """
-        Initialisation of the class.
+        Initializes a Metric instance with text, value, optional suffix, and an optional condition.
+        
+        Args:
+            text: The label or description for the metric.
+            value: The numeric value associated with the metric.
+            suffix: An optional string to display after the value.
+            cdt: An optional condition, either as a boolean or a string expression to be evaluated.
         """
 
         self._text = text

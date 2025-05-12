@@ -1,5 +1,11 @@
 class ApiRequestObject:
     def __init__(self, *args, **kwargs):
+        """
+        Initializes an API request object, validating and setting attributes based on predefined keys.
+        
+        Raises:
+            ValueError: If the provided keys do not exactly match the expected keys defined in the class.
+        """
         if not hasattr(self, "keys"):
             self.keys = {}
 
@@ -99,6 +105,11 @@ class SessionCapabilitiesBody(ApiRequestObject):
 
     @property
     def as_array(self) -> list:
+        """
+        Returns a list of external key names for attributes set to True.
+        
+        The list includes the external names (as defined in the `keys` mapping) for all attributes of the instance whose values evaluate to True.
+        """
         return [self.keys[var] for var in vars(self) if var in self.keys and vars(self)[var]]
 
 

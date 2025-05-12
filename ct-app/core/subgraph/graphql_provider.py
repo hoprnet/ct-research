@@ -30,12 +30,24 @@ class GraphQLProvider:
     default_key: list[str] = None
 
     def __init__(self, url: URL):
+        """
+        Initializes the GraphQLProvider with the specified subgraph endpoint URL.
+        
+        Sets the provider's URL, determines the module directory path, and loads the GraphQL query and parameters for subsequent requests.
+        """
         self.url = url
         self.pwd = Path(sys.modules[self.__class__.__module__].__file__).parent
         self._initialize_query(self.query_file, self.params)
 
     #### PRIVATE METHODS ####
     def _initialize_query(self, query_file: str, extra_inputs: Optional[list[str]] = None):
+        """
+        Loads and prepares the GraphQL query from the specified file, updating the default key if unset.
+        
+        Args:
+            query_file: The filename of the GraphQL query to load.
+            extra_inputs: Optional list of additional variable names to include in the query.
+        """
         if extra_inputs is None:
             extra_inputs = []
 
@@ -82,10 +94,13 @@ class GraphQLProvider:
 
     async def _test_query(self, key: str, **kwargs) -> bool:
         """
-        Tests a subgraph query.
-        :param key: The key to look for in the response.
-        :param kwargs: The variables to use in the query (dict).
-        :return: True if the query is successful, False otherwise.
+        Asynchronously tests whether a subgraph query returns data for the specified key.
+        
+        Args:
+            key: The key to check for in the query response.
+        
+        Returns:
+            True if the response contains data for the given key, False otherwise.
         """
         kwargs.update({"first": 1, "skip": 0})
 

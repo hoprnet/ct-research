@@ -27,7 +27,16 @@ class Bucket:
 
     def apr(self, x: float):
         """
-        Calculate the APR for the bucket.
+        Calculates the APR for a given input value using the bucket's parameters.
+        
+        Args:
+            x: The input value for which to compute the APR.
+        
+        Returns:
+            The calculated APR, guaranteed to be non-negative.
+        
+        Raises:
+            ValueError: If a math domain error, zero division, or overflow occurs during calculation.
         """
         try:
             apr = log(pow(self.upperbound / x, self.skewness) - 1) * self.flatness + self.offset
@@ -54,7 +63,13 @@ class Bucket:
 class EconomicModelSigmoid:
     def __init__(self, offset: float, buckets: list[Bucket], max_apr: float, proportion: float):
         """
-        Initialisation of the class.
+        Initializes an EconomicModelSigmoid instance with specified parameters.
+        
+        Args:
+            offset: Value added to the APR calculation.
+            buckets: List of Bucket instances used in APR computation.
+            max_apr: Maximum allowable APR.
+            proportion: Proportion factor for reward calculation.
         """
         self.offset = offset
         self.buckets = buckets

@@ -57,9 +57,21 @@ class ApiResponseObject:
         return str(self.__dict__)
 
     def __repr__(self):
+        """
+        Returns the string representation of the object for debugging purposes.
+        """
         return str(self)
 
     def __eq__(self, other):
+        """
+        Checks if this instance is equal to another by comparing all attributes defined in keys.
+        
+        Args:
+            other: The object to compare with.
+        
+        Returns:
+            True if all corresponding attributes are equal; otherwise, False.
+        """
         return all(getattr(self, key) == getattr(other, key) for key in self.keys.keys())
 
 
