@@ -1,17 +1,9 @@
 [project]
 name = "test"
-version = "3.8.0"
+version = "3.11.0"
 requires-python = ">=3.12"
 dependencies = [
     "pytest==8.3.5",
     "pytest-asyncio==0.26.0",
     "pytest-mock==3.14.0",
 ]
-
-[tool.pytest.ini_options]
-asyncio_default_fixture_loop_scope = "module"
-minversion = "7.0"
-asyncio_mode = "auto"
-addopts = ["-ra", "-q"]
-log_cli_level = "INFO"
-log_cli = true
