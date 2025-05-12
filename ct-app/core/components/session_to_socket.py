@@ -103,7 +103,14 @@ class SessionToSocket:
         # TODO: maybe set the timestamp here ?
 
         sent_size = self.send(message.bytes())
+        MESSAGES_STATS.labels("sent", message.sender, message.relayer).inc(
+            sent_size / message.packet_size
+        )
+
         recv_message, recv_size, timestamp = self.receive(sent_size)
+        MESSAGES_STATS.labels("relayed", message.sender, message.relayer).inc(
+            recv_size / message.packet_size
+        )
 
         if recv_message is None:
             return 0
@@ -112,17 +119,7 @@ class SessionToSocket:
             message = MessageFormat.parse(recv_message)
         except ValueError:
             return 0
-
-        rtt = (timestamp - message.timestamp) / 1000
-
-        # convert to number of messages instead of bytes
-        sent_count = sent_size / message.packet_size
-        recv_count = recv_size / message.packet_size
-
-        MESSAGES_STATS.labels("sent", message.sender, message.relayer).inc(sent_count)
-        MESSAGES_STATS.labels("relayed", message.sender, message.relayer).inc(
-            recv_count
-        )
-        MESSAGES_DELAYS.labels(message.sender, message.relayer).observe(rtt)
-
-        return recv_size / sent_size
+        else:
+            rtt = (timestamp - message.timestamp) / 1000
+            MESSAGES_DELAYS.labels(message.sender, message.relayer).observe(rtt)
+            return recv_size / sent_size
