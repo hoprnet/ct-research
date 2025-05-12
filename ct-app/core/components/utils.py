@@ -7,9 +7,7 @@ from .environment_utils import EnvironmentUtils
 
 class Utils:
     @classmethod
-    def nodesCredentials(
-        cls, address_prefix: str, keyenv: str
-    ) -> tuple[list[str], list[str]]:
+    def nodesCredentials(cls, address_prefix: str, keyenv: str) -> tuple[list[str], list[str]]:
         """
         Returns a tuple containing the addresses and keys of the nodes.
         :param address_prefix: The prefix of the environment variables containing addresses.
@@ -141,19 +139,13 @@ class Utils:
         keepalive_methods = []
 
         for node in ast.walk(tree):
-            if not isinstance(node, ast.FunctionDef) and not isinstance(
-                node, ast.AsyncFunctionDef
-            ):
+            if not isinstance(node, ast.FunctionDef) and not isinstance(node, ast.AsyncFunctionDef):
                 continue
 
             for decorator in node.decorator_list:
                 try:
                     if isinstance(decorator, ast.Call):
-                        args_name = [
-                            arg.id
-                            for arg in decorator.args
-                            if isinstance(arg, ast.Name)
-                        ]
+                        args_name = [arg.id for arg in decorator.args if isinstance(arg, ast.Name)]
 
                         if not hasattr(decorator.func, "id") or (
                             decorator.func.id != target and target not in args_name

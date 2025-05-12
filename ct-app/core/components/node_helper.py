@@ -21,9 +21,7 @@ logger = logging.getLogger(__name__)
 
 class NodeHelper:
     @classmethod
-    async def open_channel(
-        cls, initiator: Address, api: HoprdAPI, address: str, amount: int
-    ):
+    async def open_channel(cls, initiator: Address, api: HoprdAPI, address: str, amount: int):
         log_params = {"from": initiator.hopr, "to": address, "amount": amount}
         logger.debug("Opening channel", log_params)
         channel = await api.open_channel(address, f"{int(amount*1e18):d}")
@@ -35,9 +33,7 @@ class NodeHelper:
             logger.warning(f"Failed to open channel to {address}", log_params)
 
     @classmethod
-    async def close_channel(
-        cls, initiator: Address, api: HoprdAPI, channel: Channel, type: str
-    ):
+    async def close_channel(cls, initiator: Address, api: HoprdAPI, channel: Channel, type: str):
         logs_params = {"from": initiator.hopr, "channel": channel.id}
         logger.debug(f"Closing {type} channel", logs_params)
 
@@ -50,9 +46,7 @@ class NodeHelper:
             logger.warning(f"Failed to close {type}", logs_params)
 
     @classmethod
-    async def fund_channel(
-        cls, initiator: Address, api: HoprdAPI, channel: Channel, amount: int
-    ):
+    async def fund_channel(cls, initiator: Address, api: HoprdAPI, channel: Channel, amount: int):
         logs_params = {"from": initiator.hopr, "channel": channel.id, "amount": amount}
         logger.debug("Funding channel", logs_params)
 
@@ -82,9 +76,7 @@ class NodeHelper:
                 SESSION_OPS.labels(initiator.hopr, relayer, "opened", "yes").inc()
                 return session
             case SessionFailure():
-                logger.warning(
-                    "Failed to open a session", {**logs_params, **session.as_dict}
-                )
+                logger.warning("Failed to open a session", {**logs_params, **session.as_dict})
                 SESSION_OPS.labels(initiator.hopr, relayer, "opened", "no").inc()
                 return None
 
@@ -110,9 +102,7 @@ class NodeHelper:
             SESSION_OPS.labels(initiator.hopr, relayer, "closed", "no").inc()
 
     @classmethod
-    async def close_session_blindly(
-        cls, initiator: Address, api: HoprdAPI, session: Session
-    ):
+    async def close_session_blindly(cls, initiator: Address, api: HoprdAPI, session: Session):
         logs_params = {"from": initiator.hopr, "session": session.as_dict}
         logger.debug("Closing the session blindly", logs_params)
 

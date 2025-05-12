@@ -10,7 +10,9 @@ logger = logging.getLogger(__name__)
 
 class Parameters:
     """
-    Class that represents a set of parameters that can be accessed and modified. The parameters are stored in a dictionary and can be accessed and modified using the dot notation. The parameters can be loaded from environment variables with a specified prefix.
+    Class that represents a set of parameters that can be accessed and modified. The parameters are
+    stored in a dictionary and can be accessed and modified using the dot notation.
+    The parameters can be loaded from environment variables with a specified prefix.
     """
 
     def __init__(self):
@@ -95,10 +97,7 @@ class Parameters:
 
     @property
     def as_dict(self):
-        return {
-            k: v.as_dict if isinstance(v, type(self)) else v
-            for k, v in self.__dict__.items()
-        }
+        return {k: v.as_dict if isinstance(v, type(self)) else v for k, v in self.__dict__.items()}
 
     def __repr__(self):
         return str(self.__dict__)

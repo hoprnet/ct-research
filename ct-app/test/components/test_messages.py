@@ -53,8 +53,6 @@ def test_increase_message_index():
 def test_loop_message_index():
     MessageFormat.index = 0
     MessageFormat.range = 5
-    messages = [
-        MessageFormat(default_size, relayer) for _ in range(MessageFormat.range + 1)
-    ]
+    messages = [MessageFormat(default_size, relayer) for _ in range(MessageFormat.range + 1)]
     indexes = [message.index for message in messages]
     assert indexes == list(range(MessageFormat.range)) + [0]

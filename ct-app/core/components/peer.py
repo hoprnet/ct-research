@@ -9,9 +9,7 @@ from .asyncloop import AsyncLoop
 from .decorators import flagguard, formalin, master
 from .messages import MessageFormat, MessageQueue
 
-CHANNEL_STAKE = Gauge(
-    "ct_peer_channels_balance", "Balance in outgoing channels", ["peer_id"]
-)
+CHANNEL_STAKE = Gauge("ct_peer_channels_balance", "Balance in outgoing channels", ["peer_id"])
 DELAY = Gauge("ct_peer_delay", "Delay between two messages", ["peer_id"])
 NODES_LINKED_TO_SAFE_COUNT = Gauge(
     "ct_peer_safe_count", "Number of nodes linked to the safes", ["peer_id", "safe"]
@@ -22,12 +20,14 @@ SECONDS_IN_A_NON_LEAP_YEAR = 365 * 24 * 60 * 60
 
 class Peer:
     """
-    Representation of a peer in the network. A peer is a node that is part of the network and not hosted by HOPR.
+    Representation of a peer in the network. A peer is a node that is part of the network and not
+    hosted by HOPR.
     """
 
     def __init__(self, id: str, address: str, version: str):
         """
-        Create a new Peer with the specified id, address and version. The id refers to the peerId, the address refers to the native address of a node.
+        Create a new Peer with the specified id, address and version. The id refers to the peerId,
+        the address refers to the native address of a node.
         :param id: The peer's peerId
         :param address: The peer's native address
         :param version: The reported peer's version
@@ -91,9 +91,7 @@ class Peer:
     @safe_address_count.setter
     def safe_address_count(self, value: int):
         self._safe_address_count = value
-        NODES_LINKED_TO_SAFE_COUNT.labels(self.address.hopr, self.safe.address).set(
-            value
-        )
+        NODES_LINKED_TO_SAFE_COUNT.labels(self.address.hopr, self.safe.address).set(value)
 
     @property
     def split_stake(self) -> float:
@@ -106,9 +104,9 @@ class Peer:
         if self.yearly_message_count is None:
             return 0
 
-        split_stake = float(self.safe.total_balance) / float(
-            self.safe_address_count
-        ) + float(self.channel_balance)
+        split_stake = float(self.safe.total_balance) / float(self.safe_address_count) + float(
+            self.channel_balance
+        )
 
         return split_stake
 

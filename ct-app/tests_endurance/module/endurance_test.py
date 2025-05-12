@@ -29,12 +29,8 @@ class EnduranceTest(object):
         self.execution_time = None
         self.metric_list: list[Metric] = []
 
-        logger.setLevel(
-            getattr(logging, EnvironmentUtils.envvar("LOG_LEVEL", default="INFO"))
-        )
-        logger.disabled = not EnvironmentUtils.envvar(
-            "LOG_ENABLED", type=bool, default=True
-        )
+        logger.setLevel(getattr(logging, EnvironmentUtils.envvar("LOG_LEVEL", default="INFO")))
+        logger.disabled = not EnvironmentUtils.envvar("LOG_ENABLED", type=bool, default=True)
 
     async def progress_bar(self):
         """
@@ -53,8 +49,7 @@ class EnduranceTest(object):
             exp_duration_f = timedelta(seconds=int(self.duration))
 
             suffix_string = (
-                f"{completed_tasks}/{len(self.tasks)-1} "
-                + f"[{duration_f}/{exp_duration_f}]"
+                f"{completed_tasks}/{len(self.tasks)-1} " + f"[{duration_f}/{exp_duration_f}]"
             )
 
             bar_length = os.get_terminal_size().columns - len(suffix_string) - 1
@@ -89,9 +84,7 @@ class EnduranceTest(object):
         self.tasks.add(asyncio.create_task(self.progress_bar()))
 
         for it in range(self.iterations):
-            self.tasks.add(
-                asyncio.create_task(self.delayed_task(getattr(self, "task"), it))
-            )
+            self.tasks.add(asyncio.create_task(self.delayed_task(getattr(self, "task"), it)))
 
         self.start_time = time.time()
         await asyncio.gather(*self.tasks)
@@ -99,9 +92,7 @@ class EnduranceTest(object):
 
         await self.on_end()
 
-        self.execution_time = Metric(
-            "Execution time", self.end_time - self.start_time, "s"
-        )
+        self.execution_time = Metric("Execution time", self.end_time - self.start_time, "s")
 
         self.metric_list = self.metrics()
         self._show_metrics()
