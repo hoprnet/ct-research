@@ -68,9 +68,12 @@ class GraphQLProvider:
         :param variable_values: The variables to use in the query (dict)"""
 
         try:
-            async with aiohttp.ClientSession() as session, session.post(
-                self.url.url, json={"query": query, "variables": variable_values}
-            ) as response:
+            async with (
+                aiohttp.ClientSession() as session,
+                session.post(
+                    self.url.url, json={"query": query, "variables": variable_values}
+                ) as response,
+            ):
                 SUBGRAPH_CALLS.labels(self.url.params.slug, self.url.mode).inc()
                 return await response.json(), response.headers
         except TimeoutError as err:

@@ -2,6 +2,8 @@
 # =============================================================================
 # 
 # =============================================================================
+environment: prod
+
 flags:
   core: 
     apply_economic_model: 30
@@ -11,6 +13,7 @@ flags:
     topology: 30
 
     rotate_subgraphs: 60
+    open_sessions: 60
 
     peers_rewards: 300
     registered_nodes: 300
@@ -34,7 +37,7 @@ flags:
     get_total_channel_funds: 300
     
     observe_message_queue: On # should only be On / Off
-    observe_relayed_messages: 15
+    close_sessions: 30
 
   peer:
     message_relay_request: On # should only be On / Off
@@ -105,6 +108,14 @@ channel:
   funding_amount: 30
   max_age_seconds: 172800
   
+# =============================================================================
+# 
+# =============================================================================
+sessions:
+  packetSize: 462 # TODO 3.0: change to 762
+  aggregatedPackets: 10
+  batchSize: 5
+
 # =============================================================================
 # 
 # =============================================================================

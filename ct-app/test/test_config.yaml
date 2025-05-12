@@ -10,6 +10,7 @@ flags:
     connected_peers: 30
     topology: 30
 
+    open_sessions: 30
     rotate_subgraphs: 30
 
     peers_rewards: 30
@@ -34,7 +35,7 @@ flags:
     get_total_channel_funds: Off
     
     observe_message_queue: On # should only be On / Off
-    observe_relayed_messages: On # should only be On / Off
+    close_sessions: 30
 
   peer:
     message_relay_request: Off
@@ -100,6 +101,13 @@ channel:
   funding_amount: 0.2
   max_age_seconds: 60
 
+# =============================================================================
+# 
+# =============================================================================
+sessions:
+  packetSize: 472
+  numPackets: 3
+  
 # =============================================================================
 # 
 # =============================================================================

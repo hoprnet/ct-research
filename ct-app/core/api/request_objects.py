@@ -62,27 +62,75 @@ class GetChannelsBody(ApiRequestObject):
         super().__init__(vars())
 
 
-class SendMessageBody(ApiRequestObject):
-    keys = {
-        "body": "body",
-        "path": "path",
-        "destination": "peerId",
-        "tag": "tag",
-    }
-
-    def __init__(self, body: str, path: list[str], destination: str, tag: int):
-        super().__init__(vars())
-
-
-class PopMessagesBody(ApiRequestObject):
-    keys = {"tag": "tag"}
-
-    def __init__(self, tag: int):
-        super().__init__(vars())
-
-
 class GetPeersBody(ApiRequestObject):
     keys = {"quality": "quality"}
 
     def __init__(self, quality: float):
+        super().__init__(vars())
+
+
+class CreateSessionBody(ApiRequestObject):
+    keys = {
+        "capabilities": "capabilities",
+        "destination": "destination",
+        "listen_host": "listenHost",
+        "path": "path",
+        "target": "target",
+    }
+
+    def __init__(
+        self,
+        capabilities: list,
+        destination: str,
+        listen_host: str,
+        path: str,
+        target: str,
+    ):
+        super().__init__(vars())
+
+
+class SessionCapabilitiesBody(ApiRequestObject):
+    keys = {
+        "retransmission": "Retransmission",
+        "segmentation": "Segmentation",
+        "no_delay": "NoDelay",
+    }
+
+    def __init__(self, retransmission: bool, segmentation: bool, no_delay: bool):
+        super().__init__(vars())
+
+    @property
+    def as_array(self) -> list:
+        return [
+            self.keys[var] for var in vars(self) if var in self.keys and vars(self)[var]
+        ]
+
+
+class SessionPathBodyRelayers(ApiRequestObject):
+    keys = {
+        "relayers": "IntermediatePath",
+    }
+
+    def __init__(self, relayers: list[str]):
+        super().__init__(vars())
+
+
+class SessionPathBodyHops(ApiRequestObject):
+    keys = {
+        "hops": "Hops",
+    }
+
+    def __init__(self, hops: int = 0):
+        super().__init__(vars())
+
+    def post_init(self):
+        self.hops = int(self.hops)
+
+
+class SessionTargetBody(ApiRequestObject):
+    keys = {
+        "service": "Service",
+    }
+
+    def __init__(self, service: int = 0):
         super().__init__(vars())
