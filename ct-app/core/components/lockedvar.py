@@ -61,7 +61,7 @@ class LockedVar:
     async def update(self, value: Any):
         """
         Asynchronously update the value of the variable with the specified value in a locked manner.
-        If the type of the value is different from the type of the variablea  TypeError is raised.
+        If the type of the value is different from the type of the variable, a TypeError is raised.
         This method is meant to be used with dictionaries.
         """
         if self.type and not isinstance(value, self.type):
