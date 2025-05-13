@@ -20,6 +20,21 @@ class ExplicitParams:
             k: v.as_dict if isinstance(v, ExplicitParams) else v for k, v in self.__dict__.items()
         }
 
+    @classmethod
+    def generate(cls):
+        """
+        Generate an example representation of the input parameter file.
+        """
+        example = {}
+        for name, _type in cls.keys.items():
+            if issubclass(_type, ExplicitParams):
+                example[name] = _type().generate()
+            elif _type is Flag:
+                example[name] = Flag(0).value
+            else:
+                example[name] = _type()
+        return example
+
     def __repr__(self):
         return f"{self.__class__.__name__}({self.as_dict})"
 
