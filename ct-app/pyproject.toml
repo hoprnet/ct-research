@@ -13,7 +13,6 @@ members = [
     "core", 
     "core/api",
     "core/components",
-    "core/economic_model",
     "core/subgraph",
     "test" 
 ]

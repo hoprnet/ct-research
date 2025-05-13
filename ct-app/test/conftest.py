@@ -4,8 +4,6 @@ from test.decorators_patches import patches
 
 import pytest
 import yaml
-from pytest_mock import MockerFixture
-
 from core.api.response_objects import (
     Addresses,
     Balances,
@@ -13,18 +11,13 @@ from core.api.response_objects import (
     Channels,
     ConnectedPeer,
 )
-from core.components import Parameters, Peer
+from core.components import Peer
+from core.components.config_parser import LegacyParams, Parameters
 
 # needs to be imported after the patches are applied
 from core.core import Core
-from core.economic_model import (
-    Budget,
-    Coefficients,
-    EconomicModelLegacy,
-    Equation,
-    Equations,
-)
 from core.node import Node
+from pytest_mock import MockerFixture
 
 
 class SideEffect:
@@ -64,23 +57,18 @@ class SideEffect:
 
 
 @pytest.fixture
-def budget() -> Budget:
-    budget = Budget()
-    budget.ticket_price = 0.0001
-    return budget
-
-
-@pytest.fixture
-def economic_model(budget: Budget) -> EconomicModelLegacy:
-    equations = Equations(
-        Equation("a * x", "l <= x <= c"),
-        Equation("a * c + (x - c) ** (1 / b)", "x > c"),
+def economic_model() -> LegacyParams:
+    return LegacyParams(
+        {
+            "proportion": 1,
+            "apr": 15,
+            "coefficients": {"a": 1, "b": 1, "c": 3, "l": 0},
+            "equations": {
+                "fx": {"formula": "a * x", "condition": "l <= x <= c"},
+                "gx": {"formula": "a * c + (x - c) ** (1 / b)", "condition": "x > c"},
+            },
+        }
     )
-    parameters = Coefficients(1, 1, 3, 0)
-
-    model = EconomicModelLegacy(equations, parameters, 1, 15)
-    model.budget = budget
-    return model
 
 
 @pytest.fixture
@@ -188,22 +176,11 @@ def channels(peers: set[Peer]) -> Channels:
 @pytest.fixture
 async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
 
-    params = Parameters()
     with open("./test/test_config.yaml", "r") as file:
-        params.parse(yaml.safe_load(file))
-    setattr(params.subgraph, "apiKey", "foo_deployer_key")
-
-    setattr(params, "pg", Parameters())
-    setattr(params.pg, "user", "user")
-    setattr(params.pg, "password", "password")
-    setattr(params.pg, "host", "host")
-    setattr(params.pg, "port", "port")
-    setattr(params.pg, "database", "database")
+        params = Parameters(yaml.safe_load(file))
+    setattr(params.subgraph, "api_key", "foo_deployer_key")
 
     core = Core(nodes, params)
-
-    for model in core.models.values():
-        model.budget.ticket_price = 0.1
 
     return core
 
@@ -229,8 +206,8 @@ async def node(
 
     params = Parameters()
     with open("./test/test_config.yaml", "r") as file:
-        params.parse(yaml.safe_load(file))
-    setattr(params.subgraph, "apiKey", "foo_deployer_key")
+        params = Parameters(yaml.safe_load(file))
+    setattr(params.subgraph, "api_key", "foo_deployer_key")
 
     node.params = params
 
