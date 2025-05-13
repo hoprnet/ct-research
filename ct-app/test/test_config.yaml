@@ -123,6 +123,7 @@ fundings:
 subgraph:
   type: auto # auto | default | backup
   user_id: 1000
+  api_key: 
 
   mainnet_allocations:
     query_id: ~

@@ -35,6 +35,34 @@ class ExplicitParams:
                 example[name] = _type()
         return example
 
+    @classmethod
+    def verify(cls, data: dict, parent: str = ""):
+        """
+        Recursively verify all parameters in the input data.
+        Returns an instance of the class if all parameters are valid.
+        """
+        for name, _type in cls.keys.items():
+            if hasattr(_type, "verify"):
+                _type.verify(data[name], f"{parent}.{name}")
+            else:
+                if _type is dict:
+                    continue
+
+                try:
+                    _ = data[name]
+                except KeyError:
+                    raise KeyError(f"Missing required parameter `{name}` in {parent}")
+
+                if not data[name]:
+                    continue
+
+                try:
+                    _ = _type(data[name])
+                except ValueError:
+                    raise ValueError(f"Invalid type for `{name}` in {parent}")
+
+        return cls(data)
+
     def __repr__(self):
         return f"{self.__class__.__name__}({self.as_dict})"
 
