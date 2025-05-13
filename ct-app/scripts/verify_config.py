@@ -9,22 +9,22 @@ from core.components.config_parser import Parameters
 
 
 @click.command()
-@click.option("--input", "-i", type=str, help="Input config file")
-def main(input: str):
+@click.option("--file", "-f", type=str, help="Input config file")
+def main(file: str):
 
-    with open(input, "r") as f:
+    with open(file, "r") as f:
         data = yaml.safe_load(f)
 
     try:
         _ = Parameters.verify(data)
     except KeyError as e:
-        click.echo(f"KeyError: {e}")
+        click.echo(f"KeyError in {file}: {e}")
         return 1
     except ValueError as e:
-        click.echo(f"ValueError: {e}")
+        click.echo(f"ValueError in {file}: {e}")
         return 1
     else:
-        click.echo("Config file is valid.")
+        click.echo(f"Config {file} is valid.")
         return 0
 
 
