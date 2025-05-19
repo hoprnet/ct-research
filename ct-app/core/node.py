@@ -2,6 +2,7 @@
 import asyncio
 import logging
 from datetime import datetime
+from typing import Callable
 
 from prometheus_client import Gauge
 
@@ -460,19 +461,22 @@ class Node:
         )
 
         for peer_id in without_session_peer_ids:
-            AsyncLoop.add(self.open_session, peer_id, publish_to_task_set=False)
+            # TODO: pick a random destination among other CT nodes
+            destination = Address("hopr", "native")
+            AsyncLoop.add(self.open_session, destination, peer_id, publish_to_task_set=False)
 
-    async def open_session(self, relayer: str):
+    async def open_session(self, destination: Address, relayer: str):
         if session := await NodeHelper.open_session(
             self.address,
             self.api,
+            destination,
             relayer,
             self.p2p_endpoint,
         ):
             self.session_management[relayer] = SessionToSocket(session, self.p2p_endpoint)
 
     @property
-    def tasks(self):
+    def tasks(self) -> list[Callable]:
         return [getattr(self, method) for method in Utils.decorated_methods(__file__, "formalin")]
 
     @property

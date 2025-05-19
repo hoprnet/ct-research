@@ -20,7 +20,7 @@ MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer"])
 
 
 class SessionToSocket:
-    def __init__(self, session: Session, connect_address: str, timeout: Optional[int] = 0.05):
+    def __init__(self, session: Session, connect_address: str, timeout: Optional[float] = 0.05):
         self.session = session
         self.connect_address = connect_address
 

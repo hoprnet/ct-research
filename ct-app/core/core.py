@@ -1,6 +1,7 @@
 # region Imports
 import logging
 import random
+from typing import Callable
 
 from prometheus_client import Gauge
 
@@ -100,7 +101,7 @@ class Core:
         async with self.all_peers as current_peers:
             visible_peers: set[Peer] = set()
             visible_peers.update(*[await node.peers.get() for node in self.nodes])
-            visible_peers = list(visible_peers)
+            visible_peers: list[Peer] = list(visible_peers)
 
             for peer in current_peers:
                 # if peer is still visible
@@ -226,8 +227,8 @@ class Core:
             return
 
         self.topology_data = [
-            entries.Topology.fromDict(*arg)
-            for arg in (await Utils.balanceInChannels(channels.all)).items()
+            entries.Topology.fromDict(peer_id, value)
+            for peer_id, value in (await Utils.balanceInChannels(channels.all)).items()
         ]
 
         logger.debug("Fetched all topology links", {"count": len(self.topology_data)})
@@ -366,7 +367,7 @@ class Core:
             await node.open_sessions(eligible_addresses)
 
     @property
-    def tasks(self):
+    def tasks(self) -> list[Callable]:
         return [getattr(self, method) for method in Utils.decorated_methods(__file__, "formalin")]
 
     async def start(self):

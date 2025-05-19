@@ -1,11 +1,9 @@
 import asyncio
 import logging
-import os
-import re
 import sys
-from random import randint
 
-from dotenv import load_dotenv
+import click
+from lib.decorators import asynchronous
 from lib.state import State
 
 sys.path.insert(1, "./")
@@ -15,31 +13,67 @@ from core.api.response_objects import Session, SessionFailure
 from core.components.messages.message_format import MessageFormat
 from core.components.session_to_socket import SessionToSocket
 
-load_dotenv()
-
-PACKET_SIZE = 462
-NUM_SENDING = 1
-AGGREGATED_MESSAGES = 3
-
 logger = logging.getLogger("core.api.hoprd_api")
 logger.setLevel(logging.INFO)
 
 
-async def main(relayer: str = "12D3KooWPq6mC6uewNRANc4YRcigkP1bEUKUFkLX2fBB6deP32Z7"):
-    host = os.getenv("HOST_FORMAT") % ("green", randint(1, 5), "staging")
-    token = os.getenv("TOKEN")
+def get_packet_counts_from_metrics(metrics: str) -> dict:
+    """
+    Extract packet counts from metrics string.
+    """
+    if metrics is None:
+        return {}
 
-    pattern = r"ctdapp-([a-zA-Z]+)-node-(\d+)\.ctdapp\.([a-zA-Z]+)\."
-    if match := re.search(pattern, host):
-        deployment, index, environment = match.groups()
-        p2p_host = f"ctdapp-{deployment}-node-{index}-p2p.ctdapp.{environment}.hoprnet.link"
-    else:
-        p2p_host = host
+    hopr_packet_counts = [
+        line
+        for line in metrics.split("\n")
+        if "hopr_packets_count" in line and not line.startswith("#")
+    ]
+    packet_counts = {}
+    for line in hopr_packet_counts:
+        key, value = line.split(" ")
+        packet_counts[key.split('"')[1]] = int(value)
+    return packet_counts
 
-    api = HoprdAPI(host, token)
+
+@click.command()
+@click.option(
+    "--relayer",
+    default="12D3KooWPq6mC6uewNRANc4YRcigkP1bEUKUFkLX2fBB6deP32Z7",
+    help="Relayer address",
+)
+@click.option("--packet-size", default=810, help="Packet size")
+@click.option("--num-sending", default=10, help="Number of packets to send in one session")
+@click.option(
+    "--aggregated-messages",
+    default=1,
+    help="Number of messages to aggregate in one packet",
+)
+@click.option(
+    "--sleep-time",
+    default=5,
+    help="Time to sleep before closing the session",
+)
+@asynchronous
+async def main(
+    relayer: str,
+    packet_size: int,
+    num_sending: int,
+    aggregated_messages: int,
+    sleep_time: int,
+):
+    host = "http://localhost"
+    p2p_host = "127.0.0.1"
+
+    api_port = 3003
+    token = "e2e-API-token^^"
+
+    api_host = f"{host}:{api_port}"
+
+    api = HoprdAPI(api_host, token)
 
     # get node infos
-    print(f"From node: {host}")
+    print(f"From node: {api_host}")
     own_addresses = await api.get_address()
     if own_addresses is None:
         print(State.FAILURE, "No addresses found")
@@ -70,32 +104,37 @@ async def main(relayer: str = "12D3KooWPq6mC6uewNRANc4YRcigkP1bEUKUFkLX2fBB6deP3
             print(State.UNKNOWN, f"Unknown type: {type(session)}")
             return
 
+    packets_count_before = get_packet_counts_from_metrics(await api.metrics())
+
     # send data through socket
-    socket = SessionToSocket(session, p2p_host, 0.1)
-    for _ in range(NUM_SENDING):
-        message = MessageFormat(AGGREGATED_MESSAGES * PACKET_SIZE, relayer, 1, 1, 1)
+    socket = SessionToSocket(session, p2p_host, 1)
+    sent_data = []
+    recv_data = []
+    for _ in range(num_sending):
+        message = MessageFormat(aggregated_messages * packet_size, relayer, "", 1, 1, 1)
         message.sender = own_addresses.hopr
 
         size = socket.send(message.bytes())
-        print(
-            State.SUCCESS,
-            f"Sent message\n\t {size} bytes, {size / PACKET_SIZE:.1f} HOPR packets",
-        )
-        if (
-            (response := socket.receive(size))
-            and (data := response[0])
-            and (recv_size := response[1])
-        ):
-            received = MessageFormat.parse(data)
-            print(
-                State.fromBool(received == message),
-                f"Received message\n\t{recv_size} bytes, {recv_size / PACKET_SIZE:.1f} packets",
-            )
-        else:
-            print(State.FAILURE, "No message received")
+        sent_data.append(size)
+        if (response := socket.receive(size)) and (recv_size := response[1]):
+            recv_data.append(recv_size)
+
+    print(
+        State.fromBool(
+            len(sent_data) == len(recv_data) and all(sent_data) and all(recv_data),
+        ),
+        f"Sent {len(sent_data)} messages ({sum(sent_data)} bytes -",
+        f"{sum(sent_data)//packet_size} HOPR packets),",
+        f"received {len(recv_data)} messages ({sum(recv_data)} bytes -",
+        f"{sum(recv_data)//packet_size} HOPR packets)",
+    )
+
+    packets_count_after = get_packet_counts_from_metrics(await api.metrics())
 
     # close session
     if session:
+        print(State.UNKNOWN, f"Sleep for {sleep_time} seconds before closing the session")
+        await asyncio.sleep(sleep_time)
         await api.close_session(session)
 
     # get session
@@ -105,6 +144,16 @@ async def main(relayer: str = "12D3KooWPq6mC6uewNRANc4YRcigkP1bEUKUFkLX2fBB6deP3
             print(State.SUCCESS, "Sessions cleaned-up")
         case _:
             print(State.FAILURE, "Session not closed")
+
+    # get the difference between the two packet counts
+    print("Packets statistics:")
+    for key, value in packets_count_after.items():
+        if key not in packets_count_before:
+            print(f"\tKey {key} not found in before metrics")
+            packets_count_before[key] = 0
+            # continue
+
+        print(f"\t{key}: {value - packets_count_before[key]}")
 
 
 if __name__ == "__main__":

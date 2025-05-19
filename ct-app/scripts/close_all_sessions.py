@@ -21,6 +21,10 @@ async def main(deployment: str = "green", environment: str = "staging"):
     host_format = os.getenv("HOST_FORMAT")
     token = os.getenv("TOKEN")
 
+    if host_format is None or token is None:
+        print(State.FAILURE, "HOST_FORMAT or TOKEN not set in .env file")
+        return
+
     for idx in range(1, 6):
         host = host_format % (deployment, idx, environment)
 

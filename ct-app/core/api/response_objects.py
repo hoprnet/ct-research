@@ -146,6 +146,8 @@ class Session(ApiResponseObject):
         "port": "port",
         "protocol": "protocol",
         "target": "target",
+        "payload": "payload",
+        "surb_size": "surbSize",
     }
 
 

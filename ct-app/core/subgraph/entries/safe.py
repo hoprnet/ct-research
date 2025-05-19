@@ -1,4 +1,6 @@
 import random
+from typing import Optional
+
 from .entry import SubgraphEntry
 
 
@@ -7,7 +9,7 @@ class Safe(SubgraphEntry):
     A Safe represents a single entry in the subgraph.
     """
 
-    def __init__(self, address: str, balance: str, allowance: str, owners: list[str]):
+    def __init__(self, address: str, balance: Optional[str], allowance: str, owners: list[str]):
         """
         Create a new Safe with the specified balance and allowance.
         :param balance: The balance of the safe.

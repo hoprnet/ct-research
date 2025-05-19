@@ -72,7 +72,9 @@ class CreateSessionBody(ApiRequestObject):
         "capabilities": "capabilities",
         "destination": "destination",
         "listen_host": "listenHost",
-        "path": "path",
+        "forward_path": "forwardPath",
+        "return_path": "returnPath",
+        "response_buffer": "responseBuffer",
         "target": "target",
     }
 
@@ -81,8 +83,10 @@ class CreateSessionBody(ApiRequestObject):
         capabilities: list,
         destination: str,
         listen_host: str,
-        path: str,
-        target: str,
+        forward_path: str | dict,
+        return_path: str | dict,
+        response_buffer: str,
+        target: str | dict,
     ):
         super().__init__(vars())
 

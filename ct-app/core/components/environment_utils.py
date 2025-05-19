@@ -1,5 +1,5 @@
 import os
-from typing import Any
+from typing import Any, Optional
 
 
 class EnvironmentUtils:
@@ -10,5 +10,5 @@ class EnvironmentUtils:
         return dict(sorted(var_dict.items()))
 
     @classmethod
-    def envvar(cls, name: str, default: str = None, type=str) -> Any:
+    def envvar(cls, name: str, default: Optional[Any] = None, type=str) -> Any:
         return type(os.environ.get(name, default))

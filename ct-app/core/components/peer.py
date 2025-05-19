@@ -1,5 +1,6 @@
 import asyncio
 import random
+from typing import Optional
 
 from packaging.version import Version
 from prometheus_client import Gauge
@@ -111,7 +112,7 @@ class Peer:
         return split_stake
 
     @property
-    async def message_delay(self) -> float:
+    async def message_delay(self) -> Optional[float]:
         value = None
         if self.yearly_message_count is not None and self.yearly_message_count > 0:
             value = SECONDS_IN_A_NON_LEAP_YEAR / self.yearly_message_count
@@ -157,7 +158,7 @@ class Peer:
         if delay := await self.message_delay:
             multiplier: int = self.params.sessions.aggregatedPackets
             message = MessageFormat(
-                self.params.sessions.packetSize,
+                self.params.sessions.packetSize - self.params.sessions.surbSize,
                 self.address.hopr,
                 multiplier=multiplier,
             )

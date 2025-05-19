@@ -52,10 +52,10 @@ class Parameters:
                 else:
                     raise KeyError(f"Key {key} not found in parameters")
 
-    def from_env(self, *prefixes: list[str]):
+    def from_env(self, *prefixes: str):
         for prefix in prefixes:
-            subparams_name: str = prefix.lower().strip("_")
-            raw_attrs = dir(self)
+            subparams_name = prefix.lower().strip("_")
+            raw_attrs: list[str] = dir(self)
             attrs = list(map(lambda str: str.lower(), raw_attrs))
 
             if subparams_name in attrs:
@@ -79,16 +79,16 @@ class Parameters:
         k = k[0].lower() + k[1:]
         return k
 
-    def _convert(self, value: str):
+    def _convert(self, value: str) -> str | int | float:
         try:
-            value = float(value)
+            value: float = float(value)
         except ValueError:
             pass
 
         try:
-            integer = int(value)
+            integer: int = int(value)
             if integer == value:
-                value = integer
+                value: int = integer
 
         except ValueError:
             pass

@@ -36,7 +36,7 @@ class FundChannels(EnduranceTest):
         logger.info(f"\tchannel: {self.channel.id}")
         logger.info(f"\tbalance: {self.inital_balance}")
 
-    async def task(self) -> bool:
+    async def task(self):
         success = await self.api.fund_channel(
             self.channel.id, EnvironmentUtils.envvar("FUND_AMOUNT")
         )
@@ -56,7 +56,7 @@ class FundChannels(EnduranceTest):
 
             return channel.balance
 
-        timeout = EnvironmentUtils.envvar("BALANCE_CHANGE_TIMEOUT", float)
+        timeout = EnvironmentUtils.envvar("BALANCE_CHANGE_TIMEOUT", type=float)
         logger.info(f"Waiting up to {timeout}s for the balance to change")
         try:
             self.final_balance = await asyncio.wait_for(

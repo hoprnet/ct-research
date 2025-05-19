@@ -1,3 +1,5 @@
+from typing import Optional
+
 from .entry import SubgraphEntry
 
 
@@ -6,7 +8,7 @@ class Topology(SubgraphEntry):
     Class that represents a single topology entry (from the API).
     """
 
-    def __init__(self, peer_id: str, address: str, channels_balance: int):
+    def __init__(self, peer_id: Optional[str], address: Optional[str], channels_balance: int):
         """
         Create a new Topology with the specified peer_id, address and channels_balance.
         :param peer_id: The peer's peerId.

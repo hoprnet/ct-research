@@ -62,7 +62,7 @@ class EconomicModelLegacy:
 
     def transformed_stake(self, stake: float):
         # convert parameters attribute to dictionary
-        kwargs = vars(self.coefficients)
+        kwargs = dict(vars(self.coefficients))
         kwargs.update({"x": stake})
 
         for func in vars(self.equations).values():

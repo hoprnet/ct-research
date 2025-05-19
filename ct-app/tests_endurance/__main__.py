@@ -1,4 +1,5 @@
 import os
+from typing import Any
 
 import click
 import yaml
@@ -7,11 +8,11 @@ from . import *  # noqa: F403
 from . import EnduranceTest
 
 
-def set_envvars(pairs: list[tuple[str, str]]):
-    if isinstance(pairs, tuple):
-        pairs = [pairs]
+def set_envvars(pair: tuple[str, str]):
+    if isinstance(pair, tuple):
+        pair: list[Any] = [pair]
 
-    for name, value in pairs:
+    for name, value in pair:
         os.environ[name] = str(value)
 
 

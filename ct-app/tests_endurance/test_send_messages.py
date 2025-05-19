@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import random
+from typing import Tuple
 
 from core.api import HoprdAPI
 from core.components import EnvironmentUtils
@@ -50,7 +51,7 @@ class SendMessages(EnduranceTest):
 
         await self.api.messages_pop_all(self.message_tag)
 
-    async def task(self) -> bool:
+    async def task(self):
         success = await self.api.send_message(
             self.recipient.hopr,
             "".join(random.choices(CHARS, k=random.randint(10, 30))),
@@ -74,7 +75,7 @@ class SendMessages(EnduranceTest):
         )
         self.inbox_size = len(inbox)
 
-    def success_flag(self) -> bool:
+    def success_flag(self) -> Tuple[bool, str]:
         return sum(self.results) / len(self.results) >= 0.9, ""
 
     def metrics(self):

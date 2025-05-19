@@ -20,11 +20,11 @@ class MessageFormat:
         self,
         packet_size: int,
         relayer: str,
-        sender: str = None,
-        index: str = None,
-        inner_index: int = None,
-        multiplier: int = None,
-        timestamp: str = None,
+        sender: Optional[str] = None,
+        index: Optional[int | str] = None,
+        inner_index: Optional[int | str] = None,
+        multiplier: Optional[int | str] = None,
+        timestamp: Optional[int | str] = None,
     ):
         self.packet_size = int(packet_size)
         self.sender = sender

@@ -60,16 +60,17 @@ class NodeHelper:
 
     @classmethod
     async def open_session(
-        cls, initiator: Address, api: HoprdAPI, relayer: str, listen_host: str
+        cls, initiator: Address, api: HoprdAPI, destination: Address, relayer: str, listen_host: str
     ) -> Optional[Session]:
         logs_params = {
             "from": initiator.hopr,
+            "to": destination.hopr,
             "relayer": relayer,
             "listen_host": listen_host,
         }
         logger.debug("Opening session", logs_params)
 
-        session = await api.post_session(initiator.hopr, relayer, listen_host)
+        session = await api.post_session(destination.hopr, relayer, listen_host)
         match session:
             case Session():
                 logger.debug("Opened session", {**logs_params, **session.as_dict})
@@ -96,7 +97,8 @@ class NodeHelper:
         if ok:
             logger.debug("Closed the session", logs_params)
             SESSION_OPS.labels(initiator.hopr, relayer, "closed", "yes").inc()
-            sess_to_socket.socket.close()
+            if socket := sess_to_socket.socket:
+                socket.close()
         else:
             logger.warning("Failed to close the session", logs_params)
             SESSION_OPS.labels(initiator.hopr, relayer, "closed", "no").inc()
