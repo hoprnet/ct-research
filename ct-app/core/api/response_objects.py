@@ -84,7 +84,7 @@ class Infos(ApiResponseObject):
 
 
 class ConnectedPeer(ApiResponseObject):
-    keys = {"address": "peerAddress", "peer_id": "peerId", "version": "reportedVersion"}
+    keys = {"address": "address", "version": "reportedVersion"}
 
     def post_init(self):
         self.address = try_to_lower(self.address)
@@ -94,18 +94,16 @@ class Channel(ApiResponseObject):
     keys = {
         "balance": "balance",
         "id": "channelId",
-        "destination_address": "destinationAddress",
-        "destination_peer_id": "destinationPeerId",
-        "source_address": "sourceAddress",
-        "source_peer_id": "sourcePeerId",
+        "destination": "destination",
+        "source": "source",
         "status": "status",
     }
 
     def post_init(self):
         self.status = ChannelStatus.fromString(self.status)
 
-        self.destination_address = try_to_lower(self.destination_address)
-        self.source_address = try_to_lower(self.source_address)
+        self.destination = try_to_lower(self.destination)
+        self.source = try_to_lower(self.source)
 
 
 class TicketPrice(ApiResponseObject):

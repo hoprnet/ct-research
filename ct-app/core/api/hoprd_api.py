@@ -197,7 +197,6 @@ class HoprdAPI:
     ) -> list[response.ConnectedPeer]:
         """
         Returns a list of peers.
-        :param: param: list or str = "peerId"
         :param: status: str = "connected"
         :param: quality: int = 0..1
         :return: peers: list
@@ -262,8 +261,8 @@ class HoprdAPI:
     ) -> Union[response.Session, response.SessionFailure]:
         """
         Creates a new session returning the session listening host & port over TCP or UDP.
-        :param: destination: PeerID of the recipient
-        :param: relayer: PeerID of the relayer
+        :param: destination: Address of the recipient
+        :param: relayer: Address of the relayer
         :param: listen_host: str
         :param: protocol: Protocol (UDP or TCP)
         :return: Session

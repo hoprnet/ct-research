@@ -86,23 +86,20 @@ def economic_model(budget: Budget) -> EconomicModelLegacy:
 @pytest.fixture
 def peers_raw() -> list[dict]:
     return [
-        {"peerId": "id_0", "peerAddress": "address_0", "reportedVersion": "2.0.0"},
-        {"peerId": "id_1", "peerAddress": "address_1", "reportedVersion": "2.7.0"},
-        {"peerId": "id_2", "peerAddress": "address_2", "reportedVersion": "2.0.8"},
+        {"address": "address_0", "reportedVersion": "2.0.0"},
+        {"address": "address_1", "reportedVersion": "2.7.0"},
+        {"address": "address_2", "reportedVersion": "2.0.8"},
         {
-            "peerId": "id_3",
-            "peerAddress": "address_3",
+            "address": "address_3",
             "reportedVersion": "2.1.0-rc.3",
         },
-        {"peerId": "id_4", "peerAddress": "address_4", "reportedVersion": "2.0.9"},
+        {"address": "address_4", "reportedVersion": "2.0.9"},
     ]
 
 
 @pytest.fixture
 def peers(peers_raw: list[dict]) -> set[Peer]:
-    peers = [
-        Peer(peer["peerId"], peer["peerAddress"], peer["reportedVersion"]) for peer in peers_raw
-    ]
+    peers = [Peer(peer["address"], peer["reportedVersion"]) for peer in peers_raw]
     for peer in peers:
         peer.safe_balance = randint(100, 200)
         peer.channel_balance = randint(10, 50)
@@ -113,11 +110,11 @@ def peers(peers_raw: list[dict]) -> set[Peer]:
 @pytest.fixture
 def addresses() -> list[dict]:
     return [
-        {"hopr": "id_0", "native": "address_0"},
-        {"hopr": "id_1", "native": "address_1"},
-        {"hopr": "id_2", "native": "address_2"},
-        {"hopr": "id_3", "native": "address_3"},
-        {"hopr": "id_4", "native": "address_4"},
+        {"native": "address_0"},
+        {"native": "address_1"},
+        {"native": "address_2"},
+        {"native": "address_3"},
+        {"native": "address_4"},
     ]
 
 
@@ -168,10 +165,8 @@ def channels(peers: set[Peer]) -> Channels:
                     {
                         "balance": f"{1*1e18:.0f}",
                         "id": f"channel_{index}",
-                        "destinationAddress": dest.address.native,
-                        "destinationPeerId": dest.address.hopr,
-                        "sourceAddress": src.address.native,
-                        "sourcePeerId": src.address.hopr,
+                        "destination": dest.address.native,
+                        "source": src.address.native,
                         "status": "Open",
                     }
                 )

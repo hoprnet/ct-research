@@ -1,6 +1,7 @@
 import inspect
 
 import pytest
+
 from core.api.response_objects import Channels
 
 from .conftest import Node, Peer
@@ -11,7 +12,6 @@ async def test_retrieve_address(node: Node, addresses: dict):
     await node.retrieve_address()
 
     assert node.address.native in [addr["native"] for addr in addresses]
-    assert node.address.hopr in [addr["hopr"] for addr in addresses]
 
 
 @pytest.mark.asyncio

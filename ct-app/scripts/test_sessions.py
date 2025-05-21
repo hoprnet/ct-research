@@ -90,7 +90,7 @@ async def main(
         return
 
     # open session
-    session = await api.post_session(own_addresses.hopr, relayer, p2p_host)
+    session = await api.post_session(own_addresses.native, relayer, p2p_host)
     for key, value in session.as_dict.items():
         print(f"\t{key:10s}: {value:10s}")
 
@@ -112,7 +112,7 @@ async def main(
     recv_data = []
     for _ in range(num_sending):
         message = MessageFormat(aggregated_messages * packet_size, relayer, "", 1, 1, 1)
-        message.sender = own_addresses.hopr
+        message.sender = own_addresses.native
 
         size = socket.send(message.bytes())
         sent_data.append(size)

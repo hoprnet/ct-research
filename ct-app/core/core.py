@@ -20,10 +20,10 @@ from .subgraph import URL, Type, entries
 # region Metrics
 ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
 MESSAGE_COUNT = Gauge(
-    "ct_message_count", "messages one should receive / year", ["peer_id", "model"]
+    "ct_message_count", "messages one should receive / year", ["address", "model"]
 )
 NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
-PEER_VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
+PEER_VERSION = Gauge("ct_peer_version", "Peer version", ["address", "version"])
 REDEEMED_REWARDS = Gauge("ct_redeemed_rewards", "Redeemed rewards", ["address"])
 STAKE = Gauge("ct_peer_stake", "Stake", ["safe", "type"])
 SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
@@ -137,7 +137,7 @@ class Core:
                 UNIQUE_PEERS.labels(key).set(value)
 
             for peer in current_peers:
-                PEER_VERSION.labels(peer.address.hopr, str(peer.version)).set(1)
+                PEER_VERSION.labels(peer.address.native, str(peer.version)).set(1)
 
     @master(flagguard, formalin)
     async def registered_nodes(self):
@@ -227,8 +227,8 @@ class Core:
             return
 
         self.topology_data = [
-            entries.Topology.fromDict(peer_id, value)
-            for peer_id, value in (await Utils.balanceInChannels(channels.all)).items()
+            entries.Topology(address, balance)
+            for address, balance in (await Utils.balanceInChannels(channels.all)).items()
         ]
 
         logger.debug("Fetched all topology links", {"count": len(self.topology_data)})
@@ -298,7 +298,7 @@ class Core:
                         model_input[model],
                     )
 
-                    MESSAGE_COUNT.labels(peer.address.hopr, model.name).set(message_count[model])
+                    MESSAGE_COUNT.labels(peer.address.native, model.name).set(message_count[model])
 
                 peer.yearly_message_count = sum(message_count.values())
 

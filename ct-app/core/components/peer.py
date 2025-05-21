@@ -10,10 +10,10 @@ from .asyncloop import AsyncLoop
 from .decorators import flagguard, formalin, master
 from .messages import MessageFormat, MessageQueue
 
-CHANNEL_STAKE = Gauge("ct_peer_channels_balance", "Balance in outgoing channels", ["peer_id"])
-DELAY = Gauge("ct_peer_delay", "Delay between two messages", ["peer_id"])
+CHANNEL_STAKE = Gauge("ct_peer_channels_balance", "Balance in outgoing channels", ["address"])
+DELAY = Gauge("ct_peer_delay", "Delay between two messages", ["address"])
 NODES_LINKED_TO_SAFE_COUNT = Gauge(
-    "ct_peer_safe_count", "Number of nodes linked to the safes", ["peer_id", "safe"]
+    "ct_peer_safe_count", "Number of nodes linked to the safes", ["address", "safe"]
 )
 
 SECONDS_IN_A_NON_LEAP_YEAR = 365 * 24 * 60 * 60
@@ -25,15 +25,14 @@ class Peer:
     hosted by HOPR.
     """
 
-    def __init__(self, id: str, address: str, version: str):
+    def __init__(self, address: str, version: str):
         """
-        Create a new Peer with the specified id, address and version. The id refers to the peerId,
-        the address refers to the native address of a node.
-        :param id: The peer's peerId
+        Create a new Peer with the specified address and version. The address refers to the native
+        address of a node.
         :param address: The peer's native address
         :param version: The reported peer's version
         """
-        self.address = Address(id, address)
+        self.address = Address(address)
         self.version = version
 
         self.safe = None
@@ -76,7 +75,7 @@ class Peer:
     @channel_balance.setter
     def channel_balance(self, value):
         self._channel_balance = value
-        CHANNEL_STAKE.labels(self.address.hopr).set(value if value is not None else 0)
+        CHANNEL_STAKE.labels(self.address.native).set(value if value is not None else 0)
 
     @property
     def node_address(self) -> str:
@@ -92,7 +91,7 @@ class Peer:
     @safe_address_count.setter
     def safe_address_count(self, value: int):
         self._safe_address_count = value
-        NODES_LINKED_TO_SAFE_COUNT.labels(self.address.hopr, self.safe.address).set(value)
+        NODES_LINKED_TO_SAFE_COUNT.labels(self.address.native, self.safe.address).set(value)
 
     @property
     def split_stake(self) -> float:
@@ -117,7 +116,7 @@ class Peer:
         if self.yearly_message_count is not None and self.yearly_message_count > 0:
             value = SECONDS_IN_A_NON_LEAP_YEAR / self.yearly_message_count
 
-        DELAY.labels(self.address.hopr).set(value if value is not None else 0)
+        DELAY.labels(self.address.native).set(value if value is not None else 0)
 
         return value
 
@@ -159,7 +158,7 @@ class Peer:
             multiplier: int = self.params.sessions.aggregatedPackets
             message = MessageFormat(
                 self.params.sessions.packetSize - self.params.sessions.surbSize,
-                self.address.hopr,
+                self.address.native,
                 multiplier=multiplier,
             )
             await MessageQueue().put_async(message)

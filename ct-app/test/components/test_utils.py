@@ -14,10 +14,8 @@ def channel_topology():
             {
                 "balance": f"{1*1e18:.0f}",
                 "channelId": "channel_1",
-                "destinationAddress": "dst_addr_1",
-                "destinationPeerId": "dst_1",
-                "sourceAddress": "src_addr_1",
-                "sourcePeerId": "src_1",
+                "destination": "dst_1",
+                "source": "src_1",
                 "status": "Open",
             }
         ),
@@ -25,10 +23,8 @@ def channel_topology():
             {
                 "balance": f"{2*1e18:.0f}",
                 "channelId": "channel_2",
-                "destinationAddress": "dst_addr_2",
-                "destinationPeerId": "dst_2",
-                "sourceAddress": "src_addr_1",
-                "sourcePeerId": "src_1",
+                "destination": "dst_2",
+                "source": "src_1",
                 "status": "Open",
             }
         ),
@@ -36,10 +32,8 @@ def channel_topology():
             {
                 "balance": f"{3*1e18:.0f}",
                 "channelId": "channel_3",
-                "destinationAddress": "dst_addr_3",
-                "destinationPeerId": "dst_3",
-                "sourceAddress": "src_addr_1",
-                "sourcePeerId": "src_1",
+                "destination": "dst_3",
+                "source": "src_1",
                 "status": "Closed",
             }
         ),
@@ -47,10 +41,8 @@ def channel_topology():
             {
                 "balance": f"{4*1e18:.0f}",
                 "channelId": "channel_4",
-                "destinationAddress": "dst_addr_1",
-                "destinationPeerId": "dst_1",
-                "sourceAddress": "src_addr_2",
-                "sourcePeerId": "src_2",
+                "destination": "dst_1",
+                "source": "src_2",
                 "status": "Open",
             }
         ),
@@ -58,10 +50,8 @@ def channel_topology():
             {
                 "balance": f"{1*1e18:.0f}",
                 "channelId": "channel_5",
-                "destinationAddress": "dst_addr_2",
-                "destinationPeerId": "dst_2",
-                "sourceAddress": "src_addr_2",
-                "sourcePeerId": "src_2",
+                "destination": "dst_2",
+                "source": "src_2",
                 "status": "Open",
             }
         ),
@@ -84,15 +74,15 @@ def test_nodesCredentials():
 async def test_mergeDataSources():
 
     topology_list = [
-        entries.Topology("peer_id_1", "address_1", 1),
-        entries.Topology("peer_id_2", "address_2", 2),
-        entries.Topology(None, None, 3),
-        entries.Topology("peer_id_4", "address_4", 4),
+        entries.Topology("address_1", 1),
+        entries.Topology("address_2", 2),
+        entries.Topology(None, 3),
+        entries.Topology("address_4", 4),
     ]
     peers_list = [
-        Peer("peer_id_1", "address_1", "1.0.0"),
-        Peer("peer_id_2", "address_2", "1.1.0"),
-        Peer("peer_id_3", "address_3", "1.0.2"),
+        Peer("address_1", "1.0.0"),
+        Peer("address_2", "1.1.0"),
+        Peer("address_3", "1.0.2"),
     ]
     nodes_list = [
         entries.Node("address_1", entries.Safe("safe_address_1", "10", "1", ["owner_1"])),
@@ -162,10 +152,10 @@ def test_associateEntitiesToNodes_with_eoa_balances():
 
 
 def test_allowManyNodePerSafe():
-    peer_1 = Peer("id_1", "address_1", "v1.0.0")
-    peer_2 = Peer("id_2", "address_2", "v1.1.0")
-    peer_3 = Peer("id_3", "address_3", "v1.0.2")
-    peer_4 = Peer("id_4", "address_4", "v1.0.0")
+    peer_1 = Peer("address_1", "v1.0.0")
+    peer_2 = Peer("address_2", "v1.1.0")
+    peer_3 = Peer("address_3", "v1.0.2")
+    peer_4 = Peer("address_4", "v1.0.0")
 
     peer_1.safe = entries.Safe("safe_address_1", "10", "1", [])
     peer_2.safe = entries.Safe("safe_address_2", "10", "1", [])
@@ -188,5 +178,6 @@ async def test_balanceInChannels(channel_topology):
     results = await Utils.balanceInChannels(channel_topology)
 
     assert len(results) == 2
-    assert results["src_1"]["channels_balance"] == 3
-    assert results["src_2"]["channels_balance"] == 5
+    print(f"{results=}")
+    assert results["src_1"] == 3
+    assert results["src_2"] == 5

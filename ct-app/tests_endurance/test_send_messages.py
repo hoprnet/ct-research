@@ -26,23 +26,23 @@ class SendMessages(EnduranceTest):
 
         channels = await self.api.channels()
         open_channels = [
-            c for c in channels.all if c.source_peer_id == self.recipient.hopr and c.status.is_open
+            c for c in channels.all if c.source == self.recipient.native and c.status.is_open
         ]
 
         if len(open_channels) == 0:
             raise Exception("No open channels found")
 
-        selected_peer_id = EnvironmentUtils.envvar("RELAYER_PEER_ID")
+        selected_address = EnvironmentUtils.envvar("RELAYER_ADDRESS")
 
-        if selected_peer_id is not None:
-            channel = [c for c in open_channels if c.destination_peer_id == selected_peer_id][0]
+        if selected_address is not None:
+            channel = [c for c in open_channels if c.destination == selected_address][0]
         else:
             channel = random.choice(open_channels)
 
-        self.relayer = channel.destination_peer_id
+        self.relayer = channel.destination
         self.message_tag = random.randint(1024, 32768)
 
-        logger.info(f"Connected to node {self.recipient.hopr}")
+        logger.info(f"Connected to node {self.recipient.native}")
         logger.info(f"\trelayer: {self.relayer}")
         logger.info(f"\tchannel: {channel.id}")
         logger.info(f"\tstatus : {channel.status}")
@@ -53,7 +53,7 @@ class SendMessages(EnduranceTest):
 
     async def task(self):
         success = await self.api.send_message(
-            self.recipient.hopr,
+            self.recipient.native,
             "".join(random.choices(CHARS, k=random.randint(10, 30))),
             [self.relayer],
             self.message_tag,

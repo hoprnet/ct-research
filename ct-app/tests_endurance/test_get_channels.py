@@ -1,5 +1,5 @@
 import logging
-from ast import Tuple
+from typing import Tuple
 
 from core.api import HoprdAPI
 from core.components import EnvironmentUtils
@@ -17,7 +17,7 @@ class GetChannels(EnduranceTest):
 
         self.api = HoprdAPI(EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY"))
         self.recipient = await self.api.get_address()
-        logger.info(f"Connected to node {self.recipient.hopr}")
+        logger.info(f"Connected to node {self.recipient.native}")
 
     async def task(self):
         success = await self.api.channels() is not None
