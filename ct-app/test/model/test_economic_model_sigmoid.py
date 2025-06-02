@@ -1,6 +1,7 @@
 import pytest
 
 from core.components import Parameters
+from core.components.balance import Balance
 from core.economic_model import Bucket, Budget, EconomicModelSigmoid
 
 
@@ -91,7 +92,7 @@ def test_bucket_apr():
 
 
 def test_yearly_message_count(budget: Budget):
-    stake = 75000
+    stake = Balance("75000 wxHOPR")
     model = EconomicModelSigmoid(
         10.0,
         [Bucket("bucket_1", 1, 1, 1, 0), Bucket("bucket_2", 1, 1, 0.5, 0)],

@@ -1,5 +1,5 @@
 from itertools import repeat
-from random import choice, choices, randint
+from random import randint
 from test.decorators_patches import patches
 
 import pytest
@@ -14,6 +14,7 @@ from core.api.response_objects import (
     ConnectedPeer,
 )
 from core.components import Parameters, Peer
+from core.components.balance import Balance
 
 # needs to be imported after the patches are applied
 from core.core import Core
@@ -29,44 +30,22 @@ from core.node import Node
 
 class SideEffect:
     def __init__(self):
-        self.it_send_message_success = self.generator_send_message_success()
         self.it_node_balance = self.generator_node_balance()
-        self.it_inbox_messages = self.generator_inbox_messages()
-
-    @staticmethod
-    def generator_send_message_success():
-        # yields 1 95% of the time and 0 5% of the time
-        rate = 0.95
-        zeros = int(100 * (1 - rate))
-        ones = int(100 * rate)
-        yield from repeat(choice([0] * zeros + [1] * ones))
 
     @staticmethod
     def generator_node_balance():
-        # yields a dict with 2 random integers between 1 and 10
-        yield from repeat(Balances({"hopr": randint(1, 10), "native": randint(1, 10)}))
-
-    @staticmethod
-    def generator_inbox_messages():
-        # yields a list of 10 random characters repeated 2 to 10 times
         yield from repeat(
-            [choices("abcdefghijklmnopqrstuvwxyz ", k=10) for _ in range(randint(2, 10))]
+            Balances({"hopr": f"{randint(1, 10)} wxHOPR", "native": f"{randint(1, 10)} xDai"})
         )
-
-    def send_message_success(self, *args, **kwargs):
-        return next(self.it_send_message_success)
 
     def node_balance(self, *args, **kwargs):
         return next(self.it_node_balance)
-
-    def inbox_messages(self, *args, **kwargs):
-        return next(self.it_inbox_messages)
 
 
 @pytest.fixture
 def budget() -> Budget:
     budget = Budget()
-    budget.ticket_price = 0.0001
+    budget.ticket_price = Balance("0.0001 wxHOPR")
     return budget
 
 
@@ -76,7 +55,7 @@ def economic_model(budget: Budget) -> EconomicModelLegacy:
         Equation("a * x", "l <= x <= c"),
         Equation("a * c + (x - c) ** (1 / b)", "x > c"),
     )
-    parameters = Coefficients(1, 1, 3, 0)
+    parameters = Coefficients(1, 1, Balance("3 wxHOPR"), Balance("0 wxHOPR"))
 
     model = EconomicModelLegacy(equations, parameters, 1, 15)
     model.budget = budget
@@ -101,8 +80,8 @@ def peers_raw() -> list[dict]:
 def peers(peers_raw: list[dict]) -> set[Peer]:
     peers = [Peer(peer["address"], peer["reportedVersion"]) for peer in peers_raw]
     for peer in peers:
-        peer.safe_balance = randint(100, 200)
-        peer.channel_balance = randint(10, 50)
+        peer.safe_balance = Balance(f"{randint(100, 200)} wxHOPR")
+        peer.channel_balance = Balance(f"{randint(10, 50)} wxHOPR")
 
     return set(peers)
 
@@ -144,7 +123,7 @@ async def nodes(
         )
 
         mocker.patch.object(node.api, "healthyz", return_value=True)
-        mocker.patch.object(node.api, "ticket_price", return_value=0.0001)
+        mocker.patch.object(node.api, "ticket_price", return_value=Balance("0.0001 wxHOPR"))
         await node.retrieve_address()
 
     return nodes
@@ -163,7 +142,7 @@ def channels(peers: set[Peer]) -> Channels:
             all_channels.append(
                 Channel(
                     {
-                        "balance": f"{1*1e18:.0f}",
+                        "balance": "1 wxHOPR",
                         "id": f"channel_{index}",
                         "destination": dest.address.native,
                         "source": src.address.native,
@@ -191,7 +170,7 @@ async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
     core = Core(nodes, params)
 
     for model in core.models.values():
-        model.budget.ticket_price = 0.1
+        model.budget.ticket_price = Balance("0.1 wxHOPR")
 
     return core
 

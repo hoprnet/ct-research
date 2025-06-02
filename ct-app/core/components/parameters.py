@@ -1,5 +1,6 @@
 import logging
 
+from core.components.conversions import convert_unit
 from core.components.logs import configure_logging
 
 from .environment_utils import EnvironmentUtils as Utils
@@ -48,7 +49,7 @@ class Parameters:
                     if isinstance(child, type(self)):
                         parent = child
                     else:
-                        setattr(parent, param_name, self._convert(value))
+                        setattr(parent, param_name, convert_unit(value))
                 else:
                     raise KeyError(f"Key {key} not found in parameters")
 
@@ -70,7 +71,7 @@ class Parameters:
     def _parse_env_vars(self, prefix, subparams):
         for key, value in Utils.envvarWithPrefix(prefix).items():
             k = self._format_key(key, prefix)
-            value = self._convert(value)
+            value = convert_unit(value)
             setattr(subparams, k, value)
 
     def _format_key(self, key, prefix):
@@ -78,22 +79,6 @@ class Parameters:
         k = k.replace("_", " ").title().replace(" ", "")
         k = k[0].lower() + k[1:]
         return k
-
-    def _convert(self, value: str) -> str | int | float:
-        try:
-            value: float = float(value)
-        except ValueError:
-            pass
-
-        try:
-            integer: int = int(value)
-            if integer == value:
-                value: int = integer
-
-        except ValueError:
-            pass
-
-        return value
 
     @property
     def as_dict(self):

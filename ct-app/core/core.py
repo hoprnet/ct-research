@@ -5,6 +5,7 @@ from typing import Callable
 
 from prometheus_client import Gauge
 
+from core.components.balance import Balance
 from core.components.logs import configure_logging
 from core.subgraph import GraphQLProvider
 
@@ -155,9 +156,11 @@ class Core:
             )
 
         for node in results:
-            STAKE.labels(node.safe.address, "balance").set(node.safe.balance)
-            STAKE.labels(node.safe.address, "allowance").set(node.safe.allowance)
-            STAKE.labels(node.safe.address, "additional_balance").set(node.safe.additional_balance)
+            STAKE.labels(node.safe.address, "balance").set(node.safe.balance.value)
+            STAKE.labels(node.safe.address, "allowance").set(node.safe.allowance.value)
+            STAKE.labels(node.safe.address, "additional_balance").set(
+                node.safe.additional_balance.value
+            )
 
         self.registered_nodes_data = results
         logger.debug("Fetched registered nodes in the safe registry", {"count": len(results)})
@@ -203,13 +206,17 @@ class Core:
             logger.info("No EOA address found for investors safes")
             return
 
-        balances = {alloc.address: 0 for alloc in self.allocations_data}
+        balances = {alloc.address: Balance.zero("wxHOPR") for alloc in self.allocations_data}
 
         for account in await self.providers[Type.MAINNET_BALANCES].get(id_in=list(balances.keys())):
-            balances[account["id"].lower()] += float(account["totalBalance"]) / 1e18
+            balances[account["id"].lower()] += Balance.fromFloat(
+                account["totalBalance"], "wei wxHOPR"
+            )
 
         for account in await self.providers[Type.GNOSIS_BALANCES].get(id_in=list(balances.keys())):
-            balances[account["id"].lower()] += float(account["totalBalance"]) / 1e18
+            balances[account["id"].lower()] += Balance.fromFloat(
+                account["totalBalance"], "wei wxHOPR"
+            )
 
         self.eoa_balances_data = [entries.Balance(key, value) for key, value in balances.items()]
         logger.debug("Fetched investors EOA balances", {"count": len(balances)})
@@ -268,7 +275,10 @@ class Core:
                     p.yearly_message_count = None
 
             economic_security = (
-                sum([p.split_stake for p in peers if p.yearly_message_count is not None])
+                sum(
+                    [p.split_stake for p in peers if p.yearly_message_count is not None],
+                    Balance.zero("wxHOPR"),
+                )
                 / self.params.economicModel.sigmoid.totalTokenSupply
             )
             network_capacity = (
@@ -324,7 +334,11 @@ class Core:
         They are used in the economic model to calculate the number of messages to send to a peer.
         """
         ticket_price = await self.api.ticket_price()
-        logger.debug("Fetched ticket price", {"value": getattr(ticket_price, "value", None)})
+
+        logger.debug(
+            "Fetched ticket price",
+            {"value": str(getattr(getattr(ticket_price, "value", None), "value", None))},
+        )
 
         if ticket_price is not None:
             for model in self.models.values():

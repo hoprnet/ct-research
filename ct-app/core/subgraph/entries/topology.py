@@ -1,5 +1,7 @@
 from typing import Optional
 
+from core.components.balance import Balance
+
 from .entry import SubgraphEntry
 
 
@@ -8,7 +10,7 @@ class Topology(SubgraphEntry):
     Class that represents a single topology entry (from the API).
     """
 
-    def __init__(self, address: Optional[str], channels_balance: int):
+    def __init__(self, address: Optional[str], channels_balance: Balance):
         """
         Create a new Topology with the specified address and channels_balance.
         :param address: The peer's native address.

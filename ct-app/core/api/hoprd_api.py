@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 from typing import Optional, Union
 
@@ -7,6 +6,7 @@ import aiohttp
 
 from core.components.logs import configure_logging
 
+from ..components.balance import Balance
 from . import request_objects as request
 from . import response_objects as response
 from .http_method import HTTPMethod
@@ -26,7 +26,7 @@ class HoprdAPI:
     def __init__(self, url: str, token: str):
         self.host = url
         self.headers = {"Authorization": f"Bearer {token}"}
-        self.prefix = "/api/v3/"
+        self.prefix = "/api/v4/"
 
     async def __call(
         self,
@@ -137,27 +137,27 @@ class HoprdAPI:
         return response.Balances(resp) if is_ok else None
 
     async def open_channel(
-        self, peer_address: str, amount: str
+        self, peer_address: str, amount: Balance
     ) -> Optional[response.OpenedChannel]:
         """
         Opens a channel with the given peer_address and amount.
         :param: peer_address: str
-        :param: amount: str
+        :param: amount: Balance
         :return: channel id: str | undefined
         """
-        data = request.OpenChannelBody(amount, peer_address)
+        data = request.OpenChannelBody(amount.as_str, peer_address)
 
         is_ok, resp = await self.__call_api(HTTPMethod.POST, "channels", data, timeout=90)
         return response.OpenedChannel(resp) if is_ok else None
 
-    async def fund_channel(self, channel_id: str, amount: float) -> bool:
+    async def fund_channel(self, channel_id: str, amount: Balance) -> bool:
         """
         Funds a given channel.
         :param: channel_id: str
-        :param: amount: float
+        :param: amount: Balance
         :return: bool
         """
-        data = request.FundChannelBody(amount)
+        data = request.FundChannelBody(amount.as_str)
 
         is_ok, _ = await self.__call_api(
             HTTPMethod.POST, f"channels/{channel_id}/fund", data, timeout=90
@@ -194,11 +194,12 @@ class HoprdAPI:
     async def peers(
         self,
         quality: float = 0.5,
+        status: str = "connected",
     ) -> list[response.ConnectedPeer]:
         """
         Returns a list of peers.
-        :param: status: str = "connected"
         :param: quality: int = 0..1
+        :param: status: str = "connected"
         :return: peers: list
         """
         params = request.GetPeersBody(quality)
@@ -208,10 +209,10 @@ class HoprdAPI:
         if not is_ok:
             return []
 
-        if "connected" not in resp:
+        if status not in resp:
             return []
 
-        return [response.ConnectedPeer(peer) for peer in resp["connected"]]
+        return [response.ConnectedPeer(peer) for peer in resp[status]]
 
     async def get_address(self) -> Optional[response.Addresses]:
         """
@@ -235,11 +236,15 @@ class HoprdAPI:
         :return: TicketPrice
         """
         is_ok, resp = await self.__call_api(HTTPMethod.GET, "node/configuration")
-        return (
-            response.TicketPrice(response.Configuration(json.loads(resp)).as_dict)
-            if is_ok
-            else None
-        )
+        price = response.TicketPrice(response.Configuration(resp).as_dict) if is_ok else None
+
+        if price and price.value != "None":
+            return price
+
+        is_ok, resp = await self.__call_api(HTTPMethod.GET, "network/price")
+        price = response.TicketPrice(resp) if is_ok else None
+
+        return price
 
     async def get_sessions(self, protocol: Protocol = Protocol.UDP) -> list[response.Session]:
         """

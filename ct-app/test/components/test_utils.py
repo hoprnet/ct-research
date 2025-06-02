@@ -2,6 +2,7 @@ import pytest
 
 from core.api.response_objects import Channel
 from core.components import Peer, Utils
+from core.components.balance import Balance
 from core.subgraph import entries
 
 from .utils import handle_envvars
@@ -12,7 +13,7 @@ def channel_topology():
     return [
         Channel(
             {
-                "balance": f"{1*1e18:.0f}",
+                "balance": "1 wxHOPR",
                 "channelId": "channel_1",
                 "destination": "dst_1",
                 "source": "src_1",
@@ -21,7 +22,7 @@ def channel_topology():
         ),
         Channel(
             {
-                "balance": f"{2*1e18:.0f}",
+                "balance": "2 wxHOPR",
                 "channelId": "channel_2",
                 "destination": "dst_2",
                 "source": "src_1",
@@ -30,7 +31,7 @@ def channel_topology():
         ),
         Channel(
             {
-                "balance": f"{3*1e18:.0f}",
+                "balance": "3 wxHOPR",
                 "channelId": "channel_3",
                 "destination": "dst_3",
                 "source": "src_1",
@@ -39,7 +40,7 @@ def channel_topology():
         ),
         Channel(
             {
-                "balance": f"{4*1e18:.0f}",
+                "balance": "4 wxHOPR",
                 "channelId": "channel_4",
                 "destination": "dst_1",
                 "source": "src_2",
@@ -48,7 +49,7 @@ def channel_topology():
         ),
         Channel(
             {
-                "balance": f"{1*1e18:.0f}",
+                "balance": "1 wxHOPR",
                 "channelId": "channel_5",
                 "destination": "dst_2",
                 "source": "src_2",
@@ -74,10 +75,10 @@ def test_nodesCredentials():
 async def test_mergeDataSources():
 
     topology_list = [
-        entries.Topology("address_1", 1),
-        entries.Topology("address_2", 2),
-        entries.Topology(None, 3),
-        entries.Topology("address_4", 4),
+        entries.Topology("address_1", Balance("1 wxHOPR")),
+        entries.Topology("address_2", Balance("2 wxHOPR")),
+        entries.Topology(None, Balance("3 wxHOPR")),
+        entries.Topology("address_4", Balance("4 wxHOPR")),
     ]
     peers_list = [
         Peer("address_1", "1.0.0"),
@@ -178,6 +179,5 @@ async def test_balanceInChannels(channel_topology):
     results = await Utils.balanceInChannels(channel_topology)
 
     assert len(results) == 2
-    print(f"{results=}")
-    assert results["src_1"] == 3
-    assert results["src_2"] == 5
+    assert results["src_1"].value == 3
+    assert results["src_2"].value == 5

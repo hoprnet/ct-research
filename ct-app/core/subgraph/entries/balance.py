@@ -1,3 +1,5 @@
+from core.components.balance import Balance as UnitBalance
+
 from .entry import SubgraphEntry
 from .safe import Safe
 
@@ -14,7 +16,7 @@ class Balance(SubgraphEntry):
         :param balance: The balance of the EOA.
         """
         self.address = address.lower() if address is not None else None
-        self.balance = float(balance) if balance else 0
+        self.balance = UnitBalance(f"{balance} wxHOPR")
         self.linked_safes: set[Safe] = set()
 
     @property

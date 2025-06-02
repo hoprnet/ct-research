@@ -1,26 +1,10 @@
 from typing import Any
 
+from core.components.conversions import convert_unit
+
 from .channelstatus import ChannelStatus
 
-
-def _convert(value: Any):
-    if value is None:
-        return None
-
-    try:
-        value = float(value)
-    except ValueError:
-        pass
-
-    try:
-        integer = int(value)
-        if integer == value:
-            value = integer
-
-    except ValueError:
-        pass
-
-    return value
+SURB_SIZE = 400
 
 
 def try_to_lower(value: Any):
@@ -38,7 +22,7 @@ class ApiResponseObject:
                 if v is None:
                     continue
 
-            setattr(self, key, _convert(v))
+            setattr(self, key, convert_unit(v))
 
         self.post_init()
 
@@ -51,7 +35,7 @@ class ApiResponseObject:
 
     @property
     def as_dict(self) -> dict:
-        return {key: str(getattr(self, key)) for key in self.keys.keys()}
+        return {key: getattr(self, key) for key in self.keys.keys()}
 
     def __str__(self):
         return str(self.__dict__)
@@ -64,7 +48,7 @@ class ApiResponseObject:
 
 
 class Addresses(ApiResponseObject):
-    keys = {"hopr": "hopr", "native": "native"}
+    keys = {"native": "native"}
 
 
 class Balances(ApiResponseObject):
@@ -84,7 +68,7 @@ class Infos(ApiResponseObject):
 
 
 class ConnectedPeer(ApiResponseObject):
-    keys = {"address": "address", "version": "reportedVersion"}
+    keys = {"address": "address", "multiaddr": "multiaddr", "version": "reportedVersion"}
 
     def post_init(self):
         self.address = try_to_lower(self.address)
@@ -108,9 +92,6 @@ class Channel(ApiResponseObject):
 
 class TicketPrice(ApiResponseObject):
     keys = {"value": "price"}
-
-    def post_init(self):
-        self.value = float(self.value) / 1e18
 
 
 class Configuration(ApiResponseObject):
@@ -144,9 +125,12 @@ class Session(ApiResponseObject):
         "port": "port",
         "protocol": "protocol",
         "target": "target",
-        "payload": "payload",
+        "mtu": "mtu",
         "surb_size": "surbSize",
     }
+
+    def post_init(self):
+        self.payload = self.mtu - SURB_SIZE
 
 
 class SessionFailure(ApiResponseObject):

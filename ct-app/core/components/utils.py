@@ -1,5 +1,6 @@
 import ast
 
+from core.components.balance import Balance
 from core.subgraph.entries import Safe
 
 from .environment_utils import EnvironmentUtils
@@ -92,14 +93,14 @@ class Utils:
             peer.safe_address_count = safe_counts[peer.safe.address]
 
     @classmethod
-    async def balanceInChannels(cls, channels: list) -> dict[str, float]:
+    async def balanceInChannels(cls, channels: list) -> dict[str, Balance]:
         """
         Returns a dict containing all unique saddress-balance links.
         :param channels: The list of channels.
         :returns: A dict containing all address-balance links.
         """
 
-        results: dict[str, dict] = {}
+        results: dict[str, Balance] = {}
         for c in channels:
             if not (hasattr(c, "source") and hasattr(c, "status") and hasattr(c, "balance")):
                 continue
@@ -108,9 +109,9 @@ class Utils:
                 continue
 
             if c.source not in results:
-                results[c.source] = 0
+                results[c.source] = Balance.zero("wxHOPR")
 
-            results[c.source] += int(c.balance) / 1e18
+            results[c.source] += c.balance
 
         return results
 

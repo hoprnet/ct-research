@@ -2,7 +2,7 @@
 # =============================================================================
 # 
 # =============================================================================
-environment: prod
+environment: local
 
 flags:
   core: 
@@ -36,30 +36,30 @@ flags:
     closeIncomingChannels: Off
 
     getTotalChannelFunds: 300
-    
+
     closeSessions: 30
 
     observeMessageQueue: On # should only be On / Off
 
   peer:
     messageRelayRequest: On # should only be On / Off
-
+    
 # =============================================================================
 # 
 # =============================================================================
 economicModel:
   minSafeAllowance: "0 wxHOPR"
-  NFTThreshold: "30000 wxHOPR"
+  NFTThreshold: "0 wxHOPR"
 
   legacy:
     proportion: 1.0
-    apr: 12.5
+    apr: 0.000002
 
     coefficients:
       a: 1
       b: 1.4
-      c: "75000 wxHOPR"
-      l: "10000 wxHOPR"
+      c: "15 wxHOPR"
+      l: "0.1 wxHOPR"
     
     equations: 
       fx: 
@@ -71,54 +71,55 @@ economicModel:
 
   sigmoid:
     proportion: 0
-    maxAPR: 15
-    networkCapacity: 2000
-    totalTokenSupply: "450000000 wxHOPR"
 
-    offset: -0.9
+    maxAPR: 0.0000001
+    networkCapacity: 100
+    totalTokenSupply: "5000 wxHOPR"
+
+    offset: 10
     buckets:
       economicSecurity:
-        flatness: 1.8
-        skewness: 1.52
-        upperbound: 0.4
-        offset: 3.14
+        flatness: 1.65
+        skewness: 1.50
+        upperbound: 0.75
+        offset: 0
 
       networkCapacity:
-        flatness: 2.97
-        skewness: 0.72
+        flatness: 10.0
+        skewness: 2.75
         upperbound: 1.0
-        offset: 4.08
+        offset: 0
 
 # =============================================================================
 # 
 # =============================================================================
 peer:
-  minVersion: '2.2.1'
+  minVersion: '2.1.5'
   initialSleep:
-    mean: 30
+    mean: 10
     std: 2
 
 # =============================================================================
 # 
 # =============================================================================
 channel:
-  minBalance: "20 wxHOPR"
-  fundingAmount: "30 wxHOPR"
-  maxAgeSeconds: 172800
-  
+  minBalance: "0.05 wxHOPR"
+  fundingAmount: "0.1 wxHOPR"
+  maxAgeSeconds: 86400
+
 # =============================================================================
 # 
 # =============================================================================
 sessions:
-  aggregatedPackets: 10
+  aggregatedPackets: 3
   batchSize: 5
 
 # =============================================================================
 # 
 # =============================================================================
 fundings:
-  constant: 626500
-  
+  constant: 0
+
 # =============================================================================
 # 
 # =============================================================================
@@ -153,8 +154,8 @@ subgraph:
     queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
     slug: hopr-channels
   safesBalance:
-    queryID: GP2abJCarirMJCanuk4SBmnadiobEWH9ME2MNRAHbBTp
-    slug: hopr-nodes-dufour
+    queryID: GmbJTpa1o4baeStDT48TfQu4ditJmQwwXYPG1DvEiufB
+    slug: hopr-nodes-rotsee
   staking:
     queryID: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
     slug: hopr-stake-all-seasons

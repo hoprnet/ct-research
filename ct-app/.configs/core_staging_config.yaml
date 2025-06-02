@@ -48,8 +48,8 @@ flags:
 # 
 # =============================================================================
 economicModel:
-  minSafeAllowance: -1
-  NFTThreshold: ~
+  minSafeAllowance: "0 wxHOPR"
+  NFTThreshold: "0 wxHOPR"
 
   legacy:
     proportion: 1.0
@@ -58,8 +58,8 @@ economicModel:
     coefficients:
       a: 1
       b: 1.4
-      c: 15
-      l: 0.1
+      c: "15 wxHOPR"
+      l: "0.1 wxHOPR"
     
     equations: 
       fx: 
@@ -74,7 +74,7 @@ economicModel:
 
     maxAPR: 0.0000001
     networkCapacity: 100
-    totalTokenSupply: 5000
+    totalTokenSupply: "5000 wxHOPR"
 
     offset: 10
     buckets:
@@ -103,16 +103,14 @@ peer:
 # 
 # =============================================================================
 channel:
-  minBalance: 0.05
-  fundingAmount: 0.1
+  minBalance: "0.05 wxHOPR"
+  fundingAmount: "0.1 wxHOPR"
   maxAgeSeconds: 86400
 
 # =============================================================================
 # 
 # =============================================================================
 sessions:
-  packetSize: 998
-  surbSize: 398
   aggregatedPackets: 3
   batchSize: 5
 

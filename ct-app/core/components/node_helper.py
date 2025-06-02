@@ -6,6 +6,7 @@ from prometheus_client import Gauge
 from core.api.hoprd_api import HoprdAPI
 from core.api.response_objects import Channel, Session, SessionFailure
 from core.components.address import Address
+from core.components.balance import Balance
 from core.components.logs import configure_logging
 from core.components.session_to_socket import SessionToSocket
 
@@ -21,10 +22,10 @@ logger = logging.getLogger(__name__)
 
 class NodeHelper:
     @classmethod
-    async def open_channel(cls, initiator: Address, api: HoprdAPI, address: str, amount: int):
-        log_params = {"from": initiator.native, "to": address, "amount": amount}
+    async def open_channel(cls, initiator: Address, api: HoprdAPI, address: str, amount: Balance):
+        log_params = {"from": initiator.native, "to": address, "amount": amount.as_str}
         logger.debug("Opening channel", log_params)
-        channel = await api.open_channel(address, f"{int(amount*1e18):d}")
+        channel = await api.open_channel(address, amount)
 
         if channel is not None:
             logger.info("Opened channel", log_params)
@@ -46,11 +47,13 @@ class NodeHelper:
             logger.warning(f"Failed to close {type}", logs_params)
 
     @classmethod
-    async def fund_channel(cls, initiator: Address, api: HoprdAPI, channel: Channel, amount: int):
-        logs_params = {"from": initiator.native, "channel": channel.id, "amount": amount}
+    async def fund_channel(
+        cls, initiator: Address, api: HoprdAPI, channel: Channel, amount: Balance
+    ):
+        logs_params = {"from": initiator.native, "channel": channel.id, "amount": amount.as_str}
         logger.debug("Funding channel", logs_params)
 
-        ok = await api.fund_channel(channel.id, amount * 1e18)
+        ok = await api.fund_channel(channel.id, amount)
 
         if ok:
             logger.info("Funded channel", logs_params)

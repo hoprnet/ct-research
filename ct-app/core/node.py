@@ -2,11 +2,12 @@
 import asyncio
 import logging
 from datetime import datetime
-from typing import Callable
+from typing import Callable, Optional
 
 from prometheus_client import Gauge
 
 from core.components.asyncloop import AsyncLoop
+from core.components.balance import Balance
 from core.components.logs import configure_logging
 from core.components.pattern_matcher import PatternMatcher
 
@@ -125,11 +126,17 @@ class Node:
             return None
 
         if addr := self.address:
-            logger.debug("Retrieved balances", {**vars(balances), **self.log_base_params})
+            logger.debug(
+                "Retrieved balances",
+                {
+                    **{key: str(value) for key, value in balances.as_dict.items()},
+                    **self.log_base_params,
+                },
+            )
             for token, balance in vars(balances).items():
                 if balance is None:
                     continue
-                BALANCE.labels(addr.native, token).set(balance)
+                BALANCE.labels(addr.native, token).set(balance.value)
 
         return balances
 
@@ -269,15 +276,13 @@ class Node:
 
         out_opens = [c for c in self.channels.outgoing if c.status.is_open]
 
-        low_balances = [
-            c for c in out_opens if int(c.balance) / 1e18 <= self.params.channel.minBalance
-        ]
+        low_balances = [c for c in out_opens if c.balance <= self.params.channel.minBalance]
 
         logger.info(
             "Starting funding of channels where balance is too low",
             {
                 "count": len(low_balances),
-                "threshold": self.params.channel.minBalance,
+                "threshold": self.params.channel.minBalance.as_str,
                 **self.log_base_params,
             },
         )
@@ -291,7 +296,7 @@ class Node:
                     self.address,
                     self.api,
                     channel,
-                    self.params.channel.fundingAmount,
+                    self.params.channel.fundingAmount.as_str,
                     publish_to_task_set=False,
                 )
 
@@ -358,7 +363,7 @@ class Node:
         )
 
     @master(flagguard, formalin, connectguard)
-    async def get_total_channel_funds(self):
+    async def get_total_channel_funds(self) -> Optional[Balance]:
         """
         Retrieve total funds.
         """
@@ -370,13 +375,13 @@ class Node:
 
         results = await Utils.balanceInChannels(self.channels.outgoing)
 
-        balance = results.get(self.address.native, 0)
+        balance: Balance = results.get(self.address.native, Balance.zero("wxHOPR"))
 
         logger.info(
             "Retrieved total amount stored in outgoing channels",
-            {"amount": balance, **self.log_base_params},
+            {"amount": balance.as_str, **self.log_base_params},
         )
-        CHANNEL_FUNDS.labels(self.address.native).set(balance)
+        CHANNEL_FUNDS.labels(self.address.native).set(balance.value)
 
         return balance
 

@@ -3,8 +3,8 @@
 export $(grep -v '^#' .env | xargs)
 
 # Default values
-env="staging"
-count=1
+env="local"
+count=5
 deployment="auto"
 log_folder=".logs"
 
@@ -21,6 +21,13 @@ check_deployment() {
         exit 1
     fi
 }
+
+
+get_local_node_address() {
+    port=$((3000 + $1 * 3))
+    echo "http://0.0.0.0:$port"
+}
+
 
 # Parse command-line flags (long flags and short flags)
 for arg in "$@"; do
@@ -65,16 +72,25 @@ for arg in "$@"; do
     esac
 done
 
-# Check deployment if it's set to auto
-if [ $deployment == "auto" ]; then
-    deployment=$(check_deployment $HOST_FORMAT $env)
+if [ $env == "local" ]; then
+    for i in $(seq 1 6); do
+        export NODE_ADDRESS_${i}=$(get_local_node_address $i)
+        export NODE_KEY_${i}="e2e-API-token^^"
+    done
+
+else
+    # Check deployment if it's set to auto
+    if [ $deployment == "auto" ]; then
+        deployment=$(check_deployment $HOST_FORMAT $env)
+    fi
+
+    # Node parameters
+    for i in $(seq 1 $count); do
+        export NODE_ADDRESS_${i}=$(printf $HOST_FORMAT $deployment $i $env)
+        export NODE_KEY_${i}=$TOKEN
+    done
 fi
 
-# Node parameters
-for i in $(seq 1 $count); do
-    export NODE_ADDRESS_${i}=$(printf $HOST_FORMAT $deployment $i $env)
-    export NODE_KEY_${i}=$TOKEN
-done
 
 # Create log folder
 mkdir -p $log_folder

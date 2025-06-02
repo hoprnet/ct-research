@@ -5,6 +5,8 @@ from typing import Optional
 from packaging.version import Version
 from prometheus_client import Gauge
 
+from core.components.balance import Balance
+
 from .address import Address
 from .asyncloop import AsyncLoop
 from .decorators import flagguard, formalin, master
@@ -69,13 +71,13 @@ class Peer:
         self._version = value
 
     @property
-    def channel_balance(self):
+    def channel_balance(self) -> Balance:
         return self._channel_balance
 
     @channel_balance.setter
-    def channel_balance(self, value):
+    def channel_balance(self, value: Balance):
         self._channel_balance = value
-        CHANNEL_STAKE.labels(self.address.native).set(value if value is not None else 0)
+        CHANNEL_STAKE.labels(self.address.native).set(value.value if value is not None else 0)
 
     @property
     def node_address(self) -> str:
@@ -94,7 +96,7 @@ class Peer:
         NODES_LINKED_TO_SAFE_COUNT.labels(self.address.native, self.safe.address).set(value)
 
     @property
-    def split_stake(self) -> float:
+    def split_stake(self) -> Balance:
         if self.safe.balance is None:
             raise ValueError("Safe balance not set")
         if self.channel_balance is None:
@@ -102,13 +104,9 @@ class Peer:
         if self.safe_address_count is None:
             raise ValueError("Safe address count not set")
         if self.yearly_message_count is None:
-            return 0
+            return Balance.zero("wxHOPR")
 
-        split_stake = float(self.safe.total_balance) / float(self.safe_address_count) + float(
-            self.channel_balance
-        )
-
-        return split_stake
+        return self.safe.total_balance / self.safe_address_count + self.channel_balance
 
     @property
     async def message_delay(self) -> Optional[float]:
@@ -122,11 +120,11 @@ class Peer:
 
     def is_eligible(
         self,
-        min_allowance: float,
+        min_allowance: Balance,
         min_stake: float,
         ct_nodes: list[Address],
         nft_holders: list[str],
-        nft_threshold: float,
+        nft_threshold: Balance,
     ) -> bool:
         try:
             if self.safe.allowance < min_allowance:
@@ -156,6 +154,7 @@ class Peer:
 
         if delay := await self.message_delay:
             multiplier: int = self.params.sessions.aggregatedPackets
+            # TODO (3.0): use the data from the session
             message = MessageFormat(
                 self.params.sessions.packetSize - self.params.sessions.surbSize,
                 self.address.native,

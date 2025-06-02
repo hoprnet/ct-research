@@ -1,6 +1,8 @@
 import random
 from typing import Optional
 
+from core.components.balance import Balance
+
 from .entry import SubgraphEntry
 
 
@@ -16,13 +18,17 @@ class Safe(SubgraphEntry):
         :param allowance: The allowance of the safe.
         """
         self.address = address.lower() if address is not None else None
-        self.balance = float(balance) if balance else 0
-        self.allowance = float(allowance) if allowance else 0
+        self.balance = (
+            Balance(f"{balance} wxHOPR") if balance is not None else Balance.zero("wxHOPR")
+        )
+        self.allowance = (
+            Balance(f"{allowance} wxHOPR") if allowance is not None else Balance.zero("wxHOPR")
+        )
         self.owners = [owner.lower() for owner in owners if owner is not None]
-        self.additional_balance = 0
+        self.additional_balance = Balance.zero("wxHOPR")
 
     @property
-    def total_balance(self) -> float:
+    def total_balance(self) -> Balance:
         """
         Get the total balance of the safe.
         """

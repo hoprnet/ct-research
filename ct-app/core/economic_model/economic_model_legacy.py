@@ -1,3 +1,6 @@
+from decimal import Decimal
+
+from core.components.balance import Balance
 from core.components.parameters import Parameters
 
 from .budget import Budget
@@ -27,7 +30,7 @@ class Equations:
 
 
 class Coefficients:
-    def __init__(self, a: float, b: float, c: float, l: float):  # noqa: E741
+    def __init__(self, a: float, b: float, c: Balance, l: Balance):  # noqa: E741
         self.a = a
         self.b = b
         self.c = c
@@ -57,10 +60,10 @@ class EconomicModelLegacy:
         self.equations = equations
         self.coefficients = coefficients
         self.proportion = proportion
-        self.apr = apr
+        self.apr = Decimal(apr)
         self.budget: Budget = Budget()
 
-    def transformed_stake(self, stake: float):
+    def transformed_stake(self, stake: Balance) -> Balance:
         # convert parameters attribute to dictionary
         kwargs = dict(vars(self.coefficients))
         kwargs.update({"x": stake})
@@ -69,11 +72,13 @@ class EconomicModelLegacy:
             if eval(func.condition, kwargs):
                 break
         else:
-            return 0
+            return Balance.zero("wxHOPR")
 
         return eval(func.formula, kwargs)
 
-    def yearly_message_count(self, stake: float, redeemed_rewards: float = 0):
+    def yearly_message_count(
+        self, stake: Balance, redeemed_rewards: Balance = Balance.zero("wxHOPR")
+    ):
         """
         Calculate the yearly message count a peer should receive based on the stake.
         """
