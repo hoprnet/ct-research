@@ -28,7 +28,7 @@ class Parameters:
             if isinstance(value, dict):
                 subparams.parse(value)
             else:
-                setattr(self, key, value)
+                setattr(self, key, convert_unit(value))
 
         if entrypoint:
             logger.debug("Loaded config from file", {"config": self.as_dict})
@@ -71,8 +71,7 @@ class Parameters:
     def _parse_env_vars(self, prefix, subparams):
         for key, value in Utils.envvarWithPrefix(prefix).items():
             k = self._format_key(key, prefix)
-            value = convert_unit(value)
-            setattr(subparams, k, value)
+            setattr(subparams, k, convert_unit(value))
 
     def _format_key(self, key, prefix):
         k = key.replace(prefix, "").lower()

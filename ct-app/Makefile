@@ -1,6 +1,6 @@
 .PHONY: run       
 run:
-	@./scripts/run.sh --env=staging --count=5
+	@./scripts/run.sh --env=staging --count=5 --deployment=green
 
 .PHONY: endurance
 endurance:
@@ -14,4 +14,4 @@ fmt:
 
 .PHONY: test
 test:
-	uv run -m pytest
+	@uv run -m pytest

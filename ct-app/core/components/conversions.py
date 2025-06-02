@@ -21,6 +21,8 @@ def convert_unit(value: Any):
         value = float(value)
     except ValueError:
         pass
+    except TypeError:
+        pass
 
     try:
         integer = int(value)
@@ -28,6 +30,8 @@ def convert_unit(value: Any):
             value = integer
 
     except ValueError:
+        pass
+    except TypeError:
         pass
 
     return value

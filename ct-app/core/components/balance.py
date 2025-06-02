@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Optional
 
 WEI_TO_READABLE = Decimal("1000000000000000000")
@@ -6,6 +6,9 @@ WEI_TO_READABLE = Decimal("1000000000000000000")
 
 class Balance:
     def __init__(self, value: str):
+        if not isinstance(value, str):
+            raise TypeError(f"Balance value must be a string, got {type(value).__name__}")
+
         self._value: str = value
 
         if self.unit and self.unit.split()[0] == "wei":
@@ -31,7 +34,10 @@ class Balance:
 
     @property
     def value(self) -> Decimal:
-        return Decimal(self._value.split()[0])
+        try:
+            return Decimal(self._value.split()[0])
+        except InvalidOperation:
+            raise TypeError(f"Invalid balance value: {self._value}")
 
     @property
     def unit(self) -> str:
@@ -130,5 +136,5 @@ class Balance:
             raise TypeError("ndigits must be an integer")
         return Balance(f"{round(self.value, ndigits)} {self.unit}")
 
-    def __repr__(self):
+    def __str__(self):
         return f"Balance(value={self.value}, unit='{self.unit}')"

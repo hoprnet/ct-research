@@ -33,16 +33,16 @@ flags:
     fundChannels: 300
     closeOldChannels: 300
     closePendingChannels: 300
-    closeIncomingChannels: Off
+    closeIncomingChannels: ~
 
     getTotalChannelFunds: 300
 
     closeSessions: 30
 
-    observeMessageQueue: On # should only be On / Off
+    observeMessageQueue: 0
 
   peer:
-    messageRelayRequest: On # should only be On / Off
+    messageRelayRequest: 0
     
 # =============================================================================
 # 
