@@ -32,7 +32,7 @@ class FundChannels(EnduranceTest):
         self.channel = random.choice(open_channels)
         self.inital_balance = self.channel.balance
 
-        logger.info(f"\address: {self.channel.address}")
+        logger.info(f"\taddress: {self.channel.address}")
         logger.info(f"\tchannel: {self.channel.id}")
         logger.info(f"\tbalance: {self.inital_balance}")
 

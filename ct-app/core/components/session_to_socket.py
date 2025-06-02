@@ -57,7 +57,7 @@ class SessionToSocket:
 
         return (self.connect_address, self.session.port)
 
-    def create_socket(self, timeout: Optional[int]):
+    def create_socket(self, timeout: Optional[float]):
         if self.session.protocol == Protocol.UDP:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         else:

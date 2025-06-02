@@ -7,8 +7,8 @@ from .safe import Safe
 class Allocation(SubgraphEntry):
     def __init__(self, id: str, claimedAmount: str, allocatedAmount: str):
         self.address = id.lower() if id is not None else None
-        self.claimed_amount = Balance.fromFloat(float(claimedAmount), "wei wxHOPR")
-        self.allocated_amount = Balance.fromFloat(float(allocatedAmount), "wei wxHOPR")
+        self.claimed_amount = Balance(f"{claimedAmount} wei wxHOPR")
+        self.allocated_amount = Balance(f"{allocatedAmount} wei wxHOPR")
         self.linked_safes: set[Safe] = set()
 
     @property

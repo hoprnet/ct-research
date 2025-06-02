@@ -209,12 +209,12 @@ class Core:
         balances = {alloc.address: Balance.zero("wxHOPR") for alloc in self.allocations_data}
 
         for account in await self.providers[Type.MAINNET_BALANCES].get(id_in=list(balances.keys())):
-            balances[account["id"].lower()] += Balance.fromFloat(
+            balances[account["id"].lower()] += Balance.from_float(
                 account["totalBalance"], "wei wxHOPR"
             )
 
         for account in await self.providers[Type.GNOSIS_BALANCES].get(id_in=list(balances.keys())):
-            balances[account["id"].lower()] += Balance.fromFloat(
+            balances[account["id"].lower()] += Balance.from_float(
                 account["totalBalance"], "wei wxHOPR"
             )
 

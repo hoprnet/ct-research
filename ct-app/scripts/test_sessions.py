@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import sys
 from typing import Optional
@@ -70,7 +69,7 @@ def get_packet_counts_from_metrics(metrics: str) -> dict:
     return packet_counts
 
 
-def ticket_statistics(packet_counts_before: dict, packet_counts_after: dict):
+def packet_statistics(packet_counts_before: dict, packet_counts_after: dict):
     print("Packets statistics:")
     for (address, before), (address, after) in zip(
         packet_counts_before.items(), packet_counts_after.items()
@@ -79,7 +78,7 @@ def ticket_statistics(packet_counts_before: dict, packet_counts_after: dict):
         for key, value in after.items():
             if key not in before:
                 print(f"\t\tKey `{key}` not found in before metrics")
-                before[1][key] = 0
+                before[key] = 0
 
             print(f"\t\t{key}: {value - before[key]:+d}")
 
@@ -188,8 +187,8 @@ async def main(
             print(State.FAILURE, "Session not closed")
 
     # get the difference between the two packet counts
-    ticket_statistics(packet_counts_before, packets_count_after)
+    packet_statistics(packet_counts_before, packets_count_after)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

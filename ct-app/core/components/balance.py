@@ -48,7 +48,7 @@ class Balance:
         return cls(f"0 {unit}")
 
     @classmethod
-    def fromFloat(cls, value: Optional[float], unit: str):
+    def from_float(cls, value: Optional[float], unit: str):
         if value is None:
             value = 0.0
 
@@ -64,11 +64,21 @@ class Balance:
         if not isinstance(other, Balance):
             raise TypeError("Comparison must be with another Balance object")
 
+        if self.unit != other.unit:
+            raise ValueError(
+                f"Cannot compare balances with different units: {self.unit} and {other.unit}"
+            )
+
         return self.value < other.value
 
     def __le__(self, other):
         if not isinstance(other, Balance):
             raise TypeError("Comparison must be with another Balance object")
+
+        if self.unit != other.unit:
+            raise ValueError(
+                f"Cannot compare balances with different units: {self.unit} and {other.unit}"
+            )
 
         return self.value <= other.value
 
