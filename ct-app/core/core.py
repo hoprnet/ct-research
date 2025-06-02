@@ -376,9 +376,8 @@ class Core:
             for peer in await self.all_peers.get()
             if peer.yearly_message_count is not None
         ]
-
         for node in self.nodes:
-            await node.open_sessions(eligible_addresses)
+            await node.open_sessions(eligible_addresses, self.ct_nodes_addresses)
 
     @property
     def tasks(self) -> list[Callable]:

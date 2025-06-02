@@ -154,9 +154,7 @@ class Peer:
 
         if delay := await self.message_delay:
             multiplier: int = self.params.sessions.aggregatedPackets
-            # TODO (3.0): use the data from the session
             message = MessageFormat(
-                self.params.sessions.packetSize - self.params.sessions.surbSize,
                 self.address.native,
                 multiplier=multiplier,
             )

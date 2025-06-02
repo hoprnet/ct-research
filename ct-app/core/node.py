@@ -1,6 +1,7 @@
 # region Imports
 import asyncio
 import logging
+import random
 from datetime import datetime
 from typing import Callable, Optional
 
@@ -387,12 +388,12 @@ class Node:
 
     @master(flagguard, formalin, connectguard)
     async def observe_message_queue(self):
-        message: MessageFormat = await MessageQueue().get_async()
-
         if self.channels is None:
             logger.warning("No channels found yet")
             await asyncio.sleep(5)
             return
+
+        message: MessageFormat = await MessageQueue().get_async()
 
         peers = [peer.address.native for peer in await self.peers.get()]
         channels = [channel.destination for channel in self.channels.outgoing]
@@ -401,13 +402,12 @@ class Node:
             if message.relayer not in checklist:
                 return
 
+        sess_and_socket = self.session_management[message.relayer]
         message.sender = self.address.native
+        message.packet_size = sess_and_socket.session.payload
+
         for _ in range(self.params.sessions.batchSize):
-            AsyncLoop.add(
-                self.session_management[message.relayer].send_and_receive,
-                message,
-                publish_to_task_set=False,
-            )
+            AsyncLoop.add(sess_and_socket.send_and_receive, message, publish_to_task_set=False)
             message.increase_inner_index()
 
     @master(flagguard, formalin, connectguard)
@@ -447,7 +447,7 @@ class Node:
                 publish_to_task_set=False,
             )
 
-    async def open_sessions(self, allowed_addresses: list[Address]):
+    async def open_sessions(self, allowed_addresses: list[Address], destinations: list[Address]):
         if self.channels is None:
             logger.warning("No channels found yet", self.log_base_params)
             return
@@ -461,8 +461,8 @@ class Node:
         )
 
         for address in without_session_addresses:
-            # TODO: pick a random destination among other CT nodes
-            destination = Address("native")
+            destination = random.choice(list(set(destinations) - {self.address}))
+
             AsyncLoop.add(self.open_session, destination, address, publish_to_task_set=False)
 
     async def open_session(self, destination: Address, relayer: str):
