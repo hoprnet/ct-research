@@ -19,6 +19,7 @@ from .subgraph import URL, Type, entries
 # endregion
 
 # region Metrics
+BALANCE_MULTIPLIER = Gauge("balance_multiplier", "factor to multiply the balance by")
 ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
 MESSAGE_COUNT = Gauge(
     "ct_message_count", "messages one should receive / year", ["address", "model"]
@@ -69,6 +70,8 @@ class Core:
         }
 
         self.running = True
+
+        BALANCE_MULTIPLIER.set(1)
 
     @property
     def api(self) -> HoprdAPI:

@@ -244,7 +244,6 @@ class HoprdAPI:
         is_ok, resp = await self.__call_api(HTTPMethod.GET, "network/price")
         return response.TicketPrice(resp) if is_ok else None
 
-
     async def get_sessions(self, protocol: Protocol = Protocol.UDP) -> list[response.Session]:
         """
         Lists existing Session listeners for the given IP protocol
