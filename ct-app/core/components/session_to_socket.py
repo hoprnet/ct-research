@@ -8,19 +8,19 @@ from core.api.protocol import Protocol
 from core.api.response_objects import Session
 from core.components.messages.message_format import MessageFormat
 
-BUF_SIZE = 8192
+BUF_SIZE = 4096
 
 MESSAGES_DELAYS = Histogram(
     "ct_messages_delays",
     "Messages delays",
     ["sender", "relayer"],
-    buckets=[0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2.5],
+    buckets=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2.5, 5],
 )
 MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer"])
 
 
 class SessionToSocket:
-    def __init__(self, session: Session, connect_address: str, timeout: Optional[int] = 0.05):
+    def __init__(self, session: Session, connect_address: str, timeout: Optional[float] = 0.05):
         self.session = session
         self.connect_address = connect_address
 
@@ -57,7 +57,7 @@ class SessionToSocket:
 
         return (self.connect_address, self.session.port)
 
-    def create_socket(self, timeout: Optional[int]):
+    def create_socket(self, timeout: Optional[float]):
         if self.session.protocol == Protocol.UDP:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         else:

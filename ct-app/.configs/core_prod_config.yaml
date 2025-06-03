@@ -33,23 +33,23 @@ flags:
     fundChannels: 300
     closeOldChannels: 300
     closePendingChannels: 300
-    closeIncomingChannels: Off
+    closeIncomingChannels: ~
 
     getTotalChannelFunds: 300
     
     closeSessions: 30
 
-    observeMessageQueue: On # should only be On / Off
-
+    observeMessageQueue: 0
+    
   peer:
-    messageRelayRequest: On # should only be On / Off
+    messageRelayRequest: 0
 
 # =============================================================================
 # 
 # =============================================================================
 economicModel:
-  minSafeAllowance: -1
-  NFTThreshold: 30000
+  minSafeAllowance: "0 wxHOPR"
+  NFTThreshold: "30000 wxHOPR"
 
   legacy:
     proportion: 1.0
@@ -58,8 +58,8 @@ economicModel:
     coefficients:
       a: 1
       b: 1.4
-      c: 75000
-      l: 10000
+      c: "75000 wxHOPR"
+      l: "10000 wxHOPR"
     
     equations: 
       fx: 
@@ -73,7 +73,7 @@ economicModel:
     proportion: 0
     maxAPR: 15
     networkCapacity: 2000
-    totalTokenSupply: 450000000
+    totalTokenSupply: "450000000 wxHOPR"
 
     offset: -0.9
     buckets:
@@ -98,25 +98,18 @@ peer:
     mean: 30
     std: 2
 
-  # Controls how many messages are batched at a time. Increasing this reduces
-  # the queue size but also privacy as the load gets less spread over time. 
-  # NOTE: Should be replaced by a dynamic approch, by setting the minimum delay
-  # acceptable before increasing the batch size accordingly (auto-mode)
-  messageMultiplier: 1
-
 # =============================================================================
 # 
 # =============================================================================
 channel:
-  minBalance: 20
-  fundingAmount: 30
+  minBalance: "20 wxHOPR"
+  fundingAmount: "30 wxHOPR"
   maxAgeSeconds: 172800
   
 # =============================================================================
 # 
 # =============================================================================
 sessions:
-  packetSize: 462 # TODO 3.0: change to 762
   aggregatedPackets: 10
   batchSize: 5
 

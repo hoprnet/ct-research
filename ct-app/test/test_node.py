@@ -1,7 +1,9 @@
 import inspect
 
 import pytest
+
 from core.api.response_objects import Channels
+from core.components.balance import Balance
 
 from .conftest import Node, Peer
 
@@ -11,7 +13,6 @@ async def test_retrieve_address(node: Node, addresses: dict):
     await node.retrieve_address()
 
     assert node.address.native in [addr["native"] for addr in addresses]
-    assert node.address.hopr in [addr["hopr"] for addr in addresses]
 
 
 @pytest.mark.asyncio
@@ -28,8 +29,8 @@ async def test_retrieve_balances(node: Node):
 
     assert balances.hopr is not None
     assert balances.native is not None
-    assert isinstance(balances.hopr, int)
-    assert isinstance(balances.native, int)
+    assert isinstance(balances.hopr, Balance)
+    assert isinstance(balances.native, Balance)
 
 
 @pytest.mark.asyncio
@@ -81,9 +82,9 @@ async def test_get_total_channel_funds(node: Node, channels: Channels):
     await node.retrieve_channels()
 
     total_funds_from_node = await node.get_total_channel_funds()
-    total_funds_from_fixture = sum([int(c.balance) for c in channels.outgoing])
+    total_funds_from_fixture = sum([c.balance for c in channels.outgoing], Balance.zero("wxHOPR"))
 
-    assert total_funds_from_fixture / 1e18 == total_funds_from_node
+    assert total_funds_from_fixture == total_funds_from_node
 
 
 @pytest.mark.asyncio

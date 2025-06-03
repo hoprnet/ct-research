@@ -1,6 +1,7 @@
 import os
 
 import pytest
+
 from core.components import Parameters
 
 params_from_yaml = {
@@ -70,11 +71,3 @@ def test_from_env():
     del os.environ["ENVPREFIX_VALUE"]
     del os.environ["ENVPREFIX_DECIMAL"]
     del os.environ["ENVPREFIX_URL"]
-
-
-def test__convert():
-    params = Parameters()
-
-    assert isinstance(params._convert("1"), int)
-    assert isinstance(params._convert("1.2"), float)
-    assert isinstance(params._convert("http://localhost:8000"), str)

@@ -6,7 +6,7 @@ default_size = 1000
 
 
 def test_create_message():
-    message = MessageFormat(default_size, relayer, multiplier=5)
+    message = MessageFormat(relayer, packet_size=default_size, multiplier=5)
 
     assert message.relayer == relayer
     assert message.timestamp is not None
@@ -16,7 +16,7 @@ def test_create_message():
 
 
 def test_parse_message():
-    encoded = MessageFormat(default_size, relayer, sender, multiplier=10)
+    encoded = MessageFormat(relayer, sender, packet_size=default_size, multiplier=10)
     decoded = MessageFormat.parse(encoded.format())
 
     assert decoded.relayer == encoded.relayer
@@ -38,7 +38,7 @@ def test_increase_inner_index():
 
 def test_message_byte_size():
     MessageFormat.index = MessageFormat.range - 1
-    message = MessageFormat(default_size, relayer)
+    message = MessageFormat(relayer, packet_size=default_size)
 
     bytes = message.bytes()
     assert len(bytes) == default_size
@@ -46,13 +46,15 @@ def test_message_byte_size():
 
 def test_increase_message_index():
     MessageFormat.index = 0
-    messages = [MessageFormat(default_size, relayer) for _ in range(20)]
+    messages = [MessageFormat(relayer, packet_size=default_size) for _ in range(20)]
     assert all([message.index == i for i, message in enumerate(messages)])
 
 
 def test_loop_message_index():
     MessageFormat.index = 0
     MessageFormat.range = 5
-    messages = [MessageFormat(default_size, relayer) for _ in range(MessageFormat.range + 1)]
+    messages = [
+        MessageFormat(relayer, packet_size=default_size) for _ in range(MessageFormat.range + 1)
+    ]
     indexes = [message.index for message in messages]
     assert indexes == list(range(MessageFormat.range)) + [0]

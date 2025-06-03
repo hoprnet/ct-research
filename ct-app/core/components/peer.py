@@ -1,18 +1,21 @@
 import asyncio
 import random
+from typing import Optional
 
 from packaging.version import Version
 from prometheus_client import Gauge
+
+from core.components.balance import Balance
 
 from .address import Address
 from .asyncloop import AsyncLoop
 from .decorators import flagguard, formalin, master
 from .messages import MessageFormat, MessageQueue
 
-CHANNEL_STAKE = Gauge("ct_peer_channels_balance", "Balance in outgoing channels", ["peer_id"])
-DELAY = Gauge("ct_peer_delay", "Delay between two messages", ["peer_id"])
+CHANNEL_STAKE = Gauge("ct_peer_channels_balance", "Balance in outgoing channels", ["address"])
+DELAY = Gauge("ct_peer_delay", "Delay between two messages", ["address"])
 NODES_LINKED_TO_SAFE_COUNT = Gauge(
-    "ct_peer_safe_count", "Number of nodes linked to the safes", ["peer_id", "safe"]
+    "ct_peer_safe_count", "Number of nodes linked to the safes", ["address", "safe"]
 )
 
 SECONDS_IN_A_NON_LEAP_YEAR = 365 * 24 * 60 * 60
@@ -24,15 +27,14 @@ class Peer:
     hosted by HOPR.
     """
 
-    def __init__(self, id: str, address: str, version: str):
+    def __init__(self, address: str, version: str):
         """
-        Create a new Peer with the specified id, address and version. The id refers to the peerId,
-        the address refers to the native address of a node.
-        :param id: The peer's peerId
+        Create a new Peer with the specified address and version. The address refers to the native
+        address of a node.
         :param address: The peer's native address
         :param version: The reported peer's version
         """
-        self.address = Address(id, address)
+        self.address = Address(address)
         self.version = version
 
         self.safe = None
@@ -69,13 +71,13 @@ class Peer:
         self._version = value
 
     @property
-    def channel_balance(self):
+    def channel_balance(self) -> Balance:
         return self._channel_balance
 
     @channel_balance.setter
-    def channel_balance(self, value):
+    def channel_balance(self, value: Balance):
         self._channel_balance = value
-        CHANNEL_STAKE.labels(self.address.hopr).set(value if value is not None else 0)
+        CHANNEL_STAKE.labels(self.address.native).set(value.value if value is not None else 0)
 
     @property
     def node_address(self) -> str:
@@ -91,10 +93,10 @@ class Peer:
     @safe_address_count.setter
     def safe_address_count(self, value: int):
         self._safe_address_count = value
-        NODES_LINKED_TO_SAFE_COUNT.labels(self.address.hopr, self.safe.address).set(value)
+        NODES_LINKED_TO_SAFE_COUNT.labels(self.address.native, self.safe.address).set(value)
 
     @property
-    def split_stake(self) -> float:
+    def split_stake(self) -> Balance:
         if self.safe.balance is None:
             raise ValueError("Safe balance not set")
         if self.channel_balance is None:
@@ -102,31 +104,27 @@ class Peer:
         if self.safe_address_count is None:
             raise ValueError("Safe address count not set")
         if self.yearly_message_count is None:
-            return 0
+            return Balance.zero("wxHOPR")
 
-        split_stake = float(self.safe.total_balance) / float(self.safe_address_count) + float(
-            self.channel_balance
-        )
-
-        return split_stake
+        return self.safe.total_balance / self.safe_address_count + self.channel_balance
 
     @property
-    async def message_delay(self) -> float:
+    async def message_delay(self) -> Optional[float]:
         value = None
         if self.yearly_message_count is not None and self.yearly_message_count > 0:
             value = SECONDS_IN_A_NON_LEAP_YEAR / self.yearly_message_count
 
-        DELAY.labels(self.address.hopr).set(value if value is not None else 0)
+        DELAY.labels(self.address.native).set(value if value is not None else 0)
 
         return value
 
     def is_eligible(
         self,
-        min_allowance: float,
+        min_allowance: Balance,
         min_stake: float,
         ct_nodes: list[Address],
         nft_holders: list[str],
-        nft_threshold: float,
+        nft_threshold: Balance,
     ) -> bool:
         try:
             if self.safe.allowance < min_allowance:
@@ -157,8 +155,7 @@ class Peer:
         if delay := await self.message_delay:
             multiplier: int = self.params.sessions.aggregatedPackets
             message = MessageFormat(
-                self.params.sessions.packetSize,
-                self.address.hopr,
+                self.address.native,
                 multiplier=multiplier,
             )
             await MessageQueue().put_async(message)

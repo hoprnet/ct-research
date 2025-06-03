@@ -33,23 +33,23 @@ flags:
     fundChannels: 300
     closeOldChannels: 300
     closePendingChannels: 300
-    closeIncomingChannels: Off
+    closeIncomingChannels: ~
 
     getTotalChannelFunds: 300
 
     closeSessions: 30
 
-    observeMessageQueue: On # should only be On / Off
+    observeMessageQueue: 0
 
   peer:
-    messageRelayRequest: On # should only be On / Off
+    messageRelayRequest: 0
     
 # =============================================================================
 # 
 # =============================================================================
 economicModel:
-  minSafeAllowance: -1
-  NFTThreshold: ~
+  minSafeAllowance: "0 wxHOPR"
+  NFTThreshold: "0 wxHOPR"
 
   legacy:
     proportion: 1.0
@@ -58,8 +58,8 @@ economicModel:
     coefficients:
       a: 1
       b: 1.4
-      c: 15
-      l: 0.1
+      c: "15 wxHOPR"
+      l: "0.1 wxHOPR"
     
     equations: 
       fx: 
@@ -74,7 +74,7 @@ economicModel:
 
     maxAPR: 0.0000001
     networkCapacity: 100
-    totalTokenSupply: 5000
+    totalTokenSupply: "5000 wxHOPR"
 
     offset: 10
     buckets:
@@ -99,25 +99,18 @@ peer:
     mean: 10
     std: 2
 
-  # Controls how many messages are batched at a time. Increasing this reduces
-  # the queue size but also privacy as the load gets less spread over time. 
-  # NOTE: Should be replaced by a dynamic approch, by setting the minimum delay
-  # acceptable before increasing the batch size accordingly (auto-mode)
-  messageMultiplier: 1
-
 # =============================================================================
 # 
 # =============================================================================
 channel:
-  minBalance: 0.05
-  fundingAmount: 0.1
+  minBalance: "0.05 wxHOPR"
+  fundingAmount: "0.1 wxHOPR"
   maxAgeSeconds: 86400
 
 # =============================================================================
 # 
 # =============================================================================
 sessions:
-  packetSize: 452 # TODO 3.0: change to 762
   aggregatedPackets: 3
   batchSize: 5
 

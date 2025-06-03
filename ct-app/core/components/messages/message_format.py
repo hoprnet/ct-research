@@ -5,9 +5,9 @@ from typing import Optional
 
 class MessageFormat:
     params = [
-        "packet_size",
         "relayer",
         "sender",
+        "packet_size",
         "index",
         "inner_index",
         "multiplier",
@@ -18,21 +18,21 @@ class MessageFormat:
 
     def __init__(
         self,
-        packet_size: int,
         relayer: str,
-        sender: str = None,
-        index: str = None,
-        inner_index: int = None,
-        multiplier: int = None,
-        timestamp: str = None,
+        sender: Optional[str] = None,
+        packet_size: int = None,
+        index: Optional[int | str] = None,
+        inner_index: Optional[int | str] = None,
+        multiplier: Optional[int | str] = None,
+        timestamp: Optional[int | str] = None,
     ):
-        self.packet_size = int(packet_size)
+        self.packet_size = int(packet_size) if packet_size else 0
         self.sender = sender
         self.relayer = relayer
         self.index = int(index) if index else self.message_index
-        self.update_timestamp(timestamp)
         self.multiplier = int(multiplier) if multiplier else 1
         self.inner_index = int(inner_index) if inner_index else 1
+        self.update_timestamp(timestamp)
 
     @property
     def size(self):

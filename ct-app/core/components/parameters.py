@@ -1,5 +1,6 @@
 import logging
 
+from core.components.conversions import convert_unit
 from core.components.logs import configure_logging
 
 from .environment_utils import EnvironmentUtils as Utils
@@ -27,7 +28,7 @@ class Parameters:
             if isinstance(value, dict):
                 subparams.parse(value)
             else:
-                setattr(self, key, value)
+                setattr(self, key, convert_unit(value))
 
         if entrypoint:
             logger.debug("Loaded config from file", {"config": self.as_dict})
@@ -48,14 +49,14 @@ class Parameters:
                     if isinstance(child, type(self)):
                         parent = child
                     else:
-                        setattr(parent, param_name, self._convert(value))
+                        setattr(parent, param_name, convert_unit(value))
                 else:
                     raise KeyError(f"Key {key} not found in parameters")
 
-    def from_env(self, *prefixes: list[str]):
+    def from_env(self, *prefixes: str):
         for prefix in prefixes:
-            subparams_name: str = prefix.lower().strip("_")
-            raw_attrs = dir(self)
+            subparams_name = prefix.lower().strip("_")
+            raw_attrs: list[str] = dir(self)
             attrs = list(map(lambda str: str.lower(), raw_attrs))
 
             if subparams_name in attrs:
@@ -70,30 +71,13 @@ class Parameters:
     def _parse_env_vars(self, prefix, subparams):
         for key, value in Utils.envvarWithPrefix(prefix).items():
             k = self._format_key(key, prefix)
-            value = self._convert(value)
-            setattr(subparams, k, value)
+            setattr(subparams, k, convert_unit(value))
 
     def _format_key(self, key, prefix):
         k = key.replace(prefix, "").lower()
         k = k.replace("_", " ").title().replace(" ", "")
         k = k[0].lower() + k[1:]
         return k
-
-    def _convert(self, value: str):
-        try:
-            value = float(value)
-        except ValueError:
-            pass
-
-        try:
-            integer = int(value)
-            if integer == value:
-                value = integer
-
-        except ValueError:
-            pass
-
-        return value
 
     @property
     def as_dict(self):

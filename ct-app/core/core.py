@@ -1,9 +1,11 @@
 # region Imports
 import logging
 import random
+from typing import Callable
 
 from prometheus_client import Gauge
 
+from core.components.balance import Balance
 from core.components.logs import configure_logging
 from core.subgraph import GraphQLProvider
 
@@ -19,10 +21,10 @@ from .subgraph import URL, Type, entries
 # region Metrics
 ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
 MESSAGE_COUNT = Gauge(
-    "ct_message_count", "messages one should receive / year", ["peer_id", "model"]
+    "ct_message_count", "messages one should receive / year", ["address", "model"]
 )
 NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
-PEER_VERSION = Gauge("ct_peer_version", "Peer version", ["peer_id", "version"])
+PEER_VERSION = Gauge("ct_peer_version", "Peer version", ["address", "version"])
 REDEEMED_REWARDS = Gauge("ct_redeemed_rewards", "Redeemed rewards", ["address"])
 STAKE = Gauge("ct_peer_stake", "Stake", ["safe", "type"])
 SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
@@ -100,7 +102,7 @@ class Core:
         async with self.all_peers as current_peers:
             visible_peers: set[Peer] = set()
             visible_peers.update(*[await node.peers.get() for node in self.nodes])
-            visible_peers = list(visible_peers)
+            visible_peers: list[Peer] = list(visible_peers)
 
             for peer in current_peers:
                 # if peer is still visible
@@ -136,7 +138,7 @@ class Core:
                 UNIQUE_PEERS.labels(key).set(value)
 
             for peer in current_peers:
-                PEER_VERSION.labels(peer.address.hopr, str(peer.version)).set(1)
+                PEER_VERSION.labels(peer.address.native, str(peer.version)).set(1)
 
     @master(flagguard, formalin)
     async def registered_nodes(self):
@@ -154,9 +156,11 @@ class Core:
             )
 
         for node in results:
-            STAKE.labels(node.safe.address, "balance").set(node.safe.balance)
-            STAKE.labels(node.safe.address, "allowance").set(node.safe.allowance)
-            STAKE.labels(node.safe.address, "additional_balance").set(node.safe.additional_balance)
+            STAKE.labels(node.safe.address, "balance").set(node.safe.balance.value)
+            STAKE.labels(node.safe.address, "allowance").set(node.safe.allowance.value)
+            STAKE.labels(node.safe.address, "additional_balance").set(
+                node.safe.additional_balance.value
+            )
 
         self.registered_nodes_data = results
         logger.debug("Fetched registered nodes in the safe registry", {"count": len(results)})
@@ -202,13 +206,17 @@ class Core:
             logger.info("No EOA address found for investors safes")
             return
 
-        balances = {alloc.address: 0 for alloc in self.allocations_data}
+        balances = {alloc.address: Balance.zero("wxHOPR") for alloc in self.allocations_data}
 
         for account in await self.providers[Type.MAINNET_BALANCES].get(id_in=list(balances.keys())):
-            balances[account["id"].lower()] += float(account["totalBalance"]) / 1e18
+            balances[account["id"].lower()] += Balance.from_float(
+                account["totalBalance"], "wei wxHOPR"
+            )
 
         for account in await self.providers[Type.GNOSIS_BALANCES].get(id_in=list(balances.keys())):
-            balances[account["id"].lower()] += float(account["totalBalance"]) / 1e18
+            balances[account["id"].lower()] += Balance.from_float(
+                account["totalBalance"], "wei wxHOPR"
+            )
 
         self.eoa_balances_data = [entries.Balance(key, value) for key, value in balances.items()]
         logger.debug("Fetched investors EOA balances", {"count": len(balances)})
@@ -226,8 +234,8 @@ class Core:
             return
 
         self.topology_data = [
-            entries.Topology.fromDict(*arg)
-            for arg in (await Utils.balanceInChannels(channels.all)).items()
+            entries.Topology(address, balance)
+            for address, balance in (await Utils.balanceInChannels(channels.all)).items()
         ]
 
         logger.debug("Fetched all topology links", {"count": len(self.topology_data)})
@@ -267,7 +275,10 @@ class Core:
                     p.yearly_message_count = None
 
             economic_security = (
-                sum([p.split_stake for p in peers if p.yearly_message_count is not None])
+                sum(
+                    [p.split_stake for p in peers if p.yearly_message_count is not None],
+                    Balance.zero("wxHOPR"),
+                )
                 / self.params.economicModel.sigmoid.totalTokenSupply
             )
             network_capacity = (
@@ -297,7 +308,7 @@ class Core:
                         model_input[model],
                     )
 
-                    MESSAGE_COUNT.labels(peer.address.hopr, model.name).set(message_count[model])
+                    MESSAGE_COUNT.labels(peer.address.native, model.name).set(message_count[model])
 
                 peer.yearly_message_count = sum(message_count.values())
 
@@ -323,7 +334,11 @@ class Core:
         They are used in the economic model to calculate the number of messages to send to a peer.
         """
         ticket_price = await self.api.ticket_price()
-        logger.debug("Fetched ticket price", {"value": getattr(ticket_price, "value", None)})
+
+        logger.debug(
+            "Fetched ticket price",
+            {"value": str(getattr(getattr(ticket_price, "value", None), "value", None))},
+        )
 
         if ticket_price is not None:
             for model in self.models.values():
@@ -361,12 +376,11 @@ class Core:
             for peer in await self.all_peers.get()
             if peer.yearly_message_count is not None
         ]
-
         for node in self.nodes:
-            await node.open_sessions(eligible_addresses)
+            await node.open_sessions(eligible_addresses, self.ct_nodes_addresses)
 
     @property
-    def tasks(self):
+    def tasks(self) -> list[Callable]:
         return [getattr(self, method) for method in Utils.decorated_methods(__file__, "formalin")]
 
     async def start(self):

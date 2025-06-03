@@ -26,7 +26,9 @@ def main(configfile: str):
     params.overrides("OVERRIDE")
 
     # create the core and nodes instances
-    nodes = [Node(*pair) for pair in zip(*Utils.nodesCredentials("NODE_ADDRESS", "NODE_KEY"))]
+    nodes = [
+        Node(host, key) for host, key in zip(*Utils.nodesCredentials("NODE_ADDRESS", "NODE_KEY"))
+    ]
 
     # start the prometheus client
     try:

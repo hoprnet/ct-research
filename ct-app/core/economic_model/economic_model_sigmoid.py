@@ -1,6 +1,7 @@
 import logging
 from math import log, pow, prod
 
+from core.components.balance import Balance
 from core.components.logs import configure_logging
 from core.components.parameters import Parameters
 
@@ -86,12 +87,11 @@ class EconomicModelSigmoid:
 
         return apr
 
-    def yearly_message_count(self, stake: float, xs: list[float]):
+    def yearly_message_count(self, stake: Balance, xs: list[float]):
         """
         Calculate the yearly message count a peer should receive based on the stake.
         """
         apr = self.apr(xs)
-
         rewards = apr * stake / 100.0
 
         return rewards / self.budget.ticket_price * self.proportion

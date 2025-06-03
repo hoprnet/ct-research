@@ -18,12 +18,12 @@ class FundChannels(EnduranceTest):
         self.api = HoprdAPI(EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY"))
 
         self.address = await self.api.get_address()
-        logger.info(f"Connected to node '...{self.address.hopr[-10:]}'")
+        logger.info(f"Connected to node '...{self.address.native[-10:]}'")
 
         # get channel
         channels = await self.api.channels()
         open_channels = [
-            c for c in channels if c.status.is_open and c.source_peer_id == self.address.hopr
+            c for c in channels if c.status.is_open and c.source == self.address.native
         ]
 
         if len(open_channels) == 0:
@@ -32,11 +32,11 @@ class FundChannels(EnduranceTest):
         self.channel = random.choice(open_channels)
         self.inital_balance = self.channel.balance
 
-        logger.info(f"\tpeer_id: {self.channel.peer_id}")
+        logger.info(f"\taddress: {self.channel.address}")
         logger.info(f"\tchannel: {self.channel.id}")
         logger.info(f"\tbalance: {self.inital_balance}")
 
-    async def task(self) -> bool:
+    async def task(self):
         success = await self.api.fund_channel(
             self.channel.id, EnvironmentUtils.envvar("FUND_AMOUNT")
         )
@@ -47,7 +47,7 @@ class FundChannels(EnduranceTest):
             while True:
                 channels = await self.api.channels()
                 channel = channels[
-                    [c.id for c in channels if c.source_peer_id == self.address.hopr].index(id)
+                    [c.id for c in channels if c.source == self.address.native].index(id)
                 ]
                 if channel.balance != balance:
                     break
@@ -56,7 +56,7 @@ class FundChannels(EnduranceTest):
 
             return channel.balance
 
-        timeout = EnvironmentUtils.envvar("BALANCE_CHANGE_TIMEOUT", float)
+        timeout = EnvironmentUtils.envvar("BALANCE_CHANGE_TIMEOUT", type=float)
         logger.info(f"Waiting up to {timeout}s for the balance to change")
         try:
             self.final_balance = await asyncio.wait_for(
