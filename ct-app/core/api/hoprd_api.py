@@ -242,9 +242,8 @@ class HoprdAPI:
             return price
 
         is_ok, resp = await self.__call_api(HTTPMethod.GET, "network/price")
-        price = response.TicketPrice(resp) if is_ok else None
+        return response.TicketPrice(resp) if is_ok else None
 
-        return price
 
     async def get_sessions(self, protocol: Protocol = Protocol.UDP) -> list[response.Session]:
         """
