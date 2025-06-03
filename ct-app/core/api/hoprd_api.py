@@ -226,11 +226,17 @@ class HoprdAPI:
         :return: TicketPrice
         """
         is_ok, resp = await self.__call_api(HTTPMethod.GET, "node/configuration")
-        return (
+        price = (
             response.TicketPrice(response.Configuration(json.loads(resp)).as_dict)
             if is_ok
             else None
         )
+
+        if price and price.value is not None:
+            return price
+
+        is_ok, resp = await self.__call_api(HTTPMethod.GET, "network/price")
+        return response.TicketPrice(resp) if is_ok else None
 
     async def get_sessions(self, protocol: Protocol = Protocol.UDP) -> list[response.Session]:
         """
