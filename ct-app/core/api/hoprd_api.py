@@ -232,7 +232,7 @@ class HoprdAPI:
             else None
         )
 
-        if price and price.value != "None":
+        if price and price.value != None:
             return price
 
         is_ok, resp = await self.__call_api(HTTPMethod.GET, "network/price")
