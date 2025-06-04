@@ -56,6 +56,25 @@ class ExplicitParams:
                 result[f.name] = str(v)
         return result
 
+    @classmethod
+    def verify(cls, data: dict) -> bool:
+        instance = cls(data)
+
+        for field in instance.__dataclass_fields__.values():
+            if not hasattr(instance, field.name):
+                if field.type is not dict:
+                    raise KeyError(f"Missing required field: {field.name}")
+
+            if not is_dataclass(field.type):
+                if not isinstance(field.type, type):
+                    raise TypeError(
+                        f"Expected a dataclass for field {field.name}, got {type(field.type)}"
+                    )
+            else:
+                field.type.verify(data.get(field.name, {}))
+
+        return True
+
     def __repr__(self):
         print(f"{vars(self).keys()=}")
         key_pair_string: str = ", ".join([f"{key}={value}" for key, value in vars(self).items()])
