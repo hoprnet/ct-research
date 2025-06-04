@@ -43,11 +43,8 @@ class OpenChannelBody(ApiRequestObject):
 class FundChannelBody(ApiRequestObject):
     keys = {"amount": "amount"}
 
-    def __init__(self, amount: float):
+    def __init__(self, amount: str):
         super().__init__(vars())
-
-    def post_init(self):
-        self.amount = f"{self.amount:.0f}"
 
 
 class GetChannelsBody(ApiRequestObject):

@@ -300,9 +300,7 @@ class HoprdAPI:
         Closes an existing Sessino listener for the given IP protocol, IP and port.
         :param: session: Session
         """
-        is_ok, _ = await self.__call_api(
-            HTTPMethod.DELETE, f"session/{session.protocol}/{session.ip}/{session.port}"
-        )
+        is_ok, _ = await self.__call_api(HTTPMethod.DELETE, session.as_path)
 
         return is_ok
 

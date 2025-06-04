@@ -85,7 +85,6 @@ class Channel(ApiResponseObject):
 
     def post_init(self):
         self.status = ChannelStatus.fromString(self.status)
-
         self.destination = try_to_lower(self.destination)
         self.source = try_to_lower(self.source)
 
@@ -131,6 +130,10 @@ class Session(ApiResponseObject):
 
     def post_init(self):
         self.payload = self.mtu - SURB_SIZE
+
+    @property
+    def as_path(self):
+        return f"session/{self.protocol}/{self.ip}/{self.port}"
 
 
 class SessionFailure(ApiResponseObject):

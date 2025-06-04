@@ -40,7 +40,7 @@ class Balance:
             raise TypeError(f"Invalid balance value: {self._value}")
 
     @property
-    def unit(self) -> str:
+    def unit(self) -> Optional[str]:
         return self._value.split(maxsplit=1)[1] if " " in self._value else None
 
     @classmethod

@@ -20,7 +20,7 @@ class MessageFormat:
         self,
         relayer: str,
         sender: Optional[str] = None,
-        packet_size: int = None,
+        packet_size: Optional[int] = None,
         index: Optional[int | str] = None,
         inner_index: Optional[int | str] = None,
         multiplier: Optional[int | str] = None,

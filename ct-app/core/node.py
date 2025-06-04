@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Callable, Optional
 
 from prometheus_client import Gauge
+from pytest import Session
 
 from core.components.asyncloop import AsyncLoop
 from core.components.balance import Balance
@@ -374,7 +375,7 @@ class Node:
         if self.channels is None:
             return
 
-        results = await Utils.balanceInChannels(self.channels.outgoing)
+        results: dict[str, Balance] = await Utils.balanceInChannels(self.channels.outgoing)
 
         balance: Balance = results.get(self.address.native, Balance.zero("wxHOPR"))
 
@@ -395,14 +396,14 @@ class Node:
 
         message: MessageFormat = await MessageQueue().get_async()
 
-        peers = [peer.address.native for peer in await self.peers.get()]
-        channels = [channel.destination for channel in self.channels.outgoing]
+        peers: list[str] = [peer.address.native for peer in await self.peers.get()]
+        channels: list[str] = [channel.destination for channel in self.channels.outgoing]
 
         for checklist in [peers, channels, self.session_management]:
             if message.relayer not in checklist:
                 return
 
-        sess_and_socket = self.session_management[message.relayer]
+        sess_and_socket: SessionToSocket = self.session_management[message.relayer]
         message.sender = self.address.native
         message.packet_size = sess_and_socket.session.payload
 
@@ -436,7 +437,7 @@ class Node:
         Also, doesn't remove the session from the session_management dict.
         This method should run on startup to clean up any old sessions.
         """
-        active_sessions = await self.api.get_sessions(Protocol.UDP)
+        active_sessions: list[Session] = await self.api.get_sessions(Protocol.UDP)
 
         for session in active_sessions:
             AsyncLoop.add(
@@ -461,7 +462,7 @@ class Node:
         )
 
         for address in without_session_addresses:
-            destination = random.choice(list(set(destinations) - {self.address}))
+            destination: Address = random.choice(list(set(destinations) - {self.address}))
 
             AsyncLoop.add(self.open_session, destination, address, publish_to_task_set=False)
 
@@ -485,7 +486,7 @@ class Node:
             return self._p2p_endpoint
 
         target_url = "ctdapp-{}-node-{}-p2p.ctdapp.{}.hoprnet.link"
-        patterns = [
+        patterns: list[PatternMatcher] = [
             PatternMatcher(r"ctdapp-([a-zA-Z]+)-node-(\d+)\.ctdapp\.([a-zA-Z]+)"),
             PatternMatcher(r"ctdapp-([a-zA-Z]+)-node-(\d+)-p2p-tcp", self.params.environment),
         ]
