@@ -362,12 +362,14 @@ class Core:
 
         entries = await self.providers[Type.FUNDINGS].get(to_in=addresses)
 
-        amount = sum([float(item["amount"]) for item in entries])
+        amount = sum(
+            [Balance(f"{item['amount']} wxHOPR") for item in entries], Balance.zero("wxHOPR")
+        )
 
-        TOTAL_FUNDING.set(amount + self.params.fundings.constant)
+        TOTAL_FUNDING.set((amount + self.params.fundings.constant).value)
         logger.debug(
             "Fetched all safe fund events",
-            {"amount": amount, "constant": self.params.fundings.constant},
+            {"amount": amount.as_str, "constant": self.params.fundings.constant.as_str},
         )
 
     @keepalive

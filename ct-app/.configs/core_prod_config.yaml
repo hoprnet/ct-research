@@ -56,16 +56,16 @@ economic_model:
     coefficients:
       a: 1
       b: 1.4
-      c: "75000 wxHOPR"
-      l: "10000 wxHOPR"
+      upperbound: "75000 wxHOPR"
+      lowerbound: "10000 wxHOPR"
     
     equations: 
       fx: 
         formula: "a * x"
-        condition: "l <= x <= c"
+        condition: "lowerbound <= x <= upperbound"
       gx:
-        formula: "a * c + (x - c) ** (1 / b)"
-        condition: "x > c"
+        formula: "a * upperbound + (x - upperbound) ** (1 / b)"
+        condition: "x > upperbound"
 
   sigmoid:
     proportion: 0
@@ -114,7 +114,7 @@ sessions:
 # 
 # =============================================================================
 fundings:
-  constant: 626500
+  constant: "626500 wxHOPR"
   
 # =============================================================================
 # 

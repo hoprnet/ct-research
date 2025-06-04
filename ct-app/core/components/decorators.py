@@ -54,6 +54,7 @@ def keepalive(func):
                 {"feature": func.__name__},
             )
             return
+        delay = delay.value
 
         if delay is False:
             logger.debug("Feature not enabled, skipping", {"feature": func.__name__})

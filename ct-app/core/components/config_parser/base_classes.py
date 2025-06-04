@@ -1,80 +1,62 @@
-from typing import Optional
-
-
-class ExplicitParams:
-    keys: dict[str, type] = {}
-
-    def __init__(self, data: Optional[dict] = None):
-        if data is None:
-            data = {}
-        self.parse(data)
-
-    def parse(self, data: dict):
-        for name, type in self.keys.items():
-            if value := data.get(name):
-                value = type(value)
-                if type is Flag:
-                    value = value.value
-            setattr(self, name, value)
-
-    @property
-    def as_dict(self):
-        return {
-            k: (
-                v.as_dict
-                if isinstance(v, ExplicitParams)
-                else v.as_str if hasattr(v, "as_str") else v
-            )
-            for k, v in self.__dict__.items()
-        }
-
-    @classmethod
-    def generate(cls):
-        """
-        Generate an example representation of the input parameter file.
-        """
-        example = {}
-        for name, _type in cls.keys.items():
-            if issubclass(_type, ExplicitParams):
-                example[name] = _type().generate()
-            elif _type is Flag:
-                example[name] = Flag(0).value
-            else:
-                example[name] = _type()
-        return example
-
-    @classmethod
-    def verify(cls, data: dict, parent: str = ""):
-        """
-        Recursively verify all parameters in the input data.
-        Returns an instance of the class if all parameters are valid.
-        """
-        for name, _type in cls.keys.items():
-            if hasattr(_type, "verify"):
-                _type.verify(data[name], f"{parent}.{name}")
-            else:
-                if _type is dict:
-                    continue
-
-                try:
-                    _ = data[name]
-                except KeyError:
-                    raise KeyError(f"Missing required parameter `{name}` in {parent}")
-
-                if not data[name]:
-                    continue
-
-                try:
-                    _ = _type(data[name])
-                except ValueError:
-                    raise ValueError(f"Invalid type for `{name}` in {parent}")
-
-        return cls(data)
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}({self.as_dict})"
+from dataclasses import fields, is_dataclass
+from typing import Optional, get_args, get_origin
 
 
 class Flag:
-    def __init__(self, value: int):
+    def __init__(self, value: float):
         self.value = value
+
+    def __repr__(self):
+        key_pair_string: str = ", ".join([f"{key}={value}" for key, value in vars(self).items()])
+        return f"{self.__class__.__name__}({key_pair_string})"
+
+
+class ExplicitParams:
+    def __init__(self, data: Optional[dict] = None):
+        if data is None:
+            data = {}
+        for f in fields(self):
+            if f.name not in data:
+                continue
+            value = data[f.name]
+
+            field_type = f.type
+            # Handle nested dataclasses
+            if is_dataclass(field_type):
+                value = field_type(value)
+            # Handle Optional and other generics
+            elif get_origin(field_type) is not None:
+                origin = get_origin(field_type)
+                args = get_args(field_type)
+                if origin is list and isinstance(value, list):
+                    value = [args[0](v) if not is_dataclass(args[0]) else args[0](v) for v in value]
+                elif origin is dict and isinstance(value, dict):
+                    value = {
+                        k: args[1](v) if not is_dataclass(args[1]) else args[1](v)
+                        for k, v in value.items()
+                    }
+            # Handle Flag
+            elif field_type is Flag:
+                value = Flag(value)
+            else:
+                value = field_type(value)
+            setattr(self, f.name, value)
+
+    def as_dict(self):
+        result = {}
+        for f in fields(self):
+            if not hasattr(self, f.name):
+                continue
+
+            v = getattr(self, f.name)
+
+            if is_dataclass(v):
+                result[f.name] = v.as_dict()
+            else:
+                result[f.name] = str(v)
+        return result
+
+    def __repr__(self):
+        print(f"{vars(self).keys()=}")
+        key_pair_string: str = ", ".join([f"{key}={value}" for key, value in vars(self).items()])
+        return f"{self.__class__.__name__}({key_pair_string})"

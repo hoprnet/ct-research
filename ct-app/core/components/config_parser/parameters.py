@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from .base_classes import ExplicitParams
 from .channel import ChannelParams
 from .economic_model import EconomicModelParams
@@ -8,14 +10,13 @@ from .sessions import SessionsParams
 from .subgraph import SubgraphParams
 
 
+@dataclass(init=False)
 class Parameters(ExplicitParams):
-    keys: dict[str, type] = {
-        "environment": str,
-        "flags": FlagParams,
-        "economic_model": EconomicModelParams,
-        "peer": PeerParams,
-        "sessions": SessionsParams,
-        "channel": ChannelParams,
-        "fundings": FundingParams,
-        "subgraph": SubgraphParams,
-    }
+    environment: str
+    flags: FlagParams
+    economic_model: EconomicModelParams
+    peer: PeerParams
+    sessions: SessionsParams
+    channel: ChannelParams
+    fundings: FundingParams
+    subgraph: SubgraphParams

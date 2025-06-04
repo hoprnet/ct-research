@@ -23,9 +23,9 @@ def main(configfile: str):
         config = yaml.safe_load(file)
 
     params = Parameters(config)
-    logger.debug("Safe parameters loaded", {"params": params.as_dict})
+    logger.debug("Safe parameters loaded", {"params": params.as_dict()})
 
-    params.subgraph.api_key = os.getenv("SUBGRAPH_API_KEY")
+    params.subgraph.api_key = os.getenv("SUBGRAPH_API_KEY", "")
     logger.debug("API key loaded")
 
     # create the core and nodes instances

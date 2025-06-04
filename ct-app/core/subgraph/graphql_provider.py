@@ -44,7 +44,9 @@ class GraphQLProvider:
         if self.default_key is None:
             self.default_key = keys
 
-    def _load_query(self, path: str | Path, extra_inputs: list[str] = None) -> Tuple[str, str]:
+    def _load_query(
+        self, path: str | Path, extra_inputs: Optional[list[str]] = None
+    ) -> Tuple[str, str]:
         """
         Loads a graphql query from a file.
         :param path: Path to the file. The path must be relative to the ct-app folder.

@@ -1,31 +1,29 @@
 import asyncio
+from dataclasses import dataclass
 
 import pytest
+
 from core.components.config_parser.base_classes import ExplicitParams, Flag
 from core.components.decorators import connectguard, keepalive
 
 
+@dataclass(init=False)
 class FooClassParams(ExplicitParams):
-    keys = {
-        "foo_keepalive_func": Flag,
-    }
+    foo_keepalive_func: Flag
 
 
+@dataclass(init=False)
 class FooFlagParams(ExplicitParams):
-    keys = {
-        "fooclass": FooClassParams,
-    }
+    fooclass: FooClassParams
 
 
+@dataclass(init=False)
 class FooParams(ExplicitParams):
-    keys = {
-        "flags": FooFlagParams,
-    }
+    flags: FooFlagParams
 
 
 class FooClass:
     def __init__(self):
-        pass
         self.connected = False
         self.running = False
         self.counter = 0
@@ -59,7 +57,7 @@ async def test_connectguard(foo_class: FooClass):
 
 @pytest.mark.asyncio
 async def test_keepalive(foo_class: FooClass):
-    async def setup_test(run_time: float, sleep_time: float, expected_count: int):
+    async def setup_test(run_time: float, sleep_time: Flag, expected_count: int):
         foo_class.params.flags.fooclass.foo_keepalive_func = sleep_time
         foo_class.counter = 0
         foo_class.running = True
@@ -72,5 +70,5 @@ async def test_keepalive(foo_class: FooClass):
 
         assert foo_class.counter == expected_count
 
-    await setup_test(1, 0, 10)
-    await setup_test(1.4, 0.5, 3)
+    await setup_test(1, Flag(0), 10)
+    await setup_test(1.4, Flag(0.5), 3)

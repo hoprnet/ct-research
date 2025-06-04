@@ -1,5 +1,3 @@
-import inspect
-
 import pytest
 
 from core.api.response_objects import Channels
@@ -12,7 +10,7 @@ from .conftest import Node, Peer
 async def test_retrieve_address(node: Node, addresses: dict):
     await node.retrieve_address()
 
-    assert node.address.native in [addr["native"] for addr in addresses]
+    assert getattr(node.address, "native") in [addr["native"] for addr in addresses]
 
 
 @pytest.mark.asyncio
@@ -31,31 +29,6 @@ async def test_retrieve_balances(node: Node):
     assert balances.native is not None
     assert isinstance(balances.hopr, Balance)
     assert isinstance(balances.native, Balance)
-
-
-@pytest.mark.asyncio
-async def test_open_channels(node: Node):
-    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
-
-
-@pytest.mark.asyncio
-async def test_close_incoming_channels(node: Node):
-    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
-
-
-@pytest.mark.asyncio
-async def test_close_pending_channels(node: Node):
-    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
-
-
-@pytest.mark.asyncio
-async def test_close_old_channels(node: Node):
-    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
-
-
-@pytest.mark.asyncio
-async def test_fund_channels(node: Node):
-    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
 
 
 @pytest.mark.asyncio
@@ -85,8 +58,3 @@ async def test_get_total_channel_funds(node: Node, channels: Channels):
     total_funds_from_fixture = sum([c.balance for c in channels.outgoing], Balance.zero("wxHOPR"))
 
     assert total_funds_from_fixture == total_funds_from_node
-
-
-@pytest.mark.asyncio
-async def test_check_inbox(node: Node):
-    pytest.skip(f"{inspect.stack()[0][3]} not implemented")

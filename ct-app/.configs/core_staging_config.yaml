@@ -36,9 +36,8 @@ flags:
 
     get_total_channel_funds: 300
 
-    close_sessions: 30
-
     observe_message_queue: On
+    close_sessions: 30
 
   peer:
     message_relay_request: On
@@ -46,7 +45,7 @@ flags:
 # =============================================================================
 # 
 # =============================================================================
-economicModel:
+economic_model:
   min_safe_allowance: "0 wxHOPR"
   nft_threshold: "0 wxHOPR"
 
@@ -57,16 +56,16 @@ economicModel:
     coefficients:
       a: 1
       b: 1.4
-      c: "15 wxHOPR"
-      l: "0.1 wxHOPR"
+      upperbound: "15 wxHOPR"
+      lowerbound: "0.1 wxHOPR"
     
     equations: 
       fx: 
         formula: "a * x"
-        condition: "l <= x <= c"
+        condition: "lowerbound <= x <= upperbound"
       gx:
-        formula: "a * c + (x - c) ** (1 / b)"
-        condition: "x > c"
+        formula: "a * upperbound + (x - upperbound) ** (1 / b)"
+        condition: "x > upperbound"
 
   sigmoid:
     proportion: 0
@@ -116,7 +115,7 @@ sessions:
 # 
 # =============================================================================
 fundings:
-  constant: 0
+  constant: "0 wxHOPR"
 
 # =============================================================================
 # 

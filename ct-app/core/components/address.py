@@ -1,3 +1,8 @@
+from typing import Any
+
+from core.api.response_objects import try_to_lower
+
+
 class Address:
     """
     Class that represents a native address.
@@ -8,15 +13,15 @@ class Address:
         Create a new Address from a native address.
         :param address: The address of the peer.
         """
-        self.native = native
+        self.native: str | Any = native
 
     @property
-    def native(self):
+    def native(self) -> str | Any:
         return self._native
 
     @native.setter
     def native(self, value: str):
-        self._native = value.lower() if value is not None else None
+        self._native = try_to_lower(value)
 
     def __eq__(self, other):
         return self.native == other.native

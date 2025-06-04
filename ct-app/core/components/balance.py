@@ -7,7 +7,7 @@ WEI_TO_READABLE = Decimal("1000000000000000000")
 class Balance:
     def __init__(self, value: str):
         if not isinstance(value, str):
-            raise TypeError(f"Balance value must be a string, got {type(value).__name__}")
+            raise TypeError(f"Balance value must be a string, got {type(value).__name__} ({value})")
 
         self._value: str = value
 
@@ -146,5 +146,6 @@ class Balance:
             raise TypeError("ndigits must be an integer")
         return Balance(f"{round(self.value, ndigits)} {self.unit}")
 
-    def __str__(self):
-        return f"Balance(value={self.value}, unit='{self.unit}')"
+    def __repr__(self):
+        key_pair_string: str = ", ".join([f"{key}={value}" for key, value in vars(self).items()])
+        return f"{self.__class__.__name__}({key_pair_string})"

@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass
 from decimal import Decimal
 from math import log, prod
 
@@ -12,40 +13,36 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 
+@dataclass(init=False)
 class LegacyCoefficientsParams(ExplicitParams):
-    keys = {
-        "a": float,
-        "b": float,
-        "c": Balance,
-        "l": Balance,
-    }
+    a: float
+    b: float
+    lowerbound: Balance
+    upperbound: Balance
 
 
+@dataclass(init=False)
 class LegacyEquationParams(ExplicitParams):
-    keys = {
-        "formula": str,
-        "condition": str,
-    }
+    formula: str
+    condition: str
 
 
+@dataclass(init=False)
 class LegacyEquationsParams(ExplicitParams):
-    keys = {
-        "fx": LegacyEquationParams,
-        "gx": LegacyEquationParams,
-    }
+    fx: LegacyEquationParams
+    gx: LegacyEquationParams
 
 
+@dataclass(init=False)
 class LegacyParams(ExplicitParams):
-    keys = {
-        "proportion": Decimal,
-        "apr": float,
-        "coefficients": LegacyCoefficientsParams,
-        "equations": LegacyEquationsParams,
-    }
+    proportion: Decimal
+    apr: float
+    coefficients: LegacyCoefficientsParams
+    equations: LegacyEquationsParams
 
     def transformed_stake(self, stake: Balance) -> Balance:
         # convert parameters attribute to dictionary
-        kwargs = vars(self.coefficients)
+        kwargs = dict(vars(self.coefficients).items())
         kwargs.update({"x": stake})
 
         for func in vars(self.equations).values():
@@ -65,20 +62,19 @@ class LegacyParams(ExplicitParams):
         """
         Calculate the yearly message count a peer should receive based on the stake.
         """
-        self.coefficients.c += redeemed_rewards
+        self.coefficients.upperbound += redeemed_rewards
         rewards = self.apr * self.transformed_stake(stake) / 100
-        self.coefficients.c -= redeemed_rewards
+        self.coefficients.upperbound -= redeemed_rewards
 
         return rewards / ticket_price.value * self.proportion
 
 
+@dataclass(init=False)
 class BucketParams(ExplicitParams):
-    keys = {
-        "flatness": float,
-        "skewness": float,
-        "upperbound": float,
-        "offset": float,
-    }
+    flatness: float
+    skewness: float
+    upperbound: float
+    offset: float
 
     def apr(self, x: float) -> float:
         """
@@ -96,8 +92,10 @@ class BucketParams(ExplicitParams):
         return max(apr, 0.0)
 
 
+@dataclass(init=False)
 class BucketsParams(ExplicitParams):
-    keys = {"economic_security": BucketParams, "network_capacity": BucketParams}
+    economic_security: BucketParams
+    network_capacity: BucketParams
 
     order = ["network_capacity", "economic_security"]
 
@@ -107,19 +105,17 @@ class BucketsParams(ExplicitParams):
 
     @property
     def values(self):
-        # return the values of the dictionary, by `order`
-        return [vars(self)[k] for k in self.order if vars(self)[k]]
+        return [vars(self)[k] for k in self.order if k in vars(self) and vars(self)[k]]
 
 
+@dataclass(init=False)
 class SigmoidParams(ExplicitParams):
-    keys = {
-        "proportion": Decimal,
-        "max_apr": float,
-        "offset": int,
-        "buckets": BucketsParams,
-        "network_capacity": int,
-        "total_token_supply": Balance,
-    }
+    proportion: Decimal
+    max_apr: float
+    offset: float
+    buckets: BucketsParams
+    network_capacity: int
+    total_token_supply: Balance
 
     def apr(
         self,
@@ -156,13 +152,12 @@ class SigmoidParams(ExplicitParams):
         return rewards / ticket_price.value * self.proportion
 
 
+@dataclass(init=False)
 class EconomicModelParams(ExplicitParams):
-    keys = {
-        "min_safe_allowance": Balance,
-        "nft_threshold": Balance,
-        "legacy": LegacyParams,
-        "sigmoid": SigmoidParams,
-    }
+    min_safe_allowance: Balance
+    nft_threshold: Balance
+    legacy: LegacyParams
+    sigmoid: SigmoidParams
 
     @property
     def models(self):
