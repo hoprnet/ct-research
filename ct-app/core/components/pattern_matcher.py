@@ -3,7 +3,7 @@ from typing import Optional
 
 
 class PatternMatcher:
-    def __init__(self, pattern: str, *extras: list[str]):
+    def __init__(self, pattern: str, *extras: str):
         self.pattern = pattern
         self.extras = list(extras)
 

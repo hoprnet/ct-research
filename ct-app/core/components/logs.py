@@ -5,7 +5,7 @@ import time
 import traceback
 
 
-class JSONFormatter:
+class JSONFormatter(logging.Formatter):
     def __init__(self):
         pass
 
@@ -36,7 +36,7 @@ class JSONFormatter:
 
 
 def configure_logging():
-    handler = logging.StreamHandler(sys.stderr)
+    handler = logging.StreamHandler(stream=sys.stderr)
     handler.setFormatter(JSONFormatter())
     logging.basicConfig(level=logging.DEBUG, handlers=[handler])
     logging.getLogger("asyncio").setLevel(logging.WARNING)

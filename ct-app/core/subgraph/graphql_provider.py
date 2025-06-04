@@ -3,7 +3,7 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional, Tuple
 
 import aiohttp
 from prometheus_client import Gauge
@@ -25,9 +25,9 @@ class ProviderError(Exception):
 
 
 class GraphQLProvider:
-    query_file: str = None
+    query_file: Optional[str] = None
     params: list[str] = []
-    default_key: list[str] = None
+    default_key: Optional[list[str]] = None
 
     def __init__(self, url: URL):
         self.url = url
@@ -44,12 +44,15 @@ class GraphQLProvider:
         if self.default_key is None:
             self.default_key = keys
 
-    def _load_query(self, path: str | Path, extra_inputs: list[str] = []) -> str:
+    def _load_query(self, path: str | Path, extra_inputs: list[str] = None) -> Tuple[str, str]:
         """
         Loads a graphql query from a file.
         :param path: Path to the file. The path must be relative to the ct-app folder.
         :return: The query as a string.
         """
+        if extra_inputs is None:
+            extra_inputs = []
+
         inputs = ["$first: Int!", "$skip: Int!", *extra_inputs]
 
         header = "query (" + ",".join(inputs) + ") {"
@@ -59,7 +62,7 @@ class GraphQLProvider:
 
         return body.split("(")[0], ("\n".join([header, body, footer]))
 
-    async def _execute(self, query: str, variable_values: dict) -> tuple[dict, dict]:
+    async def _execute(self, query: str, variable_values: dict) -> tuple[dict, Optional[dict]]:
         """
         Executes a graphql query.
         :param query: The query to execute.
@@ -126,7 +129,7 @@ class GraphQLProvider:
 
         return key in response.get("data", [])
 
-    async def _get(self, key: str, **kwargs) -> dict:
+    async def _get(self, key: str, **kwargs) -> list[Any]:
         """
         Gets the data from a subgraph query.
         :param key: The key to look for in the response.
@@ -184,7 +187,7 @@ class GraphQLProvider:
         return data
 
     #### DEFAULT PUBLIC METHODS ####
-    async def get(self, key: str = None, **kwargs):
+    async def get(self, key: Optional[str] = None, **kwargs):
         """
         Gets the data from a subgraph query.
         :param key: The key to look for in the response. If None, the default key is used.

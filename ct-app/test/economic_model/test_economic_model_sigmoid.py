@@ -1,7 +1,9 @@
 from copy import deepcopy
 
 import pytest
+
 from core.api.response_objects import TicketPrice
+from core.components.balance import Balance
 from core.components.config_parser.economic_model import BucketParams, SigmoidParams
 
 
@@ -147,8 +149,8 @@ def test_bucket_apr():
 
 
 def test_yearly_message_count():
-    stake = 75000
-    ticket_price = TicketPrice({"price": "100000000000000"})
+    stake = Balance("75000 wxHOPR")
+    ticket_price = TicketPrice({"price": "00001 wxHOPR"})
 
     model = SigmoidParams(
         {

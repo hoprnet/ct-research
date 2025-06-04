@@ -2,7 +2,7 @@ import asyncio
 import logging
 import threading
 from signal import SIGINT, SIGTERM
-from typing import Callable
+from typing import Callable, Iterable
 
 from core.components.logs import configure_logging
 
@@ -31,7 +31,7 @@ class AsyncLoop(metaclass=Singleton):
             cls().stop()
 
     @classmethod
-    def update(cls, tasks: set[Callable]):
+    def update(cls, tasks: Iterable[Callable]):
         for task in tasks:
             cls().add(task)
 
@@ -40,7 +40,10 @@ class AsyncLoop(metaclass=Singleton):
         try:
             task = asyncio.ensure_future(callback(*args))
         except Exception as err:
-            logger.exception("Failed to create task", {"task": callback.__name__, "error": err})
+            logger.exception(
+                "Failed to create task",
+                {"task": getattr(callback, "__name__", str(callback)), "error": err},
+            )
             return
 
         if publish_to_task_set:

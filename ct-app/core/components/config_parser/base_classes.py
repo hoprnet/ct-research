@@ -1,7 +1,10 @@
+from typing import Optional
+
+
 class ExplicitParams:
     keys: dict[str, type] = {}
 
-    def __init__(self, data: dict = None):
+    def __init__(self, data: Optional[dict] = None):
         if data is None:
             data = {}
         self.parse(data)
@@ -17,7 +20,12 @@ class ExplicitParams:
     @property
     def as_dict(self):
         return {
-            k: v.as_dict if isinstance(v, ExplicitParams) else v for k, v in self.__dict__.items()
+            k: (
+                v.as_dict
+                if isinstance(v, ExplicitParams)
+                else v.as_str if hasattr(v, "as_str") else v
+            )
+            for k, v in self.__dict__.items()
         }
 
     @classmethod

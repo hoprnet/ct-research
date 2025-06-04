@@ -10,7 +10,7 @@ SECONDS_IN_YEAR = 365 * 24 * 60 * 60
 
 
 def test_peer_version():
-    peer = Peer("some_id", "some_address", "0.0.1")
+    peer = Peer("some_address", "0.0.1")
 
     peer.version = "0.1.0-rc.1"
     assert peer.is_old("0.1.0-rc.2")
@@ -53,7 +53,7 @@ def test_peer_version():
     ],
 )
 async def test_request_relay(exc_time: int, min_range: float, max_range: float):
-    peers = {Peer(f"12D{num}", f"0x{num}", "2.1.0") for num in range(10)}
+    peers = {Peer(f"0x{num}", "2.1.0") for num in range(10)}
 
     params = Parameters({"flags": {"peer": {"requestRelay": True}}})
 
@@ -68,7 +68,9 @@ async def test_request_relay(exc_time: int, min_range: float, max_range: float):
 
     queue = MessageQueue()
 
-    calls_and_delays = {p.address.hopr: {"calls": 0, "delay": await p.message_delay} for p in peers}
+    calls_and_delays = {
+        p.address.native: {"calls": 0, "delay": await p.message_delay} for p in peers
+    }
 
     while queue.size > 0:
         calls_and_delays[await queue.get_async()]["calls"] += 1

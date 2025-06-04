@@ -1,7 +1,9 @@
 import logging
+from decimal import Decimal
 from math import log, prod
 
 from core.api.response_objects import TicketPrice
+from core.components.balance import Balance
 from core.components.logs import configure_logging
 
 from .base_classes import ExplicitParams
@@ -14,8 +16,8 @@ class LegacyCoefficientsParams(ExplicitParams):
     keys = {
         "a": float,
         "b": float,
-        "c": float,
-        "l": float,
+        "c": Balance,
+        "l": Balance,
     }
 
 
@@ -35,13 +37,13 @@ class LegacyEquationsParams(ExplicitParams):
 
 class LegacyParams(ExplicitParams):
     keys = {
-        "proportion": float,
+        "proportion": Decimal,
         "apr": float,
         "coefficients": LegacyCoefficientsParams,
         "equations": LegacyEquationsParams,
     }
 
-    def transformed_stake(self, stake: float):
+    def transformed_stake(self, stake: Balance) -> Balance:
         # convert parameters attribute to dictionary
         kwargs = vars(self.coefficients)
         kwargs.update({"x": stake})
@@ -50,13 +52,16 @@ class LegacyParams(ExplicitParams):
             if eval(func.condition, kwargs):
                 break
         else:
-            return 0
+            return Balance.zero(("wxHOPR"))
 
         return eval(func.formula, kwargs)
 
     def yearly_message_count(
-        self, stake: float, ticket_price: TicketPrice, redeemed_rewards: float = 0
-    ):
+        self,
+        stake: Balance,
+        ticket_price: TicketPrice,
+        redeemed_rewards: Balance = Balance.zero("wxHOPR"),
+    ) -> float:
         """
         Calculate the yearly message count a peer should receive based on the stake.
         """
@@ -68,9 +73,14 @@ class LegacyParams(ExplicitParams):
 
 
 class BucketParams(ExplicitParams):
-    keys = {"flatness": float, "skewness": float, "upperbound": float, "offset": float}
+    keys = {
+        "flatness": float,
+        "skewness": float,
+        "upperbound": float,
+        "offset": float,
+    }
 
-    def apr(self, x: float):
+    def apr(self, x: float) -> float:
         """
         Calculate the APR for the bucket.
         """
@@ -83,7 +93,7 @@ class BucketParams(ExplicitParams):
         except OverflowError as err:
             raise ValueError("Overflow error") from err
 
-        return max(apr, 0)
+        return max(apr, 0.0)
 
 
 class BucketsParams(ExplicitParams):
@@ -103,18 +113,18 @@ class BucketsParams(ExplicitParams):
 
 class SigmoidParams(ExplicitParams):
     keys = {
-        "proportion": float,
+        "proportion": Decimal,
         "max_apr": float,
         "offset": int,
         "buckets": BucketsParams,
         "network_capacity": int,
-        "total_token_supply": int,
+        "total_token_supply": Balance,
     }
 
     def apr(
         self,
         xs: list[float],
-    ):
+    ) -> float:
         """
         Calculate the APR for the economic model.
         """
@@ -135,7 +145,7 @@ class SigmoidParams(ExplicitParams):
 
         return apr
 
-    def yearly_message_count(self, stake: float, ticket_price: TicketPrice, xs: list[float]):
+    def yearly_message_count(self, stake: Balance, ticket_price: TicketPrice, xs: list[float]):
         """
         Calculate the yearly message count a peer should receive based on the stake.
         """
@@ -148,8 +158,8 @@ class SigmoidParams(ExplicitParams):
 
 class EconomicModelParams(ExplicitParams):
     keys = {
-        "min_safe_allowance": float,
-        "nft_threshold": float,
+        "min_safe_allowance": Balance,
+        "nft_threshold": Balance,
         "legacy": LegacyParams,
         "sigmoid": SigmoidParams,
     }

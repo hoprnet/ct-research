@@ -1,11 +1,15 @@
 # region Imports
 import asyncio
 import logging
+import random
 from datetime import datetime
+from typing import Callable, Optional
 
 from prometheus_client import Gauge
+from pytest import Session
 
 from core.components.asyncloop import AsyncLoop
+from core.components.balance import Balance
 from core.components.logs import configure_logging
 from core.components.pattern_matcher import PatternMatcher
 
@@ -21,11 +25,11 @@ from .components.session_to_socket import SessionToSocket
 # endregion
 
 # region Metrics
-BALANCE = Gauge("ct_balance", "Node balance", ["peer_id", "token"])
-CHANNELS = Gauge("ct_channels", "Node channels", ["peer_id", "direction"])
-CHANNEL_FUNDS = Gauge("ct_channel_funds", "Total funds in out. channels", ["peer_id"])
-HEALTH = Gauge("ct_node_health", "Node health", ["peer_id"])
-PEERS_COUNT = Gauge("ct_peers_count", "Node peers", ["peer_id"])
+BALANCE = Gauge("ct_balance", "Node balance", ["address", "token"])
+CHANNELS = Gauge("ct_channels", "Node channels", ["address", "direction"])
+CHANNEL_FUNDS = Gauge("ct_channel_funds", "Total funds in out. channels", ["address"])
+HEALTH = Gauge("ct_node_health", "Node health", ["address"])
+PEERS_COUNT = Gauge("ct_peers_count", "Node peers", ["address"])
 # endregion
 
 configure_logging()
@@ -66,7 +70,6 @@ class Node:
         return {
             "host": self.url,
             "address": getattr(self.address, "native", None),
-            "peer_id": getattr(self.address, "hopr", None),
         }
 
     @property
@@ -90,7 +93,7 @@ class Node:
         if addresses is None:
             logger.warning("No results while retrieving addresses", self.log_base_params)
             return
-        self.address = Address(addresses.hopr, addresses.native)
+        self.address = Address(addresses.native)
 
         logger.debug("Retrieved addresses", self.log_base_params)
 
@@ -104,7 +107,7 @@ class Node:
         self.connected = health
 
         if addr := await self.retrieve_address():
-            HEALTH.labels(addr.hopr).set(int(health))
+            HEALTH.labels(addr.native).set(int(health))
             if not health:
                 logger.warning("Node is not reachable", self.log_base_params)
         else:
@@ -126,11 +129,17 @@ class Node:
             return None
 
         if addr := self.address:
-            logger.debug("Retrieved balances", {**vars(balances), **self.log_base_params})
+            logger.debug(
+                "Retrieved balances",
+                {
+                    **{key: str(value) for key, value in balances.as_dict.items()},
+                    **self.log_base_params,
+                },
+            )
             for token, balance in vars(balances).items():
                 if balance is None:
                     continue
-                BALANCE.labels(addr.hopr, token).set(balance)
+                BALANCE.labels(addr.native, token).set(balance.value)
 
         return balances
 
@@ -144,7 +153,7 @@ class Node:
 
         out_opens = [c for c in self.channels.outgoing if not c.status.is_closed]
 
-        addresses_with_channels = {c.destination_address for c in out_opens}
+        addresses_with_channels = {c.destination for c in out_opens}
         all_addresses = {
             p.address.native
             for p in await self.peers.get()
@@ -229,9 +238,7 @@ class Node:
         to_peer_history = dict[str, datetime]()
         channels_to_close: list[str] = []
 
-        address_to_channel = {
-            c.destination_address: c for c in self.channels.outgoing if c.status.is_open
-        }
+        address_to_channel = {c.destination: c for c in self.channels.outgoing if c.status.is_open}
 
         for address, channel in address_to_channel.items():
             timestamp = peer_history.get(address, None)
@@ -272,29 +279,27 @@ class Node:
 
         out_opens = [c for c in self.channels.outgoing if c.status.is_open]
 
-        low_balances = [
-            c for c in out_opens if int(c.balance) / 1e18 <= self.params.channel.min_balance
-        ]
+        low_balances = [c for c in out_opens if c.balance <= self.params.channel.min_balance]
 
         logger.info(
             "Starting funding of channels where balance is too low",
             {
                 "count": len(low_balances),
-                "threshold": self.params.channel.min_balance,
+                "threshold": self.params.channel.min_balance.as_str,
                 **self.log_base_params,
             },
         )
 
-        peer_ids = [p.address.hopr for p in await self.peers.get()]
+        addresses = [p.address.native for p in await self.peers.get()]
 
         for channel in low_balances:
-            if channel.destination_peer_id in peer_ids:
+            if channel.destination in addresses:
                 AsyncLoop.add(
                     NodeHelper.fund_channel,
                     self.address,
                     self.api,
                     channel,
-                    self.params.channel.funding_amount,
+                    self.params.channel.funding_amount.as_str,
                     publish_to_task_set=False,
                 )
 
@@ -313,7 +318,8 @@ class Node:
                 "Scanned reachable peers",
                 {"count": len(results), **self.log_base_params},
             )
-        peers = {Peer(item.peer_id, item.address, item.version) for item in results}
+
+        peers = {Peer(item.address, item.version) for item in results}
         peers = {p for p in peers if not p.is_old(self.params.peer.min_version)}
 
         addresses_w_timestamp = {p.address.native: datetime.now() for p in peers}
@@ -322,7 +328,7 @@ class Node:
         await self.peer_history.update(addresses_w_timestamp)
 
         if addr := self.address:
-            PEERS_COUNT.labels(addr.hopr).set(len(peers))
+            PEERS_COUNT.labels(addr.native).set(len(peers))
 
     @master(keepalive, connectguard)
     async def retrieve_channels(self):
@@ -337,18 +343,16 @@ class Node:
 
         if addr := self.address:
             channels.outgoing = [
-                c for c in channels.all if c.source_peer_id == addr.hopr and not c.status.is_closed
+                c for c in channels.all if c.source == addr.native and not c.status.is_closed
             ]
             channels.incoming = [
-                c
-                for c in channels.all
-                if c.destination_peer_id == addr.hopr and not c.status.is_closed
+                c for c in channels.all if c.destination == addr.native and not c.status.is_closed
             ]
 
             self.channels = channels
 
-            CHANNELS.labels(addr.hopr, "outgoing").set(len(channels.outgoing))
-            CHANNELS.labels(addr.hopr, "incoming").set(len(channels.incoming))
+            CHANNELS.labels(addr.native, "outgoing").set(len(channels.outgoing))
+            CHANNELS.labels(addr.native, "incoming").set(len(channels.incoming))
 
         incoming_count = len(channels.incoming) if channels else 0
         outgoing_count = len(channels.outgoing) if channels else 0
@@ -363,7 +367,7 @@ class Node:
         )
 
     @master(keepalive, connectguard)
-    async def get_total_channel_funds(self):
+    async def get_total_channel_funds(self) -> Optional[Balance]:
         """
         Retrieve total funds.
         """
@@ -373,41 +377,40 @@ class Node:
         if self.channels is None:
             return
 
-        results = await Utils.balanceInChannels(self.channels.outgoing)
+        results: dict[str, Balance] = await Utils.balanceInChannels(self.channels.outgoing)
 
-        total = results.get(self.address.hopr, {}).get("channels_balance", 0)
+        balance: Balance = results.get(self.address.native, Balance.zero("wxHOPR"))
 
         logger.info(
             "Retrieved total amount stored in outgoing channels",
-            {"amount": total, **self.log_base_params},
+            {"amount": balance.as_str, **self.log_base_params},
         )
-        CHANNEL_FUNDS.labels(self.address.hopr).set(total)
+        CHANNEL_FUNDS.labels(self.address.native).set(balance.value)
 
-        return total
+        return balance
 
     @master(keepalive, connectguard)
     async def observe_message_queue(self):
-        message: MessageFormat = await MessageQueue().get_async()
-
         if self.channels is None:
             logger.warning("No channels found yet")
             await asyncio.sleep(5)
             return
 
-        peers = [peer.address.hopr for peer in await self.peers.get()]
-        channels = [channel.destination_peer_id for channel in self.channels.outgoing]
+        message: MessageFormat = await MessageQueue().get_async()
+
+        peers: list[str] = [peer.address.native for peer in await self.peers.get()]
+        channels: list[str] = [channel.destination for channel in self.channels.outgoing]
 
         for checklist in [peers, channels, self.session_management]:
             if message.relayer not in checklist:
                 return
 
-        message.sender = self.address.hopr
+        sess_and_socket: SessionToSocket = self.session_management[message.relayer]
+        message.sender = self.address.native
+        message.packet_size = sess_and_socket.session.payload
+
         for _ in range(self.params.sessions.batch_size):
-            AsyncLoop.add(
-                self.session_management[message.relayer].send_and_receive,
-                message,
-                publish_to_task_set=False,
-            )
+            AsyncLoop.add(sess_and_socket.send_and_receive, message, publish_to_task_set=False)
             message.increase_inner_index()
 
     @master(keepalive, connectguard)
@@ -415,18 +418,18 @@ class Node:
         active_sessions = await self.api.get_sessions(Protocol.UDP)
 
         to_remove = [
-            peer_id
-            for peer_id, s in self.session_management.items()
+            address
+            for address, s in self.session_management.items()
             if s.session not in active_sessions
         ]
 
-        for peer_id in to_remove:
+        for address in to_remove:
             AsyncLoop.add(
                 NodeHelper.close_session,
                 self.address,
                 self.api,
-                peer_id,
-                self.session_management.pop(peer_id),
+                address,
+                self.session_management.pop(address),
                 publish_to_task_set=False,
             )
 
@@ -436,7 +439,7 @@ class Node:
         Also, doesn't remove the session from the session_management dict.
         This method should run on startup to clean up any old sessions.
         """
-        active_sessions = await self.api.get_sessions(Protocol.UDP)
+        active_sessions: list[Session] = await self.api.get_sessions(Protocol.UDP)
 
         for session in active_sessions:
             AsyncLoop.add(
@@ -447,33 +450,36 @@ class Node:
                 publish_to_task_set=False,
             )
 
-    async def open_sessions(self, allowed_addresses: list[Address]):
+    async def open_sessions(self, allowed_addresses: list[Address], destinations: list[Address]):
         if self.channels is None:
             logger.warning("No channels found yet", self.log_base_params)
             return
 
-        peer_ids_with_channels = set([c.destination_peer_id for c in self.channels.outgoing])
+        addresses_with_channels = set([c.destination for c in self.channels.outgoing])
 
-        allowed_peer_ids = set([address.hopr for address in allowed_addresses])
-        peer_ids_with_session = set(self.session_management.keys())
-        without_session_peer_ids = peer_ids_with_channels.intersection(
-            allowed_peer_ids - peer_ids_with_session
+        allowed_addressess = set([address.native for address in allowed_addresses])
+        addresses_with_session = set(self.session_management.keys())
+        without_session_addresses = addresses_with_channels.intersection(
+            allowed_addressess - addresses_with_session
         )
 
-        for peer_id in without_session_peer_ids:
-            AsyncLoop.add(self.open_session, peer_id, publish_to_task_set=False)
+        for address in without_session_addresses:
+            destination: Address = random.choice(list(set(destinations) - {self.address}))
 
-    async def open_session(self, relayer: str):
+            AsyncLoop.add(self.open_session, destination, address, publish_to_task_set=False)
+
+    async def open_session(self, destination: Address, relayer: str):
         if session := await NodeHelper.open_session(
             self.address,
             self.api,
+            destination,
             relayer,
             self.p2p_endpoint,
         ):
             self.session_management[relayer] = SessionToSocket(session, self.p2p_endpoint)
 
     @property
-    def tasks(self):
+    def tasks(self) -> list[Callable]:
         return [getattr(self, method) for method in Utils.decorated_methods(__file__, "keepalive")]
 
     @property
@@ -482,7 +488,7 @@ class Node:
             return self._p2p_endpoint
 
         target_url = "ctdapp-{}-node-{}-p2p.ctdapp.{}.hoprnet.link"
-        patterns = [
+        patterns: list[PatternMatcher] = [
             PatternMatcher(r"ctdapp-([a-zA-Z]+)-node-(\d+)\.ctdapp\.([a-zA-Z]+)"),
             PatternMatcher(r"ctdapp-([a-zA-Z]+)-node-(\d+)-p2p-tcp", self.params.environment),
         ]

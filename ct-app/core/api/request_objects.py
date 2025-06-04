@@ -43,11 +43,8 @@ class OpenChannelBody(ApiRequestObject):
 class FundChannelBody(ApiRequestObject):
     keys = {"amount": "amount"}
 
-    def __init__(self, amount: float):
+    def __init__(self, amount: str):
         super().__init__(vars())
-
-    def post_init(self):
-        self.amount = f"{self.amount:.0f}"
 
 
 class GetChannelsBody(ApiRequestObject):
@@ -72,7 +69,9 @@ class CreateSessionBody(ApiRequestObject):
         "capabilities": "capabilities",
         "destination": "destination",
         "listen_host": "listenHost",
-        "path": "path",
+        "forward_path": "forwardPath",
+        "return_path": "returnPath",
+        "response_buffer": "responseBuffer",
         "target": "target",
     }
 
@@ -81,8 +80,10 @@ class CreateSessionBody(ApiRequestObject):
         capabilities: list,
         destination: str,
         listen_host: str,
-        path: str,
-        target: str,
+        forward_path: str | dict,
+        return_path: str | dict,
+        response_buffer: str,
+        target: str | dict,
     ):
         super().__init__(vars())
 

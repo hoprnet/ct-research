@@ -33,5 +33,6 @@ def main(file: list[str]):
         click.echo("All config files are valid.")
         sys.exit(0)
 
+
 if __name__ == "__main__":
     main()

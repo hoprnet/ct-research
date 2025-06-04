@@ -1,3 +1,7 @@
+from typing import Optional
+
+from core.components.balance import Balance
+
 from .entry import SubgraphEntry
 
 
@@ -6,22 +10,11 @@ class Topology(SubgraphEntry):
     Class that represents a single topology entry (from the API).
     """
 
-    def __init__(self, peer_id: str, address: str, channels_balance: int):
+    def __init__(self, address: Optional[str], channels_balance: Balance):
         """
-        Create a new Topology with the specified peer_id, address and channels_balance.
-        :param peer_id: The peer's peerId.
+        Create a new Topology with the specified address and channels_balance.
         :param address: The peer's native address.
         :param channels_balance: The peer's outgoing channels total balance.
         """
-        self.peer_id: str = peer_id
         self.address = address.lower() if address is not None else None
         self.channels_balance = channels_balance
-
-    @classmethod
-    def fromDict(cls, peer_id: str, value: dict):
-        """
-        Create a new Topology from the specified dictionary.
-        :param peer_id: The peer's peerId.
-        :param value: The dictionary to create the Topology from.
-        """
-        return cls(peer_id, value["source_node_address"], value["channels_balance"])

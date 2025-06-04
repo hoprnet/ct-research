@@ -36,18 +36,18 @@ flags:
 
     get_total_channel_funds: 300
     
-    observe_message_queue: On # should only be On / Off
+    observe_message_queue: On
     close_sessions: 30
 
   peer:
-    message_relay_request: On # should only be On / Off
+    message_relay_request: On
 
 # =============================================================================
 # 
 # =============================================================================
 economic_model:
-  min_safe_allowance: -1
-  nft_threshold: 30000
+  min_safe_allowance: "0 wxHOPR"
+  nft_threshold: "30000 wxHOPR"
 
   legacy:
     proportion: 1.0
@@ -56,8 +56,8 @@ economic_model:
     coefficients:
       a: 1
       b: 1.4
-      c: 75000
-      l: 10000
+      c: "75000 wxHOPR"
+      l: "10000 wxHOPR"
     
     equations: 
       fx: 
@@ -71,7 +71,7 @@ economic_model:
     proportion: 0
     max_apr: 15
     network_capacity: 2000
-    total_token_supply: 450000000
+    total_token_supply: "450000000 wxHOPR"
 
     offset: -0.9
     buckets:
@@ -99,15 +99,14 @@ peer:
 # 
 # =============================================================================
 channel:
-  min_balance: 20
-  funding_amount: 30
+  min_balance: "20 wxHOPR"
+  funding_amount: "30 wxHOPR"
   max_age_seconds: 172800
   
 # =============================================================================
 # 
 # =============================================================================
 sessions:
-  packet_size: 462 # TODO 3.0: change to 762
   aggregated_packets: 10
   batch_size: 5
 
