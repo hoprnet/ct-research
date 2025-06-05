@@ -8,7 +8,7 @@ from core.api.protocol import Protocol
 from core.api.response_objects import Session
 from core.components.messages.message_format import MessageFormat
 
-BUF_SIZE = 8192
+BUF_SIZE = 4096
 
 MESSAGES_DELAYS = Histogram(
     "ct_messages_delays",
@@ -20,7 +20,7 @@ MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer"])
 
 
 class SessionToSocket:
-    def __init__(self, session: Session, connect_address: str, timeout: Optional[float] = 0.2):
+    def __init__(self, session: Session, connect_address: str, timeout: Optional[float] = 0.1):
         self.session = session
         self.connect_address = connect_address
 
