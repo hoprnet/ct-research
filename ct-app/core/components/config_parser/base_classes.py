@@ -1,5 +1,8 @@
 from dataclasses import fields, is_dataclass
+from decimal import Decimal
 from typing import Optional, get_args, get_origin
+
+from core.components.balance import Balance
 
 
 class Flag:
@@ -74,6 +77,32 @@ class ExplicitParams:
                 field.type.verify(data.get(field.name, {}))
 
         return True
+
+    @classmethod
+    def generate(cls) -> dict:
+        instance = cls()
+        result = {}
+        for field in fields(instance):
+            if is_dataclass(field.type):
+                result[field.name] = field.type.generate()
+            elif isinstance(field.type, list):
+                result[field.name] = [v.generate() if is_dataclass(v) else v for v in field.type()]
+            elif isinstance(field.type, dict):
+                result[field.name] = {
+                    k: v.generate() if is_dataclass(v) else v for k, v in field.type().items()
+                }
+            else:
+                if field.type is Flag:
+                    result[field.name] = 0
+                elif field.type is Balance:
+                    result[field.name] = "0 wxHOPR"
+                elif field.type is Decimal:
+                    result[field.name] = 0.0
+                elif field.type is dict:
+                    result[field.name] = None
+                else:
+                    result[field.name] = field.type()
+        return result
 
     def __repr__(self):
         print(f"{vars(self).keys()=}")
