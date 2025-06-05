@@ -1,9 +1,17 @@
+from dataclasses import dataclass, field
+
 from core.api.response_objects import ApiResponseObject
 from core.components.balance import Balance
 
 
+@dataclass(init=False)
 class FooResponse(ApiResponseObject):
-    keys = {"foo": "fooInTheApi", "bar": "barInTheApi", "baz": "bazInTheApi", "qux": "quxInTheApi"}
+    foo: str = field(default="", metadata={"path": "fooInTheApi"})
+    bar: float = field(default=0.0, metadata={"path": "barInTheApi"})
+    baz: Balance = field(
+        default_factory=lambda: Balance.zero("HOPR"), metadata={"path": "bazInTheApi"}
+    )
+    qux: int = field(default=0, metadata={"path": "quxInTheApi"})
 
 
 def test_parse_response_object():

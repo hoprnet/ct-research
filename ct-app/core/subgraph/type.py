@@ -4,17 +4,17 @@ from . import providers
 
 
 class Type(Enum):
-    SAFES = "safesBalance"
+    SAFES = "safes_balance"
     STAKING = "staking"
     REWARDS = "rewards"
-    MAINNET_ALLOCATIONS = "mainnetAllocations"
-    GNOSIS_ALLOCATIONS = "gnosisAllocations"
-    MAINNET_BALANCES = "hoprOnMainnet"
-    GNOSIS_BALANCES = "hoprOnGnosis"
+    MAINNET_ALLOCATIONS = "mainnet_allocations"
+    GNOSIS_ALLOCATIONS = "gnosis_allocations"
+    MAINNET_BALANCES = "hopr_on_mainnet"
+    GNOSIS_BALANCES = "hopr_on_gnosis"
     FUNDINGS = "fundings"
 
     @property
-    def provider(self):
+    def provider(self) -> providers.GraphQLProvider:
         return {
             Type.SAFES: providers.Safes,
             Type.STAKING: providers.Staking,

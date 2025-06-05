@@ -7,7 +7,6 @@ members = [
     "core",
     "core-api",
     "core-components",
-    "core-economic-model",
     "core-subgraph",
     "ct-app",
     "test",
@@ -145,7 +144,6 @@ dependencies = [
     { name = "click" },
     { name = "core-api" },
     { name = "core-components" },
-    { name = "core-economic-model" },
     { name = "core-subgraph" },
 ]
 
@@ -154,7 +152,6 @@ requires-dist = [
     { name = "click", specifier = ">=8.1.8" },
     { name = "core-api", virtual = "core/api" },
     { name = "core-components", virtual = "core/components" },
-    { name = "core-economic-model", virtual = "core/economic_model" },
     { name = "core-subgraph", virtual = "core/subgraph" },
 ]
 
@@ -183,17 +180,6 @@ requires-dist = [
     { name = "janus", specifier = "==2.0.0" },
     { name = "prometheus-client", specifier = "==0.21.1" },
 ]
-
-[[package]]
-name = "core-economic-model"
-version = "1.0.0"
-source = { virtual = "core/economic_model" }
-dependencies = [
-    { name = "prometheus-client" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "prometheus-client", specifier = "==0.21.1" }]
 
 [[package]]
 name = "core-subgraph"
