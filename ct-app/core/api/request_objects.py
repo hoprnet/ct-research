@@ -2,9 +2,10 @@ from dataclasses import dataclass, field, fields
 from typing import Any, Dict, List, Optional, Union
 
 
-def api_field(api_key: str, default: Optional[Any] = None, **kwargs):
+def api_field(api_key: Optional[str] = None, default: Optional[Any] = None, **kwargs):
     metadata = kwargs.pop("metadata", {})
-    metadata["api_key"] = api_key
+    if api_key is not None:
+        metadata["api_key"] = api_key
 
     if default is None:
         return field(metadata=metadata, **kwargs)
@@ -28,13 +29,13 @@ class ApiRequestObject:
 
 @dataclass
 class OpenChannelBody(ApiRequestObject):
-    amount: str = api_field("amount")
+    amount: str = api_field()
     peer_address: str = api_field("peerAddress")
 
 
 @dataclass
 class FundChannelBody(ApiRequestObject):
-    amount: str = api_field("amount")
+    amount: str = api_field()
 
 
 @dataclass
@@ -45,18 +46,18 @@ class GetChannelsBody(ApiRequestObject):
 
 @dataclass
 class GetPeersBody(ApiRequestObject):
-    quality: float = api_field("quality")
+    quality: float = api_field()
 
 
 @dataclass
 class CreateSessionBody(ApiRequestObject):
-    capabilities: List[Any] = api_field("capabilities")
-    destination: str = api_field("destination")
+    capabilities: List[Any] = api_field()
+    destination: str = api_field()
     listen_host: str = api_field("listenHost")
     forward_path: Union[str, Dict] = api_field("forwardPath")
     return_path: Union[str, Dict] = api_field("returnPath")
     response_buffer: str = api_field("responseBuffer")
-    target: Union[str, Dict] = api_field("target")
+    target: Union[str, Dict] = api_field()
 
 
 @dataclass
