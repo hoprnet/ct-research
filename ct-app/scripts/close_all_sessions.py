@@ -31,11 +31,11 @@ async def main(deployment: str = "green", environment: str = "staging"):
         api = HoprdAPI(host, token)
 
         # get sessions
-        sessions = await api.get_sessions()
+        sessions = await api.list_sessions()
         for session in sessions:
             await api.close_session(session)
 
-        sessions = await api.get_sessions()
+        sessions = await api.list_sessions()
         if len(sessions) != 0:
             print(State.FAILURE, f"[IDX {idx}] Sessions not closed: {sessions}")
             return

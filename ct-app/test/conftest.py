@@ -27,7 +27,14 @@ class SideEffect:
     @staticmethod
     def generator_node_balance():
         yield from repeat(
-            Balances({"hopr": f"{randint(1, 10)} wxHOPR", "native": f"{randint(1, 10)} xDai"})
+            Balances(
+                {
+                    "hopr": f"{randint(1, 10)} wxHOPR",
+                    "native": f"{randint(1, 10)} xDai",
+                    "safeHopr": f"{randint(1, 10)} wxHOPR",
+                    "safeNative": f"{randint(1, 10)} xDai",
+                }
+            )
         )
 
     def node_balance(self, *args, **kwargs):
@@ -100,7 +107,7 @@ async def nodes(
         Node("localhost:9004", "random_key"),
     ]
     for idx, node in enumerate(nodes):
-        mocker.patch.object(node.api, "get_address", return_value=Addresses(addresses[idx]))
+        mocker.patch.object(node.api, "address", return_value=Addresses(addresses[idx]))
         mocker.patch.object(node.api, "channels", return_value=channels)
         mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
         mocker.patch.object(
@@ -172,7 +179,7 @@ async def node(
     mocker.patch.object(
         node.api, "peers", return_value=[ConnectedPeer(peer) for peer in peers_raw[1:]]
     )
-    mocker.patch.object(node.api, "get_address", return_value=Addresses(addresses[0]))
+    mocker.patch.object(node.api, "address", return_value=Addresses(addresses[0]))
     mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
     # mocker.patch.object(node.api, "send_message", return_value=1)
     mocker.patch.object(node.api, "healthyz", return_value=True)

@@ -1,14 +1,12 @@
 from dataclasses import dataclass, field, fields
-from typing import Any, Optional
+from decimal import Decimal
+from typing import Any
 
 from core.components.balance import Balance
-from core.components.conversions import convert_unit
 
 from .channelstatus import ChannelStatus
 
 SURB_SIZE: int = 400
-ZERO_XDAI: Balance = Balance.zero("xDai")
-ZERO_WXHOPR: Balance = Balance.zero("wxHOPR")
 
 
 def try_to_lower(value: Any):
@@ -26,7 +24,8 @@ class ApiResponseObject:
                 v = v.get(subkey, None)
                 if v is None:
                     break
-            setattr(self, f.name, convert_unit(v))
+
+            setattr(self, f.name, f.type(v))
         self.post_init()
 
     def post_init(self):
@@ -52,22 +51,59 @@ class ApiResponseObject:
         )
 
 
+class ApiMetricResponseObject(ApiResponseObject):
+    def __init__(self, data: str):
+        self.data = data.split("\n")
+
+        for f in fields(self):
+            values = {}
+            labels = f.metadata.get("labels", [])
+
+            for line in self.data:
+                if not line.startswith(f.name):
+                    continue
+
+                value = line.split(" ")[-1]
+
+                if len(labels) == 0:
+                    setattr(self, f.name, f.type(value))
+                else:
+                    labels_values = {
+                        pair.split("=")[0].strip('"'): pair.split("=")[1].strip('"')
+                        for pair in line.split("{")[1].split("}")[0].split(",")
+                    }
+
+                    dict_path = [labels_values[label] for label in labels]
+                    current = values
+
+                    for part in dict_path[:-1]:
+                        if part not in current:
+                            current[part] = {}
+                        current = current[part]
+                    if dict_path[-1] not in current:
+                        current[dict_path[-1]] = Decimal("0")
+                    current[dict_path[-1]] += Decimal(value)
+
+            if len(labels) > 0:
+                setattr(self, f.name, f.type(values))
+
+
 @dataclass(init=False)
 class Addresses(ApiResponseObject):
-    native: str = field(default="", metadata={"path": "native"})
+    native: str = field()
 
 
 @dataclass(init=False)
 class Balances(ApiResponseObject):
-    hopr: Balance = field(default_factory=ZERO_WXHOPR, metadata={"path": "hopr"})
-    native: Balance = field(default_factory=ZERO_XDAI, metadata={"path": "native"})
-    safe_native: Balance = field(default_factory=ZERO_XDAI, metadata={"path": "safeNative"})
-    safe_hopr: Balance = field(default_factory=ZERO_WXHOPR, metadata={"path": "safeHopr"})
+    hopr: Balance = field()
+    native: Balance = field()
+    safe_native: Balance = field(metadata={"path": "safeNative"})
+    safe_hopr: Balance = field(metadata={"path": "safeHopr"})
 
 
 @dataclass(init=False)
 class Infos(ApiResponseObject):
-    hopr_node_safe: str = field(default="", metadata={"path": "hoprNodeSafe"})
+    hopr_node_safe: str = field(metadata={"path": "hoprNodeSafe"})
 
     def post_init(self):
         self.hopr_node_safe = try_to_lower(self.hopr_node_safe)
@@ -75,9 +111,9 @@ class Infos(ApiResponseObject):
 
 @dataclass(init=False)
 class ConnectedPeer(ApiResponseObject):
-    address: str = field(default="", metadata={"path": "address"})
-    multiaddr: str = field(default="", metadata={"path": "multiaddr"})
-    version: str = field(default="", metadata={"path": "reportedVersion"})
+    address: str = field()
+    multiaddr: str = field()
+    version: str = field(metadata={"path": "reportedVersion"})
 
     def post_init(self):
         self.address = try_to_lower(self.address)
@@ -85,41 +121,43 @@ class ConnectedPeer(ApiResponseObject):
 
 @dataclass(init=False)
 class Channel(ApiResponseObject):
-    balance: Balance = field(default_factory=ZERO_WXHOPR, metadata={"path": "balance"})
-    id: str = field(default="", metadata={"path": "channelId"})
-    destination: str = field(default="", metadata={"path": "destination"})
-    source: str = field(default="", metadata={"path": "source"})
-    status: Optional[ChannelStatus] = field(default=None, metadata={"path": "status"})
+    balance: Balance = field()
+    id: str = field(metadata={"path": "channelId"})
+    destination: str = field()
+    source: str = field()
+    status: ChannelStatus = field()
 
     def post_init(self):
-        self.status = ChannelStatus.fromString(self.status)
         self.destination = try_to_lower(self.destination)
         self.source = try_to_lower(self.source)
 
 
 @dataclass(init=False)
 class TicketPrice(ApiResponseObject):
-    value: Balance = field(default_factory=ZERO_WXHOPR, metadata={"path": "price"})
+    value: Balance = field(metadata={"path": "price"})
 
 
 @dataclass(init=False)
 class Configuration(ApiResponseObject):
-    price: Balance = field(
-        default_factory=ZERO_WXHOPR, metadata={"path": "hopr/protocol/outgoing_ticket_price"}
-    )
+    price: Balance = field(metadata={"path": "hopr/protocol/outgoing_ticket_price"})
 
 
 @dataclass(init=False)
 class OpenedChannel(ApiResponseObject):
-    channel_id: str = field(default="", metadata={"path": "channelId"})
+    channel_id: str = field(metadata={"path": "channelId"})
     receipt: str = field(default="", metadata={"path": "transactionReceipt"})
+
+
+@dataclass(init=False)
+class Metrics(ApiMetricResponseObject):
+    hopr_tickets_incoming_statistics: dict = field(metadata={"labels": ["statistic"]})
 
 
 class Channels:
     def __init__(self, data: dict):
-        self.all = [Channel(channel) for channel in data.get("all", [])]
-        self.incoming = []
-        self.outgoing = []
+        self.all = [Channel(c) for c in data.get("all", [])]
+        self.incoming = [Channel(c) for c in data.get("incoming", [])]
+        self.outgoing = [Channel(c) for c in data.get("outgoing", [])]
 
     def __str__(self):
         return str(self.__dict__)
@@ -130,11 +168,11 @@ class Channels:
 
 @dataclass(init=False)
 class Session(ApiResponseObject):
-    ip: str = field(default="", metadata={"path": "ip"})
-    port: int = field(default=0, metadata={"path": "port"})
-    protocol: str = field(default="", metadata={"path": "protocol"})
-    target: str = field(default="", metadata={"path": "target"})
-    mtu: int = field(default=0, metadata={"path": "mtu"})
+    ip: str = field()
+    port: int = field()
+    protocol: str = field()
+    target: str = field()
+    mtu: int = field()
 
     def post_init(self):
         self.payload = self.mtu - SURB_SIZE
@@ -146,5 +184,5 @@ class Session(ApiResponseObject):
 
 @dataclass(init=False)
 class SessionFailure(ApiResponseObject):
-    status: str = field(default="", metadata={"path": "status"})
-    error: str = field(default="", metadata={"path": "error"})
+    status: str = field(metadata={"path": "status"})
+    error: str = field(metadata={"path": "error"})

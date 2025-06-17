@@ -22,7 +22,7 @@ class SendMessages(EnduranceTest):
         self.tag = random.randint(0, 2**16 - 1)
 
         self.api = HoprdAPI(EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY"))
-        self.recipient = await self.api.get_address()
+        self.recipient = await self.api.address()
 
         channels = await self.api.channels()
         open_channels = [

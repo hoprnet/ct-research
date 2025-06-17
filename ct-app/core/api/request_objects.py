@@ -1,11 +1,15 @@
 from dataclasses import dataclass, field, fields
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 
-def api_field(api_key: str, **kwargs):
+def api_field(api_key: str, default: Optional[Any] = None, **kwargs):
     metadata = kwargs.pop("metadata", {})
     metadata["api_key"] = api_key
-    return field(metadata=metadata, **kwargs)
+
+    if default is None:
+        return field(metadata=metadata, **kwargs)
+    else:
+        return field(default=default, metadata=metadata, **kwargs)
 
 
 class ApiRequestObject:
@@ -19,7 +23,7 @@ class ApiRequestObject:
 
     @property
     def as_header_string(self) -> str:
-        return "&".join([f"{k}={v}" for k, v in self.as_dict.items()])
+        return "&".join([f"{k}={str(v).lower()}" for k, v in self.as_dict.items()])
 
 
 @dataclass
@@ -35,8 +39,8 @@ class FundChannelBody(ApiRequestObject):
 
 @dataclass
 class GetChannelsBody(ApiRequestObject):
-    full_topology: str = api_field("fullTopology")
-    including_closed: str = api_field("includingClosed")
+    full_topology: bool = api_field("fullTopology", False)
+    including_closed: bool = api_field("includingClosed", False)
 
 
 @dataclass
@@ -57,9 +61,9 @@ class CreateSessionBody(ApiRequestObject):
 
 @dataclass
 class SessionCapabilitiesBody(ApiRequestObject):
-    retransmission: bool = api_field("Retransmission")
-    segmentation: bool = api_field("Segmentation")
-    no_delay: bool = api_field("NoDelay")
+    retransmission: bool = api_field("Retransmission", "false")
+    segmentation: bool = api_field("Segmentation", "false")
+    no_delay: bool = api_field("NoDelay", "false")
 
     @property
     def as_array(self) -> list:

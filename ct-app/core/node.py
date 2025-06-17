@@ -88,7 +88,7 @@ class Node:
         """
         Retrieve the address of the node.
         """
-        addresses = await self.api.get_address()
+        addresses = await self.api.address()
 
         if addresses is None:
             logger.warning("No results while retrieving addresses", self.log_base_params)
@@ -415,7 +415,7 @@ class Node:
 
     @master(keepalive, connectguard)
     async def close_sessions(self):
-        active_sessions = await self.api.get_sessions(Protocol.UDP)
+        active_sessions = await self.api.list_sessions(Protocol.UDP)
 
         to_remove = [
             address
@@ -439,7 +439,7 @@ class Node:
         Also, doesn't remove the session from the session_management dict.
         This method should run on startup to clean up any old sessions.
         """
-        active_sessions: list[Session] = await self.api.get_sessions(Protocol.UDP)
+        active_sessions: list[Session] = await self.api.list_sessions(Protocol.UDP)
 
         for session in active_sessions:
             AsyncLoop.add(
