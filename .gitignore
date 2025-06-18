@@ -23,7 +23,7 @@ logs/
 .logs/
 
 #misc
-.coverage
+.coverage*
 htmlcov/
 foo*.*
 foo*/

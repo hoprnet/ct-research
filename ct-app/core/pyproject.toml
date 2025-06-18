@@ -6,12 +6,10 @@ dependencies = [
     "click>=8.1.8",
     "core-api",
     "core-components",
-    "core-economic_model",
     "core-subgraph",
 ]
 
 [tool.uv.sources]
 core-api = { workspace = true }
 core-components = { workspace = true }
-core-economic_model = { workspace = true }
 core-subgraph = { workspace = true }

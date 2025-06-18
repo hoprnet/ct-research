@@ -7,3 +7,4 @@ exclude_also =
 omit = 
     test*/*
     hoprd_api.py
+    __init__.py

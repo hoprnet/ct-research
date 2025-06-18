@@ -5,6 +5,18 @@ class ChannelStatus(Enum):
     Open = "Open"
     PendingToClose = "PendingToClose"
     Closed = "Closed"
+    Unknown = "UnknownState"
+
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            for status in cls:
+                if status.value == value:
+                    return status
+
+            return cls.Unknown
+
+        return super()._missing_(value)
 
     @property
     def is_pending(self):
@@ -17,11 +29,3 @@ class ChannelStatus(Enum):
     @property
     def is_closed(self):
         return self == self.Closed
-
-    @classmethod
-    def fromString(cls, value: str):
-        for status in cls:
-            if status.value == value:
-                return status
-
-        return None

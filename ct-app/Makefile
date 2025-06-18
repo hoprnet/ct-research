@@ -10,8 +10,8 @@ endurance:
 fmt:
 	@uvx black .
 	@uvx ruff check
-	@#uvx ty check core --ignore unresolved-import --ignore call-possibly-unbound-method --ignore possibly-unbound-attribute
+	@uvx ty check core
 
 .PHONY: test
 test:
-	@uv run -m pytest
+	@uv run pytest --cov=core --cov-report html:.coveragehtml

@@ -1,5 +1,3 @@
-import inspect
-
 import pytest
 
 from core.components import Peer
@@ -69,13 +67,3 @@ async def test_get_topology_data(core: Core, peers: list[Peer]):
     await core.topology()
 
     assert len(core.topology_data) == len(peers)
-
-
-@pytest.mark.asyncio
-async def test_apply_economic_model(core: Core):
-    pytest.skip(f"{inspect.stack()[0][3]} not implemented")
-
-
-@pytest.mark.asyncio
-async def test_get_fundings(core: Core):
-    pytest.skip(f"{inspect.stack()[0][3]} not implemented")

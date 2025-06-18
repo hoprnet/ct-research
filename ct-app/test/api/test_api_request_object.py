@@ -1,14 +1,12 @@
-from core.api.request_objects import ApiRequestObject
+from dataclasses import dataclass
+
+from core.api.request_objects import ApiRequestObject, api_field
 
 
+@dataclass
 class FooRequestObject(ApiRequestObject):
-    keys = {
-        "foo": "fooForApi",
-        "bar": "barForApi",
-    }
-
-    def __init__(self, foo: str, bar: str):
-        super().__init__(vars())
+    foo: str = api_field("fooForApi")
+    bar: str = api_field("barForApi")
 
 
 def test_parse_request_object_to_dict():

@@ -1,18 +1,16 @@
 import asyncio
 import logging
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 import aiohttp
 
 from core.components.logs import configure_logging
 
 from ..components.balance import Balance
-from . import request_objects as request
-from . import response_objects as response
+from . import request_objects as req
+from . import response_objects as resp
 from .http_method import HTTPMethod
 from .protocol import Protocol
-
-MESSAGE_TAG = 0x1245
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -32,19 +30,19 @@ class HoprdAPI:
         self,
         method: HTTPMethod,
         endpoint: str,
-        data: Optional[request.ApiRequestObject] = None,
+        data: Optional[req.ApiRequestObject] = None,
         use_api_path: bool = True,
     ):
-        if endpoint != "messages":
-            logger.debug(
-                "Hitting API",
-                {
-                    "host": self.host,
-                    "method": method.value,
-                    "endpoint": endpoint,
-                    "data": getattr(data, "as_dict", {}),
-                },
-            )
+        logger.debug(
+            "Hitting API",
+            {
+                "host": self.host,
+                "method": method.value,
+                "endpoint": endpoint,
+                "data": getattr(data, "as_dict", {}),
+            },
+        )
+
         try:
             headers = {"Content-Type": "application/json"}
             async with aiohttp.ClientSession(headers=self.headers) as s:
@@ -83,12 +81,12 @@ class HoprdAPI:
 
         return (False, None)
 
-    async def __call_api(
+    async def __call_api_with_timeout(
         self,
         method: HTTPMethod,
         endpoint: str,
-        data: Optional[request.ApiRequestObject] = None,
-        timeout: int = 60,
+        data: Optional[req.ApiRequestObject] = None,
+        timeout: int = 90,
         use_api_path: bool = True,
     ) -> tuple[bool, Optional[object]]:
         backoff = 0.5
@@ -128,27 +126,49 @@ class HoprdAPI:
             else:
                 return result
 
-    async def balances(self) -> Optional[response.Balances]:
+    async def request(
+        self,
+        method: HTTPMethod,
+        path: str,
+        data: Optional[req.ApiRequestObject] = None,
+        resp_type: Optional[Callable] = None,
+        use_api_path: bool = True,
+        return_state: bool = False,
+        timeout: int = 90,
+    ) -> Optional[Union[resp.ApiResponseObject, dict]]:
+        is_ok, r = await self.__call_api_with_timeout(
+            method, path, data, timeout=timeout, use_api_path=use_api_path
+        )
+
+        if return_state:
+            return is_ok
+
+        if not is_ok:
+            return None
+
+        if resp_type is None:
+            return r
+
+        return resp_type(r)
+
+    async def balances(self) -> Optional[resp.Balances]:
         """
         Returns the balance of the node.
         :return: balances: Balances | undefined
         """
-        is_ok, resp = await self.__call_api(HTTPMethod.GET, "account/balances")
-        return response.Balances(resp) if is_ok else None
+        return await self.request(HTTPMethod.GET, "account/balances", resp_type=resp.Balances)
 
     async def open_channel(
         self, peer_address: str, amount: Balance
-    ) -> Optional[response.OpenedChannel]:
+    ) -> Optional[resp.OpenedChannel]:
         """
         Opens a channel with the given peer_address and amount.
         :param: peer_address: str
         :param: amount: Balance
         :return: channel id: str | undefined
         """
-        data = request.OpenChannelBody(amount.as_str, peer_address)
-
-        is_ok, resp = await self.__call_api(HTTPMethod.POST, "channels", data, timeout=90)
-        return response.OpenedChannel(resp) if is_ok else None
+        data = req.OpenChannelBody(amount.as_str, peer_address)
+        return await self.request(HTTPMethod.POST, "channels", data, resp_type=resp.OpenedChannel)
 
     async def fund_channel(self, channel_id: str, amount: Balance) -> bool:
         """
@@ -157,12 +177,10 @@ class HoprdAPI:
         :param: amount: Balance
         :return: bool
         """
-        data = request.FundChannelBody(amount.as_str)
-
-        is_ok, _ = await self.__call_api(
-            HTTPMethod.POST, f"channels/{channel_id}/fund", data, timeout=90
+        data = req.FundChannelBody(amount.as_str)
+        return await self.request(
+            HTTPMethod.POST, f"channels/{channel_id}/fund", data, return_state=True
         )
-        return is_ok
 
     async def close_channel(self, channel_id: str) -> bool:
         """
@@ -170,89 +188,86 @@ class HoprdAPI:
         :param: channel_id: str
         :return: bool
         """
-        is_ok, _ = await self.__call_api(HTTPMethod.DELETE, f"channels/{channel_id}", timeout=90)
-        return is_ok
+        return await self.request(HTTPMethod.DELETE, f"channels/{channel_id}", return_state=True)
 
-    async def channels(self) -> Optional[response.Channels]:
+    async def channels(self) -> Optional[resp.Channels]:
         """
         Returns all channels.
         :return: channels: list
         """
-        params = request.GetChannelsBody("true", "false")
+        header = req.GetChannelsBody(True, False).as_header_string
+        print(f"{header=}")
+        return await self.request(HTTPMethod.GET, f"channels?{header}", resp_type=resp.Channels)
 
-        is_ok, resp = await self.__call_api(HTTPMethod.GET, f"channels?{params.as_header_string}")
-        return response.Channels(resp) if is_ok else None
-
-    async def metrics(self) -> Optional[str]:
+    async def metrics(self) -> Optional[resp.Metrics]:
         """
         Returns the metrics of the node.
         :return: metrics: list
         """
-        is_ok, resp = await self.__call_api(HTTPMethod.GET, "metrics", use_api_path=False)
-        return resp if is_ok else None
+        return await self.request(
+            HTTPMethod.GET, "metrics", resp_type=resp.Metrics, use_api_path=False
+        )
 
     async def peers(
         self,
         quality: float = 0.5,
         status: str = "connected",
-    ) -> list[response.ConnectedPeer]:
+    ) -> list[resp.ConnectedPeer]:
         """
         Returns a list of peers.
         :param: quality: int = 0..1
         :param: status: str = "connected"
         :return: peers: list
         """
-        params = request.GetPeersBody(quality)
+        params = req.GetPeersBody(quality)
 
-        is_ok, resp = await self.__call_api(HTTPMethod.GET, f"node/peers?{params.as_header_string}")
-
-        if not is_ok:
+        if r := await self.request(HTTPMethod.GET, f"node/peers?{params.as_header_string}"):
+            return [resp.ConnectedPeer(peer) for peer in r.getattr(status, [])]
+        else:
             return []
 
-        if status not in resp:
-            return []
-
-        return [response.ConnectedPeer(peer) for peer in resp[status]]
-
-    async def get_address(self) -> Optional[response.Addresses]:
+    async def address(self) -> Optional[resp.Addresses]:
         """
         Returns the address of the node.
-        :return: address: str | undefined
+        :return: address: Addresses | undefined
         """
-        is_ok, resp = await self.__call_api(HTTPMethod.GET, "account/addresses")
-        return response.Addresses(resp) if is_ok else None
+        return await self.request(HTTPMethod.GET, "account/address", resp_type=resp.Addresses)
 
-    async def node_info(self) -> Optional[response.Infos]:
+    async def node_info(self) -> Optional[resp.Infos]:
         """
         Gets informations about the HOPRd node.
         :return: Infos
         """
-        is_ok, resp = await self.__call_api(HTTPMethod.GET, "node/info")
-        return response.Infos(resp) if is_ok else None
+        return await self.request(HTTPMethod.GET, "node/info", resp.Infos)
 
-    async def ticket_price(self) -> Optional[response.TicketPrice]:
+    async def ticket_price(self) -> Optional[resp.TicketPrice]:
         """
         Gets the ticket price set in the configuration file.
         :return: TicketPrice
         """
-        is_ok, resp = await self.__call_api(HTTPMethod.GET, "node/configuration")
-        price = response.TicketPrice(response.Configuration(resp).as_dict) if is_ok else None
+
+        if config := await self.request(
+            HTTPMethod.GET, "node/configuration", resp_type=resp.Configuration
+        ):
+            price = resp.TicketPrice(config.as_dict)
+        else:
+            price = None
 
         if price and price.value != "None":
             return price
 
-        is_ok, resp = await self.__call_api(HTTPMethod.GET, "network/price")
-        return response.TicketPrice(resp) if is_ok else None
+        return await self.request(HTTPMethod.GET, "network/price", resp.TicketPrice)
 
-    async def get_sessions(self, protocol: Protocol = Protocol.UDP) -> list[response.Session]:
+    async def list_sessions(self, protocol: Protocol = Protocol.UDP) -> list[resp.Session]:
         """
         Lists existing Session listeners for the given IP protocol
         :param: protocol: Protocol
         :return: list[Session]
         """
-        is_ok, resp = await self.__call_api(HTTPMethod.GET, f"session/{protocol.name.lower()}")
-
-        return [response.Session(s) for s in resp] if is_ok else []
+        if resp := await self.request(HTTPMethod.GET, f"session/{protocol.name.lower()}"):
+            return [resp.Session(s) for s in resp]
+        else:
+            return []
 
     async def post_session(
         self,
@@ -261,7 +276,7 @@ class HoprdAPI:
         listen_host: str = ":0",
         response_buffer: int = 0,  # MB,
         protocol: Protocol = Protocol.UDP,
-    ) -> Union[response.Session, response.SessionFailure]:
+    ) -> Union[resp.Session, resp.SessionFailure]:
         """
         Creates a new session returning the session listening host & port over TCP or UDP.
         :param: destination: Address of the recipient
@@ -270,14 +285,14 @@ class HoprdAPI:
         :param: protocol: Protocol (UDP or TCP)
         :return: Session
         """
-        capabilities_body = request.SessionCapabilitiesBody(
+        capabilities_body = req.SessionCapabilitiesBody(
             protocol.retransmit, protocol.segment, protocol.no_delay
         )
-        target_body = request.SessionTargetBody()
-        path_body = request.SessionPathBodyRelayers([relayer])  # forward and return path
+        target_body = req.SessionTargetBody()
+        path_body = req.SessionPathBodyRelayers([relayer])  # forward and return path
         response_buffer_body = f"{response_buffer} MB"
 
-        data = request.CreateSessionBody(
+        data = req.CreateSessionBody(
             capabilities_body.as_array,
             destination,
             listen_host,
@@ -287,48 +302,36 @@ class HoprdAPI:
             target_body.as_dict,
         )
 
-        is_ok, resp = await self.__call_api(
-            HTTPMethod.POST, f"session/{protocol.name.lower()}", data
-        )
-        if resp is None:
-            resp = {"error": "client error", "status": "CLIENT_ERROR"}
+        if r := await self.request(HTTPMethod.POST, f"session/{protocol.name.lower()}", data):
+            return resp.Session(r)
+        else:
+            return resp.SessionFailure({"error": "client error", "status": "CLIENT_ERROR"})
 
-        return response.Session(resp) if is_ok else response.SessionFailure(resp)
-
-    async def close_session(self, session: response.Session) -> bool:
+    async def close_session(self, session: resp.Session) -> bool:
         """
-        Closes an existing Sessino listener for the given IP protocol, IP and port.
+        Closes an existing Session listener for the given IP protocol, IP and port.
         :param: session: Session
         """
-        is_ok, _ = await self.__call_api(HTTPMethod.DELETE, session.as_path)
-
-        return is_ok
+        return await self.request(HTTPMethod.DELETE, session.as_path, return_state=True)
 
     async def healthyz(self, timeout: int = 20) -> bool:
         """
         Checks if the node is healthy. Return True if `healthyz` returns 200 before timeout.
         """
-        return await HoprdAPI.checkStatus(f"{self.host}/healthyz", 200, timeout)
-
-    @classmethod
-    async def checkStatus(cls, url: str, target: int, timeout: int = 20) -> bool:
-        """
-        Checks if the given URL is returning 200 after max `timeout` seconds.
-        """
-
-        async def _check_url(url: str):
-            while True:
-                try:
-                    async with aiohttp.ClientSession() as s, s.get(url) as response:
-                        return response
-                except Exception:
-                    await asyncio.sleep(0.25)
-
         try:
-            resp = await asyncio.wait_for(_check_url(url), timeout=timeout)
+            is_ok = await asyncio.wait_for(self._check_url("healthyz"), timeout=timeout)
         except asyncio.TimeoutError:
             return False
         except Exception:
             return False
         else:
-            return resp.status == target
+            return is_ok
+
+    async def _check_url(self, url: str):
+        while True:
+            try:
+                return await self.request(
+                    HTTPMethod.GET, url, use_api_path=False, return_state=True, timeout=None
+                )
+            except Exception:
+                await asyncio.sleep(0.25)

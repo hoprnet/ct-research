@@ -2,50 +2,52 @@
 # =============================================================================
 # 
 # =============================================================================
+environment: test
+
 flags:
   core: 
-    rotateSubgraphs: 30
-    peersRewards: 30
-    ticketParameters: 30
+    apply_economic_model: 30
+    ticket_parameters: 30
 
-    connectedPeers: 30
-    registeredNodes: 30
+    connected_peers: 30
     topology: 30
-    allocations: 30
-    NFTHolders: 30
-    
-    applyEconomicModel: 30
 
-    fundings: 30
+    rotate_subgraphs: 30
+    open_sessions: 30
+
+    peers_rewards: 30
+    registered_nodes: 30
+    allocations: 30
+    eoa_balances: 30
+    nft_holders: 30
+    safe_fundings: 30
     
   node:
     healthcheck: 10
-    retrievePeers: 30
-    retrieveIncomingChannels: 30
-    retrieveOutgoingChannels: 30
-    retrieveBalances: 30
+    retrieve_peers: 30
+    retrieve_channels: 30
+    retrieve_balances: 30
 
-    openChannels: Off
-    fundChannels: Off
-    closeOldChannels: Off
-    closePendingChannels: Off
-    closeIncomingChannels: Off
+    open_channels: Off
+    fund_channels: Off
+    close_old_channels: Off
+    close_pending_channels: Off
+    close_incoming_channels: Off
 
-    getTotalChannelFunds: Off
+    get_total_channel_funds: Off
     
-    observeMessageQueue: On # should only be On / Off
-    observeRelayedMessages: On # should only be On / Off
-    observeSessions: 60
+    observe_message_queue: On
+    close_sessions: 30
 
   peer:
-    messageRelayRequest: Off
+    message_relay_request: Off
 
 # =============================================================================
 # 
 # =============================================================================
-economicModel:
-  minSafeAllowance: "0 wxHOPR"
-  NFTThreshold: "0 wxHOPR"
+economic_model:
+  min_safe_allowance: "0 wxHOPR"
+  nft_threshold: "0 wxHOPR"
 
   legacy:
     proportion: 0.9
@@ -54,32 +56,32 @@ economicModel:
     coefficients:
       a: 1
       b: 2
-      c: "3 wxHOPR"
-      l: "0.000001 wxHOPR"
+      upperbound: "3 wxHOPR"
+      lowerbound: "0.000001 wxHOPR"
     
     equations: 
       fx: 
         formula: "a * x"
-        condition: "l <= x <= c"
+        condition: "lowerbound <= x <= upperbound"
       gx:
-        formula: "a * c + (x - c) ** (1 / b)"
-        condition: "x > c"
+        formula: "a * upperbound + (x - upperbound) ** (1 / b)"
+        condition: "x > upperbound"
 
   sigmoid:
     proportion: 0.1
-    maxAPR: 15
-    networkCapacity: 2000
-    totalTokenSupply: "450000000 wxHOPR"
+    max_apr: 15
+    network_capacity: 2000
+    total_token_supply: "450000000 wxHOPR"
 
     offset: -0.9
     buckets:
-      economicSecurity:
+      economic_security:
         flatness: 1.8
         skewness: 1.52
         upperbound: 0.4
         offset: 3.14
 
-      networkCapacity:
+      network_capacity:
         flatness: 2.97
         skewness: 0.72
         upperbound: 1.0
@@ -89,61 +91,62 @@ economicModel:
 # 
 # =============================================================================
 peer:
-  minVersion: '2.0.7'
-  initialSleep:
-    mean: 30
-    std: 2
+  min_version: '2.0.7'
+  sleep_mean_time: 30
+  sleep_std_time: 2
 
 # =============================================================================
 # 
 # =============================================================================
 channel:
-  minBalance: "0.05 wxHOPR"
-  fundingAmount: "0.2 wxHOPR"
-  maxAgeSeconds: 60
+  min_balance: "0.05 wxHOPR"
+  funding_amount: "0.2 wxHOPR"
+  max_age_seconds: 60
 
 # =============================================================================
 # 
 # =============================================================================
 sessions:
-  packetSize: 472
-  numPackets: 3
+  packet_size: 452
+  aggregated_packets: 3
+  batch_size: 5
   
 # =============================================================================
 # 
 # =============================================================================
 fundings:
-  constant: 0
+  constant: "0 wxHOPR"
 
 # =============================================================================
 # 
 # =============================================================================
 subgraph:
   type: auto # auto | default | backup
-  userID: 1000
+  user_id: 1000
+  api_key: 
 
-  mainnetAllocations:
-    queryID: ~
+  mainnet_allocations:
+    query_id: ~
     slug: hopr-allocations
-  gnosisAllocations:
-    queryID: ~
+  gnosis_allocations:
+    query_id: ~
     slug: hopr-allocations-gnosis
-  hoprOnMainnet:
-    queryID: ~
+  hopr_on_mainnet:
+    query_id: ~
     slug: hopr-on-mainnet
-  hoprOnGnosis:
-    queryID: ~
+  hopr_on_gnosis:
+    query_id: ~
     slug: hopr-on-gnosis
   fundings:
-    queryID: ~
+    query_id: ~
     slug: subgraph-wxhopr-txs
   rewards:
-    queryID: ~
+    query_id: ~
     slug: rewards_backup_url
-  safesBalance:
-    queryID: query-id-safes
+  safes_balance:
+    query_id: query-id-safes
     slug: safes_backup_url
   staking:
-    queryID: query-id-staking
+    query_id: query-id-staking
     slug: staking_backup_url
 ...

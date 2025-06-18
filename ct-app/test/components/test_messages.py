@@ -28,7 +28,7 @@ def test_parse_message():
 
 
 def test_increase_inner_index():
-    encoded = MessageFormat(default_size, relayer)
+    encoded = MessageFormat(relayer, packet_size=default_size)
     decoded = MessageFormat.parse(encoded.format())
 
     decoded.increase_inner_index()

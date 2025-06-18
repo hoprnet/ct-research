@@ -2,9 +2,9 @@ import asyncio
 import random
 
 import pytest
+from core.components import MessageQueue, Peer
+from core.components.config_parser import Parameters
 from packaging.version import Version
-
-from core.components import MessageQueue, Parameters, Peer
 
 SECONDS_IN_YEAR = 365 * 24 * 60 * 60
 
@@ -46,17 +46,16 @@ def test_peer_version():
     "exc_time,min_range,max_range",
     [
         (
-            random.randint(5, 10),
-            round(random.random() * 0.1 + 0.1, 1),
-            round(random.random() * 0.3 + 0.2, 1),
+            round(random.random() * 2.0 + 0.1, 2),
+            round(random.random() * 0.1 + 0.1, 2),
+            round(random.random() * 0.3 + 0.2, 2),
         )
     ],
 )
 async def test_request_relay(exc_time: int, min_range: float, max_range: float):
     peers = {Peer(f"0x{num}", "2.1.0") for num in range(10)}
 
-    params = Parameters()
-    params.parse({"flags": {"peer": {"requestRelay": True}}})
+    params = Parameters({"flags": {"peer": {"requestRelay": True}}})
 
     for peer in peers:
         rand_delay = round(random.random() * (max_range - min_range) + min_range, 1)

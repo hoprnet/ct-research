@@ -14,9 +14,10 @@ from core.components.logs import configure_logging
 from core.components.pattern_matcher import PatternMatcher
 
 from .api import HoprdAPI, Protocol
-from .components import LockedVar, Parameters, Peer, Utils
+from .components import LockedVar, Peer, Utils
 from .components.address import Address
-from .components.decorators import connectguard, flagguard, formalin, master
+from .components.config_parser import Parameters
+from .components.decorators import connectguard, keepalive, master
 from .components.messages import MessageFormat, MessageQueue
 from .components.node_helper import NodeHelper
 from .components.session_to_socket import SessionToSocket
@@ -87,7 +88,7 @@ class Node:
         """
         Retrieve the address of the node.
         """
-        addresses = await self.api.get_address()
+        addresses = await self.api.address()
 
         if addresses is None:
             logger.warning("No results while retrieving addresses", self.log_base_params)
@@ -112,11 +113,11 @@ class Node:
         else:
             logger.warning("No address found", self.log_base_params)
 
-    @master(flagguard, formalin)
+    @keepalive
     async def healthcheck(self):
         await self._healthcheck()
 
-    @master(flagguard, formalin, connectguard)
+    @master(keepalive, connectguard)
     async def retrieve_balances(self):
         """
         Retrieve the balances of the node.
@@ -142,7 +143,7 @@ class Node:
 
         return balances
 
-    @master(flagguard, formalin, connectguard)
+    @master(keepalive, connectguard)
     async def open_channels(self):
         """
         Open channels to discovered_peers.
@@ -156,7 +157,7 @@ class Node:
         all_addresses = {
             p.address.native
             for p in await self.peers.get()
-            if not p.is_old(self.params.peer.minVersion)
+            if not p.is_old(self.params.peer.min_version)
         }
         addresses_without_channels = all_addresses - addresses_with_channels
 
@@ -171,11 +172,11 @@ class Node:
                 self.address,
                 self.api,
                 address,
-                self.params.channel.fundingAmount,
+                self.params.channel.funding_amount,
                 publish_to_task_set=False,
             )
 
-    @master(flagguard, formalin, connectguard)
+    @master(keepalive, connectguard)
     async def close_incoming_channels(self):
         """
         Close incoming channels
@@ -199,7 +200,7 @@ class Node:
                 publish_to_task_set=False,
             )
 
-    @master(flagguard, formalin, connectguard)
+    @master(keepalive, connectguard)
     async def close_pending_channels(self):
         """
         Close channels in PendingToClose state.
@@ -225,7 +226,7 @@ class Node:
                 publish_to_task_set=False,
             )
 
-    @master(flagguard, formalin, connectguard)
+    @master(keepalive, connectguard)
     async def close_old_channels(self):
         """
         Close channels that have been open for too long.
@@ -246,7 +247,7 @@ class Node:
                 to_peer_history[address] = datetime.now()
                 continue
 
-            if (datetime.now() - timestamp).total_seconds() < self.params.channel.maxAgeSeconds:
+            if (datetime.now() - timestamp).total_seconds() < self.params.channel.max_age_seconds:
                 continue
 
             channels_to_close.append(channel)
@@ -268,7 +269,7 @@ class Node:
                 publish_to_task_set=False,
             )
 
-    @master(flagguard, formalin, connectguard)
+    @master(keepalive, connectguard)
     async def fund_channels(self):
         """
         Fund channels that are below minimum threshold.
@@ -278,13 +279,13 @@ class Node:
 
         out_opens = [c for c in self.channels.outgoing if c.status.is_open]
 
-        low_balances = [c for c in out_opens if c.balance <= self.params.channel.minBalance]
+        low_balances = [c for c in out_opens if c.balance <= self.params.channel.min_balance]
 
         logger.info(
             "Starting funding of channels where balance is too low",
             {
                 "count": len(low_balances),
-                "threshold": self.params.channel.minBalance.as_str,
+                "threshold": self.params.channel.min_balance.as_str,
                 **self.log_base_params,
             },
         )
@@ -298,11 +299,11 @@ class Node:
                     self.address,
                     self.api,
                     channel,
-                    self.params.channel.fundingAmount.as_str,
+                    self.params.channel.funding_amount.as_str,
                     publish_to_task_set=False,
                 )
 
-    @master(flagguard, formalin, connectguard)
+    @master(keepalive, connectguard)
     async def retrieve_peers(self):
         """
         Retrieve real peers from the network.
@@ -317,8 +318,9 @@ class Node:
                 "Scanned reachable peers",
                 {"count": len(results), **self.log_base_params},
             )
+
         peers = {Peer(item.address, item.version) for item in results}
-        peers = {p for p in peers if not p.is_old(self.params.peer.minVersion)}
+        peers = {p for p in peers if not p.is_old(self.params.peer.min_version)}
 
         addresses_w_timestamp = {p.address.native: datetime.now() for p in peers}
 
@@ -328,7 +330,7 @@ class Node:
         if addr := self.address:
             PEERS_COUNT.labels(addr.native).set(len(peers))
 
-    @master(flagguard, formalin, connectguard)
+    @master(keepalive, connectguard)
     async def retrieve_channels(self):
         """
         Retrieve all channels.
@@ -364,7 +366,7 @@ class Node:
             },
         )
 
-    @master(flagguard, formalin, connectguard)
+    @master(keepalive, connectguard)
     async def get_total_channel_funds(self) -> Optional[Balance]:
         """
         Retrieve total funds.
@@ -387,7 +389,7 @@ class Node:
 
         return balance
 
-    @master(flagguard, formalin, connectguard)
+    @master(keepalive, connectguard)
     async def observe_message_queue(self):
         if self.channels is None:
             logger.warning("No channels found yet")
@@ -407,13 +409,13 @@ class Node:
         message.sender = self.address.native
         message.packet_size = sess_and_socket.session.payload
 
-        for _ in range(self.params.sessions.batchSize):
+        for _ in range(self.params.sessions.batch_size):
             AsyncLoop.add(sess_and_socket.send_and_receive, message, publish_to_task_set=False)
             message.increase_inner_index()
 
-    @master(flagguard, formalin, connectguard)
+    @master(keepalive, connectguard)
     async def close_sessions(self):
-        active_sessions = await self.api.get_sessions(Protocol.UDP)
+        active_sessions = await self.api.list_sessions(Protocol.UDP)
 
         to_remove = [
             address
@@ -437,7 +439,7 @@ class Node:
         Also, doesn't remove the session from the session_management dict.
         This method should run on startup to clean up any old sessions.
         """
-        active_sessions: list[Session] = await self.api.get_sessions(Protocol.UDP)
+        active_sessions: list[Session] = await self.api.list_sessions(Protocol.UDP)
 
         for session in active_sessions:
             AsyncLoop.add(
@@ -478,7 +480,7 @@ class Node:
 
     @property
     def tasks(self) -> list[Callable]:
-        return [getattr(self, method) for method in Utils.decorated_methods(__file__, "formalin")]
+        return [getattr(self, method) for method in Utils.decorated_methods(__file__, "keepalive")]
 
     @property
     def p2p_endpoint(self):

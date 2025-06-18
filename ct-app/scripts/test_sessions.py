@@ -29,7 +29,7 @@ class HOP:
     @property
     async def address(self) -> str:
         if self._address is None:
-            if addr := await self.api.get_address():
+            if addr := await self.api.address():
                 self._address = addr.native
             else:
                 raise ValueError("No address found for the HOP node")
@@ -120,11 +120,11 @@ async def main(
         return
 
     # get sessions
-    sessions = await path[0].api.get_sessions()
+    sessions = await path[0].api.list_sessions()
     for session in sessions:
         await path[0].api.close_session(session)
 
-    sessions = await path[0].api.get_sessions()
+    sessions = await path[0].api.list_sessions()
     if len(sessions) != 0:
         print(State.FAILURE, f"Sessions not closed: {sessions}")
         return
@@ -180,7 +180,7 @@ async def main(
         await path[0].api.close_session(session)
 
     # get session
-    match await path[0].api.get_sessions():
+    match await path[0].api.list_sessions():
         case []:
             print(State.SUCCESS, "Sessions cleaned-up")
         case _:

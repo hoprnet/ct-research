@@ -134,8 +134,8 @@ def test_associateEntitiesToNodes_with_allocations():
 
 def test_associateEntitiesToNodes_with_eoa_balances():
     balances = [
-        entries.Balance("owner_1", f"{100*1e18:.0f}"),
-        entries.Balance("owner_2", f"{250*1e18:.0f}"),
+        entries.Balance("owner_1", Balance("100 wxHOPR")),
+        entries.Balance("owner_2", Balance("250 wxHOPR")),
     ]
     nodes = [
         entries.Node("address_1", entries.Safe("safe_address_1", "10", "1", ["owner_1"])),

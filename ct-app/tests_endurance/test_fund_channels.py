@@ -17,7 +17,7 @@ class FundChannels(EnduranceTest):
         self.results = []
         self.api = HoprdAPI(EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY"))
 
-        self.address = await self.api.get_address()
+        self.address = await self.api.address()
         logger.info(f"Connected to node '...{self.address.native[-10:]}'")
 
         # get channel
