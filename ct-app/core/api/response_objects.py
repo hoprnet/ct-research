@@ -174,8 +174,9 @@ class Session(ApiResponseObject):
     target: str = field()
     mtu: int = field()
 
-    def post_init(self):
-        self.payload = self.mtu - SURB_SIZE
+    @property
+    def payload(self):
+        return self.mtu - SURB_SIZE
 
     @property
     def as_path(self):

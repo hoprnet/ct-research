@@ -12,8 +12,6 @@ from . import response_objects as resp
 from .http_method import HTTPMethod
 from .protocol import Protocol
 
-MESSAGE_TAG = 0x1245
-
 configure_logging()
 logger = logging.getLogger(__name__)
 
