@@ -27,17 +27,6 @@ class ExplicitParams:
             # Handle nested dataclasses
             if is_dataclass(field_type):
                 value = field_type(value)
-            # Handle Optional and other generics
-            elif get_origin(field_type) is not None:
-                origin = get_origin(field_type)
-                args = get_args(field_type)
-                if origin is list and isinstance(value, list):
-                    value = [args[0](v) if not is_dataclass(args[0]) else args[0](v) for v in value]
-                elif origin is dict and isinstance(value, dict):
-                    value = {
-                        k: args[1](v) if not is_dataclass(args[1]) else args[1](v)
-                        for k, v in value.items()
-                    }
             # Handle Flag
             elif field_type is Flag:
                 value = Flag(value)
@@ -56,7 +45,7 @@ class ExplicitParams:
             if is_dataclass(v):
                 result[f.name] = v.as_dict()
             else:
-                result[f.name] = str(v)
+                result[f.name] = f.type(v)
         return result
 
     @classmethod
@@ -99,7 +88,7 @@ class ExplicitParams:
                 elif field.type is Decimal:
                     result[field.name] = 0.0
                 elif field.type is dict:
-                    result[field.name] = None
+                    result[field.name] = {}
                 else:
                     result[field.name] = field.type()
         return result
