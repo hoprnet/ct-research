@@ -6,50 +6,50 @@ environment: local
 
 flags:
   core: 
-    applyEconomicModel: 30
-    ticketParameters: 60
+    apply_economic_model: 30
+    ticket_parameters: 60
 
-    connectedPeers: 30
+    connected_peers: 30
     topology: 30
 
-    openSessions: 60
+    open_sessions: 60
 
-    rotateSubgraphs: 60
+    rotate_subgraphs: 60
 
-    peersRewards: 300
-    registeredNodes: 300
+    peers_rewards: 300
+    registered_nodes: 300
     allocations: 300
-    EOABalances: 300
-    NFTHolders: 300
-    safeFundings: 300
+    eoa_balances: 300
+    nft_holders: 300
+    safe_fundings: 300
     
   node:
     healthcheck: 15
-    retrievePeers: 60
-    retrieveChannels: 120
-    retrieveBalances: 300
+    retrieve_peers: 60
+    retrieve_channels: 120
+    retrieve_balances: 300
 
-    openChannels: 300
-    fundChannels: 300
-    closeOldChannels: 300
-    closePendingChannels: 300
-    closeIncomingChannels: Off
+    open_channels: 300
+    fund_channels: 300
+    close_old_channels: 300
+    close_pending_channels: 300
+    close_incoming_channels: Off
 
-    getTotalChannelFunds: 300
+    get_total_channel_funds: 300
 
-    closeSessions: 30
+    close_sessions: 30
 
-    observeMessageQueue: On
+    observe_message_queue: On
 
   peer:
-    messageRelayRequest: On
+    message_relay_request: On
     
 # =============================================================================
 # 
 # =============================================================================
-economicModel:
-  minSafeAllowance: "0 wxHOPR"
-  NFTThreshold: "0 wxHOPR"
+economic_model:
+  min_safe_allowance: "0 wxHOPR"
+  nft_threshold: "0 wxHOPR"
 
   legacy:
     proportion: 1.0
@@ -72,19 +72,19 @@ economicModel:
   sigmoid:
     proportion: 0
 
-    maxAPR: 0.0000001
-    networkCapacity: 100
-    totalTokenSupply: "5000 wxHOPR"
+    max_apr: 0.0000001
+    network_capacity: 100
+    total_token_supply: "5000 wxHOPR"
 
     offset: 10
     buckets:
-      economicSecurity:
+      economic_security:
         flatness: 1.65
         skewness: 1.50
         upperbound: 0.75
         offset: 0
 
-      networkCapacity:
+      network_capacity:
         flatness: 10.0
         skewness: 2.75
         upperbound: 1.0
@@ -94,25 +94,24 @@ economicModel:
 # 
 # =============================================================================
 peer:
-  minVersion: '2.1.5'
-  initialSleep:
-    mean: 10
-    std: 2
+  min_version: '2.1.5'
+  sleep_mean_time: 10
+  sleep_std_time: 2
 
 # =============================================================================
 # 
 # =============================================================================
 channel:
-  minBalance: "0.05 wxHOPR"
-  fundingAmount: "0.1 wxHOPR"
-  maxAgeSeconds: 86400
+  min_balance: "0.05 wxHOPR"
+  funding_amount: "0.1 wxHOPR"
+  max_age_seconds: 86400
 
 # =============================================================================
 # 
 # =============================================================================
 sessions:
-  aggregatedPackets: 3
-  batchSize: 5
+  aggregated_packets: 3
+  batch_size: 5
 
 # =============================================================================
 # 
@@ -125,38 +124,39 @@ fundings:
 # =============================================================================
 subgraph:
   type: auto # auto | default | backup
-  userID: 78696
-
-  mainnetAllocations:
-    queryID: FhU1GxUovoP1zphNbWFEQHwpabLGELQBdWWyFX1yjBkf
+  user_id: 78696
+  api_key: 
+  
+  mainnet_allocations:
+    query_id: FhU1GxUovoP1zphNbWFEQHwpabLGELQBdWWyFX1yjBkf
     slug: hopr-allocations
     inputs:
       schedule_in:
         - investor-node-remainder-2024-01
-  gnosisAllocations:
-    queryID: DXy4UwhNms3zm7abYeSYaD3hTkuaWYyNvozrXSXejMbS
+  gnosis_allocations:
+    query_id: DXy4UwhNms3zm7abYeSYaD3hTkuaWYyNvozrXSXejMbS
     slug: hopr-allocations---gnosis
     inputs:
       schedule_in:
         - investor-node-remainder-2024-01
-  hoprOnMainnet:
-    queryID: 4GZdwVtPcQp95RF77W27GK2ezgGLB1iintG6mYZQ1w33
+  hopr_on_mainnet:
+    query_id: 4GZdwVtPcQp95RF77W27GK2ezgGLB1iintG6mYZQ1w33
     slug: hopr---mainnet
-  hoprOnGnosis:
-    queryID: 2wMRp1AW1ghxoFiM6WeRD93djHNvNGhXsuQyadmwCyqE
+  hopr_on_gnosis:
+    query_id: 2wMRp1AW1ghxoFiM6WeRD93djHNvNGhXsuQyadmwCyqE
     slug: hopr-on-gnosis
   fundings:
-    queryID: EpAdSFzDLT7N5RhA3UxtqGUwkFxmMunSE2yGLb8juQjC
+    query_id: EpAdSFzDLT7N5RhA3UxtqGUwkFxmMunSE2yGLb8juQjC
     slug: subgraph-wxhopr-txs
     inputs:
       from: '0xd9a00176cf49dfb9ca3ef61805a2850f45cb1d05'
   rewards:
-    queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
+    query_id: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
     slug: hopr-channels
-  safesBalance:
-    queryID: GmbJTpa1o4baeStDT48TfQu4ditJmQwwXYPG1DvEiufB
+  safes_balance:
+    query_id: GmbJTpa1o4baeStDT48TfQu4ditJmQwwXYPG1DvEiufB
     slug: hopr-nodes-rotsee
   staking:
-    queryID: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
+    query_id: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
     slug: hopr-stake-all-seasons
 ...

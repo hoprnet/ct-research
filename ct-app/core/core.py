@@ -162,8 +162,8 @@ class Core:
             )
 
         for node in results:
-            STAKE.labels(node.safe.address, "balance").set(node.safe.balance.value)
-            STAKE.labels(node.safe.address, "allowance").set(node.safe.allowance.value)
+            STAKE.labels(node.safe.address, "balance").set(float(node.safe.balance.value))
+            STAKE.labels(node.safe.address, "allowance").set(float(node.safe.allowance.value))
             STAKE.labels(node.safe.address, "additional_balance").set(
                 node.safe.additional_balance.value
             )
@@ -195,10 +195,10 @@ class Core:
         """
         results = list[entries.Allocation]()
         for account in await self.providers[Type.MAINNET_ALLOCATIONS].get():
-            results.append(entries.Allocation(**account["account"]))
+            results.append(entries.Allocation(**account["account"]))  # type: ignore[missing-argument]
 
         for account in await self.providers[Type.GNOSIS_ALLOCATIONS].get():
-            results.append(entries.Allocation(**account["account"]))
+            results.append(entries.Allocation(**account["account"]))  # type: ignore[missing-argument]
 
         self.allocations_data = results
         logger.debug("Fetched investors allocations", {"counts": len(results)})

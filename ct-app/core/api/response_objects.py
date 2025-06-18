@@ -25,7 +25,7 @@ class ApiResponseObject:
                 if v is None:
                     break
 
-            setattr(self, f.name, f.type(v))
+            setattr(self, f.name, f.type(v))  # ty: ignore[call-non-callable]
         self.post_init()
 
     def post_init(self):
@@ -66,7 +66,7 @@ class ApiMetricResponseObject(ApiResponseObject):
                 value = line.split(" ")[-1]
 
                 if len(labels) == 0:
-                    setattr(self, f.name, f.type(value))
+                    setattr(self, f.name, f.type(value))  # ty: ignore[call-non-callable]
                 else:
                     labels_values = {
                         pair.split("=")[0].strip('"'): pair.split("=")[1].strip('"')
@@ -85,7 +85,7 @@ class ApiMetricResponseObject(ApiResponseObject):
                     current[dict_path[-1]] += Decimal(value)
 
             if len(labels) > 0:
-                setattr(self, f.name, f.type(values))
+                setattr(self, f.name, f.type(values))  # ty: ignore[call-non-callable]
 
 
 @dataclass(init=False)

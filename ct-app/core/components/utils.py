@@ -138,10 +138,15 @@ class Utils:
             for decorator in node.decorator_list:
                 try:
                     if isinstance(decorator, ast.Call):
-                        args_name = [arg.id for arg in decorator.args if isinstance(arg, ast.Name)]
+                        args_name = [
+                            arg.id  # ty: ignore[unresolved-attribute]
+                            for arg in decorator.args
+                            if isinstance(arg, ast.Name)
+                        ]
 
                         if not hasattr(decorator.func, "id") or (
-                            decorator.func.id != target and target not in args_name
+                            decorator.func.id != target  # ty: ignore[unresolved-attribute]
+                            and target not in args_name
                         ):
                             continue
 

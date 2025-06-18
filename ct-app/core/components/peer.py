@@ -76,7 +76,9 @@ class Peer:
     @channel_balance.setter
     def channel_balance(self, value: Balance):
         self._channel_balance = value
-        CHANNEL_STAKE.labels(self.address.native).set(value.value if value is not None else 0)
+        CHANNEL_STAKE.labels(self.address.native).set(
+            float(value.value if value is not None else 0)
+        )
 
     @property
     def node_address(self) -> str:

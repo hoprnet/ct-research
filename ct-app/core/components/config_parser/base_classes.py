@@ -84,7 +84,7 @@ class ExplicitParams:
         result = {}
         for field in fields(instance):
             if is_dataclass(field.type):
-                result[field.name] = field.type.generate()
+                result[field.name] = field.type.generate()  # ty: ignore[possibly-unbound-attribute]
             elif isinstance(field.type, list):
                 result[field.name] = [v.generate() if is_dataclass(v) else v for v in field.type()]
             elif isinstance(field.type, dict):

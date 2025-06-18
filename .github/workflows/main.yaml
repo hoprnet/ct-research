@@ -39,7 +39,7 @@ jobs:
       - name: Test with pytest
         working-directory: ct-app
         run: |
-          nix develop -c uv run -m pytest test
+          nix develop -c uv run pytest
 
   image:
     name: Build and push container image
