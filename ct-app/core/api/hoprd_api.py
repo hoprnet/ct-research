@@ -222,7 +222,7 @@ class HoprdAPI:
         params = req.GetPeersBody(quality)
 
         if r := await self.request(HTTPMethod.GET, f"node/peers?{params.as_header_string}"):
-            return [resp.ConnectedPeer(peer) for peer in r.get(status, [])]
+            return [resp.ConnectedPeer(peer) for peer in r.getattr(status, [])]
         else:
             return []
 
@@ -231,7 +231,7 @@ class HoprdAPI:
         Returns the address of the node.
         :return: address: Addresses | undefined
         """
-        return await self.request(HTTPMethod.GET, "account/addresses", resp_type=resp.Addresses)
+        return await self.request(HTTPMethod.GET, "account/address", resp_type=resp.Addresses)
 
     async def node_info(self) -> Optional[resp.Infos]:
         """

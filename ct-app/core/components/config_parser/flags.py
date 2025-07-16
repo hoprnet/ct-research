@@ -13,6 +13,10 @@ class FlagCoreParams(ExplicitParams):
     open_sessions: Flag
     peers_rewards: Flag
     registered_nodes: Flag
+    allocations: Flag
+    eoa_balances: Flag
+    nft_holders: Flag
+    safe_fundings: Flag
 
 
 @dataclass(init=False)

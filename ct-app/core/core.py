@@ -27,6 +27,7 @@ MESSAGE_COUNT = Gauge(
     "ct_message_count", "messages one should receive / year", ["address", "model"]
 )
 NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
+PEER_VERSION = Gauge("ct_peer_version", "Peer version", ["address", "version"])
 REDEEMED_REWARDS = Gauge("ct_redeemed_rewards", "Redeemed rewards", ["address"])
 STAKE = Gauge("ct_peer_stake", "Stake", ["safe", "type"])
 SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
@@ -58,6 +59,8 @@ class Core:
         self.topology_data = list[entries.Topology]()
         self.registered_nodes_data = list[entries.Node]()
         self.nft_holders_data = list[str]()
+        self.allocations_data = list[entries.Allocation]()
+        self.eoa_balances_data = list[entries.Balance]()
         self.peers_rewards_data = dict[str, float]()
         self.ticket_price: TicketPrice = None
 
@@ -115,6 +118,11 @@ class Core:
                         peer.start_async_processes()
                     counts["known"] += 1
 
+                    # update peer version if it has been succesfully retrieved
+                    new_version = visible_peers[visible_peers.index(peer)].version
+                    if new_version.major != 0:
+                        peer.version = new_version
+
                 # if peer is not visible anymore
                 else:
                     peer.yearly_message_count = None
@@ -135,6 +143,9 @@ class Core:
             for key, value in counts.items():
                 UNIQUE_PEERS.labels(key).set(value)
 
+            for peer in current_peers:
+                PEER_VERSION.labels(peer.address.native, str(peer.version)).set(1)
+
     @keepalive
     async def registered_nodes(self):
         """
@@ -153,6 +164,9 @@ class Core:
         for node in results:
             STAKE.labels(node.safe.address, "balance").set(float(node.safe.balance.value))
             STAKE.labels(node.safe.address, "allowance").set(float(node.safe.allowance.value))
+            STAKE.labels(node.safe.address, "additional_balance").set(
+                node.safe.additional_balance.value
+            )
 
         self.registered_nodes_data = results
         logger.debug("Fetched registered nodes in the safe registry", {"count": len(results)})
@@ -163,9 +177,55 @@ class Core:
         """
         Gets all NFT holders.
         """
-        # TODO: get this from a static file
         results = list[str]()
+        for nft in await self.providers[Type.STAKING].get():
+            if owner := nft.get("owner", {}).get("id", None):
+                results.append(owner)
+
+        self.nft_holders_data = results
+        logger.debug("Fetched NFT holders", {"count": len(results)})
         NFT_HOLDERS.set(len(results))
+
+    @keepalive
+    async def allocations(self):
+        """
+        Gets all allocations for the investors.
+        The amount per investor is then added to their stake before dividing it by the number
+        of nodes they are running.
+        """
+        results = list[entries.Allocation]()
+        for account in await self.providers[Type.MAINNET_ALLOCATIONS].get():
+            results.append(entries.Allocation(**account["account"]))  # type: ignore[missing-argument]
+
+        for account in await self.providers[Type.GNOSIS_ALLOCATIONS].get():
+            results.append(entries.Allocation(**account["account"]))  # type: ignore[missing-argument]
+
+        self.allocations_data = results
+        logger.debug("Fetched investors allocations", {"counts": len(results)})
+
+    @keepalive
+    async def eoa_balances(self):
+        """
+        Gets the EOA balances on Gnosis and Mainnet for the investors.
+        """
+        if len(self.allocations_data) == 0:
+            logger.info("No EOA address found for investors safes")
+            return
+
+        balances = {alloc.address: Balance.zero("wxHOPR") for alloc in self.allocations_data}
+
+        for account in await self.providers[Type.MAINNET_BALANCES].get(id_in=list(balances.keys())):
+            balances[account["id"].lower()] += Balance.from_float(
+                account["totalBalance"], "wei wxHOPR"
+            )
+
+        for account in await self.providers[Type.GNOSIS_BALANCES].get(id_in=list(balances.keys())):
+            balances[account["id"].lower()] += Balance.from_float(
+                account["totalBalance"], "wei wxHOPR"
+            )
+
+        self.eoa_balances_data = [entries.Balance(key, value) for key, value in balances.items()]
+        logger.debug("Fetched investors EOA balances", {"count": len(balances)})
 
     @keepalive
     async def topology(self):
@@ -197,14 +257,23 @@ class Core:
                 logger.warning("Not enough data to apply economic model")
                 return
 
-            await Utils.mergeDataSources(self.topology_data, peers, self.registered_nodes_data)
+            Utils.associateEntitiesToNodes(self.allocations_data, self.registered_nodes_data)
+            Utils.associateEntitiesToNodes(self.eoa_balances_data, self.registered_nodes_data)
+
+            await Utils.mergeDataSources(
+                self.topology_data,
+                peers,
+                self.registered_nodes_data,
+                self.allocations_data,
+                self.eoa_balances_data,
+            )
 
             Utils.allowManyNodePerSafe(peers)
 
             for p in peers:
                 if not p.is_eligible(
                     self.params.economic_model.min_safe_allowance,
-                    self.params.economic_model.legacy.coefficients.lowerbound,
+                    self.params.economic_model.legacy.coefficients.l,
                     self.ct_nodes_addresses,
                     self.nft_holders_data,
                     self.params.economic_model.nft_threshold,
@@ -223,8 +292,9 @@ class Core:
                 / self.params.economic_model.sigmoid.network_capacity
             )
 
-            message_count = {SigmoidParams: 0, LegacyParams: 0}
-            model_input = {SigmoidParams: [], LegacyParams: []}
+            message_count = {model.__class__: 0 for model in self.params.economic_model.models}
+            model_input = {model.__class__: 0 for model in self.params.economic_model.models}
+
             model_input[SigmoidParams] = [economic_security, network_capacity]
 
             for peer in peers:
@@ -233,14 +303,14 @@ class Core:
 
                 model_input[LegacyParams] = self.peers_rewards_data.get(peer.address.native, 0.0)
 
-                for name, model in self.params.economic_model.models.items():
+                for model, name in self.params.economic_model.models.items():
                     message_count[model.__class__] = model.yearly_message_count(
                         peer.split_stake,
                         self.ticket_price,
                         model_input[model.__class__],
                     )
 
-                    MESSAGE_COUNT.labels(peer.address.native, name).set(
+                    MESSAGE_COUNT.labels(peer.address.native, model.name).set(
                         message_count[model.__class__]
                     )
 
@@ -277,6 +347,30 @@ class Core:
         if ticket_price is not None:
             self.ticket_price = ticket_price
             TICKET_STATS.labels("price").set(ticket_price.value.value)
+
+    @keepalive
+    async def safe_fundings(self):
+        """
+        Gets the total amount that was sent to CT safes.
+        """
+        addresses = list(
+            filter(
+                lambda x: x is not None,
+                {await node.safe_address for node in self.nodes},
+            )
+        )
+
+        entries = await self.providers[Type.FUNDINGS].get(to_in=addresses)
+
+        amount = sum(
+            [Balance(f"{item['amount']} wxHOPR") for item in entries], Balance.zero("wxHOPR")
+        )
+
+        TOTAL_FUNDING.set((amount + self.params.fundings.constant).value)
+        logger.debug(
+            "Fetched all safe fund events",
+            {"amount": amount.as_str, "constant": self.params.fundings.constant.as_str},
+        )
 
     @keepalive
     async def open_sessions(self):

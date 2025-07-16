@@ -19,5 +19,11 @@ class SubgraphParams(ExplicitParams):
     type: str
     user_id: int
     api_key: str
+    mainnet_allocations: SubgraphEndpointParams
+    gnosis_allocations: SubgraphEndpointParams
+    hopr_on_mainnet: SubgraphEndpointParams
+    hopr_on_gnosis: SubgraphEndpointParams
     safes_balance: SubgraphEndpointParams
+    fundings: SubgraphEndpointParams
     rewards: SubgraphEndpointParams
+    staking: SubgraphEndpointParams

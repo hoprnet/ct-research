@@ -160,5 +160,5 @@ class EconomicModelParams(ExplicitParams):
     sigmoid: SigmoidParams
 
     @property
-    def models(self) -> dict[str, ExplicitParams]:
-        return {"legacy": self.legacy, "sigmoid": self.sigmoid}
+    def models(self):
+        return {v: k for k, v in vars(self).items() if isinstance(v, ExplicitParams)}
