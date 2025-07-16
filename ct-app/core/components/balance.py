@@ -7,7 +7,7 @@ WEI_TO_READABLE = Decimal("1000000000000000000")
 class Balance:
     def __init__(self, value: str):
         if not isinstance(value, str):
-            raise TypeError(f"Balance value must be a string, got {type(value).__name__}")
+            raise TypeError(f"Balance value must be a string, got {type(value).__name__} ({value})")
 
         self._value: str = value
 
@@ -58,7 +58,10 @@ class Balance:
         if not isinstance(other, Balance):
             return False
 
-        return self.value == other.value and self.unit == other.unit
+        return (
+            self.value.quantize(Decimal("1e-7")) == other.value.quantize(Decimal("1e-7"))
+            and self.unit == other.unit
+        )
 
     def __lt__(self, other):
         if not isinstance(other, Balance):
@@ -109,20 +112,10 @@ class Balance:
             return Balance(f"{self.value / Decimal(other)} {self.unit}")
 
     def __div__(self, other):
-        if isinstance(other, Balance):
-            if self.unit != other.unit:
-                raise TypeError(
-                    f"Cannot divide balances with different units: {self.unit} and {other.unit}"
-                )
-            return self.value / other.value
-        else:
-            return Balance(f"{self.value / Decimal(other)} {self.unit}")
+        return Balance(f"{self.value / Decimal(other)} {self.unit}")
 
     def __rtruediv__(self, other):
-        if isinstance(other, Balance):
-            raise TypeError("Cannot divide two Balance objects directly")
-        else:
-            return Balance(f"{Decimal(other) / self.value} {self.unit}")
+        return Balance(f"{Decimal(other) / self.value} {self.unit}")
 
     def __mul__(self, other):
         if isinstance(other, Balance):
@@ -137,14 +130,17 @@ class Balance:
             return Balance(f"{self.value * Decimal(other)} {self.unit}")
 
     def __pow__(self, power):
-        if not isinstance(power, (int, float)):
+        if not isinstance(power, (int, float, Decimal)):
             raise TypeError("Power must be an integer or float")
-        return Balance(f"{self.value ** Decimal(power)} {self.unit}")
+        if isinstance(power, Decimal):
+            return Balance(f"{self.value ** power} {self.unit}")
+        else:
+            return Balance(f"{self.value ** Decimal(power)} {self.unit}")
 
     def __round__(self, ndigits: int = 0):
-        if not isinstance(ndigits, int):
-            raise TypeError("ndigits must be an integer")
-        return Balance(f"{round(self.value, ndigits)} {self.unit}")
+        quantized_value = self.value.quantize(Decimal(f"1e-{ndigits}"))
+        return Balance(f"{quantized_value} {self.unit}")
 
-    def __str__(self):
-        return f"Balance(value={self.value}, unit='{self.unit}')"
+    def __repr__(self):
+        key_pair_string: str = ", ".join([f"{key}={value}" for key, value in vars(self).items()])
+        return f"{self.__class__.__name__}({key_pair_string})"

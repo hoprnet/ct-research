@@ -1,133 +1,81 @@
+from dataclasses import dataclass, field, fields
+from typing import Any, Dict, List, Optional, Union
+
+
+def api_field(api_key: Optional[str] = None, default: Optional[Any] = None, **kwargs):
+    metadata = kwargs.pop("metadata", {})
+    if api_key is not None:
+        metadata["api_key"] = api_key
+
+    if default is None:
+        return field(metadata=metadata, **kwargs)
+    else:
+        return field(default=default, metadata=metadata, **kwargs)
+
+
 class ApiRequestObject:
-    def __init__(self, *args, **kwargs):
-        if not hasattr(self, "keys"):
-            self.keys = {}
-
-        if args:
-            kwargs.update(args[0])
-
-        kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}
-        kwargs.pop("self", None)
-
-        if set(kwargs.keys()) != set(self.keys.keys()):
-            raise ValueError(f"Keys mismatch: {set(kwargs.keys())} != {set(self.keys.keys())}")
-
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-        self.post_init()
-
     @property
     def as_dict(self) -> dict:
-        return {value: getattr(self, key) for key, value in self.keys.items()}
+        result = {}
+        for f in fields(self):
+            api_key = f.metadata.get("api_key", f.name)
+            result[api_key] = getattr(self, f.name)
+        return result
 
     @property
     def as_header_string(self) -> str:
-        attrs_as_dict = {value: getattr(self, key) for key, value in self.keys.items()}
-        return "&".join([f"{k}={v}" for k, v in attrs_as_dict.items()])
-
-    def post_init(self):
-        pass
+        return "&".join([f"{k}={str(v).lower()}" for k, v in self.as_dict.items()])
 
 
+@dataclass
 class OpenChannelBody(ApiRequestObject):
-    keys = {
-        "amount": "amount",
-        "peer_address": "peerAddress",
-    }
-
-    def __init__(self, amount: str, peer_address: str):
-        super().__init__(vars())
+    amount: str = api_field()
+    peer_address: str = api_field("peerAddress")
 
 
+@dataclass
 class FundChannelBody(ApiRequestObject):
-    keys = {"amount": "amount"}
-
-    def __init__(self, amount: str):
-        super().__init__(vars())
+    amount: str = api_field()
 
 
+@dataclass
 class GetChannelsBody(ApiRequestObject):
-    keys = {
-        "full_topology": "fullTopology",
-        "including_closed": "includingClosed",
-    }
-
-    def __init__(self, full_topology: str, including_closed: str):
-        super().__init__(vars())
+    full_topology: bool = api_field("fullTopology", False)
+    including_closed: bool = api_field("includingClosed", False)
 
 
+@dataclass
 class GetPeersBody(ApiRequestObject):
-    keys = {"quality": "quality"}
-
-    def __init__(self, quality: float):
-        super().__init__(vars())
+    quality: float = api_field()
 
 
+@dataclass
 class CreateSessionBody(ApiRequestObject):
-    keys = {
-        "capabilities": "capabilities",
-        "destination": "destination",
-        "listen_host": "listenHost",
-        "forward_path": "forwardPath",
-        "return_path": "returnPath",
-        "response_buffer": "responseBuffer",
-        "target": "target",
-    }
-
-    def __init__(
-        self,
-        capabilities: list,
-        destination: str,
-        listen_host: str,
-        forward_path: str | dict,
-        return_path: str | dict,
-        response_buffer: str,
-        target: str | dict,
-    ):
-        super().__init__(vars())
+    capabilities: List[Any] = api_field()
+    destination: str = api_field()
+    listen_host: str = api_field("listenHost")
+    forward_path: Union[str, Dict] = api_field("forwardPath")
+    return_path: Union[str, Dict] = api_field("returnPath")
+    response_buffer: str = api_field("responseBuffer")
+    target: Union[str, Dict] = api_field()
 
 
+@dataclass
 class SessionCapabilitiesBody(ApiRequestObject):
-    keys = {
-        "retransmission": "Retransmission",
-        "segmentation": "Segmentation",
-        "no_delay": "NoDelay",
-    }
-
-    def __init__(self, retransmission: bool, segmentation: bool, no_delay: bool):
-        super().__init__(vars())
+    retransmission: bool = api_field("Retransmission", "false")
+    segmentation: bool = api_field("Segmentation", "false")
+    no_delay: bool = api_field("NoDelay", "false")
 
     @property
     def as_array(self) -> list:
-        return [self.keys[var] for var in vars(self) if var in self.keys and vars(self)[var]]
+        return [f.metadata["api_key"] for f in fields(self) if getattr(self, f.name)]
 
 
+@dataclass
 class SessionPathBodyRelayers(ApiRequestObject):
-    keys = {
-        "relayers": "IntermediatePath",
-    }
-
-    def __init__(self, relayers: list[str]):
-        super().__init__(vars())
+    relayers: List[str] = api_field("IntermediatePath")
 
 
-class SessionPathBodyHops(ApiRequestObject):
-    keys = {
-        "hops": "Hops",
-    }
-
-    def __init__(self, hops: int = 0):
-        super().__init__(vars())
-
-    def post_init(self):
-        self.hops = int(self.hops)
-
-
+@dataclass
 class SessionTargetBody(ApiRequestObject):
-    keys = {
-        "service": "Service",
-    }
-
-    def __init__(self, service: int = 0):
-        super().__init__(vars())
+    service: int = api_field("Service")

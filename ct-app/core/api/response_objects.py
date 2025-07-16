@@ -1,10 +1,12 @@
+from dataclasses import dataclass, field, fields
+from decimal import Decimal
 from typing import Any
 
-from core.components.conversions import convert_unit
+from core.components.balance import Balance
 
 from .channelstatus import ChannelStatus
 
-SURB_SIZE = 400
+SURB_SIZE: int = 400
 
 
 def try_to_lower(value: Any):
@@ -15,15 +17,15 @@ def try_to_lower(value: Any):
 
 class ApiResponseObject:
     def __init__(self, data: dict):
-        for key, value in self.keys.items():
+        for f in fields(self):
+            path = f.metadata.get("path", f.name)
             v = data
-            for subkey in value.split("/"):
+            for subkey in path.split("/"):
                 v = v.get(subkey, None)
                 if v is None:
-                    continue
+                    break
 
-            setattr(self, key, convert_unit(v))
-
+            setattr(self, f.name, f.type(v))  # ty: ignore[call-non-callable]
         self.post_init()
 
     def post_init(self):
@@ -31,11 +33,11 @@ class ApiResponseObject:
 
     @property
     def is_null(self):
-        return all(getattr(self, key) is None for key in self.keys.keys())
+        return all(getattr(self, key) is None for key in [f.name for f in fields(self)])
 
     @property
     def as_dict(self) -> dict:
-        return {key: getattr(self, key) for key in self.keys.keys()}
+        return {key: getattr(self, key) for key in [f.name for f in fields(self)]}
 
     def __str__(self):
         return str(self.__dict__)
@@ -44,72 +46,118 @@ class ApiResponseObject:
         return str(self)
 
     def __eq__(self, other):
-        return all(getattr(self, key) == getattr(other, key) for key in self.keys.keys())
+        return all(
+            getattr(self, key) == getattr(other, key) for key in [f.name for f in fields(self)]
+        )
 
 
+class ApiMetricResponseObject(ApiResponseObject):
+    def __init__(self, data: str):
+        self.data = data.split("\n")
+
+        for f in fields(self):
+            values = {}
+            labels = f.metadata.get("labels", [])
+
+            for line in self.data:
+                if not line.startswith(f.name):
+                    continue
+
+                value = line.split(" ")[-1]
+
+                if len(labels) == 0:
+                    setattr(self, f.name, f.type(value))  # ty: ignore[call-non-callable]
+                else:
+                    labels_values = {
+                        pair.split("=")[0].strip('"'): pair.split("=")[1].strip('"')
+                        for pair in line.split("{")[1].split("}")[0].split(",")
+                    }
+
+                    dict_path = [labels_values[label] for label in labels]
+                    current = values
+
+                    for part in dict_path[:-1]:
+                        if part not in current:
+                            current[part] = {}
+                        current = current[part]
+                    if dict_path[-1] not in current:
+                        current[dict_path[-1]] = Decimal("0")
+                    current[dict_path[-1]] += Decimal(value)
+
+            if len(labels) > 0:
+                setattr(self, f.name, f.type(values))  # ty: ignore[call-non-callable]
+
+
+@dataclass(init=False)
 class Addresses(ApiResponseObject):
-    keys = {"native": "native"}
+    native: str = field()
 
 
+@dataclass(init=False)
 class Balances(ApiResponseObject):
-    keys = {
-        "hopr": "hopr",
-        "native": "native",
-        "safe_native": "safeNative",
-        "safe_hopr": "safeHopr",
-    }
+    hopr: Balance = field()
+    native: Balance = field()
+    safe_native: Balance = field(metadata={"path": "safeNative"})
+    safe_hopr: Balance = field(metadata={"path": "safeHopr"})
 
 
+@dataclass(init=False)
 class Infos(ApiResponseObject):
-    keys = {"hopr_node_safe": "hoprNodeSafe"}
+    hopr_node_safe: str = field(metadata={"path": "hoprNodeSafe"})
 
     def post_init(self):
         self.hopr_node_safe = try_to_lower(self.hopr_node_safe)
 
 
+@dataclass(init=False)
 class ConnectedPeer(ApiResponseObject):
-    keys = {"address": "address", "multiaddr": "multiaddr", "version": "reportedVersion"}
+    address: str = field()
+    multiaddr: str = field()
+    version: str = field(metadata={"path": "reportedVersion"})
 
     def post_init(self):
         self.address = try_to_lower(self.address)
 
 
+@dataclass(init=False)
 class Channel(ApiResponseObject):
-    keys = {
-        "balance": "balance",
-        "id": "channelId",
-        "destination": "destination",
-        "source": "source",
-        "status": "status",
-    }
+    balance: Balance = field()
+    id: str = field(metadata={"path": "channelId"})
+    destination: str = field()
+    source: str = field()
+    status: ChannelStatus = field()
 
     def post_init(self):
-        self.status = ChannelStatus.fromString(self.status)
         self.destination = try_to_lower(self.destination)
         self.source = try_to_lower(self.source)
 
 
+@dataclass(init=False)
 class TicketPrice(ApiResponseObject):
-    keys = {"value": "price"}
+    value: Balance = field(metadata={"path": "price"})
 
 
+@dataclass(init=False)
 class Configuration(ApiResponseObject):
-    keys = {"price": "hopr/protocol/outgoing_ticket_price"}
-
-    def post_init(self):
-        if isinstance(self.price, str):
-            self.price = float(self.price.split()[0])
+    price: Balance = field(metadata={"path": "hopr/protocol/outgoing_ticket_price"})
 
 
+@dataclass(init=False)
 class OpenedChannel(ApiResponseObject):
-    keys = {"channel_id": "channelId", "receipt": "transactionReceipt"}
+    channel_id: str = field(metadata={"path": "channelId"})
+    receipt: str = field(default="", metadata={"path": "transactionReceipt"})
+
+
+@dataclass(init=False)
+class Metrics(ApiMetricResponseObject):
+    hopr_tickets_incoming_statistics: dict = field(metadata={"labels": ["statistic"]})
 
 
 class Channels:
     def __init__(self, data: dict):
-        self.all = [Channel(channel) for channel in data.get("all", [])]
-        self.incoming = []
-        self.outgoing = []
+        self.all = [Channel(c) for c in data.get("all", [])]
+        self.incoming = [Channel(c) for c in data.get("incoming", [])]
+        self.outgoing = [Channel(c) for c in data.get("outgoing", [])]
 
     def __str__(self):
         return str(self.__dict__)
@@ -118,23 +166,24 @@ class Channels:
         return str(self)
 
 
+@dataclass(init=False)
 class Session(ApiResponseObject):
-    keys = {
-        "ip": "ip",
-        "port": "port",
-        "protocol": "protocol",
-        "target": "target",
-        "mtu": "mtu",
-        "surb_size": "surbSize",
-    }
+    ip: str = field()
+    port: int = field()
+    protocol: str = field()
+    target: str = field()
+    mtu: int = field()
 
-    def post_init(self):
-        self.payload = self.mtu - SURB_SIZE
+    @property
+    def payload(self):
+        return self.mtu - SURB_SIZE
 
     @property
     def as_path(self):
         return f"session/{self.protocol}/{self.ip}/{self.port}"
 
 
+@dataclass(init=False)
 class SessionFailure(ApiResponseObject):
-    keys = {"status": "status", "error": "error"}
+    status: str = field(metadata={"path": "status"})
+    error: str = field(metadata={"path": "error"})

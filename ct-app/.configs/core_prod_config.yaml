@@ -6,50 +6,48 @@ environment: prod
 
 flags:
   core: 
-    applyEconomicModel: 30
-    ticketParameters: 60
+    apply_economic_model: 30
+    ticket_parameters: 60
 
-    connectedPeers: 30
+    connected_peers: 30
     topology: 30
 
-    openSessions: 60
+    rotate_subgraphs: 60
+    open_sessions: 60
 
-    rotateSubgraphs: 60
-
-    peersRewards: 300
-    registeredNodes: 300
+    peers_rewards: 300
+    registered_nodes: 300
     allocations: 300
-    EOABalances: 300
-    NFTHolders: 300
-    safeFundings: 300
+    eoa_balances: 300
+    nft_holders: 300
+    safe_fundings: 300
     
   node:
     healthcheck: 15
-    retrievePeers: 60
-    retrieveChannels: 120
-    retrieveBalances: 300
+    retrieve_peers: 60
+    retrieve_channels: 120
+    retrieve_balances: 300
 
-    openChannels: 300
-    fundChannels: 300
-    closeOldChannels: 300
-    closePendingChannels: 300
-    closeIncomingChannels: ~
+    open_channels: 300
+    fund_channels: 300
+    close_old_channels: 300
+    close_pending_channels: 300
+    close_incoming_channels: Off
 
-    getTotalChannelFunds: 300
+    get_total_channel_funds: 300
     
-    closeSessions: 30
+    observe_message_queue: On
+    close_sessions: 30
 
-    observeMessageQueue: 0
-    
   peer:
-    messageRelayRequest: 0
+    message_relay_request: On
 
 # =============================================================================
 # 
 # =============================================================================
-economicModel:
-  minSafeAllowance: "0 wxHOPR"
-  NFTThreshold: "30000 wxHOPR"
+economic_model:
+  min_safe_allowance: "0 wxHOPR"
+  nft_threshold: "30000 wxHOPR"
 
   legacy:
     proportion: 1.0
@@ -58,32 +56,32 @@ economicModel:
     coefficients:
       a: 1
       b: 1.4
-      c: "75000 wxHOPR"
-      l: "10000 wxHOPR"
+      upperbound: "75000 wxHOPR"
+      lowerbound: "10000 wxHOPR"
     
     equations: 
       fx: 
         formula: "a * x"
-        condition: "l <= x <= c"
+        condition: "lowerbound <= x <= upperbound"
       gx:
-        formula: "a * c + (x - c) ** (1 / b)"
-        condition: "x > c"
+        formula: "a * upperbound + (x - upperbound) ** (1 / b)"
+        condition: "x > upperbound"
 
   sigmoid:
     proportion: 0
-    maxAPR: 15
-    networkCapacity: 2000
-    totalTokenSupply: "450000000 wxHOPR"
+    max_apr: 15
+    network_capacity: 2000
+    total_token_supply: "450000000 wxHOPR"
 
     offset: -0.9
     buckets:
-      economicSecurity:
+      economic_security:
         flatness: 1.8
         skewness: 1.52
         upperbound: 0.4
         offset: 3.14
 
-      networkCapacity:
+      network_capacity:
         flatness: 2.97
         skewness: 0.72
         upperbound: 1.0
@@ -93,69 +91,69 @@ economicModel:
 # 
 # =============================================================================
 peer:
-  minVersion: '2.2.1'
-  initialSleep:
-    mean: 30
-    std: 2
+  min_version: '2.2.1'
+  sleep_mean_time: 30
+  sleep_std_time: 2
 
 # =============================================================================
 # 
 # =============================================================================
 channel:
-  minBalance: "20 wxHOPR"
-  fundingAmount: "30 wxHOPR"
-  maxAgeSeconds: 172800
+  min_balance: "20 wxHOPR"
+  funding_amount: "30 wxHOPR"
+  max_age_seconds: 172800
   
 # =============================================================================
 # 
 # =============================================================================
 sessions:
-  aggregatedPackets: 10
-  batchSize: 5
+  aggregated_packets: 10
+  batch_size: 5
 
 # =============================================================================
 # 
 # =============================================================================
 fundings:
-  constant: 626500
+  constant: "626500 wxHOPR"
   
 # =============================================================================
 # 
 # =============================================================================
 subgraph:
   type: auto # auto | default | backup
-  userID: 78696
+  user_id: 78696
+  api_key: 
 
-  mainnetAllocations:
-    queryID: FhU1GxUovoP1zphNbWFEQHwpabLGELQBdWWyFX1yjBkf
+  mainnet_allocations:
+    query_id: FhU1GxUovoP1zphNbWFEQHwpabLGELQBdWWyFX1yjBkf
     slug: hopr-allocations
     inputs:
       schedule_in:
         - investor-node-remainder-2024-01
-  gnosisAllocations:
-    queryID: DXy4UwhNms3zm7abYeSYaD3hTkuaWYyNvozrXSXejMbS
+  gnosis_allocations:
+    query_id: DXy4UwhNms3zm7abYeSYaD3hTkuaWYyNvozrXSXejMbS
     slug: hopr-allocations---gnosis
     inputs:
       schedule_in:
         - investor-node-remainder-2024-01
-  hoprOnMainnet:
-    queryID: 4GZdwVtPcQp95RF77W27GK2ezgGLB1iintG6mYZQ1w33
+  hopr_on_mainnet:
+    query_id: 4GZdwVtPcQp95RF77W27GK2ezgGLB1iintG6mYZQ1w33
     slug: hopr---mainnet
-  hoprOnGnosis:
-    queryID: 2wMRp1AW1ghxoFiM6WeRD93djHNvNGhXsuQyadmwCyqE
+  hopr_on_gnosis:
+    query_id: 2wMRp1AW1ghxoFiM6WeRD93djHNvNGhXsuQyadmwCyqE
     slug: hopr-on-gnosis
   fundings:
-    queryID: EpAdSFzDLT7N5RhA3UxtqGUwkFxmMunSE2yGLb8juQjC
+    query_id: EpAdSFzDLT7N5RhA3UxtqGUwkFxmMunSE2yGLb8juQjC
     slug: subgraph-wxhopr-txs
     inputs:
       from: '0xd9a00176cf49dfb9ca3ef61805a2850f45cb1d05'
   rewards:
-    queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
+    query_id: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
     slug: hopr-channels
-  safesBalance:
-    queryID: GP2abJCarirMJCanuk4SBmnadiobEWH9ME2MNRAHbBTp
+  safes_balance:
+    query_id: GP2abJCarirMJCanuk4SBmnadiobEWH9ME2MNRAHbBTp
     slug: hopr-nodes-dufour
   staking:
-    queryID: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
+    query_id: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
     slug: hopr-stake-all-seasons
 ...

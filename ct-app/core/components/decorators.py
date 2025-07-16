@@ -37,51 +37,7 @@ def connectguard(func):
     return wrapper
 
 
-def flagguard(func):
-    """
-    Decorator to check if the feature is enabled before running it
-    """
-
-    @functools.wraps(func)
-    async def wrapper(self, *args, **kwargs):
-        func_name_clean = func.__name__.replace("_", "").lower()
-
-        if not hasattr(self.params, "flags"):
-            logger.error("No class listed in config file as might contain long running tasks")
-            return
-
-        if not hasattr(self.params.flags, self.__class__.__name__.lower()):
-            logger.error(
-                "Class not listed in config file as might contain long running tasks",
-                {"class": self.__class__.__name__.lower()},
-            )
-            return
-
-        class_flags = getattr(self.params.flags, self.__class__.__name__.lower())
-
-        params_raw = dir(class_flags)
-        params_clean = list(map(lambda s: s.lower(), params_raw))
-
-        if func_name_clean not in params_clean:
-            logger.error(
-                "Method not listed in config file as a long running task",
-                {"method": func.__name__},
-            )
-            return
-
-        index = params_clean.index(func_name_clean)
-        feature = params_raw[index]
-        flag = getattr(class_flags, feature)
-
-        if flag is None or flag is False:
-            return
-
-        return await func(self, *args, **kwargs)
-
-    return wrapper
-
-
-def formalin(func):
+def keepalive(func):
     """
     Decorator to log the start of a function, make it run until stopped, and delay the
     next iteration
@@ -89,35 +45,28 @@ def formalin(func):
 
     @functools.wraps(func)
     async def wrapper(self, *args, **kwargs):
-        func_name_clean = func.__name__.replace("_", "").lower()
+        class_flags = getattr(self.params.flags, self.__class__.__name__.lower(), {})
+        delay = getattr(class_flags, func.__name__, None)
 
-        class_flags = getattr(self.params.flags, self.__class__.__name__.lower())
-
-        params_raw = dir(class_flags)
-        params_clean = list(map(lambda s: s.lower(), params_raw))
-
-        if func_name_clean not in params_clean:
-            logger.error(
-                "Method not listed in config file as a long running task",
-                {"method": func.__name__},
+        if delay is None:
+            logger.warning(
+                "Feature not found in the config file, skipping",
+                {"feature": func.__name__},
             )
             return
+        delay = delay.value
 
-        index = params_clean.index(func_name_clean)
-        delay = getattr(class_flags, params_raw[index])
-
-        if delay is True:
-            delay = 0
         if delay is False:
-            delay = None
+            logger.debug("Feature not enabled, skipping", {"feature": func.__name__})
+            return
+
+        delay = 0 if delay is True else delay
 
         logger.debug("Running method continuously", {"method": func.__name__, "delay": delay})
 
         while self.running:
             await func(self, *args, **kwargs)
 
-            if delay is None:
-                break
             await asyncio.sleep(delay)
 
     return wrapper

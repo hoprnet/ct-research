@@ -26,6 +26,11 @@ jobs:
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Verify config files
+        working-directory: ct-app
+        run: |
+          nix develop -c uv run scripts/verify_config.py -f .configs/core_prod_config.yaml -f .configs/core_staging_config.yaml -f test/test_config.yaml
+          
       - name: Lint with ruff
         working-directory: ct-app
         run: |
@@ -34,7 +39,7 @@ jobs:
       - name: Test with pytest
         working-directory: ct-app
         run: |
-          nix develop -c uv run -m pytest test
+          nix develop -c uv run pytest
 
   image:
     name: Build and push container image

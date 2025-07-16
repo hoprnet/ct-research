@@ -9,7 +9,7 @@ from core.components.balance import Balance
 
 from .address import Address
 from .asyncloop import AsyncLoop
-from .decorators import flagguard, formalin, master
+from .decorators import keepalive
 from .messages import MessageFormat, MessageQueue
 
 CHANNEL_STAKE = Gauge("ct_peer_channels_balance", "Balance in outgoing channels", ["address"])
@@ -17,7 +17,6 @@ DELAY = Gauge("ct_peer_delay", "Delay between two messages", ["address"])
 NODES_LINKED_TO_SAFE_COUNT = Gauge(
     "ct_peer_safe_count", "Number of nodes linked to the safes", ["address", "safe"]
 )
-
 SECONDS_IN_A_NON_LEAP_YEAR = 365 * 24 * 60 * 60
 
 
@@ -77,7 +76,9 @@ class Peer:
     @channel_balance.setter
     def channel_balance(self, value: Balance):
         self._channel_balance = value
-        CHANNEL_STAKE.labels(self.address.native).set(value.value if value is not None else 0)
+        CHANNEL_STAKE.labels(self.address.native).set(
+            float(value.value if value is not None else 0)
+        )
 
     @property
     def node_address(self) -> str:
@@ -147,25 +148,24 @@ class Peer:
 
         return True
 
-    @master(flagguard, formalin)
+    @keepalive
     async def message_relay_request(self):
         if self.address is None:
             return
 
         if delay := await self.message_delay:
-            multiplier: int = self.params.sessions.aggregatedPackets
+            multiplier: int = self.params.sessions.aggregated_packets
             message = MessageFormat(
                 self.address.native,
                 multiplier=multiplier,
             )
             await MessageQueue().put_async(message)
-            await asyncio.sleep(delay * multiplier * self.params.sessions.batchSize)
+            await asyncio.sleep(delay * multiplier * self.params.sessions.batch_size)
 
         else:
             await asyncio.sleep(
                 random.normalvariate(
-                    self.params.peer.initialSleep.mean,
-                    self.params.peer.initialSleep.std,
+                    self.params.peer.sleep_mean_time, self.params.peer.sleep_std_time
                 )
             )
 
