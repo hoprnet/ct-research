@@ -6,6 +6,9 @@ WEI_TO_READABLE = Decimal("1000000000000000000")
 
 class Balance:
     def __init__(self, value: str):
+        if isinstance(value, Balance):
+            value = value.as_str
+
         if not isinstance(value, str):
             raise TypeError(f"Balance value must be a string, got {type(value).__name__} ({value})")
 

@@ -81,9 +81,9 @@ async def test_mergeDataSources():
         entries.Topology("address_4", Balance("4 wxHOPR")),
     ]
     peers_list = [
-        Peer("address_1", "1.0.0"),
-        Peer("address_2", "1.1.0"),
-        Peer("address_3", "1.0.2"),
+        Peer("address_1"),
+        Peer("address_2"),
+        Peer("address_3"),
     ]
     nodes_list = [
         entries.Node("address_1", entries.Safe("safe_address_1", "10", "1", ["owner_1"])),
@@ -93,70 +93,18 @@ async def test_mergeDataSources():
         ),
         entries.Node("address_3", entries.Safe("safe_address_3", None, "3", ["owner_3"])),
     ]
-    allocation_list = [
-        entries.Allocation("owner_1", "0", f"{100*1e18:.0f}"),
-        entries.Allocation("owner_2", "0", f"{250*1e18:.0f}"),
-    ]
 
-    allocation_list[0].linked_safes = ["safe_address_1", "safe_address_2"]
-    allocation_list[1].linked_safes = ["safe_address_2"]
-
-    await Utils.mergeDataSources(topology_list, peers_list, nodes_list, allocation_list, {})
+    await Utils.mergeDataSources(topology_list, peers_list, nodes_list)
 
     assert len(peers_list) == 3
     assert len([p for p in peers_list if p.safe is not None]) == 3
-    assert peers_list[0].safe.additional_balance == allocation_list[0].allocated_amount / 2
-    assert (
-        peers_list[1].safe.additional_balance
-        == allocation_list[0].allocated_amount / 2 + allocation_list[1].allocated_amount
-    )
-
-
-def test_associateEntitiesToNodes_with_allocations():
-    allocations = [
-        entries.Allocation("owner_1", "0", f"{100*1e18:.0f}"),
-        entries.Allocation("owner_2", "0", f"{250*1e18:.0f}"),
-    ]
-    nodes = [
-        entries.Node("address_1", entries.Safe("safe_address_1", "10", "1", ["owner_1"])),
-        entries.Node(
-            "address_2",
-            entries.Safe("safe_address_2", "10", "2", ["owner_1", "owner_2"]),
-        ),
-        entries.Node("address_3", entries.Safe("safe_address_3", None, "3", ["owner_3"])),
-    ]
-
-    Utils.associateEntitiesToNodes(allocations, nodes)
-
-    assert allocations[0].linked_safes == {"safe_address_1", "safe_address_2"}
-    assert allocations[1].linked_safes == {"safe_address_2"}
-
-
-def test_associateEntitiesToNodes_with_eoa_balances():
-    balances = [
-        entries.Balance("owner_1", Balance("100 wxHOPR")),
-        entries.Balance("owner_2", Balance("250 wxHOPR")),
-    ]
-    nodes = [
-        entries.Node("address_1", entries.Safe("safe_address_1", "10", "1", ["owner_1"])),
-        entries.Node(
-            "address_2",
-            entries.Safe("safe_address_2", "10", "2", ["owner_1", "owner_2"]),
-        ),
-        entries.Node("address_3", entries.Safe("safe_address_3", None, "3", ["owner_3"])),
-    ]
-
-    Utils.associateEntitiesToNodes(balances, nodes)
-
-    assert balances[0].linked_safes == {"safe_address_1", "safe_address_2"}
-    assert balances[1].linked_safes == {"safe_address_2"}
 
 
 def test_allowManyNodePerSafe():
-    peer_1 = Peer("address_1", "v1.0.0")
-    peer_2 = Peer("address_2", "v1.1.0")
-    peer_3 = Peer("address_3", "v1.0.2")
-    peer_4 = Peer("address_4", "v1.0.0")
+    peer_1 = Peer("address_1")
+    peer_2 = Peer("address_2")
+    peer_3 = Peer("address_3")
+    peer_4 = Peer("address_4")
 
     peer_1.safe = entries.Safe("safe_address_1", "10", "1", [])
     peer_2.safe = entries.Safe("safe_address_2", "10", "1", [])

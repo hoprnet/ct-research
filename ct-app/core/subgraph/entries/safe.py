@@ -25,7 +25,6 @@ class Safe(SubgraphEntry):
             Balance(f"{allowance} wxHOPR") if allowance is not None else Balance.zero("wxHOPR")
         )
         self.owners = [owner.lower() for owner in owners if owner is not None]
-        self.additional_balance = Balance.zero("wxHOPR")
 
     @property
     def total_balance(self) -> Balance:

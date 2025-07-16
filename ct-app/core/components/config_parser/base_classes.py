@@ -45,7 +45,7 @@ class ExplicitParams:
             if is_dataclass(v):
                 result[f.name] = v.as_dict()
             else:
-                result[f.name] = f.type(v)
+                result[f.name] = f.type(v)  # ty: ignore[call-non-callable]
         return result
 
     @classmethod

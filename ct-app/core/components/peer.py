@@ -2,7 +2,6 @@ import asyncio
 import random
 from typing import Optional
 
-from packaging.version import Version
 from prometheus_client import Gauge
 
 from core.components.balance import Balance
@@ -26,15 +25,13 @@ class Peer:
     hosted by HOPR.
     """
 
-    def __init__(self, address: str, version: str):
+    def __init__(self, address: str):
         """
-        Create a new Peer with the specified address and version. The address refers to the native
+        Create a new Peer with the specified address. The address refers to the native
         address of a node.
         :param address: The peer's native address
-        :param version: The reported peer's version
         """
         self.address = Address(address)
-        self.version = version
 
         self.safe = None
         self._safe_address_count = None
@@ -44,30 +41,6 @@ class Peer:
 
         self.params = None
         self.running = False
-
-    def is_old(self, min_version: str | Version):
-        """
-        Check if the peer's version is older than the specified version.
-        :param min_version: The minimum version to check against.
-        """
-        if isinstance(min_version, str):
-            min_version = Version(min_version)
-
-        return self.version < min_version
-
-    @property
-    def version(self) -> Version:
-        return self._version
-
-    @version.setter
-    def version(self, value: str | Version):
-        if not isinstance(value, Version):
-            try:
-                value = Version(value)
-            except Exception:
-                value = Version("0.0.0")
-
-        self._version = value
 
     @property
     def channel_balance(self) -> Balance:

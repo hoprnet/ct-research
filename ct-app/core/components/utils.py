@@ -26,8 +26,6 @@ class Utils:
         topology: list,
         peers: list,
         nodes: list,
-        allocations: list,
-        eoa_balances: dict,
     ):
         def filter_func(item, true_value):
             if item is None:
@@ -45,34 +43,10 @@ class Utils:
 
             peer.safe = getattr(node, "safe", Safe.default())
 
-            for allocation in allocations:
-                if peer.safe.address in allocation.linked_safes:
-                    peer.safe.additional_balance += (
-                        allocation.unclaimed_amount / allocation.num_linked_safes
-                    )
-
-            for eoa_balance in eoa_balances:
-                if peer.safe.address in eoa_balance.linked_safes:
-                    peer.safe.additional_balance += (
-                        eoa_balance.balance / eoa_balance.num_linked_safes
-                    )
-
             if topo is not None:
                 peer.channel_balance = topo.channels_balance
             else:
                 peer.yearly_message_count = None
-
-    @classmethod
-    def associateEntitiesToNodes(cls, entities, nodes):
-        entity_addresses = [e.address for e in entities]
-        for n in nodes:
-            for owner in n.safe.owners:
-                try:
-                    index = entity_addresses.index(owner)
-                except ValueError:
-                    continue
-
-                entities[index].linked_safes.add(n.safe.address)
 
     @classmethod
     def allowManyNodePerSafe(cls, peers: list):
