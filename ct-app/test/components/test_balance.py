@@ -53,10 +53,6 @@ def test_addition():
     assert Balance("1.0 unit") + Balance("2.1 unit") == Balance("3.1 unit")
 
 
-def test_addition():
-    assert Balance("1.0 unit") + Balance("2.1 unit") == Balance("3.1 unit")
-
-
 def test_substraction():
     assert Balance("2.1 unit") - Balance("1.0 unit") == Balance("1.1 unit")
 

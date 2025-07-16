@@ -1,6 +1,6 @@
 from dataclasses import fields, is_dataclass
 from decimal import Decimal
-from typing import Optional, get_args, get_origin
+from typing import Optional
 
 from core.components.balance import Balance
 
