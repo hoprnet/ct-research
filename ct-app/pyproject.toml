@@ -15,6 +15,7 @@ members = [
     "core/components",
     "core/economic_model",
     "core/subgraph",
+    "core/rpc",
     "test" 
 ]
 

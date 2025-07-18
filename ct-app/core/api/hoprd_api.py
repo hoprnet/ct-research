@@ -4,6 +4,7 @@ import logging
 from typing import Optional
 
 import aiohttp
+
 from core.components.logs import configure_logging
 
 from . import request_objects as request
@@ -30,7 +31,7 @@ class HoprdAPI:
         self,
         method: HTTPMethod,
         endpoint: str,
-        data: request.ApiRequestObject = None,
+        data: Optional[request.ApiRequestObject] = None,
     ):
         if endpoint != "messages":
             logger.debug(
@@ -84,7 +85,7 @@ class HoprdAPI:
         self,
         method: HTTPMethod,
         endpoint: str,
-        data: request.ApiRequestObject = None,
+        data: Optional[request.ApiRequestObject] = None,
         timeout: int = 60,
     ) -> tuple[bool, Optional[object]]:
         backoff = 0.5
@@ -173,7 +174,7 @@ class HoprdAPI:
         )
         return is_ok
 
-    async def channels(self) -> response.Channels:
+    async def channels(self) -> Optional[response.Channels]:
         """
         Returns all channels.
         :return: channels: list
@@ -295,4 +296,5 @@ class HoprdAPI:
         except Exception:
             return False
         else:
+            return resp.status == target
             return resp.status == target

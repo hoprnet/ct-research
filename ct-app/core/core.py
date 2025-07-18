@@ -2,16 +2,28 @@
 import logging
 import random
 
-from core.components.logs import configure_logging
-from core.subgraph import GraphQLProvider
 from prometheus_client import Gauge
+
+from core.components.logs import configure_logging
+from core.rpc.providers import (
+    GnosisDistributor,
+    HOPRBalance,
+    MainnetDistributor,
+    wxHOPRBalance,
+    xHOPRBalance,
+)
+from core.subgraph import GraphQLProvider
 
 from .api import HoprdAPI
 from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
 from .components.decorators import flagguard, formalin, master
+from .components.logs import configure_logging
 from .economic_model import EconomicModelTypes
 from .node import Node
-from .subgraph import URL, Type, entries
+from .rpc import entries as rpc_entries
+from .subgraph import URL, GraphQLProvider
+from .subgraph import Type as SubgraphType
+from .subgraph import entries as subgraph_entries
 
 # endregion
 
@@ -26,9 +38,13 @@ REDEEMED_REWARDS = Gauge("ct_redeemed_rewards", "Redeemed rewards", ["address"])
 STAKE = Gauge("ct_peer_stake", "Stake", ["safe", "type"])
 SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
 TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
-TOTAL_FUNDING = Gauge("ct_total_funding", "Total funding")
 UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers", ["type"])
 # endregion
+
+# FIXME: update the RPC URLs to use environment variables or a config file
+GNOSIS_RPC_URL: str = "https://gnosis-rpc.publicnode.com"
+MAINNET_RPC_URL: str = "https://ethereum-rpc.publicnode.com"
+
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -48,21 +64,30 @@ class Core:
             node.params = params
 
         self.all_peers = LockedVar("all_peers", set[Peer]())
-        self.topology_data = list[entries.Topology]()
-        self.registered_nodes_data = list[entries.Node]()
+        self.topology_data = list[subgraph_entries.Topology]()
+        self.registered_nodes_data = list[subgraph_entries.Node]()
         self.nft_holders_data = list[str]()
-        self.allocations_data = list[entries.Allocation]()
-        self.eoa_balances_data = list[entries.Balance]()
+        self.allocations_data = list[rpc_entries.Allocation]()
+        self.eoa_balances_data = list[rpc_entries.ExternalBalance]()
         self.peers_rewards_data = dict[str, float]()
+        self.ticket_price = None
 
         self.models = {
-            m: m.model.fromParameters(getattr(self.params.economicModel, m.value))
+            m: m.model.fromParameters(
+                getattr(self.params.economicModel, m.value))
             for m in EconomicModelTypes
         }
 
-        self.providers: dict[Type, GraphQLProvider] = {
-            s: s.provider(URL(self.params.subgraph, s.value)) for s in Type
+        # Initialize the subgraph providers
+        self.graphql_providers: dict[SubgraphType, GraphQLProvider] = {
+            s: s.provider(URL(self.params.subgraph, s.value))
+            for s in SubgraphType
         }
+
+        # Initialize the RPC providers
+        # self.rpc_providers: dict[RPCType, RPCQueryProvider] = {
+        #     s: s.provider(self.params.rpc[s.value]) for s in RPCType
+        # }
 
         self.running = False
 
@@ -84,7 +109,7 @@ class Core:
         Checks the subgraph URLs and sets the subgraph mode in use (default, backup or none).
         """
         logger.info("Rotating subgraphs")
-        for provider in self.providers.values():
+        for provider in self.graphql_providers.values():
             await provider.test(self.params.subgraph.type)
 
     @master(flagguard, formalin)
@@ -98,7 +123,7 @@ class Core:
         async with self.all_peers as current_peers:
             visible_peers: set[Peer] = set()
             visible_peers.update(*[await node.peers.get() for node in self.nodes])
-            visible_peers = list(visible_peers)
+            visible_peers: list[Peer] = list(visible_peers)
 
             for peer in current_peers:
                 # if peer is still visible
@@ -142,11 +167,11 @@ class Core:
         Gets all registered nodes in the Network Registry.
         """
 
-        results = list[entries.Node]()
-        for safe in await self.providers[Type.SAFES].get():
+        results = list[subgraph_entries.Node]()
+        for safe in await self.graphql_providers[SubgraphType.SAFES].get():
             results.extend(
                 [
-                    entries.Node.fromSubgraphResult(node)
+                    subgraph_entries.Node.fromSubgraphResult(node)
                     for node in safe["registeredNodesInSafeRegistry"]
                 ]
             )
@@ -164,61 +189,45 @@ class Core:
         )
         SUBGRAPH_SIZE.set(len(results))
 
-    @master(flagguard, formalin)
-    async def nft_holders(self):
-        """
-        Gets all NFT holders.
-        """
-        results = list[str]()
-        for nft in await self.providers[Type.STAKING].get():
-            if owner := nft.get("owner", {}).get("id", None):
-                results.append(owner)
-
-        self.nft_holders_data = results
-        logger.debug("Fetched NFT holders", {"count": len(results)})
-        NFT_HOLDERS.set(len(results))
-
-    @master(flagguard, formalin)
+    @formalin
     async def allocations(self):
         """
         Gets all allocations for the investors.
         The amount per investor is then added to their stake before dividing it by the number of nodes they are running.
         """
-        results = list[entries.Allocation]()
-        for account in await self.providers[Type.MAINNET_ALLOCATIONS].get():
-            results.append(entries.Allocation(**account["account"]))
+        addresses: list[str] = self.params.investors.addresses
+        schedule: str = self.params.investors.schedule
 
-        for account in await self.providers[Type.GNOSIS_ALLOCATIONS].get():
-            results.append(entries.Allocation(**account["account"]))
+        gno_query_provider = GnosisDistributor(GNOSIS_RPC_URL)
+        eth_query_provider = MainnetDistributor(MAINNET_RPC_URL)
 
-        self.allocations_data = results
-        logger.debug("Fetched investors allocations", {"counts": len(results)})
+        futures = []
+        futures.extend([gno_query_provider.allocations(addr, schedule) for addr in addresses])
+        futures.extend([eth_query_provider.allocations(addr, schedule) for addr in addresses])
+
+        self.allocations_data = await AsyncLoop.gather_any(futures)
+
+        logger.debug("Fetched investors allocations", {"counts": len(self.allocations_data)})
 
     @master(flagguard, formalin)
     async def eoa_balances(self):
         """
         Gets the EOA balances on Gnosis and Mainnet for the investors.
         """
-        if len(self.allocations_data) == 0:
-            logger.info("No EOA address found for investors safes")
-            return
+        addresses: list[str] = self.params.investors.addresses
 
-        balances = {alloc.address: 0 for alloc in self.allocations_data}
+        hopr_contract_provider = HOPRBalance(MAINNET_RPC_URL)
+        xhopr_contract_provider = xHOPRBalance(GNOSIS_RPC_URL)
+        wxhopr_contract_provider = wxHOPRBalance(GNOSIS_RPC_URL)
 
-        for account in await self.providers[Type.MAINNET_BALANCES].get(
-            id_in=list(balances.keys())
-        ):
-            balances[account["id"].lower()] += float(account["totalBalance"]) / 1e18
+        futures = []
+        futures.extend([hopr_contract_provider.balance_of(addr) for addr in addresses])
+        futures.extend([xhopr_contract_provider.balance_of(addr) for addr in addresses])
+        futures.extend([wxhopr_contract_provider.balance_of(addr) for addr in addresses])
 
-        for account in await self.providers[Type.GNOSIS_BALANCES].get(
-            id_in=list(balances.keys())
-        ):
-            balances[account["id"].lower()] += float(account["totalBalance"]) / 1e18
+        self.eoa_balances_data = await AsyncLoop.gather_any(futures)
 
-        self.eoa_balances_data = [
-            entries.Balance(key, value) for key, value in balances.items()
-        ]
-        logger.debug("Fetched investors EOA balances", {"count": len(balances)})
+        logger.debug("Fetched investors EOA balances", {"count": len(self.eoa_balances_data)})
 
     @master(flagguard, formalin)
     async def topology(self):
@@ -233,7 +242,7 @@ class Core:
             return
 
         self.topology_data = [
-            entries.Topology.fromDict(*arg)
+            subgraph_entries.Topology(*arg)
             for arg in (await Utils.balanceInChannels(channels.all)).items()
         ]
 
@@ -325,8 +334,8 @@ class Core:
     @master(flagguard, formalin)
     async def peers_rewards(self):
         results = dict()
-        for acc in await self.providers[Type.REWARDS].get():
-            account = entries.Account.fromSubgraphResult(acc)
+        for acc in await self.graphql_providers[SubgraphType.REWARDS].get():
+            account = subgraph_entries.Account.fromSubgraphResult(acc)
             results[account.address] = account.redeemed_value
             REDEEMED_REWARDS.labels(account.address).set(account.redeemed_value)
 
@@ -347,27 +356,20 @@ class Core:
             for model in self.models.values():
                 model.budget.ticket_price = ticket_price.value
 
-    @master(flagguard, formalin)
-    async def safe_fundings(self):
+    async def get_nft_holders(self):
         """
-        Gets the total amount that was sent to CT safes.
+        Gets all NFT holders.
         """
-        addresses = list(
-            filter(
-                lambda x: x is not None,
-                {await node.safe_address for node in self.nodes},
-            )
-        )
+        with open(self.params.nft_holders.filepath, "r") as f:
+            data: list[str] = [line.strip() for line in f if line.strip()]
 
-        entries = await self.providers[Type.FUNDINGS].get(to_in=addresses)
+        if len(data) == 0:
+            logger.warning("No NFT holders data found")
 
-        amount = sum([float(item["amount"]) for item in entries])
+        self.nft_holders_data: list[str] = data
 
-        TOTAL_FUNDING.set(amount + self.params.fundings.constant)
-        logger.debug(
-            "Fetched all safe fund events",
-            {"amount": amount, "constant": self.params.fundings.constant},
-        )
+        logger.debug("Fetched NFT holders", {"count": len(self.nft_holders_data)})
+        NFT_HOLDERS.set(len(self.nft_holders_data))
 
     async def start(self):
         """
@@ -379,11 +381,13 @@ class Core:
             node.running = True
             await node._healthcheck()
             AsyncLoop.update(await node.tasks())
+            
+        await AsyncLoop.gather_any([self.get_nft_holders()])
 
         self.running = True
 
         AsyncLoop.update(
-            [
+            set([
                 self.rotate_subgraphs,
                 self.peers_rewards,
                 self.ticket_parameters,
@@ -395,7 +399,7 @@ class Core:
                 self.eoa_balances,
                 self.apply_economic_model,
                 self.safe_fundings,
-            ]
+            ])
         )
 
         for node in self.nodes:
@@ -408,4 +412,5 @@ class Core:
         Stop the node.
         """
         logger.info("CTCore stopped")
+        self.running = False
         self.running = False
