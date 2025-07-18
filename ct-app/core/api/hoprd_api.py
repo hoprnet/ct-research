@@ -194,15 +194,10 @@ class HoprdAPI:
         """
         params = request.GetPeersBody(quality)
 
-        is_ok, resp = await self.__call_api(HTTPMethod.GET, f"node/peers?{params.as_header_string}")
-
-        if not is_ok:
+        if r := await self.request(HTTPMethod.GET, f"node/peers?{params.as_header_string}"):
+            return [resp.ConnectedPeer(peer) for peer in r.get(status, [])]
+        else:
             return []
-
-        if "connected" not in resp:
-            return []
-
-        return [response.ConnectedPeer(peer) for peer in resp["connected"]]
 
     async def get_address(self) -> Optional[response.Addresses]:
         """
