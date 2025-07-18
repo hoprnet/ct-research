@@ -1,4 +1,0 @@
-accounts(first: $first, skip: $skip, where: {id_in: $id_in}) {
-    id
-    totalBalance
-}

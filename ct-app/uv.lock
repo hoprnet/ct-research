@@ -7,6 +7,7 @@ members = [
     "core",
     "core-api",
     "core-components",
+    "core-rpc",
     "core-subgraph",
     "ct-app",
     "test",
@@ -180,6 +181,17 @@ requires-dist = [
     { name = "janus", specifier = "==2.0.0" },
     { name = "prometheus-client", specifier = "==0.21.1" },
 ]
+
+[[package]]
+name = "core-rpc"
+version = "1.0.1"
+source = { virtual = "core/rpc" }
+dependencies = [
+    { name = "aiohttp" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "aiohttp", specifier = ">=3.10.11" }]
 
 [[package]]
 name = "core-subgraph"

@@ -66,8 +66,8 @@ class AsyncLoop(metaclass=Singleton):
         await asyncio.gather(*cls().tasks)
 
     @classmethod
-    async def gather_any(cls, futures: list[asyncio.Future]):
-        await asyncio.gather(*futures)
+    async def gather_any(cls, futures: list[asyncio.Future]) -> list:
+        return await asyncio.gather(*futures)
 
     @classmethod
     def stop(cls):

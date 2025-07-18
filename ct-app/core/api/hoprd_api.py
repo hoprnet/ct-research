@@ -222,7 +222,7 @@ class HoprdAPI:
         params = req.GetPeersBody(quality)
 
         if r := await self.request(HTTPMethod.GET, f"node/peers?{params.as_header_string}"):
-            return [resp.ConnectedPeer(peer) for peer in r.getattr(status, [])]
+            return [resp.ConnectedPeer(peer) for peer in r.get(status, [])]
         else:
             return []
 
