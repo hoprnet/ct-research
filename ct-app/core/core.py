@@ -73,16 +73,11 @@ class Core:
         # Initialize the subgraph providers
         user_id = self.params.subgraph.user_id
         api_key = self.params.subgraph.api_key
-
+        
         self.graphql_providers: dict[SubgraphType, GraphQLProvider] = {
             s: s.provider(URL(user_id, api_key, getattr(self.params.subgraph, s.value)))
             for s in SubgraphType
         }
-
-        # Initialize the RPC providers
-        # self.rpc_providers: dict[RPCType, RPCQueryProvider] = {
-        #     s: s.provider(self.params.rpc[s.value]) for s in RPCType
-        # }
 
         self.running = True
 

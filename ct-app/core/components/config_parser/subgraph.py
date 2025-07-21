@@ -12,7 +12,7 @@ class SubgraphEndpointParams(ExplicitParams):
 @dataclass(init=False)
 class SubgraphParams(ExplicitParams):
     type: str
-    user_id: int
+    user_id: str
     api_key: str
 
     safes_balance: SubgraphEndpointParams
