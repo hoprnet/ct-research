@@ -11,12 +11,17 @@ flags:
     connectedPeers: 30
     registeredNodes: 30
     topology: 30
-    allocations: 30
-    NFTHolders: 30
-    
-    applyEconomicModel: 30
 
-    fundings: 30
+    rotate_subgraphs: 30
+    open_sessions: 30
+
+    # through subgraph queries
+    peersRewards: 30
+    registeredNodes: 30
+
+    # through rpc calls
+    allocations: 30
+    eoaBalances: 30
     
   node:
     healthcheck: 10
@@ -112,8 +117,22 @@ sessions:
 # =============================================================================
 # 
 # =============================================================================
-fundings:
-  constant: 0
+investors:
+  schedule: 
+  addresses: []
+
+# =============================================================================
+# 
+# =============================================================================
+nftHolders:
+  filepath: ".configs/nft_holders.txt"
+
+# =============================================================================
+# 
+# =============================================================================
+rpc:
+  gnosis:   
+  mainnet: 
 
 # =============================================================================
 # 
@@ -122,28 +141,10 @@ subgraph:
   type: auto # auto | default | backup
   userID: 1000
 
-  mainnetAllocations:
-    queryID: ~
-    slug: hopr-allocations
-  gnosisAllocations:
-    queryID: ~
-    slug: hopr-allocations-gnosis
-  hoprOnMainnet:
-    queryID: ~
-    slug: hopr-on-mainnet
-  hoprOnGnosis:
-    queryID: ~
-    slug: hopr-on-gnosis
-  fundings:
-    queryID: ~
-    slug: subgraph-wxhopr-txs
   rewards:
     queryID: ~
     slug: rewards_backup_url
   safesBalance:
     queryID: query-id-safes
     slug: safes_backup_url
-  staking:
-    queryID: query-id-staking
-    slug: staking_backup_url
 ...
