@@ -92,7 +92,7 @@ class ExplicitParams:
             if not is_dataclass(field.type):
                 if not isinstance(field.type, type):
                     raise TypeError(
-                        f"Expected a dataclass for field {field.name}, got {type(field.type)}"
+                        f"Expected a dataclass for field {field.name}, got {field.type}"
                     )
             else:
                 field.type.verify(data.get(field.name, {}))
