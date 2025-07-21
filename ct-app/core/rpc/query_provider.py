@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import sys
 from pathlib import Path
@@ -39,24 +40,32 @@ class RPCQueryProvider:
         self.query["params"][0]["to"] = to
         self.query["params"][0]["data"] = data
 
-        try:
-            async with (
-                aiohttp.ClientSession() as session,
-                session.post(self.url, json=self.query) as response,
-            ):
-                return await response.json(), response.status
-        except TimeoutError as err:
-            logger.error("Timeout error", {"error": str(err)})
-        except Exception as err:
-            logger.error("Unknown error", {"error": str(err)})
-        return {}, {}
-
+        while True:
+            try:
+                async with (
+                    aiohttp.ClientSession() as session,
+                    session.post(self.url, json=self.query) as response,
+                ):
+                    return await response.json(), response.status
+            except TimeoutError as err:
+                logger.error("Timeout error", {"error": str(err)})
+                await asyncio.sleep(0.2)  # Retry after a short delay
+            except Exception as err:
+                logger.error("Unknown error", {"error": str(err)})
+                await asyncio.sleep(0.2)  # Retry after a short delay
+                
     #### PUBLIC METHODS ####
     def convert_result(self, result: dict, status: int) -> Any:
         return result
 
-    async def get(self, to: str, data: list[str]) -> Any:
-        return self.convert_result(*(await self._execute(to, data)))
+    async def get(self, to: str, data: list[str], timeout: int = 30) -> Any:
+        try:
+            res = await asyncio.wait_for(self._execute(to, data), timeout)
+        except asyncio.TimeoutError:
+            logger.error(f"Request to {self.url} timed out after {timeout} seconds")
+            return self.convert_result({}, 504)  # HTTP 504 Gateway Timeout
+        else:
+            return self.convert_result(*res)
 
 
 class ETHCallRPCProvider(RPCQueryProvider):
