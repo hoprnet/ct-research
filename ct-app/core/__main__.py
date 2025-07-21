@@ -23,7 +23,7 @@ def main(configfile: str):
 
     params = Parameters()
     params.parse(config, entrypoint=True)
-    params.from_env("SUBGRAPH", "PG")
+    params.from_env("SUBGRAPH", "PG", "RPC")
     params.overrides("OVERRIDE")
 
     # create the core and nodes instances
