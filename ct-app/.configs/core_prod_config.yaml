@@ -14,9 +14,11 @@ flags:
 
     openSessions: 60
 
+    # through subgraph queries
     peersRewards: 300
     registeredNodes: 300
 
+    # through rpc calls
     allocations: 300
     eoaBalances: 300
     
@@ -141,15 +143,17 @@ nft_holders:
 # =============================================================================
 # 
 # =============================================================================
+rpc:
+  gnosis: 
+  mainnet: 
+
+# =============================================================================
+# 
+# =============================================================================
 subgraph:
   type: auto # auto | default | backup
   userID: 78696
 
-  fundings:
-    queryID: EpAdSFzDLT7N5RhA3UxtqGUwkFxmMunSE2yGLb8juQjC
-    slug: subgraph-wxhopr-txs
-    inputs:
-      from: '0xd9a00176cf49dfb9ca3ef61805a2850f45cb1d05'
   rewards:
     queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
     slug: hopr-channels

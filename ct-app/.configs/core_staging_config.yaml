@@ -14,9 +14,11 @@ flags:
 
     openSessions: 60
 
+    # through subgraph queries
     peersRewards: 300
     registeredNodes: 300
 
+    # through rpc calls
     allocations: 300
     eoaBalances: 300
     
@@ -68,10 +70,9 @@ economicModel:
 
   sigmoid:
     proportion: 0
-
-    maxAPR: 0.0000001
-    networkCapacity: 100
-    totalTokenSupply: 5000
+    max_apr: 0.0000001
+    network_capacity: 100
+    total_token_supply: "5000 wxHOPR"
 
     offset: 10
     buckets:
@@ -122,7 +123,7 @@ sessions:
 # 
 # =============================================================================
 investors:
-  schedule: ""
+  schedule: 
   addresses: []
 
 # =============================================================================
@@ -130,6 +131,13 @@ investors:
 # =============================================================================
 nft_holders:
   filepath: ".configs/nft_holders.txt"
+
+# =============================================================================
+# 
+# =============================================================================
+rpc:
+  gnosis:   
+  mainnet: 
 
 # =============================================================================
 # 
