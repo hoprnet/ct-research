@@ -1,6 +1,7 @@
 # region Imports
 import logging
 import random
+from decimal import Decimal
 from typing import Callable
 
 from prometheus_client import Gauge
@@ -257,7 +258,7 @@ class Core:
             for p in peers:
                 if not p.is_eligible(
                     self.params.economic_model.min_safe_allowance,
-                    self.params.economic_model.legacy.coefficients.l,
+                    self.params.economic_model.legacy.coefficients.lowerbound,
                     self.ct_nodes_addresses,
                     self.nft_holders_data,
                     self.params.economic_model.nft_threshold,
@@ -271,13 +272,13 @@ class Core:
                 )
                 / self.params.economic_model.sigmoid.total_token_supply
             )
-            network_capacity = (
+            network_capacity = Decimal(
                 len([p for p in peers if p.yearly_message_count is not None])
                 / self.params.economic_model.sigmoid.network_capacity
             )
 
-            message_count = {model.__class__: 0 for model in self.params.economic_model.models}
-            model_input = {model.__class__: 0 for model in self.params.economic_model.models}
+            message_count = {model: 0 for model in self.params.economic_model.models}
+            model_input = {model: None for model in self.params.economic_model.models}
 
             model_input[SigmoidParams] = [economic_security, network_capacity]
 
@@ -288,15 +289,15 @@ class Core:
                 model_input[LegacyParams] = self.peers_rewards_data.get(peer.address.native, 0.0)
 
                 for model, name in self.params.economic_model.models.items():
-                    message_count[model.__class__] = model.yearly_message_count(
+                    message_count[model] = getattr(
+                        self.params.economic_model, name
+                    ).yearly_message_count(
                         peer.split_stake,
                         self.ticket_price,
-                        model_input[model.__class__],
+                        model_input[model],
                     )
 
-                    MESSAGE_COUNT.labels(peer.address.native, model.name).set(
-                        message_count[model.__class__]
-                    )
+                    MESSAGE_COUNT.labels(peer.address.native, name).set(message_count[model])
 
                 peer.yearly_message_count = sum(message_count.values())
 
