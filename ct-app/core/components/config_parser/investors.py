@@ -5,5 +5,5 @@ from .base_classes import ExplicitParams
 
 @dataclass(init=False)
 class InvestorsParams(ExplicitParams):
-    addresses: list[str]
+    addresses: list
     schedule: str
