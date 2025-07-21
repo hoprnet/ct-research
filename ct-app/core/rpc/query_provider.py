@@ -52,7 +52,7 @@ class RPCQueryProvider:
             except Exception as err:
                 logger.error("Unknown error", {"error": str(err)})
                 await asyncio.sleep(0.2)  # Retry after a short delay
-                
+
     #### PUBLIC METHODS ####
     def convert_result(self, result: dict, status: int) -> Any:
         return result
