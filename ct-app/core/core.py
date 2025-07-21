@@ -18,6 +18,7 @@ from .api import HoprdAPI
 from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
 from .components.decorators import flagguard, formalin, master
 from .components.logs import configure_logging
+from .components.parameters import Parameters
 from .economic_model import EconomicModelTypes
 from .node import Node
 from .rpc import entries as rpc_entries
@@ -65,18 +66,14 @@ class Core:
         self.allocations_data = list[rpc_entries.Allocation]()
         self.eoa_balances_data = list[rpc_entries.ExternalBalance]()
         self.peers_rewards_data = dict[str, float]()
-        self.ticket_price = None
 
         self.models = {
-            m: m.model.fromParameters(
-                getattr(self.params.economicModel, m.value))
+            m: m.model.fromParameters(getattr(self.params.economicModel, m.value))
             for m in EconomicModelTypes
         }
 
-        # Initialize the subgraph providers
         self.graphql_providers: dict[SubgraphType, GraphQLProvider] = {
-            s: s.provider(URL(self.params.subgraph, s.value))
-            for s in SubgraphType
+            s: s.provider(URL(self.params.subgraph, s.value)) for s in SubgraphType
         }
 
 
@@ -233,7 +230,7 @@ class Core:
             return
 
         self.topology_data = [
-            subgraph_entries.Topology(*arg)
+            subgraph_entries.Topology.fromDict(*arg)
             for arg in (await Utils.balanceInChannels(channels.all)).items()
         ]
 
@@ -351,7 +348,7 @@ class Core:
         """
         Gets all NFT holders.
         """
-        with open(self.params.nft_holders.filepath, "r") as f:
+        with open(self.params.nftHolders.filepath, "r") as f:
             data: list[str] = [line.strip() for line in f if line.strip()]
 
         if len(data) == 0:

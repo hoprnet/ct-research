@@ -10,7 +10,7 @@ flags:
     connectedPeers: 30
     topology: 30
 
-    rotateSubgraphs: 60
+    rotateSubgraphs: 300
 
     # through subgraph queries
     peersRewards: 300
@@ -133,7 +133,7 @@ investors:
 # =============================================================================
 # 
 # =============================================================================
-nft_holders:
+nftHolders:
   filepath: ".configs/nft_holders.txt"
 
 # =============================================================================

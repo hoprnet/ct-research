@@ -1,4 +1,3 @@
-from core.components.balance import Balance
 from core.rpc.entries import Allocation, ExternalBalance
 from core.rpc.providers import MainnetDistributor, wxHOPRBalance
 from core.rpc.query_provider import RPCQueryProvider
@@ -15,7 +14,7 @@ async def test_eoa_balance_provider():
     )
     assert isinstance(balance, ExternalBalance)
     assert balance is not None
-    assert balance.amount > Balance.zero(contract.symbol)
+    assert balance.amount > 0
 
 
 async def test_safe_balance_provider():
@@ -25,7 +24,7 @@ async def test_safe_balance_provider():
         address="0x530C90DE63BF1233f84179f312B4dC73727b9C1E",
     )
     assert balance is not None
-    assert balance.amount > Balance.zero(contract.symbol)
+    assert balance.amount > 0
 
 
 async def test_distributor_provider():
@@ -36,5 +35,5 @@ async def test_distributor_provider():
         schedule="Ecosystem-2022-02",
     )
     assert allocation is not None
-    assert allocation.amount > Balance.zero(contract.symbol)
-    assert allocation.claimed >= Balance.zero(contract.symbol)
+    assert allocation.amount > 0
+    assert allocation.claimed >= 0

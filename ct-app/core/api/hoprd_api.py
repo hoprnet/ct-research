@@ -15,7 +15,6 @@ MESSAGE_TAG = 0x1245
 
 configure_logging()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 class HoprdAPI:
@@ -180,8 +179,7 @@ class HoprdAPI:
         Returns all channels.
         :return: channels: list
         """
-        header = req.GetChannelsBody(True, False).as_header_string
-        return await self.request(HTTPMethod.GET, f"channels?{header}", resp_type=resp.Channels)
+        params = request.GetChannelsBody("true", "false")
 
         is_ok, resp = await self.__call_api(
             HTTPMethod.GET, f"channels?{params.as_header_string}"
@@ -218,7 +216,8 @@ class HoprdAPI:
         Returns the address of the node.
         :return: address: str | undefined
         """
-        return await self.request(HTTPMethod.GET, "account/addresses", resp_type=resp.Addresses)
+        is_ok, resp = await self.__call_api(HTTPMethod.GET, "account/addresses")
+        return response.Addresses(resp) if is_ok else None
 
     async def send_message(
         self, destination: str, message: str, hops: list[str], tag: int = MESSAGE_TAG

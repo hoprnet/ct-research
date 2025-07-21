@@ -2,7 +2,6 @@ import pytest
 
 from core.api.response_objects import Channel
 from core.components import Peer, Utils
-from core.components.balance import Balance
 from core.rpc import entries as rpc_entries
 from core.subgraph import entries as sg_entries
 
@@ -85,15 +84,15 @@ def test_nodesCredentials():
 @pytest.mark.asyncio
 async def test_mergeDataSources():
     topology_list = [
-        sg_entries.Topology("address_1", Balance("1 wxHOPR")),
-        sg_entries.Topology("address_2", Balance("2 wxHOPR")),
-        sg_entries.Topology(None, Balance("3 wxHOPR")),
-        sg_entries.Topology("address_4", Balance("4 wxHOPR")),
+        sg_entries.Topology("peer_id_1", "address_1", 1),
+        sg_entries.Topology("peer_id_2", "address_2", 2),
+        sg_entries.Topology(None, None, 3),
+        sg_entries.Topology("peer_id_4", "address_4", 4),
     ]
     peers_list = [
-        Peer("address_1", "1.0.0"),
-        Peer("address_2", "1.1.0"),
-        Peer("address_3", "1.0.2"),
+        Peer("peer_id_1", "address_1", "1.0.0"),
+        Peer("peer_id_2", "address_2", "1.1.0"),
+        Peer("peer_id_3", "address_3", "1.0.2"),
     ]
     nodes_list = [
         sg_entries.Node("address_1", sg_entries.Safe("safe_address_1", "10", "1", ["owner_1"])),
@@ -104,12 +103,8 @@ async def test_mergeDataSources():
         sg_entries.Node("address_3", sg_entries.Safe("safe_address_3", None, "3", ["owner_3"])),
     ]
     allocation_list = [
-        rpc_entries.Allocation(
-            "owner_1", "schedule", Balance("100 wxHOPR"), Balance.zero("wxHOPR")
-        ),
-        rpc_entries.Allocation(
-            "owner_2", "schedule", Balance("250 wxHOPR"), Balance.zero("wxHOPR")
-        ),
+        rpc_entries.Allocation("owner_1", "schedule", f"{100*1e18:.0f}", "0"),
+        rpc_entries.Allocation("owner_2", "schedule", f"{250*1e18:.0f}", "0"),
     ]
 
     allocation_list[0].linked_safes = ["safe_address_1", "safe_address_2"]
@@ -128,12 +123,8 @@ async def test_mergeDataSources():
 
 def test_associateEntitiesToNodes_with_allocations():
     allocations = [
-        rpc_entries.Allocation(
-            "owner_1", "schedule", Balance("100 wxHOPR"), Balance.zero("wxHOPR")
-        ),
-        rpc_entries.Allocation(
-            "owner_2", "schedule", Balance("250 wxHOPR"), Balance.zero("wxHOPR")
-        ),
+        rpc_entries.Allocation("owner_1", "schedule", f"{100*1e18:.0f}", "0"),
+        rpc_entries.Allocation("owner_2", "schedule", f"{250*1e18:.0f}", "0"),
     ]
     nodes = [
         sg_entries.Node("address_1", sg_entries.Safe("safe_address_1", "10", "1", ["owner_1"])),
@@ -152,8 +143,8 @@ def test_associateEntitiesToNodes_with_allocations():
 
 def test_associateEntitiesToNodes_with_balances():
     balances = [
-        rpc_entries.ExternalBalance("owner_1", Balance("100 wxHOPR")),
-        rpc_entries.ExternalBalance("owner_2", Balance("250 wxHOPR")),
+        rpc_entries.ExternalBalance("owner_1", f"{100*1e18:.0f}"),
+        rpc_entries.ExternalBalance("owner_2", f"{250*1e18:.0f}"),
     ]
     nodes = [
         sg_entries.Node("address_1", sg_entries.Safe("safe_address_1", "10", "1", ["owner_1"])),

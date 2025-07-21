@@ -5,7 +5,7 @@ from . import providers
 
 
 class Type(Enum):
-    SAFES = "safes_balance"
+    SAFES = "safesBalance"
     REWARDS = "rewards"
 
     @property

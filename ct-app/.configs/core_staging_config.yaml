@@ -10,7 +10,7 @@ flags:
     connectedPeers: 30
     topology: 30
 
-    rotateSubgraphs: 60
+    rotateSubgraphs: 300
 
     # through subgraph queries
     peersRewards: 300
@@ -67,9 +67,9 @@ economicModel:
 
   sigmoid:
     proportion: 0
-    max_apr: 0.0000001
-    network_capacity: 100
-    total_token_supply: "5000 wxHOPR"
+    maxAPR: 0.0000001
+    networkCapacity: 100
+    totalTokenSupply: 5000
 
     offset: 10
     buckets:
@@ -118,7 +118,7 @@ investors:
 # =============================================================================
 # 
 # =============================================================================
-nft_holders:
+nftHolders:
   filepath: ".configs/nft_holders.txt"
 
 # =============================================================================
