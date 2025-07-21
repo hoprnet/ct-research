@@ -79,10 +79,6 @@ class Core:
             for s in SubgraphType
         }
 
-        # Initialize the RPC providers
-        # self.rpc_providers: dict[RPCType, RPCQueryProvider] = {
-        #     s: s.provider(self.params.rpc[s.value]) for s in RPCType
-        # }
 
         self.running = False
 
