@@ -56,6 +56,9 @@ def test_parameter_as_dict():
 
     params = Parameters(config)
 
+    print(f"{params.as_dict()=}")
+    print(f"{config=}")
+
     assert params.as_dict() == config
 
 

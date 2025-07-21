@@ -12,13 +12,14 @@ flags:
     connected_peers: 30
     topology: 30
 
+    rotate_subgraphs: 60
     open_sessions: 60
 
-    rotate_subgraphs: 60
-
+    # through subgraph queries
     peers_rewards: 300
     registered_nodes: 300
-
+    
+    # through rpc calls
     allocations: 300
     eoa_balances: 300
     
@@ -36,10 +37,9 @@ flags:
 
     get_total_channel_funds: 300
 
-    close_sessions: 30
-
     observe_message_queue: On
-
+    close_sessions: 30
+  
   peer:
     message_relay_request: On
     
@@ -70,7 +70,6 @@ economic_model:
 
   sigmoid:
     proportion: 0
-
     max_apr: 0.0000001
     network_capacity: 100
     total_token_supply: "5000 wxHOPR"
@@ -116,7 +115,7 @@ sessions:
 # 
 # =============================================================================
 investors:
-  schedule: "investor-node-remainder-2024-01
+  schedule: 
   addresses: []
 
 # =============================================================================
@@ -124,6 +123,13 @@ investors:
 # =============================================================================
 nft_holders:
   filepath: ".configs/nft_holders.json"
+
+# =============================================================================
+# 
+# =============================================================================
+rpc:
+  gnosis: https://gnosis-rpc.publicnode.com
+  mainnet: https://ethereum-rpc.publicnode.com
 
 # =============================================================================
 # 

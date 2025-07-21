@@ -43,11 +43,6 @@ TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
 UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers", ["type"])
 # endregion
 
-# FIXME: update the RPC URLs to use environment variables or a config file
-GNOSIS_RPC_URL: str = "https://gnosis-rpc.publicnode.com"
-MAINNET_RPC_URL: str = "https://ethereum-rpc.publicnode.com"
-
-
 configure_logging()
 logger = logging.getLogger(__name__)
 
@@ -199,8 +194,8 @@ class Core:
         addresses: list[str] = self.params.investors.addresses
         schedule: str = self.params.investors.schedule
 
-        gno_query_provider = GnosisDistributor(GNOSIS_RPC_URL)
-        eth_query_provider = MainnetDistributor(MAINNET_RPC_URL)
+        gno_query_provider = GnosisDistributor(self.params.rpc.gnosis)
+        eth_query_provider = MainnetDistributor(self.params.rpc.mainnet)
 
         futures = []
         futures.extend([gno_query_provider.allocations(addr, schedule) for addr in addresses])
@@ -217,9 +212,9 @@ class Core:
         """
         addresses: list[str] = self.params.investors.addresses
 
-        hopr_contract_provider = HOPRBalance(MAINNET_RPC_URL)
-        xhopr_contract_provider = xHOPRBalance(GNOSIS_RPC_URL)
-        wxhopr_contract_provider = wxHOPRBalance(GNOSIS_RPC_URL)
+        hopr_contract_provider = HOPRBalance(self.params.rpc.mainnet)
+        xhopr_contract_provider = xHOPRBalance(self.params.rpc.gnosis)
+        wxhopr_contract_provider = wxHOPRBalance(self.params.rpc.gnosis)
 
         futures = []
         futures.extend([hopr_contract_provider.balance_of(addr) for addr in addresses])

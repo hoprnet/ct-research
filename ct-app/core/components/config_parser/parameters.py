@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from core.components.config_parser.rpc import RPCParams
+
 from .base_classes import ExplicitParams
 from .channel import ChannelParams
 from .economic_model import EconomicModelParams
@@ -21,4 +23,5 @@ class Parameters(ExplicitParams):
     channel: ChannelParams
     investors: InvestorsParams
     nft_holders: NFTHoldersParams
+    rpc: RPCParams
     subgraph: SubgraphParams
