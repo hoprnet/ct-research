@@ -34,7 +34,6 @@ MESSAGE_COUNT = Gauge(
     "ct_message_count", "messages one should receive / year", ["address", "model"]
 )
 NFT_HOLDERS = Gauge("ct_nft_holders", "Number of nr-nft holders")
-PEER_VERSION = Gauge("ct_peer_version", "Peer version", ["address", "version"])
 REDEEMED_REWARDS = Gauge("ct_redeemed_rewards", "Redeemed rewards", ["address"])
 STAKE = Gauge("ct_peer_stake", "Stake", ["safe", "type"])
 SUBGRAPH_SIZE = Gauge("ct_subgraph_size", "Size of the subgraph")
@@ -125,11 +124,6 @@ class Core:
                         peer.start_async_processes()
                     counts["known"] += 1
 
-                    # update peer version if it has been succesfully retrieved
-                    new_version = visible_peers[visible_peers.index(peer)].version
-                    if new_version.major != 0:
-                        peer.version = new_version
-
                 # if peer is not visible anymore
                 else:
                     peer.yearly_message_count = None
@@ -149,9 +143,6 @@ class Core:
 
             for key, value in counts.items():
                 UNIQUE_PEERS.labels(key).set(value)
-
-            for peer in current_peers:
-                PEER_VERSION.labels(peer.address.native, str(peer.version)).set(1)
 
     @keepalive
     async def registered_nodes(self):

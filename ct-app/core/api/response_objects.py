@@ -113,7 +113,6 @@ class Infos(ApiResponseObject):
 class ConnectedPeer(ApiResponseObject):
     address: str = field()
     multiaddr: str = field()
-    version: str = field(metadata={"path": "reportedVersion"})
 
     def post_init(self):
         self.address = try_to_lower(self.address)

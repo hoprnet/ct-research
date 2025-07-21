@@ -2,43 +2,11 @@ import asyncio
 import random
 
 import pytest
+
 from core.components import MessageQueue, Peer
 from core.components.config_parser import Parameters
-from packaging.version import Version
 
 SECONDS_IN_YEAR = 365 * 24 * 60 * 60
-
-
-def test_peer_version():
-    peer = Peer("some_address", "0.0.1")
-
-    peer.version = "0.1.0-rc.1"
-    assert peer.is_old("0.1.0-rc.2")
-    assert peer.is_old(Version("0.1.0-rc.2"))
-
-    peer.version = "0.1.0-rc.1"
-    assert not peer.is_old("0.1.0-rc.0")
-    assert not peer.is_old(Version("0.1.0-rc.0"))
-
-    peer.version = "0.1.1"
-    assert not peer.is_old("0.1.0-rc.3")
-    assert not peer.is_old(Version("0.1.0-rc.3"))
-
-    peer.version = "0.1.0-rc.1"
-    assert not peer.is_old("0.1.0-rc.1")
-    assert not peer.is_old(Version("0.1.0-rc.1"))
-
-    peer.version = "2.0"
-    assert not peer.is_old("2.0")
-    assert not peer.is_old(Version("2.0"))
-
-    peer.version = "2.0"
-    assert peer.is_old("2.1")
-    assert peer.is_old(Version("2.1"))
-
-    peer.version = "2.0.7"
-    assert not peer.is_old("2.0.7")
-    assert not peer.is_old(Version("2.0.7"))
 
 
 @pytest.mark.asyncio
@@ -53,7 +21,7 @@ def test_peer_version():
     ],
 )
 async def test_request_relay(exc_time: int, min_range: float, max_range: float):
-    peers = {Peer(f"0x{num}", "2.1.0") for num in range(10)}
+    peers = {Peer(f"0x{num}") for num in range(10)}
 
     params = Parameters({"flags": {"peer": {"requestRelay": True}}})
 

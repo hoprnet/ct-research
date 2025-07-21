@@ -81,9 +81,9 @@ async def test_mergeDataSources():
         sg_entries.Topology("address_4", Balance("4 wxHOPR")),
     ]
     peers_list = [
-        Peer("address_1", "1.0.0"),
-        Peer("address_2", "1.1.0"),
-        Peer("address_3", "1.0.2"),
+        Peer("address_1"),
+        Peer("address_2"),
+        Peer("address_3"),
     ]
     nodes_list = [
         sg_entries.Node("address_1", sg_entries.Safe("safe_address_1", "10", "1", ["owner_1"])),
@@ -161,10 +161,10 @@ def test_associateEntitiesToNodes_with_balances():
 
 
 def test_allowManyNodePerSafe():
-    peer_1 = Peer("address_1", "v1.0.0")
-    peer_2 = Peer("address_2", "v1.1.0")
-    peer_3 = Peer("address_3", "v1.0.2")
-    peer_4 = Peer("address_4", "v1.0.0")
+    peer_1 = Peer("address_1")
+    peer_2 = Peer("address_2")
+    peer_3 = Peer("address_3")
+    peer_4 = Peer("address_4")
 
     peer_1.safe = sg_entries.Safe("safe_address_1", "10", "1", [])
     peer_2.safe = sg_entries.Safe("safe_address_2", "10", "1", [])

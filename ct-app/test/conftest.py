@@ -59,20 +59,17 @@ def economic_model() -> LegacyParams:
 @pytest.fixture
 def peers_raw() -> list[dict]:
     return [
-        {"address": "address_0", "reportedVersion": "2.0.0"},
-        {"address": "address_1", "reportedVersion": "2.7.0"},
-        {"address": "address_2", "reportedVersion": "2.0.8"},
-        {
-            "address": "address_3",
-            "reportedVersion": "2.1.0-rc.3",
-        },
-        {"address": "address_4", "reportedVersion": "2.0.9"},
+        {"address": "address_0"},
+        {"address": "address_1"},
+        {"address": "address_2"},
+        {"address": "address_3"},
+        {"address": "address_4"},
     ]
 
 
 @pytest.fixture
 def peers(peers_raw: list[dict]) -> set[Peer]:
-    peers = [Peer(peer["address"], peer["reportedVersion"]) for peer in peers_raw]
+    peers = [Peer(peer["address"]) for peer in peers_raw]
     for peer in peers:
         peer.safe_balance = Balance(f"{randint(100, 200)} wxHOPR")
         peer.channel_balance = Balance(f"{randint(10, 50)} wxHOPR")

@@ -154,11 +154,7 @@ class Node:
         out_opens = [c for c in self.channels.outgoing if not c.status.is_closed]
 
         addresses_with_channels = {c.destination for c in out_opens}
-        all_addresses = {
-            p.address.native
-            for p in await self.peers.get()
-            if not p.is_old(self.params.peer.min_version)
-        }
+        all_addresses = {p.address.native for p in await self.peers.get()}
         addresses_without_channels = all_addresses - addresses_with_channels
 
         logger.info(
@@ -319,8 +315,7 @@ class Node:
                 {"count": len(results), **self.log_base_params},
             )
 
-        peers = {Peer(item.address, item.version) for item in results}
-        peers = {p for p in peers if not p.is_old(self.params.peer.min_version)}
+        peers = {Peer(item.address) for item in results}
 
         addresses_w_timestamp = {p.address.native: datetime.now() for p in peers}
 
