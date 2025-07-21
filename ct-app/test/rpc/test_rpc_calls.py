@@ -1,11 +1,13 @@
 from core.rpc.entries import Allocation, ExternalBalance
 from core.rpc.providers import MainnetDistributor, wxHOPRBalance
 from core.rpc.query_provider import RPCQueryProvider
+import pytest
 
 GNOSIS_RPC_URL: str = "https://gnosis-rpc.publicnode.com"
 MAINNET_RPC_URL: str = "https://ethereum-rpc.publicnode.com"
 
 
+@pytest.mark.asyncio
 async def test_eoa_balance_provider():
     contract: RPCQueryProvider = wxHOPRBalance(GNOSIS_RPC_URL)
 
@@ -17,6 +19,7 @@ async def test_eoa_balance_provider():
     assert balance.amount > 0
 
 
+@pytest.mark.asyncio
 async def test_safe_balance_provider():
     contract: RPCQueryProvider = wxHOPRBalance(GNOSIS_RPC_URL)
 
@@ -27,6 +30,7 @@ async def test_safe_balance_provider():
     assert balance.amount > 0
 
 
+@pytest.mark.asyncio
 async def test_distributor_provider():
     contract: RPCQueryProvider = MainnetDistributor(MAINNET_RPC_URL)
 
