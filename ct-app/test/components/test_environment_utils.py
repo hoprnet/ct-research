@@ -1,6 +1,6 @@
-from test.components.utils import handle_envvars
-
 from core.components import EnvironmentUtils
+
+from .utils import handle_envvars
 
 
 def test_envvarWithPrefix():

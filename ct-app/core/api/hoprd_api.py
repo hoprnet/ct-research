@@ -14,6 +14,7 @@ from .protocol import Protocol
 
 configure_logging()
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class HoprdAPI:
@@ -196,7 +197,6 @@ class HoprdAPI:
         :return: channels: list
         """
         header = req.GetChannelsBody(True, False).as_header_string
-        print(f"{header=}")
         return await self.request(HTTPMethod.GET, f"channels?{header}", resp_type=resp.Channels)
 
     async def metrics(self) -> Optional[resp.Metrics]:
@@ -231,7 +231,7 @@ class HoprdAPI:
         Returns the address of the node.
         :return: address: Addresses | undefined
         """
-        return await self.request(HTTPMethod.GET, "account/address", resp_type=resp.Addresses)
+        return await self.request(HTTPMethod.GET, "account/addresses", resp_type=resp.Addresses)
 
     async def node_info(self) -> Optional[resp.Infos]:
         """
