@@ -14,10 +14,10 @@ from core.rpc.providers import (
 
 from .api import HoprdAPI
 from .components import Address, AsyncLoop, LockedVar, Peer, Utils
-from .components.balance import Balance
-from .components.config_parser import LegacyParams, Parameters, SigmoidParams
-from .components.decorators import keepalive
+from .components.decorators import flagguard, formalin, master
 from .components.logs import configure_logging
+from .components.parameters import Parameters
+from .economic_model import EconomicModelTypes
 from .node import Node
 from .rpc import entries as rpc_entries
 from .subgraph import URL, GraphQLProvider
@@ -66,15 +66,14 @@ class Core:
         self.allocations_data = list[rpc_entries.Allocation]()
         self.eoa_balances_data = list[rpc_entries.ExternalBalance]()
         self.peers_rewards_data = dict[str, float]()
-        self.ticket_price = None
 
-        # Initialize the subgraph providers
-        user_id = self.params.subgraph.user_id
-        api_key = self.params.subgraph.api_key
-        
+        self.models = {
+            m: m.model.fromParameters(getattr(self.params.economicModel, m.value))
+            for m in EconomicModelTypes
+        }
+
         self.graphql_providers: dict[SubgraphType, GraphQLProvider] = {
-            s: s.provider(URL(user_id, api_key, getattr(self.params.subgraph, s.value)))
-            for s in SubgraphType
+            s: s.provider(URL(self.params.subgraph, s.value)) for s in SubgraphType
         }
 
         self.running = True
@@ -113,7 +112,7 @@ class Core:
         async with self.all_peers as current_peers:
             visible_peers: set[Peer] = set()
             visible_peers.update(*[await node.peers.get() for node in self.nodes])
-            visible_peers = list(visible_peers)
+            visible_peers: list[Peer] = list(visible_peers)
 
             for peer in current_peers:
                 # if peer is still visible
@@ -175,7 +174,7 @@ class Core:
         logger.debug("Fetched registered nodes in the safe registry", {"count": len(results)})
         SUBGRAPH_SIZE.set(len(results))
 
-    @keepalive
+    @master(flagguard, formalin)
     async def allocations(self):
         """
         Gets all allocations for the investors.
@@ -229,8 +228,8 @@ class Core:
             return
 
         self.topology_data = [
-            subgraph_entries.Topology(address, balance)
-            for address, balance in (await Utils.balanceInChannels(channels.all)).items()
+            subgraph_entries.Topology.fromDict(*arg)
+            for arg in (await Utils.balanceInChannels(channels.all)).items()
         ]
 
         logger.debug("Fetched all topology links", {"count": len(self.topology_data)})
@@ -332,7 +331,7 @@ class Core:
             for model in self.models.values():
                 model.budget.ticket_price = ticket_price.value
 
-    @keepalive
+    @master(flagguard, formalin)
     async def open_sessions(self):
         """
         Opens sessions for all eligible peers.
@@ -354,7 +353,7 @@ class Core:
         """
         Gets all NFT holders.
         """
-        with open(self.params.nft_holders.filepath, "r") as f:
+        with open(self.params.nftHolders.filepath, "r") as f:
             data: list[str] = [line.strip() for line in f if line.strip()]
 
         if len(data) == 0:

@@ -5,7 +5,6 @@ from typing import Any
 
 import aiohttp
 
-from core.components.balance import Balance
 from core.components.logs import configure_logging
 from core.rpc.entries.external_balance import ExternalBalance
 
@@ -85,7 +84,7 @@ class BalanceProvider(ETHCallRPCProvider):
             data="0x70a08231" + address.lower().replace("0x", "").rjust(BLOCK_SIZE, "0"),
         )
         try:
-            balance = Balance(f"{int(result, 16)} wei {self.symbol}")
+            balance = str(int(result, 16))
         except ValueError as e:
             logger.error("Failed to parse balance", {"address": address, "error": str(e)})
             raise ProviderError(f"Invalid balance format for address {address}: {result}")
@@ -115,6 +114,6 @@ class DistributorProvider(ETHCallRPCProvider):
         return Allocation(
             address,
             schedule,
-            Balance(f"{int(blocks[0], 16)} wei {self.symbol}"),
-            Balance(f"{int(blocks[1], 16)} wei {self.symbol}"),
+            str(int(blocks[0], 16)),
+            str(int(blocks[1], 16)),
         )

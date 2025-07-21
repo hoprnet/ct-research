@@ -20,12 +20,13 @@ def main(configfile: str):
     with open(configfile, "r") as file:
         config = yaml.safe_load(file)
 
-    params = Parameters(config)
+    params = Parameters()
+    params.parse(config, entrypoint=True)
     logger.debug("Safe parameters loaded", {"params": str(params)})
 
-    params.subgraph.set_attribute_from_env("api_key", "SUBGRAPH_API_KEY")
-    params.rpc.set_attribute_from_env("gnosis", "RPC_GNOSIS")
-    params.rpc.set_attribute_from_env("mainnet", "RPC_MAINNET")
+    params.from_env("SUBGRAPH", "RPC")
+
+    logger.debug("All parameters loaded", {"params": str(params)})
 
     # create the core and nodes instances
     nodes = [Node(*pair) for pair in zip(*Utils.nodesCredentials("NODE_ADDRESS", "NODE_KEY"))]

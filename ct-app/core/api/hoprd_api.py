@@ -16,7 +16,6 @@ MESSAGE_TAG = 0x1245
 
 configure_logging()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 class HoprdAPI:
@@ -33,7 +32,7 @@ class HoprdAPI:
         self,
         method: HTTPMethod,
         endpoint: str,
-        data: request.ApiRequestObject = None,
+        data: Optional[request.ApiRequestObject] = None,
     ):
         if endpoint != "messages":
             logger.debug(
@@ -87,7 +86,7 @@ class HoprdAPI:
         self,
         method: HTTPMethod,
         endpoint: str,
-        data: request.ApiRequestObject = None,
+        data: Optional[request.ApiRequestObject] = None,
         timeout: int = 60,
     ) -> tuple[bool, Optional[object]]:
         backoff = 0.5
@@ -172,13 +171,12 @@ class HoprdAPI:
         is_ok, _ = await self.__call_api(HTTPMethod.DELETE, f"channels/{channel_id}", timeout=90)
         return is_ok
 
-    async def channels(self) -> response.Channels:
+    async def channels(self) -> Optional[response.Channels]:
         """
         Returns all channels.
         :return: channels: list
         """
-        header = req.GetChannelsBody(True, False).as_header_string
-        return await self.request(HTTPMethod.GET, f"channels?{header}", resp_type=resp.Channels)
+        params = request.GetChannelsBody("true", "false")
 
         is_ok, resp = await self.__call_api(HTTPMethod.GET, f"channels?{params.as_header_string}")
         return response.Channels(resp) if is_ok else None
@@ -196,17 +194,23 @@ class HoprdAPI:
         """
         params = request.GetPeersBody(quality)
 
-        if r := await self.request(HTTPMethod.GET, f"node/peers?{params.as_header_string}"):
-            return [resp.ConnectedPeer(peer) for peer in r.get(status, [])]
-        else:
+        is_ok, resp = await self.__call_api(HTTPMethod.GET, f"node/peers?{params.as_header_string}")
+
+        if not is_ok:
             return []
+
+        if "connected" not in resp:
+            return []
+
+        return [response.ConnectedPeer(peer) for peer in resp["connected"]]
 
     async def get_address(self) -> Optional[response.Addresses]:
         """
         Returns the address of the node.
         :return: address: str | undefined
         """
-        return await self.request(HTTPMethod.GET, "account/addresses", resp_type=resp.Addresses)
+        is_ok, resp = await self.__call_api(HTTPMethod.GET, "account/addresses")
+        return response.Addresses(resp) if is_ok else None
 
     async def node_info(self) -> Optional[response.Infos]:
         """

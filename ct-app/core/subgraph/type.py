@@ -5,7 +5,7 @@ from .graphql_provider import GraphQLProvider
 
 
 class Type(Enum):
-    SAFES = "safes_balance"
+    SAFES = "safesBalance"
     REWARDS = "rewards"
 
     @property

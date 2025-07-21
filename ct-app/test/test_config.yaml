@@ -12,8 +12,8 @@ flags:
     registeredNodes: 30
     topology: 30
 
-    rotate_subgraphs: 30
-    open_sessions: 30
+    rotateSubgraphs: 30
+    openSessions: 30
 
     # through subgraph queries
     peersRewards: 30

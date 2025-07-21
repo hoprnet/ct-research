@@ -12,6 +12,7 @@ flags:
     connectedPeers: 30
     topology: 30
 
+    rotateSubgraphs: 300
     openSessions: 60
 
     # through subgraph queries
@@ -137,7 +138,7 @@ investors:
 # =============================================================================
 # 
 # =============================================================================
-nft_holders:
+nftHolders:
   filepath: ".configs/nft_holders.txt"
 
 # =============================================================================
