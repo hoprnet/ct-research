@@ -91,11 +91,6 @@ To execute the module, create a bash script to specify a bunch of environment va
 
 Parameter | Recommanded value (staging)
 --|--
-`PGHOST` | (check Bitwarden)
-`PGPORT` | `5432`
-`PGUSER` | `ctdapp`
-`PGPASSWORD` | (check Bitwarden)
-`PGDATABASE` | `ctdapp` |
 `SUBGRAPH_DEPLOYER_KEY` | (check Bitwarden)
 `NODE_ADDRESS_X` (multiple, min. 2) | (check Bitwarden)
 `NODE_KEY_X` | (check Bitwarden)

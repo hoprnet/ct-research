@@ -193,13 +193,6 @@ async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
         params.parse(yaml.safe_load(file))
     setattr(params.subgraph, "apiKey", "foo_deployer_key")
 
-    setattr(params, "pg", Parameters())
-    setattr(params.pg, "user", "user")
-    setattr(params.pg, "password", "password")
-    setattr(params.pg, "host", "host")
-    setattr(params.pg, "port", "port")
-    setattr(params.pg, "database", "database")
-
     core = Core(nodes, params)
 
     for model in core.models.values():
