@@ -152,6 +152,7 @@ class Metrics(ApiMetricResponseObject):
     hopr_tickets_incoming_statistics: dict = field(metadata={"labels": ["statistic"]})
     hopr_packets_count: dict = field(metadata={"labels": ["type"]})
 
+
 class Channels:
     def __init__(self, data: dict):
         self.all = [Channel(c) for c in data.get("all", [])]
