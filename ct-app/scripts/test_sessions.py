@@ -9,7 +9,7 @@ from lib.state import State
 sys.path.insert(1, "./")
 
 from core.api.hoprd_api import HoprdAPI
-from core.api.response_objects import Metrics, Session, SessionFailure
+from core.api.response_objects import Session, SessionFailure
 from core.components.messages.message_format import MessageFormat
 from core.components.session_to_socket import SessionToSocket
 
