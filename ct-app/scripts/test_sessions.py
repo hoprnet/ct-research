@@ -9,7 +9,7 @@ from lib.state import State
 sys.path.insert(1, "./")
 
 from core.api.hoprd_api import HoprdAPI
-from core.api.response_objects import Session, SessionFailure
+from core.api.response_objects import Metrics, Session, SessionFailure
 from core.components.messages.message_format import MessageFormat
 from core.components.session_to_socket import SessionToSocket
 
@@ -37,7 +37,7 @@ class HOP:
 
     @property
     async def packet_count(self) -> dict:
-        return get_packet_counts_from_metrics(await self.api.metrics())
+        return (await self.api.metrics()).hopr_packets_count
 
     @property
     def api_host(self) -> str:
@@ -48,25 +48,6 @@ class HOP:
         if self._api is None:
             self._api = HoprdAPI(self.api_host, self.token)
         return self._api
-
-
-def get_packet_counts_from_metrics(metrics: str) -> dict:
-    """
-    Extract packet counts from metrics string.
-    """
-    if metrics is None:
-        return {}
-
-    hopr_packet_counts = [
-        line
-        for line in metrics.split("\n")
-        if "hopr_packets_count" in line and not line.startswith("#")
-    ]
-    packet_counts = {}
-    for line in hopr_packet_counts:
-        key, value = line.split(" ")
-        packet_counts[key] = int(value)
-    return packet_counts
 
 
 def packet_statistics(packet_counts_before: dict, packet_counts_after: dict):
@@ -80,7 +61,7 @@ def packet_statistics(packet_counts_before: dict, packet_counts_after: dict):
                 print(f"\t\tKey `{key}` not found in before metrics")
                 before[key] = 0
 
-            print(f"\t\t{key}: {value - before[key]:+d}")
+            print(f"\t\t{key}: {int(value - before[key]):+d}")
 
 
 def print_path(hops: list[str]):
@@ -95,7 +76,7 @@ def print_path(hops: list[str]):
 
 
 @click.command()
-@click.option("--num-sending", default=10, help="Number of packets to send in one session")
+@click.option("--num-sending", default=50, help="Number of packets to send in one session")
 @click.option(
     "--aggregated-messages",
     default=1,
@@ -107,11 +88,16 @@ async def main(
     aggregated_messages: int,
 ):
     path = [
-        HOP(host="http://0.0.0.0", port=3003, token="e2e-API-token^^"),
-        HOP(host="http://0.0.0.0", port=3018, token="e2e-API-token^^"),
-        HOP(host="http://0.0.0.0", port=3006, token="e2e-API-token^^"),
+        HOP(host="https://ctdapp-green-node-1.ctdapp.staging.hoprnet.link",
+            port=443, token="^f9pbS266TlcI2uHnPcBH6ouoYbE8ya8qlEVbKYQlF0fOjvkfQD^",
+            p2p_host="ctdapp-green-node-1-p2p.ctdapp.staging.hoprnet.link"),
+        HOP(host="https://ctdapp-green-node-2.ctdapp.staging.hoprnet.link",
+            port=443, token="^f9pbS266TlcI2uHnPcBH6ouoYbE8ya8qlEVbKYQlF0fOjvkfQD^",
+            p2p_host="ctdapp-green-node-2-p2p.ctdapp.staging.hoprnet.link"),
+        HOP(host="https://ctdapp-green-node-3.ctdapp.staging.hoprnet.link",
+            port=443, token="^f9pbS266TlcI2uHnPcBH6ouoYbE8ya8qlEVbKYQlF0fOjvkfQD^", 
+            p2p_host="ctdapp-green-node-3-p2p.ctdapp.staging.hoprnet.link"),
     ]
-
     # get node infos
     try:
         print_path([await hop.address for hop in path])
@@ -145,7 +131,7 @@ async def main(
             return
 
     for key, value in session.as_dict.items():
-        print(f"\t{key:10s}: {value:10s}")
+        print(f"\t{key:10s}: {str(value):10s}")
 
     packet_counts_before = {await hop.address: await hop.packet_count for hop in path}
 
@@ -155,7 +141,7 @@ async def main(
     recv_data = []
     for _ in range(num_sending):
         message = MessageFormat(
-            aggregated_messages * session.payload, await path[1].address, await path[0].address
+            await path[1].address, await path[0].address, aggregated_messages * session.payload
         )
 
         size = socket.send(message.bytes())
@@ -191,4 +177,5 @@ async def main(
 
 
 if __name__ == "__main__":
+    main()
     main()

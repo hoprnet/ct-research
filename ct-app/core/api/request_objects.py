@@ -30,7 +30,7 @@ class ApiRequestObject:
 @dataclass
 class OpenChannelBody(ApiRequestObject):
     amount: str = api_field()
-    peer_address: str = api_field("peerAddress")
+    destination: str = api_field()
 
 
 @dataclass
@@ -78,4 +78,4 @@ class SessionPathBodyRelayers(ApiRequestObject):
 
 @dataclass
 class SessionTargetBody(ApiRequestObject):
-    service: int = api_field("Service")
+    service: int = api_field("Service", 0)

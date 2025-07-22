@@ -264,8 +264,8 @@ class HoprdAPI:
         :param: protocol: Protocol
         :return: list[Session]
         """
-        if resp := await self.request(HTTPMethod.GET, f"session/{protocol.name.lower()}"):
-            return [resp.Session(s) for s in resp]
+        if r := await self.request(HTTPMethod.GET, f"session/{protocol.name.lower()}"):
+            return [resp.Session(s) for s in r]
         else:
             return []
 
