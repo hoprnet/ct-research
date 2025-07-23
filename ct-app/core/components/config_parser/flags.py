@@ -29,6 +29,7 @@ class FlagNodeParams(ExplicitParams):
     close_pending_channels: Flag
     close_incoming_channels: Flag
     get_total_channel_funds: Flag
+    observe_sockets: Flag
     observe_message_queue: Flag
     close_sessions: Flag
 

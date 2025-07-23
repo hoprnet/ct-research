@@ -4,11 +4,11 @@ import os
 import sys
 
 from dotenv import load_dotenv
-from lib.state import State
 
 sys.path.insert(1, "./")
 
 from core.api.hoprd_api import HoprdAPI
+from scripts.lib.state import State
 
 load_dotenv()
 

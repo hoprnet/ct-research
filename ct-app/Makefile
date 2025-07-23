@@ -8,9 +8,9 @@ endurance:
 
 .PHONY: fmt
 fmt:
-	@uvx black .
-	@uvx ruff check .
-	@uvx ty check .
+	@uvx black core scripts test
+	@uvx ruff check core scripts test
+	@uvx ty check core scripts test
 
 .PHONY: test
 test:

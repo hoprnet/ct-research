@@ -6,20 +6,18 @@ from datetime import datetime
 from typing import Callable, Optional
 
 from prometheus_client import Gauge
-from pytest import Session
-
-from core.components.asyncloop import AsyncLoop
-from core.components.balance import Balance
-from core.components.logs import configure_logging
-from core.components.pattern_matcher import PatternMatcher
 
 from .api import HoprdAPI, Protocol
 from .components import LockedVar, Peer, Utils
 from .components.address import Address
+from .components.asyncloop import AsyncLoop
+from .components.balance import Balance
 from .components.config_parser import Parameters
 from .components.decorators import connectguard, keepalive, master
+from .components.logs import configure_logging
 from .components.messages import MessageFormat, MessageQueue
 from .components.node_helper import NodeHelper
+from .components.pattern_matcher import PatternMatcher
 from .components.session_to_socket import SessionToSocket
 
 # endregion
@@ -404,9 +402,25 @@ class Node:
         message.sender = self.address.native
         message.packet_size = sess_and_socket.session.payload
 
-        for _ in range(self.params.sessions.batch_size):
-            AsyncLoop.add(sess_and_socket.send_and_receive, message, publish_to_task_set=False)
-            message.increase_inner_index()
+        AsyncLoop.add(
+            sess_and_socket.send,
+            message,
+            self.params.sessions.batch_size,
+            publish_to_task_set=False,
+        )
+
+    @master(keepalive, connectguard)
+    async def observe_sockets(self):
+        for sess_and_socket in self.session_management.values():
+            if sess_and_socket.socket is None:
+                continue
+
+            AsyncLoop.add(
+                sess_and_socket.receive,
+                sess_and_socket.session.payload,
+                2,
+                publish_to_task_set=False,
+            )
 
     @master(keepalive, connectguard)
     async def close_sessions(self):
@@ -434,7 +448,7 @@ class Node:
         Also, doesn't remove the session from the session_management dict.
         This method should run on startup to clean up any old sessions.
         """
-        active_sessions: list[Session] = await self.api.list_sessions(Protocol.UDP)
+        active_sessions = await self.api.list_sessions(Protocol.UDP)
 
         for session in active_sessions:
             AsyncLoop.add(
@@ -454,11 +468,9 @@ class Node:
 
         allowed_addressess = set([address.native for address in allowed_addresses])
         addresses_with_session = set(self.session_management.keys())
-        without_session_addresses = addresses_with_channels.intersection(
-            allowed_addressess - addresses_with_session
-        )
+        addresses_without_session = allowed_addressess - addresses_with_session
 
-        for address in without_session_addresses:
+        for address in addresses_without_session.intersection(addresses_with_channels):
             destination: Address = random.choice(list(set(destinations) - {self.address}))
 
             AsyncLoop.add(self.open_session, destination, address, publish_to_task_set=False)

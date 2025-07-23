@@ -50,7 +50,7 @@ class MessageFormat:
         return " ".join([f"{{{param}}}" for param in self.params])
 
     @classmethod
-    def parse(cls, input_string: str):
+    def parse(cls, input_string: str) -> "MessageFormat":
         if len(input_string) == 0:
             raise ValueError("Input string is empty")
 
@@ -60,7 +60,7 @@ class MessageFormat:
         if not match:
             raise ValueError(
                 f"Input string format is incorrect. `{input_string}`"
-                + "incompatible with format {cls.pattern()}"
+                + f"incompatible with format {cls.pattern()}"
             )
 
         return cls(*[match.group(param) for param in cls.params])

@@ -274,7 +274,6 @@ class HoprdAPI:
         destination: str,
         relayer: str,
         listen_host: str = ":0",
-        response_buffer: int = 0,  # MB,
         protocol: Protocol = Protocol.UDP,
     ) -> Union[resp.Session, resp.SessionFailure]:
         """
@@ -290,7 +289,6 @@ class HoprdAPI:
         )
         target_body = req.SessionTargetBody()
         path_body = req.SessionPathBodyRelayers([relayer])  # forward and return path
-        response_buffer_body = f"{response_buffer} MB"
 
         data = req.CreateSessionBody(
             capabilities_body.as_array,
@@ -298,7 +296,7 @@ class HoprdAPI:
             listen_host,
             path_body.as_dict,
             path_body.as_dict,
-            response_buffer_body,
+            "0 KB",
             target_body.as_dict,
         )
 

@@ -38,6 +38,7 @@ flags:
     get_total_channel_funds: 300
 
     observe_message_queue: On
+    observe_sockets: 30
     close_sessions: 30
 
   peer:
@@ -108,8 +109,8 @@ channel:
 # 
 # =============================================================================
 sessions:
-  aggregated_packets: 3
-  batch_size: 5
+  aggregated_packets: 1
+  batch_size: 1
 
 # =============================================================================
 # 

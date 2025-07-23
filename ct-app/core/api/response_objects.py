@@ -176,7 +176,7 @@ class Session(ApiResponseObject):
 
     @property
     def payload(self):
-        return self.mtu - SURB_SIZE
+        return self.mtu - 2 * SURB_SIZE
 
     @property
     def as_path(self):

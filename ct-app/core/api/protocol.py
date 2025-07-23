@@ -10,7 +10,7 @@ class ProtocolTemplate:
 
 class TCPProtocol(ProtocolTemplate):
     def __init__(self):
-        super().__init__(retransmit=True, segment=True, no_delay=True)
+        super().__init__(retransmit=False, segment=True, no_delay=True)
 
 
 class UDPProtocol(ProtocolTemplate):
