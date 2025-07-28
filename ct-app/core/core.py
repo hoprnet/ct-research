@@ -416,4 +416,3 @@ class Core:
         """
         logger.info("CTCore stopped")
         self.running = False
-        self.running = False

@@ -26,7 +26,6 @@ class RPCQueryProvider:
 
     def __init__(self, url: str):
         self.url = url
-        self.pwd = Path(sys.modules[self.__class__.__module__].__file__).parent
         self.query = {
             "jsonrpc": "2.0",
             "method": self.method,

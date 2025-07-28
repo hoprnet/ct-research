@@ -2,9 +2,10 @@
 import logging
 from datetime import datetime
 
+from prometheus_client import Gauge, Histogram
+
 from core.components.asyncloop import AsyncLoop
 from core.components.logs import configure_logging
-from prometheus_client import Gauge, Histogram
 
 from .api import HoprdAPI
 from .components import LockedVar, Parameters, Peer, Utils
@@ -474,4 +475,5 @@ class Node:
 
     @classmethod
     def fromCredentials(cls, addresses: list[str], keys: list[str]):
+        return [cls(address, key) for address, key in zip(addresses, keys)]
         return [cls(address, key) for address, key in zip(addresses, keys)]
