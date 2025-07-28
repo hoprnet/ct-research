@@ -186,12 +186,18 @@ class Core:
         eth_query_provider = MainnetDistributor(self.params.rpc.mainnet)
 
         futures = []
-        futures.extend([gno_query_provider.allocations(addr, schedule) for addr in addresses])
-        futures.extend([eth_query_provider.allocations(addr, schedule) for addr in addresses])
+        futures.extend(
+            [gno_query_provider.allocations(addr, schedule) for addr in addresses]
+        )
+        futures.extend(
+            [eth_query_provider.allocations(addr, schedule) for addr in addresses]
+        )
 
         self.allocations_data = await AsyncLoop.gather_any(futures)
 
-        logger.debug("Fetched investors allocations", {"counts": len(self.allocations_data)})
+        logger.debug(
+            "Fetched investors allocations", {"counts": len(self.allocations_data)}
+        )
 
     @master(flagguard, formalin)
     async def eoa_balances(self):
@@ -207,11 +213,15 @@ class Core:
         futures = []
         futures.extend([hopr_contract_provider.balance_of(addr) for addr in addresses])
         futures.extend([xhopr_contract_provider.balance_of(addr) for addr in addresses])
-        futures.extend([wxhopr_contract_provider.balance_of(addr) for addr in addresses])
+        futures.extend(
+            [wxhopr_contract_provider.balance_of(addr) for addr in addresses]
+        )
 
         self.eoa_balances_data = await AsyncLoop.gather_any(futures)
 
-        logger.debug("Fetched investors EOA balances", {"count": len(self.eoa_balances_data)})
+        logger.debug(
+            "Fetched investors EOA balances", {"count": len(self.eoa_balances_data)}
+        )
 
     @master(flagguard, formalin)
     async def topology(self):

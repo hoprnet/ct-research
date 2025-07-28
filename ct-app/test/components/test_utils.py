@@ -95,12 +95,16 @@ async def test_mergeDataSources():
         Peer("peer_id_3", "address_3", "1.0.2"),
     ]
     nodes_list = [
-        sg_entries.Node("address_1", sg_entries.Safe("safe_address_1", "10", "1", ["owner_1"])),
+        sg_entries.Node(
+            "address_1", sg_entries.Safe("safe_address_1", "10", "1", ["owner_1"])
+        ),
         sg_entries.Node(
             "address_2",
             sg_entries.Safe("safe_address_2", "10", "2", ["owner_1", "owner_2"]),
         ),
-        sg_entries.Node("address_3", sg_entries.Safe("safe_address_3", None, "3", ["owner_3"])),
+        sg_entries.Node(
+            "address_3", sg_entries.Safe("safe_address_3", None, "3", ["owner_3"])
+        ),
     ]
     allocation_list = [
         rpc_entries.Allocation("owner_1", "schedule", f"{100*1e18:.0f}", "0"),
@@ -127,12 +131,16 @@ def test_associateEntitiesToNodes_with_allocations():
         rpc_entries.Allocation("owner_2", "schedule", f"{250*1e18:.0f}", "0"),
     ]
     nodes = [
-        sg_entries.Node("address_1", sg_entries.Safe("safe_address_1", "10", "1", ["owner_1"])),
+        sg_entries.Node(
+            "address_1", sg_entries.Safe("safe_address_1", "10", "1", ["owner_1"])
+        ),
         sg_entries.Node(
             "address_2",
             sg_entries.Safe("safe_address_2", "10", "2", ["owner_1", "owner_2"]),
         ),
-        sg_entries.Node("address_3", sg_entries.Safe("safe_address_3", None, "3", ["owner_3"])),
+        sg_entries.Node(
+            "address_3", sg_entries.Safe("safe_address_3", None, "3", ["owner_3"])
+        ),
     ]
 
     Utils.associateEntitiesToNodes(allocations, nodes)
@@ -147,12 +155,16 @@ def test_associateEntitiesToNodes_with_balances():
         rpc_entries.ExternalBalance("owner_2", f"{250*1e18:.0f}"),
     ]
     nodes = [
-        sg_entries.Node("address_1", sg_entries.Safe("safe_address_1", "10", "1", ["owner_1"])),
+        sg_entries.Node(
+            "address_1", sg_entries.Safe("safe_address_1", "10", "1", ["owner_1"])
+        ),
         sg_entries.Node(
             "address_2",
             sg_entries.Safe("safe_address_2", "10", "2", ["owner_1", "owner_2"]),
         ),
-        sg_entries.Node("address_3", sg_entries.Safe("safe_address_3", None, "3", ["owner_3"])),
+        sg_entries.Node(
+            "address_3", sg_entries.Safe("safe_address_3", None, "3", ["owner_3"])
+        ),
     ]
 
     Utils.associateEntitiesToNodes(balances, nodes)
