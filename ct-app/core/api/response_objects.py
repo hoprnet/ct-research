@@ -51,7 +51,7 @@ class ApiResponseObject:
 
     @property
     def as_dict(self) -> dict:
-        return {key: getattr(self, key) for key in self.keys.keys()}
+        return {key: str(getattr(self, key)) for key in self.keys.keys()}
 
     def __str__(self):
         return str(self.__dict__)
@@ -60,9 +60,7 @@ class ApiResponseObject:
         return str(self)
 
     def __eq__(self, other):
-        return all(
-            getattr(self, key) == getattr(other, key) for key in self.keys.keys()
-        )
+        return all(getattr(self, key) == getattr(other, key) for key in self.keys.keys())
 
 
 class Addresses(ApiResponseObject):
@@ -130,14 +128,6 @@ class OpenedChannel(ApiResponseObject):
     keys = {"channel_id": "channelId", "receipt": "transactionReceipt"}
 
 
-class Message(ApiResponseObject):
-    keys = {"body": "body", "timestamp": "receivedAt"}
-
-
-class SendMessageAck(ApiResponseObject):
-    keys = {"timestamp": "timestamp"}
-
-
 class Channels:
     def __init__(self, data: dict):
         self.all = [Channel(channel) for channel in data.get("all", [])]
@@ -149,3 +139,16 @@ class Channels:
 
     def __repr__(self):
         return str(self)
+
+
+class Session(ApiResponseObject):
+    keys = {
+        "ip": "ip",
+        "port": "port",
+        "protocol": "protocol",
+        "target": "target",
+    }
+
+
+class SessionFailure(ApiResponseObject):
+    keys = {"status": "status", "error": "error"}

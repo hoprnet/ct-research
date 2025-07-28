@@ -25,6 +25,7 @@ from .subgraph import entries as subgraph_entries
 # endregion
 
 # region Metrics
+BALANCE_MULTIPLIER = Gauge("ct_balance_multiplier", "factor to multiply the balance by")
 ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
 MESSAGE_COUNT = Gauge(
     "ct_message_count", "messages one should receive / year", ["peer_id", "model"]
@@ -44,7 +45,8 @@ logger = logging.getLogger(__name__)
 
 class Core:
     """
-    The Core class represents the main class of the application. It is responsible for managing the nodes, the economic model and the distribution of rewards.
+    The Core class represents the main class of the application. It is responsible for managing
+    the nodes, the economic model and the distribution of rewards.
     """
 
     def __init__(self, nodes: list[Node], params: Parameters):
@@ -72,7 +74,9 @@ class Core:
             s: s.provider(URL(self.params.subgraph, s.value)) for s in SubgraphType
         }
 
-        self.running = False
+        self.running = True
+
+        BALANCE_MULTIPLIER.set(1e18)
 
     @property
     def api(self) -> HoprdAPI:
@@ -162,21 +166,18 @@ class Core:
         for node in results:
             STAKE.labels(node.safe.address, "balance").set(node.safe.balance)
             STAKE.labels(node.safe.address, "allowance").set(node.safe.allowance)
-            STAKE.labels(node.safe.address, "additional_balance").set(
-                node.safe.additional_balance
-            )
+            STAKE.labels(node.safe.address, "additional_balance").set(node.safe.additional_balance)
 
         self.registered_nodes_data = results
-        logger.debug(
-            "Fetched registered nodes in the safe registry", {"count": len(results)}
-        )
+        logger.debug("Fetched registered nodes in the safe registry", {"count": len(results)})
         SUBGRAPH_SIZE.set(len(results))
 
     @formalin
     async def allocations(self):
         """
         Gets all allocations for the investors.
-        The amount per investor is then added to their stake before dividing it by the number of nodes they are running.
+        The amount per investor is then added to their stake before dividing it by the number
+        of nodes they are running.
         """
         addresses: list[str] = self.params.investors.addresses
         schedule: str = self.params.investors.schedule
@@ -248,18 +249,12 @@ class Core:
         Applies the economic model to the eligible peers (after multiple filtering layers).
         """
         async with self.all_peers as peers:
-            if not all(
-                [len(self.topology_data), len(self.registered_nodes_data), len(peers)]
-            ):
+            if not all([len(self.topology_data), len(self.registered_nodes_data), len(peers)]):
                 logger.warning("Not enough data to apply economic model")
                 return
 
-            Utils.associateEntitiesToNodes(
-                self.allocations_data, self.registered_nodes_data
-            )
-            Utils.associateEntitiesToNodes(
-                self.eoa_balances_data, self.registered_nodes_data
-            )
+            Utils.associateEntitiesToNodes(self.allocations_data, self.registered_nodes_data)
+            Utils.associateEntitiesToNodes(self.eoa_balances_data, self.registered_nodes_data)
 
             await Utils.mergeDataSources(
                 self.topology_data,
@@ -282,9 +277,7 @@ class Core:
                     p.yearly_message_count = None
 
             economic_security = (
-                sum(
-                    [p.split_stake for p in peers if p.yearly_message_count is not None]
-                )
+                sum([p.split_stake for p in peers if p.yearly_message_count is not None])
                 / self.params.economicModel.sigmoid.totalTokenSupply
             )
             network_capacity = (
@@ -314,9 +307,7 @@ class Core:
                         model_input[model],
                     )
 
-                    MESSAGE_COUNT.labels(peer.address.hopr, model.name).set(
-                        message_count[model]
-                    )
+                    MESSAGE_COUNT.labels(peer.address.hopr, model.name).set(message_count[model])
 
                 peer.yearly_message_count = sum(message_count.values())
 
@@ -338,12 +329,11 @@ class Core:
     @master(flagguard, formalin)
     async def ticket_parameters(self):
         """
-        Gets the ticket price from the api. They are used in the economic model to calculate the number of messages to send to a peer.
+        Gets the ticket price from the api.
+        They are used in the economic model to calculate the number of messages to send to a peer.
         """
         ticket_price = await self.api.ticket_price()
-        logger.debug(
-            "Fetched ticket price", {"value": getattr(ticket_price, "value", None)}
-        )
+        logger.debug("Fetched ticket price", {"value": getattr(ticket_price, "value", None)})
 
         if ticket_price is not None:
             for model in self.models.values():
@@ -364,16 +354,32 @@ class Core:
         logger.debug("Fetched NFT holders", {"count": len(self.nft_holders_data)})
         NFT_HOLDERS.set(len(self.nft_holders_data))
 
+    @master(flagguard, formalin)
+    async def open_sessions(self):
+        """
+        Opens sessions for all eligible peers.
+        """
+        eligible_addresses = [
+            peer.address
+            for peer in await self.all_peers.get()
+            if peer.yearly_message_count is not None
+        ]
+
+        for node in self.nodes:
+            await node.open_sessions(eligible_addresses)
+
+    @property
+    def tasks(self):
+        return [getattr(self, method) for method in Utils.decorated_methods(__file__, "formalin")]
+
     async def start(self):
         """
         Start the node.
         """
         logger.info("CTCore started", {"num_nodes": len(self.nodes)})
 
-        for node in self.nodes:
-            node.running = True
-            await node._healthcheck()
-            AsyncLoop.update(await node.tasks())
+        await AsyncLoop.gather_any([node._healthcheck() for node in self.nodes])
+        await AsyncLoop.gather_any([node.close_all_sessions() for node in self.nodes])
 
         await AsyncLoop.gather_any([self.get_nft_holders()])
 

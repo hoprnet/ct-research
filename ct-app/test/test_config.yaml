@@ -40,6 +40,7 @@ flags:
     
     observeMessageQueue: On # should only be On / Off
     observeRelayedMessages: On # should only be On / Off
+    observeSessions: 60
 
   peer:
     messageRelayRequest: Off
