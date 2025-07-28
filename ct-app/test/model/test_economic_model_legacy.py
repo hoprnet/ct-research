@@ -1,5 +1,4 @@
 import pytest
-
 from core.economic_model import (
     Budget,
     Coefficients,
@@ -29,7 +28,9 @@ def test_transformed_stake(model: EconomicModelLegacy):
     assert model.transformed_stake(0) == 0
     assert model.transformed_stake(model.coefficients.l) == model.coefficients.l
     assert model.transformed_stake(model.coefficients.c) == model.coefficients.c
-    assert model.transformed_stake(model.coefficients.c * 2) < (model.coefficients.c * 2)
+    assert model.transformed_stake(model.coefficients.c * 2) < (
+        model.coefficients.c * 2
+    )
 
 
 def test_message_count_for_reward(model: EconomicModelLegacy):

@@ -14,7 +14,9 @@ class GetChannels(EnduranceTest):
     async def on_start(self):
         self.results = []
 
-        self.api = HoprdAPI(EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY"))
+        self.api = HoprdAPI(
+            EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY")
+        )
         self.recipient = await self.api.get_address()
         logger.info(f"Connected to node {self.recipient.hopr}")
 

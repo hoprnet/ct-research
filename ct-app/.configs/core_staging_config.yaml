@@ -2,8 +2,6 @@
 # =============================================================================
 # 
 # =============================================================================
-environment: staging
-
 flags:
   core: 
     applyEconomicModel: 30
@@ -11,8 +9,6 @@ flags:
 
     connectedPeers: 30
     topology: 30
-
-    openSessions: 60
 
     rotateSubgraphs: 300
 
@@ -38,9 +34,8 @@ flags:
 
     getTotalChannelFunds: 300
 
-    closeSessions: 30
-
     observeMessageQueue: On # should only be On / Off
+    observeRelayedMessages: 15
 
   peer:
     messageRelayRequest: On # should only be On / Off
@@ -54,7 +49,7 @@ economicModel:
 
   legacy:
     proportion: 1.0
-    apr: 0.000002
+    apr: 0.000001
 
     coefficients:
       a: 1
@@ -103,7 +98,7 @@ peer:
   # the queue size but also privacy as the load gets less spread over time. 
   # NOTE: Should be replaced by a dynamic approch, by setting the minimum delay
   # acceptable before increasing the batch size accordingly (auto-mode)
-  messageMultiplier: 1
+  messageMultiplier: 5 
 
 # =============================================================================
 # 
@@ -112,14 +107,6 @@ channel:
   minBalance: 0.05
   fundingAmount: 0.1
   maxAgeSeconds: 86400
-
-# =============================================================================
-# 
-# =============================================================================
-sessions:
-  packetSize: 452 # TODO 3.0: change to 762
-  aggregatedPackets: 3
-  batchSize: 5
 
 # =============================================================================
 # 

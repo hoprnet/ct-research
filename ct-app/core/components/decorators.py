@@ -47,7 +47,9 @@ def flagguard(func):
         func_name_clean = func.__name__.replace("_", "").lower()
 
         if not hasattr(self.params, "flags"):
-            logger.error("No class listed in config file as might contain long running tasks")
+            logger.error(
+                "No class listed in config file as might contain long running tasks"
+            )
             return
 
         if not hasattr(self.params.flags, self.__class__.__name__.lower()):
@@ -111,7 +113,9 @@ def formalin(func):
         if delay is False:
             delay = None
 
-        logger.debug("Running method continuously", {"method": func.__name__, "delay": delay})
+        logger.debug(
+            "Running method continuously", {"method": func.__name__, "delay": delay}
+        )
 
         while self.running:
             await func(self, *args, **kwargs)

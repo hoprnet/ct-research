@@ -35,7 +35,9 @@ class GraphQLProvider:
         self._initialize_query(self.query_file, self.params)
 
     #### PRIVATE METHODS ####
-    def _initialize_query(self, query_file: str, extra_inputs: Optional[list[str]] = None):
+    def _initialize_query(
+        self, query_file: str, extra_inputs: Optional[list[str]] = None
+    ):
         if extra_inputs is None:
             extra_inputs = []
 
@@ -66,12 +68,9 @@ class GraphQLProvider:
         :param variable_values: The variables to use in the query (dict)"""
 
         try:
-            async with (
-                aiohttp.ClientSession() as session,
-                session.post(
-                    self.url.url, json={"query": query, "variables": variable_values}
-                ) as response,
-            ):
+            async with aiohttp.ClientSession() as session, session.post(
+                self.url.url, json={"query": query, "variables": variable_values}
+            ) as response:
                 SUBGRAPH_CALLS.labels(self.url.params.slug, self.url.mode).inc()
                 return await response.json(), response.headers
         except TimeoutError as err:
@@ -99,7 +98,9 @@ class GraphQLProvider:
                     **kwargs,
                 },
             )
-            response, _ = await asyncio.wait_for(self._execute(self._sku_query, kwargs), timeout=30)
+            response, _ = await asyncio.wait_for(
+                self._execute(self._sku_query, kwargs), timeout=30
+            )
         except asyncio.TimeoutError:
             logger.error(
                 "Query timeout occurred",

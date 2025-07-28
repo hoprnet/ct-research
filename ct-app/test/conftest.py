@@ -50,7 +50,10 @@ class SideEffect:
     def generator_inbox_messages():
         # yields a list of 10 random characters repeated 2 to 10 times
         yield from repeat(
-            [choices("abcdefghijklmnopqrstuvwxyz ", k=10) for _ in range(randint(2, 10))]
+            [
+                choices("abcdefghijklmnopqrstuvwxyz ", k=10)
+                for _ in range(randint(2, 10))
+            ]
         )
 
     def send_message_success(self, *args, **kwargs):
@@ -101,7 +104,8 @@ def peers_raw() -> list[dict]:
 @pytest.fixture
 def peers(peers_raw: list[dict]) -> set[Peer]:
     peers = [
-        Peer(peer["peerId"], peer["peerAddress"], peer["reportedVersion"]) for peer in peers_raw
+        Peer(peer["peerId"], peer["peerAddress"], peer["reportedVersion"])
+        for peer in peers_raw
     ]
     for peer in peers:
         peer.safe_balance = randint(100, 200)
@@ -137,13 +141,17 @@ async def nodes(
         Node("localhost:9004", "random_key"),
     ]
     for idx, node in enumerate(nodes):
-        mocker.patch.object(node.api, "get_address", return_value=Addresses(addresses[idx]))
+        mocker.patch.object(
+            node.api, "get_address", return_value=Addresses(addresses[idx])
+        )
         mocker.patch.object(node.api, "channels", return_value=channels)
         mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
         mocker.patch.object(
             node.api,
             "peers",
-            return_value=[ConnectedPeer(peer) for peer in peers_raw[:idx] + peers_raw[idx + 1 :]],
+            return_value=[
+                ConnectedPeer(peer) for peer in peers_raw[:idx] + peers_raw[idx + 1 :]
+            ],
         )
 
         mocker.patch.object(node.api, "healthyz", return_value=True)

@@ -7,6 +7,7 @@ from prometheus_client import start_http_server
 from core.components.logs import configure_logging
 
 from .components import AsyncLoop, Parameters, Utils
+from .components.messages import MessageQueue
 from .core import Core
 from .node import Node
 
@@ -26,19 +27,23 @@ def main(configfile: str):
     params.overrides("OVERRIDE")
 
     # create the core and nodes instances
-    nodes = [Node(*pair) for pair in zip(*Utils.nodesCredentials("NODE_ADDRESS", "NODE_KEY"))]
+    nodes = Node.fromCredentials(*Utils.nodesCredentials("NODE_ADDRESS", "NODE_KEY"))
 
     # start the prometheus client
     try:
         start_http_server(8080)
     except Exception as err:
-        logger.exception("Could not start the prometheus client on port 8080", {"error": err})
+        logger.exception(
+            "Could not start the prometheus client on port 8080", {"error": err}
+        )
     else:
         logger.info("Prometheus client started on port 8080")
 
     core = Core(nodes, params)
 
     AsyncLoop.run(core.start, core.stop)
+
+    MessageQueue.clear()
 
 
 if __name__ == "__main__":

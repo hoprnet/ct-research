@@ -93,4 +93,6 @@ class EconomicModelLegacy:
         )
 
     def __repr__(self):
-        return f"EconomicModelLegacy({self.equations}, {self.coefficients}, {self.budget})"
+        return (
+            f"EconomicModelLegacy({self.equations}, {self.coefficients}, {self.budget})"
+        )

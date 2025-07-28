@@ -37,7 +37,9 @@ def test_init_class():
     for bucket in economic_model.buckets:
         assert bucket.flatness == config["sigmoid"]["buckets"][bucket.name]["flatness"]
         assert bucket.skewness == config["sigmoid"]["buckets"][bucket.name]["skewness"]
-        assert bucket.upperbound == config["sigmoid"]["buckets"][bucket.name]["upperbound"]
+        assert (
+            bucket.upperbound == config["sigmoid"]["buckets"][bucket.name]["upperbound"]
+        )
 
 
 def test_values_mid_range():
@@ -57,7 +59,9 @@ def test_values_mid_range():
 
 
 def test_value_above_mid_range():
-    assert EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)], 20.0, 1).apr([0.75]) == 0
+    assert (
+        EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)], 20.0, 1).apr([0.75]) == 0
+    )
 
 
 def test_value_below_mid_range():
@@ -67,13 +71,20 @@ def test_value_below_mid_range():
 def test_apr_composition():
     assert EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)], 20.0, 1).apr(
         [0.25]
-    ) == EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)] * 2, 20.0, 1).apr([0.25] * 2)
+    ) == EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 1)] * 2, 20.0, 1).apr(
+        [0.25] * 2
+    )
 
 
 def test_out_of_bounds_values():
-    assert EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 0.5, 0)], 20.0, 1).apr([0.5]) == 0
+    assert (
+        EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 0.5, 0)], 20.0, 1).apr([0.5])
+        == 0
+    )
 
-    assert EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 0.5, 0)], 20.0, 1).apr([0]) == 0
+    assert (
+        EconomicModelSigmoid(0, [Bucket("bucket", 1, 1, 0.5, 0)], 20.0, 1).apr([0]) == 0
+    )
 
 
 def test_bucket_apr():

@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from typing import Optional, Union
+from typing import Optional
 
 import aiohttp
 
@@ -10,7 +10,6 @@ from core.components.logs import configure_logging
 from . import request_objects as request
 from . import response_objects as response
 from .http_method import HTTPMethod
-from .protocol import Protocol
 
 MESSAGE_TAG = 0x1245
 
@@ -113,8 +112,8 @@ class HoprdAPI:
                 await asyncio.sleep(backoff)
 
             except asyncio.TimeoutError as err:
-                logger.error(
-                    "Timeout error while doing an API call",
+                logger.exception(
+                    "Timeout exception while doing an API call",
                     {
                         "error": str(err),
                         "host": self.host,
@@ -145,7 +144,9 @@ class HoprdAPI:
         """
         data = request.OpenChannelBody(amount, peer_address)
 
-        is_ok, resp = await self.__call_api(HTTPMethod.POST, "channels", data, timeout=90)
+        is_ok, resp = await self.__call_api(
+            HTTPMethod.POST, "channels", data, timeout=90
+        )
         return response.OpenedChannel(resp) if is_ok else None
 
     async def fund_channel(self, channel_id: str, amount: float) -> bool:
@@ -168,7 +169,9 @@ class HoprdAPI:
         :param: channel_id: str
         :return: bool
         """
-        is_ok, _ = await self.__call_api(HTTPMethod.DELETE, f"channels/{channel_id}", timeout=90)
+        is_ok, _ = await self.__call_api(
+            HTTPMethod.DELETE, f"channels/{channel_id}", timeout=90
+        )
         return is_ok
 
     async def channels(self) -> Optional[response.Channels]:
@@ -178,7 +181,9 @@ class HoprdAPI:
         """
         params = request.GetChannelsBody("true", "false")
 
-        is_ok, resp = await self.__call_api(HTTPMethod.GET, f"channels?{params.as_header_string}")
+        is_ok, resp = await self.__call_api(
+            HTTPMethod.GET, f"channels?{params.as_header_string}"
+        )
         return response.Channels(resp) if is_ok else None
 
     async def peers(
@@ -194,7 +199,9 @@ class HoprdAPI:
         """
         params = request.GetPeersBody(quality)
 
-        is_ok, resp = await self.__call_api(HTTPMethod.GET, f"node/peers?{params.as_header_string}")
+        is_ok, resp = await self.__call_api(
+            HTTPMethod.GET, f"node/peers?{params.as_header_string}"
+        )
 
         if not is_ok:
             return []
@@ -212,6 +219,21 @@ class HoprdAPI:
         is_ok, resp = await self.__call_api(HTTPMethod.GET, "account/addresses")
         return response.Addresses(resp) if is_ok else None
 
+    async def send_message(
+        self, destination: str, message: str, hops: list[str], tag: int = MESSAGE_TAG
+    ) -> Optional[response.SendMessageAck]:
+        """
+        Sends a message to the given destination.
+        :param: destination: str
+        :param: message: str
+        :param: hops: list[str]
+        :param: tag: int = 0x0320
+        :return: bool
+        """
+        data = request.SendMessageBody(message, hops, destination, tag)
+        is_ok, resp = await self.__call_api(HTTPMethod.POST, "messages", data=data)
+        return response.SendMessageAck(resp) if is_ok else None
+
     async def node_info(self) -> Optional[response.Infos]:
         """
         Gets informations about the HOPRd node.
@@ -226,78 +248,30 @@ class HoprdAPI:
         :return: TicketPrice
         """
         is_ok, resp = await self.__call_api(HTTPMethod.GET, "node/configuration")
-        price = (
+        return (
             response.TicketPrice(response.Configuration(json.loads(resp)).as_dict)
             if is_ok
             else None
         )
 
-        if price and price.value is not None:
-            return price
-
-        is_ok, resp = await self.__call_api(HTTPMethod.GET, "network/price")
-        return response.TicketPrice(resp) if is_ok else None
-
-    async def get_sessions(self, protocol: Protocol = Protocol.UDP) -> list[response.Session]:
+    async def messages_pop_all(self, tag: int = MESSAGE_TAG) -> list:
         """
-        Lists existing Session listeners for the given IP protocol
-        :param: protocol: Protocol
-        :return: list[Session]
+        Pop all messages from the inbox
+        :param: tag = 0x0320
+        :return: list
         """
-        is_ok, resp = await self.__call_api(HTTPMethod.GET, f"session/{protocol.name.lower()}")
-
-        return [response.Session(s) for s in resp] if is_ok else []
-
-    async def post_session(
-        self,
-        destination: str,
-        relayer: str,
-        listen_host: str = ":0",
-        protocol: Protocol = Protocol.UDP,
-    ) -> Union[response.Session, response.SessionFailure]:
-        """
-        Creates a new session returning the session listening host & port over TCP or UDP.
-        :param: destination: PeerID of the recipient
-        :param: relayer: PeerID of the relayer
-        :param: listen_host: str
-        :param: protocol: Protocol (UDP or TCP)
-        :return: Session
-        """
-        capabilities_body = request.SessionCapabilitiesBody(
-            protocol.retransmit, protocol.segment, protocol.no_delay
-        )
-        target_body = request.SessionTargetBody()
-        path_body = request.SessionPathBodyRelayers([relayer])
-
-        data = request.CreateSessionBody(
-            capabilities_body.as_array,
-            destination,
-            listen_host,
-            path_body.as_dict,
-            target_body.as_dict,
-        )
-
         is_ok, resp = await self.__call_api(
-            HTTPMethod.POST, f"session/{protocol.name.lower()}", data
+            HTTPMethod.POST, "messages/pop-all", data=request.PopMessagesBody(tag)
         )
-        if resp is None:
-            resp = {"error": "client error", "status": "CLIENT_ERROR"}
-        return response.Session(resp) if is_ok else response.SessionFailure(resp)
-
-    async def close_session(self, session: response.Session) -> bool:
-        """
-        Closes an existing Sessino listener for the given IP protocol, IP and port.
-        :param: session: Session
-        """
-        is_ok, _ = await self.__call_api(
-            HTTPMethod.DELETE, f"session/{session.protocol}/{session.ip}/{session.port}"
+        return (
+            [response.Message(item) for item in resp.get("messages", [])]
+            if is_ok
+            else []
         )
-
-        return is_ok
 
     async def healthyz(self, timeout: int = 20) -> bool:
         """
-        Checks if the node is healthy. Return True if `healthyz` returns 200 before timeout.
+        Checks if the node is healthy. Return True if `healthyz` returns 200 after max `timeout` seconds.
         """
         return await HoprdAPI.checkStatus(f"{self.host}/healthyz", 200, timeout)
 

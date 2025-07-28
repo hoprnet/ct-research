@@ -5,7 +5,9 @@ from typing import Any
 class EnvironmentUtils:
     @classmethod
     def envvarWithPrefix(cls, prefix: str, type=str) -> dict[str, Any]:
-        var_dict = {key: type(v) for key, v in os.environ.items() if key.startswith(prefix)}
+        var_dict = {
+            key: type(v) for key, v in os.environ.items() if key.startswith(prefix)
+        }
 
         return dict(sorted(var_dict.items()))
 

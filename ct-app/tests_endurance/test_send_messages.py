@@ -20,12 +20,16 @@ class SendMessages(EnduranceTest):
         self.results = []
         self.tag = random.randint(0, 2**16 - 1)
 
-        self.api = HoprdAPI(EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY"))
+        self.api = HoprdAPI(
+            EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY")
+        )
         self.recipient = await self.api.get_address()
 
         channels = await self.api.channels()
         open_channels = [
-            c for c in channels.all if c.source_peer_id == self.recipient.hopr and c.status.is_open
+            c
+            for c in channels.all
+            if c.source_peer_id == self.recipient.hopr and c.status.is_open
         ]
 
         if len(open_channels) == 0:
@@ -34,7 +38,9 @@ class SendMessages(EnduranceTest):
         selected_peer_id = EnvironmentUtils.envvar("RELAYER_PEER_ID")
 
         if selected_peer_id is not None:
-            channel = [c for c in open_channels if c.destination_peer_id == selected_peer_id][0]
+            channel = [
+                c for c in open_channels if c.destination_peer_id == selected_peer_id
+            ][0]
         else:
             channel = random.choice(open_channels)
 
