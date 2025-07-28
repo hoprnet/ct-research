@@ -4,6 +4,8 @@ import random
 
 from prometheus_client import Gauge
 
+from core.rpc.query_provider import ProviderError
+
 from .api import HoprdAPI
 from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
 from .components.decorators import flagguard, formalin, master
@@ -192,7 +194,11 @@ class Core:
             [eth_query_provider.allocations(addr, schedule) for addr in addresses]
         )
 
-        self.allocations_data = await AsyncLoop.gather_any(futures)
+        try:
+            self.allocations_data = await AsyncLoop.gather_any(futures)
+        except ProviderError:
+            logger.error("Error fetching investors allocations", exc_info=True)
+            self.allocations_data = []
 
         logger.debug(
             "Fetched investors allocations", {"counts": len(self.allocations_data)}
@@ -216,7 +222,11 @@ class Core:
             [wxhopr_contract_provider.balance_of(addr) for addr in addresses]
         )
 
-        self.eoa_balances_data = await AsyncLoop.gather_any(futures)
+        try:
+            self.eoa_balances_data = await AsyncLoop.gather_any(futures)
+        except ProviderError:
+            logger.error("Error fetching investors EOA balances", exc_info=True)
+            self.eoa_balances_data = []
 
         logger.debug(
             "Fetched investors EOA balances", {"count": len(self.eoa_balances_data)}
