@@ -388,11 +388,9 @@ class Core:
                     self.connected_peers,
                     self.registered_nodes,
                     self.topology,
-                    self.nft_holders,
                     self.allocations,
                     self.eoa_balances,
                     self.apply_economic_model,
-                    self.safe_fundings,
                 ]
             )
         )
