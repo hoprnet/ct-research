@@ -72,17 +72,13 @@ class ETHCallRPCProvider(RPCQueryProvider):
 
     def convert_result(self, result: dict, status: int) -> Any:
         if status != 200:
-            raise ProviderError(
-                f"Error fetching data: {result.get('error', 'Unknown error')}"
-            )
+            raise ProviderError(f"Error fetching data: {result.get('error', 'Unknown error')}")
 
         if "result" not in result:
             raise ProviderError("Invalid response format: 'result' key not found")
 
         if not isinstance(result["result"], str):
-            raise ProviderError(
-                "Invalid response format: 'result' should be a hex string"
-            )
+            raise ProviderError("Invalid response format: 'result' should be a hex string")
 
         return result["result"]
 
@@ -94,18 +90,13 @@ class BalanceProvider(ETHCallRPCProvider):
     async def balance_of(self, address: str) -> ExternalBalance:
         result = await self.get(
             to=self.token_contract,
-            data="0x70a08231"
-            + address.lower().replace("0x", "").rjust(BLOCK_SIZE, "0"),
+            data="0x70a08231" + address.lower().replace("0x", "").rjust(BLOCK_SIZE, "0"),
         )
         try:
             balance = str(int(result, 16))
         except ValueError as e:
-            logger.error(
-                "Failed to parse balance", {"address": address, "error": str(e)}
-            )
-            raise ProviderError(
-                f"Invalid balance format for address {address}: {result}"
-            )
+            logger.error("Failed to parse balance", {"address": address, "error": str(e)})
+            raise ProviderError(f"Invalid balance format for address {address}: {result}")
 
         return ExternalBalance(address, balance)
 
@@ -128,9 +119,7 @@ class DistributorProvider(ETHCallRPCProvider):
         )
 
         # split the result into 4 blocks of 64 charaters
-        blocks = [
-            result[2 + i * BLOCK_SIZE : 2 + (i + 1) * BLOCK_SIZE] for i in range(4)
-        ]
+        blocks = [result[2 + i * BLOCK_SIZE : 2 + (i + 1) * BLOCK_SIZE] for i in range(4)]
         return Allocation(
             address,
             schedule,
