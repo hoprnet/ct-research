@@ -31,3 +31,11 @@ lint = [
 
 [tool.uv]
 default-groups = "all"
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "module"
+minversion = "7.0"
+asyncio_mode = "auto"
+addopts = ["-ra", "-q"]
+log_cli_level = "INFO"
+log_cli = true

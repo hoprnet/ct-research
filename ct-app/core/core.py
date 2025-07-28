@@ -4,24 +4,20 @@ import random
 
 from prometheus_client import Gauge
 
-from core.components.logs import configure_logging
-from core.rpc.providers import (
+from .api import HoprdAPI
+from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
+from .components.decorators import flagguard, formalin, master
+from .components.logs import configure_logging
+from .economic_model import EconomicModelTypes
+from .node import Node
+from .rpc import entries as rpc_entries
+from .rpc.providers import (
     GnosisDistributor,
     HOPRBalance,
     MainnetDistributor,
     wxHOPRBalance,
     xHOPRBalance,
 )
-from core.subgraph import GraphQLProvider
-
-from .api import HoprdAPI
-from .components import Address, AsyncLoop, LockedVar, Parameters, Peer, Utils
-from .components.decorators import flagguard, formalin, master
-from .components.logs import configure_logging
-from .components.parameters import Parameters
-from .economic_model import EconomicModelTypes
-from .node import Node
-from .rpc import entries as rpc_entries
 from .subgraph import URL, GraphQLProvider
 from .subgraph import Type as SubgraphType
 from .subgraph import entries as subgraph_entries
@@ -75,7 +71,6 @@ class Core:
         self.graphql_providers: dict[SubgraphType, GraphQLProvider] = {
             s: s.provider(URL(self.params.subgraph, s.value)) for s in SubgraphType
         }
-
 
         self.running = False
 
@@ -190,12 +185,18 @@ class Core:
         eth_query_provider = MainnetDistributor(self.params.rpc.mainnet)
 
         futures = []
-        futures.extend([gno_query_provider.allocations(addr, schedule) for addr in addresses])
-        futures.extend([eth_query_provider.allocations(addr, schedule) for addr in addresses])
+        futures.extend(
+            [gno_query_provider.allocations(addr, schedule) for addr in addresses]
+        )
+        futures.extend(
+            [eth_query_provider.allocations(addr, schedule) for addr in addresses]
+        )
 
         self.allocations_data = await AsyncLoop.gather_any(futures)
 
-        logger.debug("Fetched investors allocations", {"counts": len(self.allocations_data)})
+        logger.debug(
+            "Fetched investors allocations", {"counts": len(self.allocations_data)}
+        )
 
     @master(flagguard, formalin)
     async def eoa_balances(self):
@@ -211,11 +212,15 @@ class Core:
         futures = []
         futures.extend([hopr_contract_provider.balance_of(addr) for addr in addresses])
         futures.extend([xhopr_contract_provider.balance_of(addr) for addr in addresses])
-        futures.extend([wxhopr_contract_provider.balance_of(addr) for addr in addresses])
+        futures.extend(
+            [wxhopr_contract_provider.balance_of(addr) for addr in addresses]
+        )
 
         self.eoa_balances_data = await AsyncLoop.gather_any(futures)
 
-        logger.debug("Fetched investors EOA balances", {"count": len(self.eoa_balances_data)})
+        logger.debug(
+            "Fetched investors EOA balances", {"count": len(self.eoa_balances_data)}
+        )
 
     @master(flagguard, formalin)
     async def topology(self):
@@ -369,25 +374,27 @@ class Core:
             node.running = True
             await node._healthcheck()
             AsyncLoop.update(await node.tasks())
-            
+
         await AsyncLoop.gather_any([self.get_nft_holders()])
 
         self.running = True
 
         AsyncLoop.update(
-            set([
-                self.rotate_subgraphs,
-                self.peers_rewards,
-                self.ticket_parameters,
-                self.connected_peers,
-                self.registered_nodes,
-                self.topology,
-                self.nft_holders,
-                self.allocations,
-                self.eoa_balances,
-                self.apply_economic_model,
-                self.safe_fundings,
-            ])
+            set(
+                [
+                    self.rotate_subgraphs,
+                    self.peers_rewards,
+                    self.ticket_parameters,
+                    self.connected_peers,
+                    self.registered_nodes,
+                    self.topology,
+                    self.nft_holders,
+                    self.allocations,
+                    self.eoa_balances,
+                    self.apply_economic_model,
+                    self.safe_fundings,
+                ]
+            )
         )
 
         for node in self.nodes:
