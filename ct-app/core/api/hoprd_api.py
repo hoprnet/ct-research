@@ -297,4 +297,3 @@ class HoprdAPI:
             return False
         else:
             return resp.status == target
-            return resp.status == target
