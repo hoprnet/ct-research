@@ -1,7 +1,7 @@
 from enum import Enum
+from typing import Callable
 
 from . import providers
-from .graphql_provider import GraphQLProvider
 
 
 class Type(Enum):
@@ -9,7 +9,7 @@ class Type(Enum):
     REWARDS = "rewards"
 
     @property
-    def provider(self) -> GraphQLProvider:
+    def provider(self) -> Callable:
         return {
             Type.SAFES: providers.Safes,
             Type.REWARDS: providers.Rewards,
