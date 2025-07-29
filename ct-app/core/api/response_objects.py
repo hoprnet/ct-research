@@ -114,8 +114,10 @@ class TicketPrice(ApiResponseObject):
     keys = {"value": "price"}
 
     def post_init(self):
-        if isinstance(self.value, str):
+        try:
             self.value = float(self.value) / 1e18
+        except (ValueError, TypeError):
+            self.value = None
 
 
 class Configuration(ApiResponseObject):
