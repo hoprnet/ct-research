@@ -476,4 +476,3 @@ class Node:
     @classmethod
     def fromCredentials(cls, addresses: list[str], keys: list[str]):
         return [cls(address, key) for address, key in zip(addresses, keys)]
-        return [cls(address, key) for address, key in zip(addresses, keys)]
