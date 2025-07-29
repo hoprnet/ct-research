@@ -8,19 +8,9 @@ class ProtocolTemplate:
         self.no_delay = no_delay
 
 
-class TCPProtocol(ProtocolTemplate):
-    def __init__(self):
-        super().__init__(retransmit=False, segment=True, no_delay=True)
-
-
-class UDPProtocol(ProtocolTemplate):
-    def __init__(self):
-        super().__init__(retransmit=False, segment=True, no_delay=True)
-
-
 class Protocol(Enum):
-    TCP = TCPProtocol()
-    UDP = UDPProtocol()
+    TCP = ProtocolTemplate(retransmit=False, segment=True, no_delay=False)
+    UDP = ProtocolTemplate(retransmit=False, segment=True, no_delay=False)
 
     @property
     def segment(self):

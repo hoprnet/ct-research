@@ -32,6 +32,12 @@ class Node:
 
     @property
     def host_root(self) -> str:
+        if "localhost" in self.host:
+            return f"localhost:{self.port}"
+            
+        if "127.0.0.1" in self.host:
+            return f"127.0.0.1:{self.port}"
+
         return self.host.split("//")[1].split(".")[0]
 
     @property
@@ -44,7 +50,7 @@ class Node:
             if addr := await self.api.address():
                 self._address = addr.native
             else:
-                raise ValueError("No address found for the HOP node")
+                raise ValueError(f"No address found for the HOP node: {self.host}:{self.port}")
         return self._address
 
     @property
@@ -77,13 +83,14 @@ async def only_send(
 
 
 @click.command()
-@click.option("--waves", default=10, help="Number of batches to send")
+@click.option("--waves", default=100, help="Number of batches to send")
 @click.option("--batch-size", default=1, help="Aggregated messages")
 @click.option("--timeout", default=1, help="Socket timeout")
+@click.option("--local", is_flag=True, help="Use local nodes instead of staging")
 @asynchronous
-async def main(waves: int, batch_size: int, timeout: int):
-    path: list[Node] = random.sample(
-        [
+async def main(waves: int, batch_size: int, timeout: int, local: bool):
+    if not local:
+        nodes = [
             Node(
                 host=f"https://ctdapp-green-node-{idx}.ctdapp.staging.hoprnet.link",
                 port=443,
@@ -91,9 +98,37 @@ async def main(waves: int, batch_size: int, timeout: int):
                 p2p_host=f"ctdapp-green-node-{idx}-p2p.ctdapp.staging.hoprnet.link",
             )
             for idx in range(1, 6)
-        ],
-        k=3,
-    )
+        ]
+    else:
+        nodes = [
+            Node(
+                host=f"http://localhost",
+                port=3003,
+                token="e2e-API-token^^",
+            ),
+            Node(
+                host=f"http://127.0.0.1",
+                port=3006,
+                token="e2e-API-token^^",
+            ),
+            Node(
+                host=f"http://localhost",
+                port=3009,
+                token="e2e-API-token^^",
+            ),
+            Node(
+                host=f"http://127.0.0.1",
+                port=3012,
+                token="e2e-API-token^^",
+            ),
+            Node(
+                host=f"http://127.0.0.1",
+                port=3018,
+                token="e2e-API-token^^",
+            )
+        ]
+
+    path: list[Node] = random.sample(nodes, k=3)
 
     [await hop.address for hop in path]
 
@@ -107,6 +142,7 @@ async def main(waves: int, batch_size: int, timeout: int):
     except ValueError as e:
         print(State.FAILURE, f"Error getting addresses: {e}")
         return
+
 
     # get sessions
     sessions: list[Session] = await path[0].api.list_sessions()
@@ -128,6 +164,7 @@ async def main(waves: int, batch_size: int, timeout: int):
             print(State.SUCCESS, "Session opened")
         case SessionFailure():
             print(State.FAILURE, "No session opened")
+            print(session)
             return
         case _:
             print(State.UNKNOWN, f"Unknown type: {type(session)}")
