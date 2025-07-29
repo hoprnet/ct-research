@@ -117,7 +117,7 @@ class TicketPrice(ApiResponseObject):
         try:
             self.value = float(self.value) / 1e18
         except (ValueError, TypeError):
-            self.value = 0
+            self.value = None
 
 
 class Configuration(ApiResponseObject):
