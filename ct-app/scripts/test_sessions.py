@@ -34,7 +34,7 @@ class Node:
     def host_root(self) -> str:
         if "localhost" in self.host:
             return f"localhost:{self.port}"
-            
+
         if "127.0.0.1" in self.host:
             return f"127.0.0.1:{self.port}"
 
@@ -102,30 +102,30 @@ async def main(waves: int, batch_size: int, timeout: int, local: bool):
     else:
         nodes = [
             Node(
-                host=f"http://localhost",
+                host="http://localhost",
                 port=3003,
                 token="e2e-API-token^^",
             ),
             Node(
-                host=f"http://127.0.0.1",
+                host="http://127.0.0.1",
                 port=3006,
                 token="e2e-API-token^^",
             ),
             Node(
-                host=f"http://localhost",
+                host="http://localhost",
                 port=3009,
                 token="e2e-API-token^^",
             ),
             Node(
-                host=f"http://127.0.0.1",
+                host="http://127.0.0.1",
                 port=3012,
                 token="e2e-API-token^^",
             ),
             Node(
-                host=f"http://127.0.0.1",
+                host="http://127.0.0.1",
                 port=3018,
                 token="e2e-API-token^^",
-            )
+            ),
         ]
 
     path: list[Node] = random.sample(nodes, k=3)
@@ -142,7 +142,6 @@ async def main(waves: int, batch_size: int, timeout: int, local: bool):
     except ValueError as e:
         print(State.FAILURE, f"Error getting addresses: {e}")
         return
-
 
     # get sessions
     sessions: list[Session] = await path[0].api.list_sessions()
