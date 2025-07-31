@@ -78,7 +78,7 @@ class MessageFormat:
             raise ValueError(
                 f"Encoded message is exceeds specified size ({len(message_as_bytes)} > {self.size})"
             )
-        return message_as_bytes + b"\0" * (self.size - len(message_as_bytes))
+        return message_as_bytes.ljust(self.size, b"\0")
 
     def update_timestamp(self, timestamp: Optional[str] = None):
         if timestamp is not None:

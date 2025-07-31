@@ -30,7 +30,7 @@ class SessionToSocket:
         self.connect_address = connect_address
 
         try:
-            self.socket, self.conn = self.create_socket(timeout)
+            self.socket = self.create_socket(timeout)
         except (socket.error, ValueError) as e:
             raise ValueError(f"Error while creating socket: {e}")
 
@@ -62,30 +62,38 @@ class SessionToSocket:
 
         return (self.connect_address, self.session.port)
 
-    def create_socket(self, timeout: Optional[float] = None):
+    def create_socket(self, timeout: Optional[float] = None) -> socket.socket:
         if self.session.protocol == Protocol.UDP:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            conn = None
+            s: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         elif self.session.protocol == Protocol.TCP:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            conn = s.connect(self.address)
+            s: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            s.connect(self.address)
         else:
             raise ValueError(f"Invalid protocol: {self.session.protocol}")
 
+        # # SET CUSTOM SND AND RCV BUFFER SIZES
+        # import math
+
+        # buffer_size = 2**(int(math.log2(self.session.payload)+0.5) + 2)
+        # s.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, self.session.payload)
+        # s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, buffer_size)
+
         s.settimeout(timeout)
 
-        return s, conn
+        return s
 
-    async def send(self, message: MessageFormat, factor: int = 1) -> bytes:
+    async def send(self, message: MessageFormat) -> bytes:
         """
         Sends data to the peer.
         """
         payload: bytes = message.bytes()
 
-        if self.session.protocol == Protocol.UDP:
-            self.socket.sendto(payload, self.address)
-        elif self.session.protocol == Protocol.TCP:
-            self.socket.sendall(payload)
+        match self.session.protocol:
+            case Protocol.UDP:
+                self.socket.sendto(payload, self.address)
+            case Protocol.TCP:
+                self.socket.send(payload)
 
         if isinstance(message, MessageFormat):
             MESSAGES_STATS.labels("sent", message.sender, message.relayer).inc(
@@ -107,11 +115,12 @@ class SessionToSocket:
 
             try:
                 if self.session.protocol == Protocol.UDP:
-                    data, _ = self.socket.recvfrom(chunk_size)
+                    data: bytes = self.socket.recvfrom(chunk_size)[0]
                 if self.session.protocol == Protocol.TCP:
-                    data = self.socket.recv(chunk_size)
+                    data: bytes = self.socket.recv(chunk_size)
                 recv_data += data
             except socket.timeout:
+                logger.info("Socket timeout while receiving data")
                 await asyncio.sleep(0.1)
                 pass
             except ConnectionResetError:
@@ -120,6 +129,7 @@ class SessionToSocket:
 
         now = int(datetime.now().timestamp() * 1000)
         recv_size: int = len(recv_data)
+
         recv_data: list[str] = [
             item for item in recv_data.decode().split(b"\0".decode()) if len(item) > 0
         ]

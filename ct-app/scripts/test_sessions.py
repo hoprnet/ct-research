@@ -76,57 +76,45 @@ async def only_send(
     for _ in range(loops):
         message = MessageFormat(await path[1].address, await path[0].address, message_size)
         sent_data.append(await socket.send(message))
-        # await asyncio.sleep(0.001)
 
     sent_size: int = sum(len(data) for data in sent_data)
     return sent_data, sent_size
 
 
 @click.command()
-@click.option("--waves", default=100, help="Number of batches to send")
-@click.option("--batch-size", default=1, help="Aggregated messages")
-@click.option("--timeout", default=1, help="Socket timeout")
-@click.option("--local", is_flag=True, help="Use local nodes instead of staging")
+@click.option("--waves", type=int, default=100, help="Number of batches to send")
+@click.option("--batch-size", type=int, default=1, help="Aggregated messages")
+@click.option("--timeout", type=float, default=1, help="Socket timeout")
+@click.option("--protocol", type=click.Choice(Protocol), help="Protocol to use")
 @asynchronous
-async def main(waves: int, batch_size: int, timeout: int, local: bool):
-    if not local:
-        nodes = [
-            Node(
-                host=f"https://ctdapp-green-node-{idx}.ctdapp.staging.hoprnet.link",
-                port=443,
-                token="^f9pbS266TlcI2uHnPcBH6ouoYbE8ya8qlEVbKYQlF0fOjvkfQD^",
-                p2p_host=f"ctdapp-green-node-{idx}-p2p.ctdapp.staging.hoprnet.link",
-            )
-            for idx in range(1, 6)
-        ]
-    else:
-        nodes = [
-            Node(
-                host="http://localhost",
-                port=3003,
-                token="e2e-API-token^^",
-            ),
-            Node(
-                host="http://127.0.0.1",
-                port=3006,
-                token="e2e-API-token^^",
-            ),
-            Node(
-                host="http://localhost",
-                port=3009,
-                token="e2e-API-token^^",
-            ),
-            Node(
-                host="http://127.0.0.1",
-                port=3012,
-                token="e2e-API-token^^",
-            ),
-            Node(
-                host="http://127.0.0.1",
-                port=3018,
-                token="e2e-API-token^^",
-            ),
-        ]
+async def main(waves: int, batch_size: int, timeout: float, protocol: Protocol):
+    nodes: list[Node] = [
+        Node(
+            host="http://localhost",
+            port=3003,
+            token="e2e-API-token^^",
+        ),
+        Node(
+            host="http://127.0.0.1",
+            port=3006,
+            token="e2e-API-token^^",
+        ),
+        Node(
+            host="http://localhost",
+            port=3009,
+            token="e2e-API-token^^",
+        ),
+        Node(
+            host="http://127.0.0.1",
+            port=3012,
+            token="e2e-API-token^^",
+        ),
+        Node(
+            host="http://127.0.0.1",
+            port=3018,
+            token="e2e-API-token^^",
+        ),
+    ]
 
     path: list[Node] = random.sample(nodes, k=3)
 
@@ -155,7 +143,7 @@ async def main(waves: int, batch_size: int, timeout: int, local: bool):
 
     # open session
     session = await path[0].api.post_session(
-        await path[2].address, await path[1].address, path[0].p2p_host, protocol=Protocol.UDP
+        await path[2].address, await path[1].address, path[0].p2p_host, protocol
     )
 
     match session:
@@ -163,7 +151,6 @@ async def main(waves: int, batch_size: int, timeout: int, local: bool):
             print(State.SUCCESS, "Session opened")
         case SessionFailure():
             print(State.FAILURE, "No session opened")
-            print(session)
             return
         case _:
             print(State.UNKNOWN, f"Unknown type: {type(session)}")
@@ -184,20 +171,20 @@ async def main(waves: int, batch_size: int, timeout: int, local: bool):
 
     print(
         State.SUCCESS,
-        f"Sent {len(sent_data)} messages in {send_elapsed_time*1000:4.0f}ms",
+        f"Sent {len(sent_data):3d} messages in {send_elapsed_time*1000:4.0f}ms",
         f"({sent_size/2**10:.2f} kB - {sent_size//session.payload} HOPR packets),",
     )
 
     # receive data in socket
     recv_start_time: float = time.time()
-    recv_data, recv_size = await socket.receive(session.payload, 5)
+    recv_data, recv_size = await socket.receive(batch_size * session.payload, timeout)
     recv_elapsed_time: float = time.time() - recv_start_time
 
     metrics_after: dict[str, Metrics] = {hop.host_root: await hop.api.metrics() for hop in path}
 
     print(
         State.fromBool(sent_size == recv_size),
-        f"Recv {len(recv_data)} messages in {recv_elapsed_time*1000:4.0f}ms",
+        f"Recv {len(recv_data):3d} messages in {recv_elapsed_time*1000:4.0f}ms",
         f"({recv_size/2**10:.2f} kB - {recv_size//session.payload} HOPR packets)",
     )
 

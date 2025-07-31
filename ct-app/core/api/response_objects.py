@@ -5,6 +5,7 @@ from typing import Any
 from core.components.balance import Balance
 
 from .channelstatus import ChannelStatus
+from .protocol import Protocol
 
 SURB_SIZE: int = 400
 
@@ -170,17 +171,17 @@ class Channels:
 class Session(ApiResponseObject):
     ip: str = field()
     port: int = field()
-    protocol: str = field()
+    protocol: Protocol = field()
     target: str = field()
     mtu: int = field()
 
     @property
     def payload(self):
-        return 2 * (self.mtu - SURB_SIZE)
+        return self.mtu - SURB_SIZE
 
     @property
     def as_path(self):
-        return f"session/{self.protocol}/{self.ip}/{self.port}"
+        return f"session/{self.protocol.value}/{self.ip}/{self.port}"
 
 
 @dataclass(init=False)

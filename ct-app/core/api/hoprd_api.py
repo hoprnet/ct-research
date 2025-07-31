@@ -284,9 +284,7 @@ class HoprdAPI:
         :param: protocol: Protocol (UDP or TCP)
         :return: Session
         """
-        capabilities_body = req.SessionCapabilitiesBody(
-            protocol.retransmit, protocol.segment, protocol.no_delay
-        )
+        capabilities_body = req.SessionCapabilitiesBody(protocol.retransmit, protocol.segment)
         target_body = req.SessionTargetBody()
         path_body = req.SessionPathBodyRelayers([relayer])  # forward and return path
 
@@ -300,7 +298,9 @@ class HoprdAPI:
             target_body.as_dict,
         )
 
-        if r := await self.request(HTTPMethod.POST, f"session/{protocol.name.lower()}", data):
+        if r := await self.request(
+            HTTPMethod.POST, f"session/{protocol.name.lower()}", data, timeout=2
+        ):
             return resp.Session(r)
         else:
             return resp.SessionFailure({"error": "client error", "status": "CLIENT_ERROR"})
