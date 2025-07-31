@@ -12,7 +12,7 @@ flags:
     connected_peers: 30
     topology: 30
 
-    rotate_subgraphs: 60
+    rotate_subgraphs: 300
     open_sessions: 60
 
     # through subgraph queries
