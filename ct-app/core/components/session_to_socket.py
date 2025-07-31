@@ -120,13 +120,16 @@ class SessionToSocket:
                     data: bytes = self.socket.recv(chunk_size)
                 recv_data += data
             except socket.timeout:
-                logger.info("Socket timeout while receiving data")
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(0.2)
                 pass
             except ConnectionResetError:
                 logger.error("Connection reset by peer while receiving data")
                 break
 
+        logger.debug(
+            "End of socket recv",
+            {**self.session.as_dict, "address": self.connect_address, "size": len(recv_data)},
+        )
         now = int(datetime.now().timestamp() * 1000)
         recv_size: int = len(recv_data)
 

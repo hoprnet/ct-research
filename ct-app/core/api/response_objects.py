@@ -183,6 +183,16 @@ class Session(ApiResponseObject):
     def as_path(self):
         return f"session/{self.protocol.value}/{self.ip}/{self.port}"
 
+    @property
+    def as_dict(self) -> dict:
+        return {
+            "ip": self.ip,
+            "port": self.port,
+            "protocol": self.protocol.value,
+            "target": self.target,
+            "mtu": self.mtu,
+        }
+
 
 @dataclass(init=False)
 class SessionFailure(ApiResponseObject):

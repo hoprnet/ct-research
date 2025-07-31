@@ -405,7 +405,6 @@ class Node:
         AsyncLoop.add(
             sess_and_socket.send,
             message,
-            self.params.sessions.batch_size,
             publish_to_task_set=False,
         )
 
@@ -418,7 +417,7 @@ class Node:
             AsyncLoop.add(
                 sess_and_socket.receive,
                 sess_and_socket.session.payload,
-                2,
+                0.5,
                 publish_to_task_set=False,
             )
 
@@ -459,20 +458,19 @@ class Node:
                 publish_to_task_set=False,
             )
 
-    async def open_sessions(self, allowed_addresses: list[Address], destinations: list[Address]):
+    async def open_sessions(self, allowed: list[Address], destinations: list[Address]):
         if self.channels is None:
             logger.warning("No channels found yet", self.log_base_params)
             return
 
         addresses_with_channels = set([c.destination for c in self.channels.outgoing])
 
-        allowed_addressess = set([address.native for address in allowed_addresses])
+        allowed_addresses = set([address.native for address in allowed])
         addresses_with_session = set(self.session_management.keys())
-        addresses_without_session = allowed_addressess - addresses_with_session
+        addresses_without_session = allowed_addresses - addresses_with_session
 
         for address in addresses_without_session.intersection(addresses_with_channels):
             destination: Address = random.choice(list(set(destinations) - {self.address}))
-
             AsyncLoop.add(self.open_session, destination, address, publish_to_task_set=False)
 
     async def open_session(self, destination: Address, relayer: str):
