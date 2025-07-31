@@ -89,31 +89,11 @@ async def only_send(
 @asynchronous
 async def main(waves: int, batch_size: int, timeout: float, protocol: Protocol):
     nodes: list[Node] = [
-        Node(
-            host="http://localhost",
-            port=3003,
-            token="e2e-API-token^^",
-        ),
-        Node(
-            host="http://127.0.0.1",
-            port=3006,
-            token="e2e-API-token^^",
-        ),
-        Node(
-            host="http://localhost",
-            port=3009,
-            token="e2e-API-token^^",
-        ),
-        Node(
-            host="http://127.0.0.1",
-            port=3012,
-            token="e2e-API-token^^",
-        ),
-        Node(
-            host="http://127.0.0.1",
-            port=3018,
-            token="e2e-API-token^^",
-        ),
+        Node(host="http://localhost", port=3003, token="e2e-API-token^^"),
+        Node(host="http://127.0.0.1", port=3006, token="e2e-API-token^^"),
+        Node(host="http://localhost", port=3009, token="e2e-API-token^^"),
+        Node(host="http://127.0.0.1", port=3012, token="e2e-API-token^^"),
+        Node(host="http://127.0.0.1", port=3018, token="e2e-API-token^^"),
     ]
 
     path: list[Node] = random.sample(nodes, k=3)
