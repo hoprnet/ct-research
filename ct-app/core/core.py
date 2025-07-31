@@ -6,14 +6,6 @@ from typing import Callable
 
 from prometheus_client import Gauge
 
-from core.rpc.providers import (
-    GnosisDistributor,
-    HOPRBalance,
-    MainnetDistributor,
-    wxHOPRBalance,
-    xHOPRBalance,
-)
-
 from .api import HoprdAPI
 from .components import Address, AsyncLoop, LockedVar, Peer, Utils
 from .components.balance import Balance
@@ -22,6 +14,13 @@ from .components.decorators import keepalive
 from .components.logs import configure_logging
 from .node import Node
 from .rpc import entries as rpc_entries
+from .rpc.providers import (
+    GnosisDistributor,
+    HOPRBalance,
+    MainnetDistributor,
+    wxHOPRBalance,
+    xHOPRBalance,
+)
 from .subgraph import URL, GraphQLProvider
 from .subgraph import Type as SubgraphType
 from .subgraph import entries as subgraph_entries
@@ -286,7 +285,9 @@ class Core:
                 if peer.yearly_message_count is None:
                     continue
 
-                model_input[LegacyParams] = self.peers_rewards_data.get(peer.address.native, 0.0)
+                model_input[LegacyParams] = self.peers_rewards_data.get(
+                    peer.address.native, Balance.zero("wxHOPR")
+                )
 
                 for model, name in self.params.economic_model.models.items():
                     message_count[model] = getattr(
@@ -309,9 +310,11 @@ class Core:
     async def peers_rewards(self):
         results = dict()
         for acc in await self.graphql_providers[SubgraphType.REWARDS].get():
-            account = subgraph_entries.Account.fromSubgraphResult(acc)
+            account = subgraph_entries.Account(acc["id"], acc["redeemedValue"])
             results[account.address] = account.redeemed_value
-            REDEEMED_REWARDS.labels(account.address).set(account.redeemed_value)
+            REDEEMED_REWARDS.labels(account.address).set(
+                account.redeemed_value.value  # ty: ignore[invalid-argument-type]
+            )
 
         self.peers_rewards_data = results
         logger.debug("Fetched peers rewards amounts", {"count": len(results)})

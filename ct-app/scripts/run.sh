@@ -87,7 +87,11 @@ else
     # Node parameters
     for i in $(seq 1 $count); do
         export NODE_ADDRESS_${i}=$(printf $HOST_FORMAT $deployment $i $env)
-        export NODE_KEY_${i}=$TOKEN
+        if [ $env == "prod" ]; then
+            export NODE_KEY_${i}=$PROD_TOKEN
+        elif [ $env == "staging" ]; then
+            export NODE_KEY_${i}=$STAGING_TOKEN
+        fi
     done
 fi
 
