@@ -6,24 +6,22 @@ default_size = 1000
 
 
 def test_create_message():
-    message = MessageFormat(relayer, packet_size=default_size, multiplier=5)
+    message = MessageFormat(relayer, packet_size=default_size)
 
     assert message.relayer == relayer
     assert message.timestamp is not None
     assert isinstance(message.timestamp, int)
     assert message.index == 0
-    assert message.multiplier == 5
 
 
 def test_parse_message():
-    encoded = MessageFormat(relayer, sender, packet_size=default_size, multiplier=10)
+    encoded = MessageFormat(relayer, sender, packet_size=default_size)
     decoded = MessageFormat.parse(encoded.format())
 
     assert decoded.relayer == encoded.relayer
     assert decoded.sender == encoded.sender
     assert decoded.timestamp == encoded.timestamp
     assert decoded.index == encoded.index
-    assert decoded.multiplier == encoded.multiplier
     assert decoded.inner_index == encoded.inner_index
 
 

@@ -10,7 +10,6 @@ class MessageFormat:
         "packet_size",
         "index",
         "inner_index",
-        "multiplier",
         "timestamp",
     ]
     range = int(1e5)
@@ -23,20 +22,18 @@ class MessageFormat:
         packet_size: Optional[int] = None,
         index: Optional[int | str] = None,
         inner_index: Optional[int | str] = None,
-        multiplier: Optional[int | str] = None,
         timestamp: Optional[int | str] = None,
     ):
         self.packet_size = int(packet_size) if packet_size else 0
         self.sender = sender
         self.relayer = relayer
         self.index = int(index) if index else self.message_index
-        self.multiplier = int(multiplier) if multiplier else 1
         self.inner_index = int(inner_index) if inner_index else 1
         self.update_timestamp(timestamp)
 
     @property
     def size(self):
-        return self.packet_size * self.multiplier
+        return self.packet_size
 
     @property
     def message_index(self):

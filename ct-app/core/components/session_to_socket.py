@@ -4,12 +4,11 @@ import socket
 from datetime import datetime
 from typing import Optional
 
-from prometheus_client import Gauge, Histogram
-
 from core.api.protocol import Protocol
 from core.api.response_objects import Session
 from core.components.logs import configure_logging
 from core.components.messages.message_format import MessageFormat
+from prometheus_client import Gauge, Histogram
 
 MESSAGES_DELAYS = Histogram(
     "ct_messages_delays",
@@ -95,10 +94,7 @@ class SessionToSocket:
             case Protocol.TCP:
                 self.socket.send(payload)
 
-        if isinstance(message, MessageFormat):
-            MESSAGES_STATS.labels("sent", message.sender, message.relayer).inc(
-                len(payload) / message.packet_size
-            )
+        MESSAGES_STATS.labels("sent", message.sender, message.relayer).inc()
         return payload
 
     async def receive(self, chunk_size: int, timeout: float = 5) -> tuple[list[str], int]:
@@ -145,9 +141,7 @@ class SessionToSocket:
                 continue
 
             rtt = (now - message.timestamp) / 1000
-            MESSAGES_STATS.labels("received", message.sender, message.relayer).inc(
-                message.multiplier
-            )
+            MESSAGES_STATS.labels("received", message.sender, message.relayer).inc()
             MESSAGES_DELAYS.labels(message.sender, message.relayer).observe(rtt)
 
         return recv_data, recv_size
