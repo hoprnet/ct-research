@@ -408,7 +408,7 @@ class Node:
             publish_to_task_set=False,
         )
 
-    @master(keepalive, connectguard)
+    @keepalive
     async def observe_sockets(self):
         for sess_and_socket in self.session_management.values():
             if sess_and_socket.socket is None:
@@ -417,7 +417,6 @@ class Node:
             AsyncLoop.add(
                 sess_and_socket.receive,
                 sess_and_socket.session.payload,
-                0.5,
                 publish_to_task_set=False,
             )
 

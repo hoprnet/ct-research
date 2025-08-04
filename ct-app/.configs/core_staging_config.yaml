@@ -38,7 +38,7 @@ flags:
     get_total_channel_funds: 300
 
     observe_message_queue: On
-    observe_sockets: 30
+    observe_sockets: 5
     close_sessions: 30
 
   peer:

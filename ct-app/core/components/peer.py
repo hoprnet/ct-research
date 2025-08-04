@@ -86,7 +86,9 @@ class Peer:
     async def message_delay(self) -> Optional[float]:
         value = None
         if self.yearly_message_count is not None and self.yearly_message_count > 0:
-            value = SECONDS_IN_A_NON_LEAP_YEAR / self.yearly_message_count
+            value = (
+                SECONDS_IN_A_NON_LEAP_YEAR / self.yearly_message_count * 2
+            )  # to account for the loopback session behavior
 
         DELAY.labels(self.address.native).set(value if value is not None else 0)
 
@@ -127,11 +129,8 @@ class Peer:
             return
 
         if delay := await self.message_delay:
-            message = MessageFormat(
-                self.address.native,
-            )
-            await MessageQueue().put_async(message)
-            await asyncio.sleep(delay * 2)
+            await MessageQueue().put_async(MessageFormat(self.address.native))
+            await asyncio.sleep(delay)
 
         else:
             await asyncio.sleep(

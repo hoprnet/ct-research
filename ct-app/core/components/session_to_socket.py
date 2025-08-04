@@ -4,11 +4,12 @@ import socket
 from datetime import datetime
 from typing import Optional
 
+from prometheus_client import Gauge, Histogram
+
 from core.api.protocol import Protocol
 from core.api.response_objects import Session
 from core.components.logs import configure_logging
 from core.components.messages.message_format import MessageFormat
-from prometheus_client import Gauge, Histogram
 
 MESSAGES_DELAYS = Histogram(
     "ct_messages_delays",
@@ -97,7 +98,7 @@ class SessionToSocket:
         MESSAGES_STATS.labels("sent", message.sender, message.relayer).inc()
         return payload
 
-    async def receive(self, chunk_size: int, timeout: float = 5) -> tuple[list[str], int]:
+    async def receive(self, chunk_size: int, timeout: float = 1) -> tuple[list[str], int]:
         """
         Receives data from the peer. In case off multiple message in the same packet, which should
         not happen, they are already split and returned as a list.
@@ -105,6 +106,7 @@ class SessionToSocket:
         recv_data = b""
 
         start_time = datetime.now().timestamp()
+
         while True:
             if (datetime.now().timestamp() - start_time) >= timeout:
                 break
@@ -116,10 +118,9 @@ class SessionToSocket:
                     data: bytes = self.socket.recv(chunk_size)
                 recv_data += data
             except socket.timeout:
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(0.02)
                 pass
             except ConnectionResetError:
-                logger.error("Connection reset by peer while receiving data")
                 break
 
         logger.debug(
@@ -135,7 +136,7 @@ class SessionToSocket:
 
         for data in recv_data:
             try:
-                message: MessageFormat = MessageFormat.parse(data)
+                message = MessageFormat.parse(data)
             except ValueError as e:
                 logger.error(f"Failed to parse message: {e}")
                 continue
