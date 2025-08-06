@@ -378,8 +378,7 @@ class Core:
         await AsyncLoop.gather_any([node.close_all_sessions() for node in self.nodes])
         await AsyncLoop.gather_any([self.get_nft_holders()])
 
-        AsyncLoop.update(sum([node.tasks for node in self.nodes], []))
-        AsyncLoop.update(self.tasks)
+        AsyncLoop.update(sum([node.tasks for node in self.nodes], self.tasks))
 
         await AsyncLoop.gather()
 

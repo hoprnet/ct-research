@@ -16,13 +16,12 @@ def print_path(*lines_comps: list[str], seps: Optional[list[str]] = None):
             sep.join([f"{comp.center(size)}" for (comp, size) in zip(line_comps, comp_size)])
         )
 
-    str_len: int = sum(comp_size) + (len(comp_size) - 1) * len(seps[0]) + 2
-    print("/" + "=" * str_len + "\\")
-    print("|" + " " * str_len + "|")
+    str_len: int = sum(comp_size) + (len(comp_size) - 1) * len(seps[0])
+    ext = 3
+    print("/" + "-" * ext + "=" * str_len + "-" * ext + "\\")
     for line in lines:
-        print("| " + line + " |")
-    print("|" + " " * str_len + "|")
-    print("\\" + "=" * str_len + "/")
+        print("|" + " " * ext + line + " " * ext + "|")
+    print("\\" + "-" * ext + "=" * str_len + "-" * ext + "/")
 
 
 def packet_statistics(metrics_before: dict, metrics_after: dict, metric: str):

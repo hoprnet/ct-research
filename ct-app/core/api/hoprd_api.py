@@ -4,9 +4,8 @@ from typing import Callable, Optional, Union
 
 import aiohttp
 
-from core.components.logs import configure_logging
-
 from ..components.balance import Balance
+from ..components.logs import configure_logging
 from . import request_objects as req
 from . import response_objects as resp
 from .http_method import HTTPMethod
@@ -22,9 +21,9 @@ class HoprdAPI:
     HOPRd API helper to handle exceptions and logging.
     """
 
-    def __init__(self, url: str, token: str):
+    def __init__(self, url: str, token: Optional[str] = None):
         self.host = url
-        self.headers = {"Authorization": f"Bearer {token}"}
+        self.headers = {"Authorization": f"Bearer {token}"} if token else {}
         self.prefix = "/api/v4/"
 
     async def __call(
@@ -57,7 +56,7 @@ class HoprdAPI:
                     except Exception:
                         data = await res.text()
 
-                    return (res.status // 200) == 1, data
+                    return int(res.status // 200) == 1, data
         except OSError as err:
             logger.error(
                 "OSError while doing an API call",
@@ -141,6 +140,9 @@ class HoprdAPI:
             method, path, data, timeout=timeout, use_api_path=use_api_path
         )
 
+        if resp_type is resp.OpenedChannel:
+            logger.error(f"{is_ok=}, {r=}")
+
         if return_state:
             return is_ok
 
@@ -191,12 +193,12 @@ class HoprdAPI:
         """
         return await self.request(HTTPMethod.DELETE, f"channels/{channel_id}", return_state=True)
 
-    async def channels(self) -> Optional[resp.Channels]:
+    async def channels(self, full_topology: bool = True) -> Optional[resp.Channels]:
         """
         Returns all channels.
         :return: channels: list
         """
-        header = req.GetChannelsBody(True, False).as_header_string
+        header = req.GetChannelsBody(full_topology, False).as_header_string
         return await self.request(HTTPMethod.GET, f"channels?{header}", resp_type=resp.Channels)
 
     async def metrics(self) -> Optional[resp.Metrics]:

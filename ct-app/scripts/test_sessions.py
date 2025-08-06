@@ -22,7 +22,9 @@ logger.setLevel(logging.INFO)
 
 
 class Node:
-    def __init__(self, host: str, port: int, token: str, p2p_host: str = "127.0.0.1"):
+    def __init__(
+        self, host: str, port: int, token: Optional[str] = None, p2p_host: str = "127.0.0.1"
+    ):
         self.host = host
         self.port = port
         self.token = token
@@ -42,7 +44,7 @@ class Node:
 
     @property
     def address_short(self) -> str:
-        return f"...{(self._address)[-6:]}"
+        return f"{self._address[:6]}..{(self._address)[-4:]}"
 
     @property
     async def address(self) -> str:
@@ -90,9 +92,10 @@ async def only_send(
 async def main(waves: int, batch_size: int, timeout: float, protocol: Protocol):
     nodes: list[Node] = [
         Node(host="http://localhost", port=3003, token="e2e-API-token^^"),
-        Node(host="http://127.0.0.1", port=3006, token="e2e-API-token^^"),
+        Node(host="http://127.0.0.1", port=3006),
         Node(host="http://localhost", port=3009, token="e2e-API-token^^"),
         Node(host="http://127.0.0.1", port=3012, token="e2e-API-token^^"),
+        Node(host="http://localhost", port=3015, token="e2e-API-token^^"),
         Node(host="http://127.0.0.1", port=3018, token="e2e-API-token^^"),
     ]
 

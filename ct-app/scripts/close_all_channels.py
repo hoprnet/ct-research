@@ -25,22 +25,19 @@ async def main(deployment: str = "green", environment: str = "staging"):
         print(State.FAILURE, "HOST_FORMAT or TOKEN not set in .env file")
         return
 
-    for idx in range(1, 6):
-        host = host_format % (deployment, idx, environment)
+    apis = [HoprdAPI(host_format % (deployment, idx, environment), token) for idx in range(1, 6)]
 
-        api = HoprdAPI(host, token)
+    tasks = set()
+    for api in apis:
+        for channel in (await api.channels(full_topology=False)).outgoing:
+            tasks.add(asyncio.create_task(api.close_channel(channel.id)))
 
-        # get sessions
-        sessions = await api.list_sessions()
-        for session in sessions:
-            await api.close_session(session)
+    if not tasks:
+        print(State.SUCCESS, "No channels to close")
+        return
 
-        sessions = await api.list_sessions()
-        if len(sessions) != 0:
-            print(State.FAILURE, f"[IDX {idx}] Sessions not closed: {sessions}")
-            return
-        else:
-            print(State.SUCCESS, f"[IDX {idx}] Sessions cleanup")
+    results = await asyncio.gather(*tasks)
+    print(f"{results=}")
 
 
 if __name__ == "__main__":

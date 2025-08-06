@@ -133,6 +133,14 @@ class Channel(ApiResponseObject):
 
 
 @dataclass(init=False)
+class OwnChannel(ApiResponseObject):
+    id: str = field()
+    peer_address: str = field(metadata={"path": "peerAddress"})
+    status: ChannelStatus = field()
+    balance: Balance = field()
+
+
+@dataclass(init=False)
 class TicketPrice(ApiResponseObject):
     value: Balance = field(metadata={"path": "price"})
 
@@ -157,8 +165,8 @@ class Metrics(ApiMetricResponseObject):
 class Channels:
     def __init__(self, data: dict):
         self.all = [Channel(c) for c in data.get("all", [])]
-        self.incoming = [Channel(c) for c in data.get("incoming", [])]
-        self.outgoing = [Channel(c) for c in data.get("outgoing", [])]
+        self.incoming = [OwnChannel(c) for c in data.get("incoming", [])]
+        self.outgoing = [OwnChannel(c) for c in data.get("outgoing", [])]
 
     def __str__(self):
         return str(self.__dict__)
