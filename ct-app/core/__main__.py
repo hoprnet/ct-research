@@ -1,5 +1,4 @@
 import logging
-import os
 
 import click
 import yaml
@@ -23,10 +22,11 @@ def main(configfile: str):
         config = yaml.safe_load(file)
 
     params = Parameters(config)
-    logger.debug("Safe parameters loaded", {"params": params.as_dict()})
+    logger.debug("Safe parameters loaded", {"params": str(params)})
 
-    params.subgraph.api_key = os.getenv("SUBGRAPH_API_KEY", "")
-    logger.debug("API key loaded")
+    params.subgraph.set_attribute_from_env("api_key", "SUBGRAPH_API_KEY")
+    params.rpc.set_attribute_from_env("gnosis", "RPC_GNOSIS")
+    params.rpc.set_attribute_from_env("mainnet", "RPC_MAINNET")
 
     # create the core and nodes instances
     nodes = [

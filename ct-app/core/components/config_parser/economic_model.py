@@ -2,6 +2,7 @@ import logging
 from dataclasses import dataclass
 from decimal import Decimal
 from math import log, prod
+from typing import Optional
 
 from core.api.response_objects import TicketPrice
 from core.components.balance import Balance
@@ -15,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 @dataclass(init=False)
 class LegacyCoefficientsParams(ExplicitParams):
-    a: float
-    b: float
+    a: Decimal
+    b: Decimal
     lowerbound: Balance
     upperbound: Balance
 
@@ -36,7 +37,7 @@ class LegacyEquationsParams(ExplicitParams):
 @dataclass(init=False)
 class LegacyParams(ExplicitParams):
     proportion: Decimal
-    apr: float
+    apr: Decimal
     coefficients: LegacyCoefficientsParams
     equations: LegacyEquationsParams
 
@@ -57,31 +58,35 @@ class LegacyParams(ExplicitParams):
         self,
         stake: Balance,
         ticket_price: TicketPrice,
-        redeemed_rewards: Balance = Balance.zero("wxHOPR"),
+        redeemed_rewards: Optional[Balance] = None,
     ) -> float:
         """
         Calculate the yearly message count a peer should receive based on the stake.
         """
-        self.coefficients.upperbound += redeemed_rewards
-        rewards = self.apr * self.transformed_stake(stake) / 100
-        self.coefficients.upperbound -= redeemed_rewards
 
-        return rewards / ticket_price.value * self.proportion
+        self.coefficients.upperbound += redeemed_rewards or Balance.zero(("wxHOPR"))
+        rewards = self.apr * self.transformed_stake(stake) / 100
+        self.coefficients.upperbound -= redeemed_rewards or Balance.zero(("wxHOPR"))
+
+        return float(rewards / ticket_price.value * self.proportion)
 
 
 @dataclass(init=False)
 class BucketParams(ExplicitParams):
-    flatness: float
-    skewness: float
-    upperbound: float
-    offset: float
+    flatness: Decimal
+    skewness: Decimal
+    upperbound: Decimal
+    offset: Decimal
 
-    def apr(self, x: float) -> float:
+    def apr(self, x: Decimal) -> Decimal:
         """
         Calculate the APR for the bucket.
         """
         try:
-            apr = log(pow(self.upperbound / x, self.skewness) - 1) * self.flatness + self.offset
+            apr = (
+                Decimal(log(pow(self.upperbound / x, self.skewness) - 1)) * self.flatness
+                + self.offset
+            )
         except ValueError as err:
             raise ValueError(f"Math domain error: {x=}, {vars(self)}") from err
         except ZeroDivisionError as err:
@@ -89,7 +94,7 @@ class BucketParams(ExplicitParams):
         except OverflowError as err:
             raise ValueError("Overflow error") from err
 
-        return max(apr, 0.0)
+        return max(apr, Decimal(0))
 
 
 @dataclass(init=False)
@@ -111,45 +116,47 @@ class BucketsParams(ExplicitParams):
 @dataclass(init=False)
 class SigmoidParams(ExplicitParams):
     proportion: Decimal
-    max_apr: float
-    offset: float
+    max_apr: Decimal
+    offset: Decimal
     buckets: BucketsParams
     network_capacity: int
     total_token_supply: Balance
 
     def apr(
         self,
-        xs: list[float],
-    ) -> float:
+        xs: list[Decimal],
+    ) -> Decimal:
         """
         Calculate the APR for the economic model.
         """
         try:
-            apr = (
+            apr: Decimal = (
                 pow(
                     prod(b.apr(x) for b, x in zip(self.buckets.values, xs)),
-                    1 / self.buckets.count,
+                    Decimal(1 / self.buckets.count),
                 )
                 + self.offset
             )
         except ValueError as err:
             logger.exception("Value error in APR calculation", {"error": err})
-            apr = 0
+            apr: Decimal = Decimal(0)
 
         if self.max_apr is not None:
-            apr = min(apr, self.max_apr)
+            apr: Decimal = min(apr, self.max_apr)
 
         return apr
 
-    def yearly_message_count(self, stake: Balance, ticket_price: TicketPrice, xs: list[float]):
+    def yearly_message_count(
+        self, stake: Balance, ticket_price: TicketPrice, xs: list[Decimal]
+    ) -> float:
         """
         Calculate the yearly message count a peer should receive based on the stake.
         """
-        apr = self.apr(xs)
+        apr: Decimal = self.apr(xs)
 
-        rewards = apr * stake / 100.0
+        rewards: Decimal = apr * stake / Decimal(100.0)
 
-        return rewards / ticket_price.value * self.proportion
+        return float(rewards / ticket_price.value * self.proportion)
 
 
 @dataclass(init=False)
@@ -161,4 +168,4 @@ class EconomicModelParams(ExplicitParams):
 
     @property
     def models(self):
-        return {v: k for k, v in vars(self).items() if isinstance(v, ExplicitParams)}
+        return {v.__class__: k for k, v in vars(self).items() if isinstance(v, ExplicitParams)}

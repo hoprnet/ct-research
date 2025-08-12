@@ -16,6 +16,7 @@ def main(file: list[str]):
         with open(f, "r") as stream_file:
             data = yaml.safe_load(stream_file)
 
+        click.echo("Verifying config file: " + f)
         try:
             _ = Parameters.verify(data)
         except KeyError as e:

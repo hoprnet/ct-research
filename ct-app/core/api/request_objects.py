@@ -30,7 +30,7 @@ class ApiRequestObject:
 @dataclass
 class OpenChannelBody(ApiRequestObject):
     amount: str = api_field()
-    peer_address: str = api_field("peerAddress")
+    destination: str = api_field()
 
 
 @dataclass
@@ -64,7 +64,6 @@ class CreateSessionBody(ApiRequestObject):
 class SessionCapabilitiesBody(ApiRequestObject):
     retransmission: bool = api_field("Retransmission", "false")
     segmentation: bool = api_field("Segmentation", "false")
-    no_delay: bool = api_field("NoDelay", "false")
 
     @property
     def as_array(self) -> list:
@@ -78,4 +77,4 @@ class SessionPathBodyRelayers(ApiRequestObject):
 
 @dataclass
 class SessionTargetBody(ApiRequestObject):
-    service: int = api_field("Service")
+    service: int = api_field("Service", 0)

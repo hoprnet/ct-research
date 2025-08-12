@@ -1,12 +1,21 @@
+import logging
+import os
 from dataclasses import fields, is_dataclass
 from decimal import Decimal
 from typing import Optional
 
 from core.components.balance import Balance
+from core.components.logs import configure_logging
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 
 class Flag:
     def __init__(self, value: float):
+        if not isinstance(value, (int, float)):
+            raise TypeError(f"Flag value must be an int or float, got {type(value)}")
+
         self.value = value
 
     def __repr__(self):
@@ -18,6 +27,7 @@ class ExplicitParams:
     def __init__(self, data: Optional[dict] = None):
         if data is None:
             data = {}
+
         for f in fields(self):
             if f.name not in data:
                 continue
@@ -45,8 +55,30 @@ class ExplicitParams:
             if is_dataclass(v):
                 result[f.name] = v.as_dict()
             else:
-                result[f.name] = f.type(v)
+                result[f.name] = f.type(v)  # ty: ignore[call-non-callable]
         return result
+
+    def set_attribute_from_env(self, attribute: str, env_var: str) -> bool:
+        """
+        Set the value of an attribute from an environment variable.
+        """
+        cls_name = self.__class__.__name__
+        if not hasattr(self, attribute):
+            raise AttributeError(f"{cls_name} has no attribute '{attribute}'")
+
+        if value := os.getenv(env_var):
+            setattr(self, attribute, value)
+            logger.debug(f"{env_var} key loaded to {cls_name}.{attribute}")
+
+            return True
+        else:
+            if getattr(self, attribute) == "None":
+                raise AttributeError(f"{cls_name}.{attribute} not set and {env_var} key not found.")
+            else:
+                logger.warning(
+                    f"{env_var} key not found, using default value for {cls_name}.{attribute}"
+                )
+            return False
 
     @classmethod
     def verify(cls, data: dict) -> bool:
@@ -60,7 +92,7 @@ class ExplicitParams:
             if not is_dataclass(field.type):
                 if not isinstance(field.type, type):
                     raise TypeError(
-                        f"Expected a dataclass for field {field.name}, got {type(field.type)}"
+                        f"Expected a dataclass for field {field.name}, got {field.type}"
                     )
             else:
                 field.type.verify(data.get(field.name, {}))
@@ -94,6 +126,5 @@ class ExplicitParams:
         return result
 
     def __repr__(self):
-        print(f"{vars(self).keys()=}")
         key_pair_string: str = ", ".join([f"{key}={value}" for key, value in vars(self).items()])
         return f"{self.__class__.__name__}({key_pair_string})"

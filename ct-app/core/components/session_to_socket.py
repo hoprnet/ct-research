@@ -1,3 +1,5 @@
+import asyncio
+import logging
 import socket
 from datetime import datetime
 from typing import Optional
@@ -6,9 +8,8 @@ from prometheus_client import Gauge, Histogram
 
 from core.api.protocol import Protocol
 from core.api.response_objects import Session
+from core.components.logs import configure_logging
 from core.components.messages.message_format import MessageFormat
-
-BUF_SIZE = 4096
 
 MESSAGES_DELAYS = Histogram(
     "ct_messages_delays",
@@ -19,13 +20,17 @@ MESSAGES_DELAYS = Histogram(
 MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer"])
 
 
+configure_logging()
+logger = logging.getLogger(__name__)
+
+
 class SessionToSocket:
     def __init__(self, session: Session, connect_address: str, timeout: Optional[float] = 0.05):
         self.session = session
         self.connect_address = connect_address
 
         try:
-            self.socket, self.conn = self.create_socket(timeout)
+            self.socket = self.create_socket(timeout)
         except (socket.error, ValueError) as e:
             raise ValueError(f"Error while creating socket: {e}")
 
@@ -57,67 +62,83 @@ class SessionToSocket:
 
         return (self.connect_address, self.session.port)
 
-    def create_socket(self, timeout: Optional[float]):
+    def create_socket(self, timeout: Optional[float] = None) -> socket.socket:
         if self.session.protocol == Protocol.UDP:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        elif self.session.protocol == Protocol.TCP:
+            s: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            s.connect(self.address)
         else:
             raise ValueError(f"Invalid protocol: {self.session.protocol}")
 
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, BUF_SIZE)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, BUF_SIZE)
+        # # SET CUSTOM SND AND RCV BUFFER SIZES
+        # import math
 
-        if timeout is not None:
-            s.settimeout(timeout)
+        # buffer_size = 2**(int(math.log2(self.session.payload)+0.5) + 2)
+        # s.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, self.session.payload)
+        # s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, buffer_size)
 
-        conn = None
+        s.settimeout(timeout)
 
-        return s, conn
+        return s
 
-    def send(self, data: bytes) -> int:
+    async def send(self, message: MessageFormat) -> bytes:
         """
         Sends data to the peer.
         """
-        if self.session.protocol == Protocol.UDP:
-            return self.socket.sendto(data, self.address)
-        else:
-            raise ValueError(f"Invalid protocol: {self.session.protocol}")
+        payload: bytes = message.bytes()
 
-    def receive(self, size: int) -> tuple[Optional[str], int, Optional[int]]:
+        match self.session.protocol:
+            case Protocol.UDP:
+                self.socket.sendto(payload, self.address)
+            case Protocol.TCP:
+                self.socket.send(payload)
+
+        MESSAGES_STATS.labels("sent", message.sender, message.relayer).inc()
+        return payload
+
+    async def receive(self, chunk_size: int, timeout: float = 1) -> tuple[list[str], int]:
         """
         Receives data from the peer. In case off multiple message in the same packet, which should
         not happen, they are already split and returned as a list.
         """
-        if self.session.protocol != Protocol.UDP:
-            raise ValueError(f"Invalid protocol: {self.session.protocol}")
+        recv_data = b""
 
-        try:
-            data, _ = self.socket.recvfrom(size)
-            now = int(datetime.now().timestamp() * 1000)
-            return data.rstrip(b"\0").decode(), len(data), now
-        except socket.timeout:
-            return None, 0, None
+        start_time = datetime.now().timestamp()
 
-    async def send_and_receive(self, message: MessageFormat) -> float:
-        message.update_timestamp()
+        while True:
+            if (datetime.now().timestamp() - start_time) >= timeout:
+                break
 
-        sent_size = self.send(message.bytes())
-        MESSAGES_STATS.labels("sent", message.sender, message.relayer).inc(
-            sent_size / message.packet_size
-        )
+            try:
+                if self.session.protocol == Protocol.UDP:
+                    data: bytes = self.socket.recvfrom(chunk_size)[0]
+                if self.session.protocol == Protocol.TCP:
+                    data: bytes = self.socket.recv(chunk_size)
+                recv_data += data
+            except socket.timeout:
+                await asyncio.sleep(0.02)
+                pass
+            except ConnectionResetError:
+                break
 
-        recv_message, recv_size, timestamp = self.receive(sent_size)
-        MESSAGES_STATS.labels("relayed", message.sender, message.relayer).inc(
-            recv_size / message.packet_size
-        )
+        now = int(datetime.now().timestamp() * 1000)
+        recv_size: int = len(recv_data)
 
-        if recv_message is None:
-            return 0
+        recv_data: list[str] = [
+            item for item in recv_data.decode().split(b"\0".decode()) if len(item) > 0
+        ]
 
-        try:
-            message = MessageFormat.parse(recv_message)
-        except ValueError:
-            return 0
-        else:
-            rtt = (timestamp - message.timestamp) / 1000
+        for data in recv_data:
+            try:
+                message = MessageFormat.parse(data)
+            except ValueError as e:
+                logger.error(f"Failed to parse message: {e}")
+                continue
+
+            rtt = (now - message.timestamp) / 1000
+            MESSAGES_STATS.labels("received", message.sender, message.relayer).inc()
             MESSAGES_DELAYS.labels(message.sender, message.relayer).observe(rtt)
-            return recv_size / sent_size
+
+        return recv_data, recv_size

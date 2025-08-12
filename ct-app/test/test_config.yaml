@@ -15,12 +15,13 @@ flags:
     rotate_subgraphs: 30
     open_sessions: 30
 
+    # through subgraph queries
     peers_rewards: 30
     registered_nodes: 30
+
+    # through rpc calls
     allocations: 30
     eoa_balances: 30
-    nft_holders: 30
-    safe_fundings: 30
     
   node:
     healthcheck: 10
@@ -37,6 +38,7 @@ flags:
     get_total_channel_funds: Off
     
     observe_message_queue: On
+    observe_sockets: 30
     close_sessions: 30
 
   peer:
@@ -91,7 +93,6 @@ economic_model:
 # 
 # =============================================================================
 peer:
-  min_version: '2.0.7'
   sleep_mean_time: 30
   sleep_std_time: 2
 
@@ -102,20 +103,26 @@ channel:
   min_balance: "0.05 wxHOPR"
   funding_amount: "0.2 wxHOPR"
   max_age_seconds: 60
-
-# =============================================================================
-# 
-# =============================================================================
-sessions:
-  packet_size: 452
-  aggregated_packets: 3
-  batch_size: 5
   
 # =============================================================================
 # 
 # =============================================================================
-fundings:
-  constant: "0 wxHOPR"
+investors:
+  schedule: 
+  addresses: []
+
+# =============================================================================
+# 
+# =============================================================================
+nft_holders:
+  filepath: ".configs/nft_holders.txt"
+
+# =============================================================================
+# 
+# =============================================================================
+rpc:
+  gnosis:   
+  mainnet: 
 
 # =============================================================================
 # 
@@ -125,28 +132,10 @@ subgraph:
   user_id: 1000
   api_key: 
 
-  mainnet_allocations:
-    query_id: ~
-    slug: hopr-allocations
-  gnosis_allocations:
-    query_id: ~
-    slug: hopr-allocations-gnosis
-  hopr_on_mainnet:
-    query_id: ~
-    slug: hopr-on-mainnet
-  hopr_on_gnosis:
-    query_id: ~
-    slug: hopr-on-gnosis
-  fundings:
-    query_id: ~
-    slug: subgraph-wxhopr-txs
   rewards:
     query_id: ~
     slug: rewards_backup_url
   safes_balance:
     query_id: query-id-safes
     slug: safes_backup_url
-  staking:
-    query_id: query-id-staking
-    slug: staking_backup_url
 ...

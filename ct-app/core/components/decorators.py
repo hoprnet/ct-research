@@ -29,7 +29,8 @@ def connectguard(func):
     @functools.wraps(func)
     async def wrapper(self, *args, **kwargs):
         if not self.connected:
-            logger.warning("Node not connected, skipping")
+            logger.warning("Node not connected, sleeping for 15 seconds")
+            await asyncio.sleep(15)
             return
 
         return await func(self, *args, **kwargs)

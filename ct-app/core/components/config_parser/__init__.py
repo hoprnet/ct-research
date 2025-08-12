@@ -1,6 +1,5 @@
 from .economic_model import LegacyParams, SigmoidParams
 from .parameters import Parameters
-from .sessions import SessionsParams
 from .subgraph import SubgraphEndpointParams, SubgraphParams
 
 __all__ = [
@@ -8,6 +7,5 @@ __all__ = [
     "SubgraphParams",
     "SubgraphEndpointParams",
     "LegacyParams",
-    "SessionsParams",
     "SigmoidParams",
 ]

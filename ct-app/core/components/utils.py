@@ -45,6 +45,8 @@ class Utils:
 
             peer.safe = getattr(node, "safe", Safe.default())
 
+            peer.safe.additional_balance = Balance.zero("wxHOPR")
+
             for allocation in allocations:
                 if peer.safe.address in allocation.linked_safes:
                     peer.safe.additional_balance += (

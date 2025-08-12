@@ -4,9 +4,8 @@ from typing import Callable, Optional, Union
 
 import aiohttp
 
-from core.components.logs import configure_logging
-
 from ..components.balance import Balance
+from ..components.logs import configure_logging
 from . import request_objects as req
 from . import response_objects as resp
 from .http_method import HTTPMethod
@@ -14,6 +13,7 @@ from .protocol import Protocol
 
 configure_logging()
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class HoprdAPI:
@@ -21,9 +21,9 @@ class HoprdAPI:
     HOPRd API helper to handle exceptions and logging.
     """
 
-    def __init__(self, url: str, token: str):
+    def __init__(self, url: str, token: Optional[str] = None):
         self.host = url
-        self.headers = {"Authorization": f"Bearer {token}"}
+        self.headers = {"Authorization": f"Bearer {token}"} if token else {}
         self.prefix = "/api/v4/"
 
     async def __call(
@@ -56,7 +56,7 @@ class HoprdAPI:
                     except Exception:
                         data = await res.text()
 
-                    return (res.status // 200) == 1, data
+                    return int(res.status // 200) == 1, data
         except OSError as err:
             logger.error(
                 "OSError while doing an API call",
@@ -144,6 +144,10 @@ class HoprdAPI:
             return is_ok
 
         if not is_ok:
+            if r is None:
+                logger.error("API request failed due to timeout", {"method": method.value, "path": path})
+            else:
+                logger.error("API request failed", {"method": method.value, "path": path, "r": r})
             return None
 
         if resp_type is None:
@@ -190,13 +194,12 @@ class HoprdAPI:
         """
         return await self.request(HTTPMethod.DELETE, f"channels/{channel_id}", return_state=True)
 
-    async def channels(self) -> Optional[resp.Channels]:
+    async def channels(self, full_topology: bool = True) -> Optional[resp.Channels]:
         """
         Returns all channels.
         :return: channels: list
         """
-        header = req.GetChannelsBody(True, False).as_header_string
-        print(f"{header=}")
+        header = req.GetChannelsBody(full_topology, False).as_header_string
         return await self.request(HTTPMethod.GET, f"channels?{header}", resp_type=resp.Channels)
 
     async def metrics(self) -> Optional[resp.Metrics]:
@@ -222,7 +225,7 @@ class HoprdAPI:
         params = req.GetPeersBody(quality)
 
         if r := await self.request(HTTPMethod.GET, f"node/peers?{params.as_header_string}"):
-            return [resp.ConnectedPeer(peer) for peer in r.getattr(status, [])]
+            return [resp.ConnectedPeer(peer) for peer in r.get(status, [])]
         else:
             return []
 
@@ -231,7 +234,7 @@ class HoprdAPI:
         Returns the address of the node.
         :return: address: Addresses | undefined
         """
-        return await self.request(HTTPMethod.GET, "account/address", resp_type=resp.Addresses)
+        return await self.request(HTTPMethod.GET, "account/addresses", resp_type=resp.Addresses)
 
     async def node_info(self) -> Optional[resp.Infos]:
         """
@@ -264,8 +267,8 @@ class HoprdAPI:
         :param: protocol: Protocol
         :return: list[Session]
         """
-        if resp := await self.request(HTTPMethod.GET, f"session/{protocol.name.lower()}"):
-            return [resp.Session(s) for s in resp]
+        if r := await self.request(HTTPMethod.GET, f"session/{protocol.name.lower()}"):
+            return [resp.Session(s) for s in r]
         else:
             return []
 
@@ -274,7 +277,6 @@ class HoprdAPI:
         destination: str,
         relayer: str,
         listen_host: str = ":0",
-        response_buffer: int = 0,  # MB,
         protocol: Protocol = Protocol.UDP,
     ) -> Union[resp.Session, resp.SessionFailure]:
         """
@@ -285,12 +287,9 @@ class HoprdAPI:
         :param: protocol: Protocol (UDP or TCP)
         :return: Session
         """
-        capabilities_body = req.SessionCapabilitiesBody(
-            protocol.retransmit, protocol.segment, protocol.no_delay
-        )
+        capabilities_body = req.SessionCapabilitiesBody(protocol.retransmit, protocol.segment)
         target_body = req.SessionTargetBody()
-        path_body = req.SessionPathBodyRelayers([relayer])  # forward and return path
-        response_buffer_body = f"{response_buffer} MB"
+        path_body = req.SessionPathBodyRelayers([])  # forward and return path
 
         data = req.CreateSessionBody(
             capabilities_body.as_array,
@@ -298,14 +297,16 @@ class HoprdAPI:
             listen_host,
             path_body.as_dict,
             path_body.as_dict,
-            response_buffer_body,
+            "0 KB",
             target_body.as_dict,
-        )
 
-        if r := await self.request(HTTPMethod.POST, f"session/{protocol.name.lower()}", data):
-            return resp.Session(r)
+        )
+        if r := await self.request(
+            HTTPMethod.POST, f"session/{protocol.name.lower()}", data, timeout=5, resp_type=resp.Session
+        ):
+            return r
         else:
-            return resp.SessionFailure({"error": "client error", "status": "CLIENT_ERROR"})
+            return resp.SessionFailure({"error": "api call or timeout error", "status": "NO_SESSION_OPENED"})
 
     async def close_session(self, session: resp.Session) -> bool:
         """

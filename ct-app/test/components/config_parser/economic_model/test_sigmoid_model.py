@@ -1,4 +1,5 @@
 from copy import deepcopy
+from decimal import Decimal
 
 import pytest
 
@@ -29,11 +30,11 @@ def test_values_mid_range():
         }
     )
 
-    model.offset = 0
-    assert model.apr([0.5, 0.25]) == 0
+    model.offset = Decimal(0)
+    assert model.apr([Decimal("0.5"), Decimal("0.25")]) == 0
 
-    model.offset = 10.0
-    assert model.apr([0.5, 0.25]) == 10
+    model.offset = Decimal(10)
+    assert model.apr([Decimal("0.5"), Decimal("0.25")]) == 10
 
 
 def test_value_above_mid_range():
@@ -53,7 +54,7 @@ def test_value_above_mid_range():
         }
     )
 
-    assert model.apr([0.75]) == 0
+    assert model.apr([Decimal("0.75")]) == 0
 
 
 def test_value_below_mid_range():
@@ -73,7 +74,7 @@ def test_value_below_mid_range():
         }
     )
 
-    assert model.apr([0.25]) > 0
+    assert model.apr([Decimal("0.25")]) > 0
 
 
 def test_apr_composition():
@@ -103,7 +104,7 @@ def test_apr_composition():
         }
     )
 
-    assert model_a.apr([0.25]) == model_b.apr([0.25, 0.25])
+    assert model_a.apr([Decimal("0.25")]) == model_b.apr([Decimal("0.25"), Decimal("0.25")])
 
 
 def test_out_of_bounds_values():
@@ -123,8 +124,8 @@ def test_out_of_bounds_values():
         }
     )
 
-    assert model.apr([0.5]) == 0
-    assert model.apr([0]) == 0
+    assert model.apr([Decimal("0.5")]) == 0
+    assert model.apr([Decimal("0")]) == 0
 
 
 def test_bucket_apr():
@@ -138,14 +139,14 @@ def test_bucket_apr():
     )
 
     with pytest.raises(ValueError):
-        bucket.apr(0)
+        bucket.apr(Decimal(0))
 
-    assert bucket.apr(0.125) > 0
-    assert bucket.apr(0.25) == 0
-    assert bucket.apr(0.375) == 0
+    assert bucket.apr(Decimal("0.125")) > 0
+    assert bucket.apr(Decimal("0.25")) == 0
+    assert bucket.apr(Decimal("0.375")) == 0
 
     with pytest.raises(ValueError):
-        bucket.apr(0.5)
+        bucket.apr(Decimal("0.5"))
 
 
 def test_yearly_message_count():
@@ -174,8 +175,8 @@ def test_yearly_message_count():
         }
     )
 
-    assert model.apr([0.5, 0.25]) == 10
+    assert model.apr([Decimal("0.5"), Decimal("0.25")]) == 10
 
-    assert model.yearly_message_count(stake, ticket_price, [0.5, 0.25]) == round(
-        model.apr([0.5, 0.25]) / 100 * stake / (ticket_price.value)
-    )
+    assert model.yearly_message_count(
+        stake, ticket_price, [Decimal("0.5"), Decimal("0.25")]
+    ) == round(model.apr([Decimal("0.5"), Decimal("0.25")]) / 100 * stake / (ticket_price.value))

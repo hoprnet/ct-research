@@ -5,6 +5,7 @@ from typing import Any
 from core.components.balance import Balance
 
 from .channelstatus import ChannelStatus
+from .protocol import Protocol
 
 SURB_SIZE: int = 400
 
@@ -113,7 +114,6 @@ class Infos(ApiResponseObject):
 class ConnectedPeer(ApiResponseObject):
     address: str = field()
     multiaddr: str = field()
-    version: str = field(metadata={"path": "reportedVersion"})
 
     def post_init(self):
         self.address = try_to_lower(self.address)
@@ -130,6 +130,14 @@ class Channel(ApiResponseObject):
     def post_init(self):
         self.destination = try_to_lower(self.destination)
         self.source = try_to_lower(self.source)
+
+
+@dataclass(init=False)
+class OwnChannel(ApiResponseObject):
+    id: str = field()
+    peer_address: str = field(metadata={"path": "peerAddress"})
+    status: ChannelStatus = field()
+    balance: Balance = field()
 
 
 @dataclass(init=False)
@@ -151,13 +159,14 @@ class OpenedChannel(ApiResponseObject):
 @dataclass(init=False)
 class Metrics(ApiMetricResponseObject):
     hopr_tickets_incoming_statistics: dict = field(metadata={"labels": ["statistic"]})
+    hopr_packets_count: dict = field(metadata={"labels": ["type"]})
 
 
 class Channels:
     def __init__(self, data: dict):
         self.all = [Channel(c) for c in data.get("all", [])]
-        self.incoming = [Channel(c) for c in data.get("incoming", [])]
-        self.outgoing = [Channel(c) for c in data.get("outgoing", [])]
+        self.incoming = [OwnChannel(c) for c in data.get("incoming", [])]
+        self.outgoing = [OwnChannel(c) for c in data.get("outgoing", [])]
 
     def __str__(self):
         return str(self.__dict__)
@@ -170,7 +179,7 @@ class Channels:
 class Session(ApiResponseObject):
     ip: str = field()
     port: int = field()
-    protocol: str = field()
+    protocol: Protocol = field()
     target: str = field()
     mtu: int = field()
 
@@ -180,7 +189,17 @@ class Session(ApiResponseObject):
 
     @property
     def as_path(self):
-        return f"session/{self.protocol}/{self.ip}/{self.port}"
+        return f"session/{self.protocol.value}/{self.ip}/{self.port}"
+
+    @property
+    def as_dict(self) -> dict:
+        return {
+            "ip": self.ip,
+            "port": self.port,
+            "protocol": self.protocol.value,
+            "target": self.target,
+            "mtu": self.mtu,
+        }
 
 
 @dataclass(init=False)

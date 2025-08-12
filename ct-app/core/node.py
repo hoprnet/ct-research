@@ -6,20 +6,18 @@ from datetime import datetime
 from typing import Callable, Optional
 
 from prometheus_client import Gauge
-from pytest import Session
-
-from core.components.asyncloop import AsyncLoop
-from core.components.balance import Balance
-from core.components.logs import configure_logging
-from core.components.pattern_matcher import PatternMatcher
 
 from .api import HoprdAPI, Protocol
 from .components import LockedVar, Peer, Utils
 from .components.address import Address
+from .components.asyncloop import AsyncLoop
+from .components.balance import Balance
 from .components.config_parser import Parameters
 from .components.decorators import connectguard, keepalive, master
+from .components.logs import configure_logging
 from .components.messages import MessageFormat, MessageQueue
 from .components.node_helper import NodeHelper
+from .components.pattern_matcher import PatternMatcher
 from .components.session_to_socket import SessionToSocket
 
 # endregion
@@ -154,11 +152,7 @@ class Node:
         out_opens = [c for c in self.channels.outgoing if not c.status.is_closed]
 
         addresses_with_channels = {c.destination for c in out_opens}
-        all_addresses = {
-            p.address.native
-            for p in await self.peers.get()
-            if not p.is_old(self.params.peer.min_version)
-        }
+        all_addresses = {p.address.native for p in await self.peers.get()}
         addresses_without_channels = all_addresses - addresses_with_channels
 
         logger.info(
@@ -319,8 +313,7 @@ class Node:
                 {"count": len(results), **self.log_base_params},
             )
 
-        peers = {Peer(item.address, item.version) for item in results}
-        peers = {p for p in peers if not p.is_old(self.params.peer.min_version)}
+        peers = {Peer(item.address) for item in results}
 
         addresses_w_timestamp = {p.address.native: datetime.now() for p in peers}
 
@@ -409,9 +402,23 @@ class Node:
         message.sender = self.address.native
         message.packet_size = sess_and_socket.session.payload
 
-        for _ in range(self.params.sessions.batch_size):
-            AsyncLoop.add(sess_and_socket.send_and_receive, message, publish_to_task_set=False)
-            message.increase_inner_index()
+        AsyncLoop.add(
+            sess_and_socket.send,
+            message,
+            publish_to_task_set=False,
+        )
+
+    @keepalive
+    async def observe_sockets(self):
+        for sess_and_socket in self.session_management.values():
+            if sess_and_socket.socket is None:
+                continue
+
+            AsyncLoop.add(
+                sess_and_socket.receive,
+                sess_and_socket.session.payload,
+                publish_to_task_set=False,
+            )
 
     @master(keepalive, connectguard)
     async def close_sessions(self):
@@ -439,7 +446,7 @@ class Node:
         Also, doesn't remove the session from the session_management dict.
         This method should run on startup to clean up any old sessions.
         """
-        active_sessions: list[Session] = await self.api.list_sessions(Protocol.UDP)
+        active_sessions = await self.api.list_sessions(Protocol.UDP)
 
         for session in active_sessions:
             AsyncLoop.add(
@@ -450,22 +457,19 @@ class Node:
                 publish_to_task_set=False,
             )
 
-    async def open_sessions(self, allowed_addresses: list[Address], destinations: list[Address]):
+    async def open_sessions(self, allowed: list[Address], destinations: list[Address]):
         if self.channels is None:
             logger.warning("No channels found yet", self.log_base_params)
             return
 
         addresses_with_channels = set([c.destination for c in self.channels.outgoing])
 
-        allowed_addressess = set([address.native for address in allowed_addresses])
+        allowed_addresses = set([address.native for address in allowed])
         addresses_with_session = set(self.session_management.keys())
-        without_session_addresses = addresses_with_channels.intersection(
-            allowed_addressess - addresses_with_session
-        )
+        addresses_without_session = allowed_addresses - addresses_with_session
 
-        for address in without_session_addresses:
+        for address in addresses_without_session.intersection(addresses_with_channels):
             destination: Address = random.choice(list(set(destinations) - {self.address}))
-
             AsyncLoop.add(self.open_session, destination, address, publish_to_task_set=False)
 
     async def open_session(self, destination: Address, relayer: str):

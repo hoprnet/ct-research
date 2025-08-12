@@ -1,41 +1,25 @@
-from enum import Enum
+import enum
 
 
-class ProtocolTemplate:
-    def __init__(self, retransmit: bool, segment: bool, no_delay: bool):
-        self.retransmit = retransmit
-        self.segment = segment
-        self.no_delay = no_delay
+class Protocol(enum.Enum):
+    TCP = "tcp"
+    UDP = "udp"
 
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            for status in cls:
+                if status.value == value:
+                    return status
 
-class TCPProtocol(ProtocolTemplate):
-    def __init__(self):
-        super().__init__(retransmit=True, segment=True, no_delay=True)
+            return cls.Unknown
 
-
-class UDPProtocol(ProtocolTemplate):
-    def __init__(self):
-        super().__init__(retransmit=False, segment=True, no_delay=True)
-
-
-class Protocol(Enum):
-    TCP = TCPProtocol()
-    UDP = UDPProtocol()
+        return super()._missing_(value)
 
     @property
     def segment(self):
-        return self.value.segment
+        return False
 
     @property
     def retransmit(self):
-        return self.value.retransmit
-
-    @property
-    def no_delay(self):
-        return self.value.no_delay
-
-    def __eq__(self, other):
-        if isinstance(other, str):
-            return other.lower() == self.name.lower()
-
-        return self.name == other.name
+        return False

@@ -12,15 +12,16 @@ flags:
     connected_peers: 30
     topology: 30
 
-    rotate_subgraphs: 60
+    rotate_subgraphs: 300
     open_sessions: 60
 
+    # through subgraph queries
     peers_rewards: 300
     registered_nodes: 300
+
+    # through rpc calls
     allocations: 300
     eoa_balances: 300
-    nft_holders: 300
-    safe_fundings: 300
     
   node:
     healthcheck: 15
@@ -37,6 +38,7 @@ flags:
     get_total_channel_funds: 300
     
     observe_message_queue: On
+    observe_sockets: 5
     close_sessions: 30
 
   peer:
@@ -91,7 +93,6 @@ economic_model:
 # 
 # =============================================================================
 peer:
-  min_version: '2.2.1'
   sleep_mean_time: 30
   sleep_std_time: 2
 
@@ -102,20 +103,35 @@ channel:
   min_balance: "20 wxHOPR"
   funding_amount: "30 wxHOPR"
   max_age_seconds: 172800
-  
-# =============================================================================
-# 
-# =============================================================================
-sessions:
-  aggregated_packets: 10
-  batch_size: 5
 
 # =============================================================================
 # 
 # =============================================================================
-fundings:
-  constant: "626500 wxHOPR"
-  
+investors:
+  schedule: "investor-node-remainder-2024-01"
+  addresses:
+    - "0xebad8a12451bd17f7708a325a150f06cb0ec6e7c"
+    - "0x9263a4d34c3fe5a3e5a281c78f652ee84abc56ae"
+    - "0x3228413375817f8201c78a61ee86c5b8689343bb"
+    - "0x06c2c4db3776d500636de63e4f109386dcba6ae2"
+    - "0xcf2878a10cca65e3ec3569e0d9634d431bcbef9e"
+    - "0x329c54289ff5d6b7b7dae13592c6b1eda1543ed4"
+    - "0xa96bc337f5966c8ecba27fc4d46c75712790997c"
+    - "0xb11dd162fc6c31cb5560f2310de3283bb913b91e"
+
+# =============================================================================
+# 
+# =============================================================================
+nft_holders:
+  filepath: ".configs/nft_holders.txt"
+
+# =============================================================================
+# 
+# =============================================================================
+rpc:
+  gnosis: 
+  mainnet: 
+
 # =============================================================================
 # 
 # =============================================================================
@@ -124,36 +140,10 @@ subgraph:
   user_id: 78696
   api_key: 
 
-  mainnet_allocations:
-    query_id: FhU1GxUovoP1zphNbWFEQHwpabLGELQBdWWyFX1yjBkf
-    slug: hopr-allocations
-    inputs:
-      schedule_in:
-        - investor-node-remainder-2024-01
-  gnosis_allocations:
-    query_id: DXy4UwhNms3zm7abYeSYaD3hTkuaWYyNvozrXSXejMbS
-    slug: hopr-allocations---gnosis
-    inputs:
-      schedule_in:
-        - investor-node-remainder-2024-01
-  hopr_on_mainnet:
-    query_id: 4GZdwVtPcQp95RF77W27GK2ezgGLB1iintG6mYZQ1w33
-    slug: hopr---mainnet
-  hopr_on_gnosis:
-    query_id: 2wMRp1AW1ghxoFiM6WeRD93djHNvNGhXsuQyadmwCyqE
-    slug: hopr-on-gnosis
-  fundings:
-    query_id: EpAdSFzDLT7N5RhA3UxtqGUwkFxmMunSE2yGLb8juQjC
-    slug: subgraph-wxhopr-txs
-    inputs:
-      from: '0xd9a00176cf49dfb9ca3ef61805a2850f45cb1d05'
   rewards:
     query_id: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
     slug: hopr-channels
   safes_balance:
     query_id: GP2abJCarirMJCanuk4SBmnadiobEWH9ME2MNRAHbBTp
     slug: hopr-nodes-dufour
-  staking:
-    query_id: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
-    slug: hopr-stake-all-seasons
 ...

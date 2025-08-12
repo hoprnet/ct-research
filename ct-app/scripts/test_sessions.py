@@ -1,24 +1,30 @@
 import logging
+import random
 import sys
+import time
 from typing import Optional
 
 import click
-from lib.decorators import asynchronous
-from lib.state import State
 
 sys.path.insert(1, "./")
 
 from core.api.hoprd_api import HoprdAPI
-from core.api.response_objects import Session, SessionFailure
+from core.api.protocol import Protocol
+from core.api.response_objects import Metrics, Session, SessionFailure
 from core.components.messages.message_format import MessageFormat
 from core.components.session_to_socket import SessionToSocket
+from scripts.lib.decorators import asynchronous
+from scripts.lib.state import State
+from scripts.lib.tools import packet_statistics, print_path
 
 logger = logging.getLogger("core.api.hoprd_api")
 logger.setLevel(logging.INFO)
 
 
-class HOP:
-    def __init__(self, host: str, port: int, token: str, p2p_host: str = "127.0.0.1"):
+class Node:
+    def __init__(
+        self, host: str, port: int, token: Optional[str] = None, p2p_host: str = "127.0.0.1"
+    ):
         self.host = host
         self.port = port
         self.token = token
@@ -27,17 +33,31 @@ class HOP:
         self._address: Optional[str] = None
 
     @property
+    def host_root(self) -> str:
+        if "localhost" in self.host:
+            return f"localhost:{self.port}"
+
+        if "127.0.0.1" in self.host:
+            return f"127.0.0.1:{self.port}"
+
+        return self.host.split("//")[1].split(".")[0]
+
+    @property
+    def address_short(self) -> str:
+        return f"{self._address[:6]}..{(self._address)[-4:]}"
+
+    @property
     async def address(self) -> str:
         if self._address is None:
             if addr := await self.api.address():
                 self._address = addr.native
             else:
-                raise ValueError("No address found for the HOP node")
+                raise ValueError(f"No address found for the HOP node: {self.host}:{self.port}")
         return self._address
 
     @property
-    async def packet_count(self) -> dict:
-        return get_packet_counts_from_metrics(await self.api.metrics())
+    async def metrics(self) -> Metrics:
+        return await self.api.metrics()
 
     @property
     def api_host(self) -> str:
@@ -50,88 +70,63 @@ class HOP:
         return self._api
 
 
-def get_packet_counts_from_metrics(metrics: str) -> dict:
-    """
-    Extract packet counts from metrics string.
-    """
-    if metrics is None:
-        return {}
+async def only_send(
+    socket: SessionToSocket, path: list[Node], message_size: int, loops: int
+) -> tuple[list[bytes], int]:
+    sent_data: list[bytes] = list()
 
-    hopr_packet_counts = [
-        line
-        for line in metrics.split("\n")
-        if "hopr_packets_count" in line and not line.startswith("#")
-    ]
-    packet_counts = {}
-    for line in hopr_packet_counts:
-        key, value = line.split(" ")
-        packet_counts[key] = int(value)
-    return packet_counts
+    for _ in range(loops):
+        message = MessageFormat(await path[1].address, await path[0].address, message_size)
+        sent_data.append(await socket.send(message))
 
-
-def packet_statistics(packet_counts_before: dict, packet_counts_after: dict):
-    print("Packets statistics:")
-    for (address, before), (address, after) in zip(
-        packet_counts_before.items(), packet_counts_after.items()
-    ):
-        print(f"\t..{address[-6:]}")
-        for key, value in after.items():
-            if key not in before:
-                print(f"\t\tKey `{key}` not found in before metrics")
-                before[key] = 0
-
-            print(f"\t\t{key}: {value - before[key]:+d}")
-
-
-def print_path(hops: list[str]):
-    hops = [f"..{hop[-6:]}" for hop in hops]
-    str_len = sum(len(hop) for hop in hops) + (len(hops)) * 3 + 1
-
-    print("/" + "=" * str_len + "\\")
-    print("|" + " " * str_len + "|")
-    print("| " + " <> ".join(hops) + " |")
-    print("|" + " " * str_len + "|")
-    print("\\" + "=" * str_len + "/")
+    sent_size: int = sum(len(data) for data in sent_data)
+    return sent_data, sent_size
 
 
 @click.command()
-@click.option("--num-sending", default=10, help="Number of packets to send in one session")
-@click.option(
-    "--aggregated-messages",
-    default=1,
-    help="Number of messages to aggregate in one packet",
-)
+@click.option("--waves", type=int, default=100, help="Number of batches to send")
+@click.option("--batch-size", type=int, default=1, help="Aggregated messages")
+@click.option("--timeout", type=float, default=1, help="Socket timeout")
+@click.option("--protocol", type=click.Choice(Protocol), help="Protocol to use")
 @asynchronous
-async def main(
-    num_sending: int,
-    aggregated_messages: int,
-):
-    path = [
-        HOP(host="http://0.0.0.0", port=3003, token="e2e-API-token^^"),
-        HOP(host="http://0.0.0.0", port=3018, token="e2e-API-token^^"),
-        HOP(host="http://0.0.0.0", port=3006, token="e2e-API-token^^"),
+async def main(waves: int, batch_size: int, timeout: float, protocol: Protocol):
+    nodes: list[Node] = [
+        Node(host="http://localhost", port=3003, token="e2e-API-token^^"),
+        Node(host="http://127.0.0.1", port=3006),
+        Node(host="http://localhost", port=3009, token="e2e-API-token^^"),
+        Node(host="http://127.0.0.1", port=3012, token="e2e-API-token^^"),
+        Node(host="http://localhost", port=3015, token="e2e-API-token^^"),
+        Node(host="http://127.0.0.1", port=3018, token="e2e-API-token^^"),
     ]
+
+    path: list[Node] = random.sample(nodes, k=3)
+
+    [await hop.address for hop in path]
 
     # get node infos
     try:
-        print_path([await hop.address for hop in path])
+        print_path(
+            [hop.host_root for hop in path],
+            [hop.address_short for hop in path],
+            seps=[" <> ", "    "],
+        )
     except ValueError as e:
         print(State.FAILURE, f"Error getting addresses: {e}")
         return
 
     # get sessions
-    sessions = await path[0].api.list_sessions()
+    sessions: list[Session] = await path[0].api.list_sessions()
     for session in sessions:
         await path[0].api.close_session(session)
 
-    sessions = await path[0].api.list_sessions()
+    sessions: list[Session] = await path[0].api.list_sessions()
     if len(sessions) != 0:
         print(State.FAILURE, f"Sessions not closed: {sessions}")
         return
 
     # open session
     session = await path[0].api.post_session(
-        await path[2].address, await path[1].address, path[0].p2p_host
+        await path[2].address, await path[1].address, path[0].p2p_host, protocol
     )
 
     match session:
@@ -145,49 +140,46 @@ async def main(
             return
 
     for key, value in session.as_dict.items():
-        print(f"\t{key:10s}: {value:10s}")
+        print(f"\t{key:10s}: {str(value):10s}")
 
-    packet_counts_before = {await hop.address: await hop.packet_count for hop in path}
+    # create socket
+    socket: SessionToSocket = SessionToSocket(session, path[0].p2p_host, timeout)
 
     # send data through socket
-    socket = SessionToSocket(session, path[0].p2p_host, 0.5)
-    sent_data = []
-    recv_data = []
-    for _ in range(num_sending):
-        message = MessageFormat(
-            aggregated_messages * session.payload, await path[1].address, await path[0].address
-        )
+    metrics_before: dict[str, Metrics] = {hop.host_root: await hop.api.metrics() for hop in path}
 
-        size = socket.send(message.bytes())
-        sent_data.append(size)
-        if (response := socket.receive(size)) and (recv_size := response[1]):
-            recv_data.append(recv_size)
+    send_start_time: float = time.time()
+    sent_data, sent_size = await only_send(socket, path, batch_size * session.payload, waves)
+    send_elapsed_time: float = time.time() - send_start_time
 
     print(
-        State.fromBool(
-            len(sent_data) == len(recv_data) and all(sent_data) and all(recv_data),
-        ),
-        f"Sent {len(sent_data)} messages ({sum(sent_data)} bytes -",
-        f"{sum(sent_data)//session.payload} HOPR packets),",
-        f"received {len(recv_data)} messages ({sum(recv_data)} bytes -",
-        f"{sum(recv_data)//session.payload} HOPR packets)",
+        State.SUCCESS,
+        f"Sent {len(sent_data):3d} messages in {send_elapsed_time*1000:4.0f}ms",
+        f"({sent_size/2**10:.2f} kB - {sent_size//session.payload} HOPR packets),",
     )
 
-    packets_count_after = {await hop.address: await hop.packet_count for hop in path}
+    # receive data in socket
+    recv_start_time: float = time.time()
+    recv_data, recv_size = await socket.receive(batch_size * session.payload, timeout)
+    recv_elapsed_time: float = time.time() - recv_start_time
+
+    metrics_after: dict[str, Metrics] = {hop.host_root: await hop.api.metrics() for hop in path}
+
+    print(
+        State.fromBool(sent_size == recv_size),
+        f"Recv {len(recv_data):3d} messages in {recv_elapsed_time*1000:4.0f}ms",
+        f"({recv_size/2**10:.2f} kB - {recv_size//session.payload} HOPR packets)",
+    )
 
     # close session
-    if session:
-        await path[0].api.close_session(session)
-
-    # get session
-    match await path[0].api.list_sessions():
-        case []:
-            print(State.SUCCESS, "Sessions cleaned-up")
-        case _:
+    match await path[0].api.close_session(session):
+        case True:
+            print(State.SUCCESS, "Session closed")
+        case False:
             print(State.FAILURE, "Session not closed")
 
     # get the difference between the two packet counts
-    packet_statistics(packet_counts_before, packets_count_after)
+    packet_statistics(metrics_before, metrics_after, "hopr_packets_count")
 
 
 if __name__ == "__main__":
