@@ -123,10 +123,6 @@ class SessionToSocket:
             except ConnectionResetError:
                 break
 
-        logger.debug(
-            "End of socket recv",
-            {**self.session.as_dict, "address": self.connect_address, "size": len(recv_data)},
-        )
         now = int(datetime.now().timestamp() * 1000)
         recv_size: int = len(recv_data)
 
