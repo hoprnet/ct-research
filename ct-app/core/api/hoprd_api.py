@@ -140,13 +140,14 @@ class HoprdAPI:
             method, path, data, timeout=timeout, use_api_path=use_api_path
         )
 
-        if resp_type is resp.OpenedChannel:
-            logger.error(f"{is_ok=}, {r=}")
-
         if return_state:
             return is_ok
 
         if not is_ok:
+            if r is None:
+                logger.error("API request failed due to timeout", {"method": method.value, "path": path})
+            else:
+                logger.error("API request failed", {"method": method.value, "path": path, "r": r})
             return None
 
         if resp_type is None:
@@ -288,7 +289,7 @@ class HoprdAPI:
         """
         capabilities_body = req.SessionCapabilitiesBody(protocol.retransmit, protocol.segment)
         target_body = req.SessionTargetBody()
-        path_body = req.SessionPathBodyRelayers([relayer])  # forward and return path
+        path_body = req.SessionPathBodyRelayers([])  # forward and return path
 
         data = req.CreateSessionBody(
             capabilities_body.as_array,
@@ -298,14 +299,14 @@ class HoprdAPI:
             path_body.as_dict,
             "0 KB",
             target_body.as_dict,
-        )
 
+        )
         if r := await self.request(
-            HTTPMethod.POST, f"session/{protocol.name.lower()}", data, timeout=2
+            HTTPMethod.POST, f"session/{protocol.name.lower()}", data, timeout=5, resp_type=resp.Session
         ):
-            return resp.Session(r)
+            return r
         else:
-            return resp.SessionFailure({"error": "client error", "status": "CLIENT_ERROR"})
+            return resp.SessionFailure({"error": "api call or timeout error", "status": "NO_SESSION_OPENED"})
 
     async def close_session(self, session: resp.Session) -> bool:
         """
