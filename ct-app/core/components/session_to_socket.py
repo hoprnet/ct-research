@@ -18,7 +18,7 @@ MESSAGES_DELAYS = Histogram(
     buckets=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2.5, 5],
 )
 MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer"])
-
+MESSAGE_SENDING_REQUEST = Gauge("ct_message_sending_request", "", ["sender", "relayer"])
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -72,13 +72,6 @@ class SessionToSocket:
         else:
             raise ValueError(f"Invalid protocol: {self.session.protocol}")
 
-        # # SET CUSTOM SND AND RCV BUFFER SIZES
-        # import math
-
-        # buffer_size = 2**(int(math.log2(self.session.payload)+0.5) + 2)
-        # s.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, self.session.payload)
-        # s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, buffer_size)
-
         s.settimeout(timeout)
 
         return s
@@ -87,6 +80,8 @@ class SessionToSocket:
         """
         Sends data to the peer.
         """
+        MESSAGE_SENDING_REQUEST.labels(message.sender, message.relayer).inc()
+
         payload: bytes = message.bytes()
 
         match self.session.protocol:

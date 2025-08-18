@@ -384,18 +384,29 @@ class Node:
 
     @master(keepalive, connectguard)
     async def observe_message_queue(self):
-        if self.channels is None:
-            logger.warning("No channels found yet")
-            await asyncio.sleep(5)
-            return
+        peers: list[str] = [peer.address.native for peer in await self.peers.get()]
+        channels: list[str] = (
+            [channel.destination for channel in self.channels.outgoing] if self.channels else []
+        )
+
+        checklists = {"peers": peers, "channels": channels, "sessions": self.session_management}
+
+        # check if one of the checklist is empty
+        for key, checklist in checklists.items():
+            if not checklist:
+                logger.debug("Checklist is empty", {"checklist": key})
+                await asyncio.sleep(5)
+                return
 
         message: MessageFormat = await MessageQueue().get_async()
 
-        peers: list[str] = [peer.address.native for peer in await self.peers.get()]
-        channels: list[str] = [channel.destination for channel in self.channels.outgoing]
-
-        for checklist in [peers, channels, self.session_management]:
+        for key, checklist in checklists.items():
             if message.relayer not in checklist:
+                logger.warning(
+                    "Message relayer not found in checklist",
+                    {"relayer": message.relayer, "key": key},
+                )
+                await asyncio.sleep(5)
                 return
 
         sess_and_socket: SessionToSocket = self.session_management[message.relayer]

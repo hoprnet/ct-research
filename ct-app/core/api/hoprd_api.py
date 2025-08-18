@@ -145,7 +145,9 @@ class HoprdAPI:
 
         if not is_ok:
             if r is None:
-                logger.error("API request failed due to timeout", {"method": method.value, "path": path})
+                logger.error(
+                    "API request failed due to timeout", {"method": method.value, "path": path}
+                )
             else:
                 logger.error("API request failed", {"method": method.value, "path": path, "r": r})
             return None
@@ -299,14 +301,19 @@ class HoprdAPI:
             path_body.as_dict,
             "0 KB",
             target_body.as_dict,
-
         )
         if r := await self.request(
-            HTTPMethod.POST, f"session/{protocol.name.lower()}", data, timeout=5, resp_type=resp.Session
+            HTTPMethod.POST,
+            f"session/{protocol.name.lower()}",
+            data,
+            timeout=5,
+            resp_type=resp.Session,
         ):
             return r
         else:
-            return resp.SessionFailure({"error": "api call or timeout error", "status": "NO_SESSION_OPENED"})
+            return resp.SessionFailure(
+                {"error": "api call or timeout error", "status": "NO_SESSION_OPENED"}
+            )
 
     async def close_session(self, session: resp.Session) -> bool:
         """
