@@ -291,7 +291,7 @@ class HoprdAPI:
         """
         capabilities_body = req.SessionCapabilitiesBody(protocol.retransmit, protocol.segment)
         target_body = req.SessionTargetBody()
-        path_body = req.SessionPathBodyRelayers([])  # forward and return path
+        path_body = req.SessionPathBodyRelayers([relayer])
 
         data = req.CreateSessionBody(
             capabilities_body.as_array,
