@@ -388,7 +388,6 @@ class Node:
         channels: list[str] = (
             [channel.destination for channel in self.channels.outgoing] if self.channels else []
         )
-
         checklists = {"peers": peers, "channels": channels, "sessions": self.session_management}
 
         # check if one of the checklist is empty
@@ -406,7 +405,6 @@ class Node:
                     "Message relayer not found in checklist",
                     {"relayer": message.relayer, "key": key},
                 )
-                await asyncio.sleep(5)
                 return
 
         sess_and_socket: SessionToSocket = self.session_management[message.relayer]
