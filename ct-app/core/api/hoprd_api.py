@@ -140,9 +140,6 @@ class HoprdAPI:
             method, path, data, timeout=timeout, use_api_path=use_api_path
         )
 
-        if return_state:
-            return is_ok
-
         if not is_ok:
             if r is None:
                 logger.error(
@@ -150,6 +147,11 @@ class HoprdAPI:
                 )
             else:
                 logger.error("API request failed", {"method": method.value, "path": path, "r": r})
+
+        if return_state:
+            return is_ok
+
+        if not is_ok:
             return None
 
         if resp_type is None:
