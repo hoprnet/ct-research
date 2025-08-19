@@ -8,7 +8,7 @@ from typing import Callable, Optional
 from prometheus_client import Gauge
 
 from .api import HoprdAPI, Protocol
-from .components import LockedVar, Peer, Utils
+from .components import Peer, Utils
 from .components.address import Address
 from .components.asyncloop import AsyncLoop
 from .components.balance import Balance
@@ -382,13 +382,16 @@ class Node:
     async def observe_message_queue(self):
         checklists = {
             "peers": [peer.address.native for peer in self.peers],
-            "channels": [channel.destination for channel in self.channels.outgoing] if self.channels else [], "sessions": self.session_management}
+            "channels": (
+                [channel.destination for channel in self.channels.outgoing] if self.channels else []
+            ),
+            "sessions": self.session_management,
+        }
 
         # check if one of the checklist is empty
         for key, checklist in checklists.items():
             if not checklist:
-                logger.debug("Checklist is empty", {
-                             "checklist": key, **self.log_base_params})
+                logger.debug("Checklist is empty", {"checklist": key, **self.log_base_params})
                 await asyncio.sleep(5)
                 return
 

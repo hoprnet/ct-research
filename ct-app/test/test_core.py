@@ -11,9 +11,9 @@ async def test_connected_peers(core: Core, peers: list[Peer]):
 
     # drop manually some peers (all in but #3)
     peers_list = list(peers)
-    await core.nodes[0].peers.set(set(peers_list[:3]))
-    await core.nodes[1].peers.set(set(peers_list[4:]))
-    await core.nodes[2].peers.set(set(peers_list[::2]))
+    core.nodes[0].peers = set(peers_list[:3])
+    core.nodes[1].peers = set(peers_list[4:])
+    core.nodes[2].peers = set(peers_list[::2])
 
     await core.connected_peers()
     all_peers = await core.all_peers.get()
@@ -23,7 +23,7 @@ async def test_connected_peers(core: Core, peers: list[Peer]):
 
     # drop manually all but #0 and #1
     for node in core.nodes:
-        await node.peers.set(set(peers_list[:2]))
+        node.peers = set(peers_list[:2])
 
     await core.connected_peers()
     all_peers = await core.all_peers.get()
@@ -31,7 +31,7 @@ async def test_connected_peers(core: Core, peers: list[Peer]):
     assert len(all_peers) == len(peers) - 1
     assert sum([peer.yearly_message_count is not None for peer in all_peers]) == 2
     # last peer appear
-    await core.nodes[0].peers.update(set([peers_list[3]]))
+    core.nodes[0].peers.update(set([peers_list[3]]))
 
     await core.connected_peers()
     all_peers = await core.all_peers.get()
@@ -40,7 +40,7 @@ async def test_connected_peers(core: Core, peers: list[Peer]):
     assert sum([peer.yearly_message_count is not None for peer in all_peers]) == 3
 
     # peer reappear
-    await core.nodes[0].peers.update(set([peers_list[-1]]))
+    core.nodes[0].peers.update(set([peers_list[-1]]))
 
     await core.connected_peers()
     all_peers = await core.all_peers.get()
@@ -50,7 +50,7 @@ async def test_connected_peers(core: Core, peers: list[Peer]):
 
     # all disappear
     for node in core.nodes:
-        await node.peers.set(set())
+        node.peers = set()
 
     await core.connected_peers()
     all_peers = await core.all_peers.get()
