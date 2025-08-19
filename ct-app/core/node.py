@@ -399,10 +399,10 @@ class Node:
 
         for key, checklist in checklists.items():
             if message.relayer not in checklist:
-                logger.warning(
-                    "Message relayer not found in checklist",
-                    {"relayer": message.relayer, "key": key, **self.log_base_params},
-                )
+                # logger.warning(
+                #     "Message relayer not found in checklist",
+                #     {"relayer": message.relayer, "key": key, **self.log_base_params},
+                # )
                 return
 
         sess_and_socket: SessionToSocket = self.session_management[message.relayer]
@@ -428,7 +428,7 @@ class Node:
             )
 
     @master(keepalive, connectguard)
-    async def close_sessions(self):
+    async def manage_active_sessions(self):
         active_sessions = await self.api.list_sessions(Protocol.UDP)
 
         to_remove = [
@@ -437,20 +437,12 @@ class Node:
             if s.session not in active_sessions
         ]
 
-        if len(to_remove) == 0:
-            logging.info("No sessions to close", self.log_base_params)
-        else:
-            logging.info("Closing sessions", {"addresses": to_remove, **self.log_base_params})
-
         for address in to_remove:
-            AsyncLoop.add(
-                NodeHelper.close_session,
-                self.address,
-                self.api,
-                address,
-                self.session_management.pop(address),
-                publish_to_task_set=False,
+            logger.warning(
+                "Session for peer not found in active session list. Removing it from cache.",
+                {"relayer": address, **self.log_base_params},
             )
+            self.session_management.pop(address),
 
     async def close_all_sessions(self):
         """

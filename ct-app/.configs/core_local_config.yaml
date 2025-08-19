@@ -39,7 +39,7 @@ flags:
 
     observe_message_queue: On
     observe_sockets: 30
-    close_sessions: 30
+    manage_active_sessions: 30
   
   peer:
     message_relay_request: On

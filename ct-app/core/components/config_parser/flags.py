@@ -31,7 +31,7 @@ class FlagNodeParams(ExplicitParams):
     get_total_channel_funds: Flag
     observe_sockets: Flag
     observe_message_queue: Flag
-    close_sessions: Flag
+    manage_active_sessions: Flag
 
 
 @dataclass(init=False)
