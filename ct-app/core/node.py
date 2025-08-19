@@ -50,8 +50,8 @@ class Node:
         self.api: HoprdAPI = HoprdAPI(url, key)
         self.url = url
 
-        self.peers = LockedVar("peers", set[Peer]())
-        self.peer_history = LockedVar("peer_history", dict[str, datetime]())
+        self.peers = set[Peer]()
+        self.peer_history = dict[str, datetime]()
 
         self.address = None
         self.channels = None
@@ -152,7 +152,7 @@ class Node:
         out_opens = [c for c in self.channels.outgoing if not c.status.is_closed]
 
         addresses_with_channels = {c.destination for c in out_opens}
-        all_addresses = {p.address.native for p in await self.peers.get()}
+        all_addresses = {p.address.native for p in self.peers}
         addresses_without_channels = all_addresses - addresses_with_channels
 
         logger.info(
@@ -228,7 +228,7 @@ class Node:
         if self.channels is None:
             return
 
-        peer_history: dict[str, datetime] = await self.peer_history.get()
+        peer_history: dict[str, datetime] = self.peer_history
         to_peer_history = dict[str, datetime]()
         channels_to_close: list[str] = []
 
@@ -246,7 +246,7 @@ class Node:
 
             channels_to_close.append(channel)
 
-        await self.peer_history.update(to_peer_history)
+        self.peer_history.update(to_peer_history)
 
         logger.info(
             "Starting closure of dangling channels open with peer visible for too long",
@@ -284,7 +284,7 @@ class Node:
             },
         )
 
-        addresses = [p.address.native for p in await self.peers.get()]
+        addresses = [p.address.native for p in self.peers]
 
         for channel in low_balances:
             if channel.destination in addresses:
@@ -313,15 +313,11 @@ class Node:
                 {"count": len(results), **self.log_base_params},
             )
 
-        peers = {Peer(item.address) for item in results}
-
-        addresses_w_timestamp = {p.address.native: datetime.now() for p in peers}
-
-        await self.peers.set(peers)
-        await self.peer_history.update(addresses_w_timestamp)
+        self.peers = {Peer(item.address) for item in results}
+        self.peer_history.update({item.address: datetime.now() for item in results})
 
         if addr := self.address:
-            PEERS_COUNT.labels(addr.native).set(len(peers))
+            PEERS_COUNT.labels(addr.native).set(len(self.peers))
 
     @master(keepalive, connectguard)
     async def retrieve_channels(self):
@@ -384,16 +380,15 @@ class Node:
 
     @master(keepalive, connectguard)
     async def observe_message_queue(self):
-        peers: list[str] = [peer.address.native for peer in await self.peers.get()]
-        channels: list[str] = (
-            [channel.destination for channel in self.channels.outgoing] if self.channels else []
-        )
-        checklists = {"peers": peers, "channels": channels, "sessions": self.session_management}
+        checklists = {
+            "peers": [peer.address.native for peer in self.peers],
+            "channels": [channel.destination for channel in self.channels.outgoing] if self.channels else [], "sessions": self.session_management}
 
         # check if one of the checklist is empty
         for key, checklist in checklists.items():
             if not checklist:
-                logger.debug("Checklist is empty", {"checklist": key})
+                logger.debug("Checklist is empty", {
+                             "checklist": key, **self.log_base_params})
                 await asyncio.sleep(5)
                 return
 
@@ -403,7 +398,7 @@ class Node:
             if message.relayer not in checklist:
                 logger.warning(
                     "Message relayer not found in checklist",
-                    {"relayer": message.relayer, "key": key},
+                    {"relayer": message.relayer, "key": key, **self.log_base_params},
                 )
                 return
 
@@ -438,6 +433,11 @@ class Node:
             for address, s in self.session_management.items()
             if s.session not in active_sessions
         ]
+
+        if len(to_remove) == 0:
+            logging.info("No sessions to close", self.log_base_params)
+        else:
+            logging.info("Closing sessions", {"addresses": to_remove, **self.log_base_params})
 
         for address in to_remove:
             AsyncLoop.add(

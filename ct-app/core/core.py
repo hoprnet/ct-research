@@ -113,7 +113,7 @@ class Core:
 
         async with self.all_peers as current_peers:
             visible_peers: set[Peer] = set()
-            visible_peers.update(*[await node.peers.get() for node in self.nodes])
+            visible_peers.update(*[node.peers for node in self.nodes])
             visible_peers: list[Peer] = list(visible_peers)
 
             for peer in current_peers:
