@@ -408,7 +408,6 @@ class Node:
 
         destination = random.choice(self.ct_node_addresses)
 
-        
         async with ManageSession(
             self.address,
             self.api,
@@ -418,7 +417,7 @@ class Node:
         ) as session:
             if not session:
                 return
-                
+
             sess_and_socket: SessionToSocket = SessionToSocket(session, self.p2p_endpoint)
 
             message.sender = self.address.native

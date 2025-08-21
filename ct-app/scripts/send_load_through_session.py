@@ -114,7 +114,7 @@ async def main(deployment: str, environment: str, waves: int):
             Node(host_format % (deployment, idx, environment), 443, token) for idx in range(1, 6)
         ]
 
-    # path: list[Node] = [nodes[idx] for idx in [0, 2, 3]] 
+    # path: list[Node] = [nodes[idx] for idx in [0, 2, 3]]
     path = random.sample(nodes, k=3)
 
     [await hop.address for hop in path]
