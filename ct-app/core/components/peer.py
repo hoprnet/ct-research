@@ -130,7 +130,7 @@ class Peer:
 
         if delay := await self.message_delay:
             await MessageQueue().put_async(MessageFormat(self.address.native))
-            await asyncio.sleep(delay)
+            await asyncio.sleep(delay * 20)
 
         else:
             await asyncio.sleep(

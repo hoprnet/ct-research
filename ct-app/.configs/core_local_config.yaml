@@ -13,7 +13,6 @@ flags:
     topology: 30
 
     rotate_subgraphs: 60
-    open_sessions: 60
 
     # through subgraph queries
     peers_rewards: 300
@@ -38,8 +37,6 @@ flags:
     get_total_channel_funds: 300
 
     observe_message_queue: On
-    observe_sockets: 30
-    close_sessions: 30
   
   peer:
     message_relay_request: On

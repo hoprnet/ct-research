@@ -8,7 +8,7 @@ from typing import Callable, Optional
 from prometheus_client import Gauge
 
 from .api import HoprdAPI, Protocol
-from .components import LockedVar, Peer, Utils
+from .components import Peer, Utils
 from .components.address import Address
 from .components.asyncloop import AsyncLoop
 from .components.balance import Balance
@@ -16,7 +16,7 @@ from .components.config_parser import Parameters
 from .components.decorators import connectguard, keepalive, master
 from .components.logs import configure_logging
 from .components.messages import MessageFormat, MessageQueue
-from .components.node_helper import NodeHelper
+from .components.node_helper import ManageSession, NodeHelper
 from .components.pattern_matcher import PatternMatcher
 from .components.session_to_socket import SessionToSocket
 
@@ -50,18 +50,18 @@ class Node:
         self.api: HoprdAPI = HoprdAPI(url, key)
         self.url = url
 
-        self.peers = LockedVar("peers", set[Peer]())
-        self.peer_history = LockedVar("peer_history", dict[str, datetime]())
+        self.peers = set[Peer]()
+        self.peer_history = dict[str, datetime]()
 
         self.address = None
         self.channels = None
         self._safe_address = None
 
         self.params = Parameters()
-        self.session_management = dict[str, SessionToSocket]()
 
         self.connected = False
         self.running = True
+        self.ct_node_addresses: list[Address] = []
 
     @property
     def log_base_params(self):
@@ -108,8 +108,10 @@ class Node:
             HEALTH.labels(addr.native).set(int(health))
             if not health:
                 logger.warning("Node is not reachable", self.log_base_params)
+            return addr
         else:
             logger.warning("No address found", self.log_base_params)
+            return None
 
     @keepalive
     async def healthcheck(self):
@@ -152,7 +154,7 @@ class Node:
         out_opens = [c for c in self.channels.outgoing if not c.status.is_closed]
 
         addresses_with_channels = {c.destination for c in out_opens}
-        all_addresses = {p.address.native for p in await self.peers.get()}
+        all_addresses = {p.address.native for p in self.peers}
         addresses_without_channels = all_addresses - addresses_with_channels
 
         logger.info(
@@ -228,7 +230,7 @@ class Node:
         if self.channels is None:
             return
 
-        peer_history: dict[str, datetime] = await self.peer_history.get()
+        peer_history: dict[str, datetime] = self.peer_history
         to_peer_history = dict[str, datetime]()
         channels_to_close: list[str] = []
 
@@ -246,7 +248,7 @@ class Node:
 
             channels_to_close.append(channel)
 
-        await self.peer_history.update(to_peer_history)
+        self.peer_history.update(to_peer_history)
 
         logger.info(
             "Starting closure of dangling channels open with peer visible for too long",
@@ -284,7 +286,7 @@ class Node:
             },
         )
 
-        addresses = [p.address.native for p in await self.peers.get()]
+        addresses = [p.address.native for p in self.peers]
 
         for channel in low_balances:
             if channel.destination in addresses:
@@ -313,15 +315,11 @@ class Node:
                 {"count": len(results), **self.log_base_params},
             )
 
-        peers = {Peer(item.address) for item in results}
-
-        addresses_w_timestamp = {p.address.native: datetime.now() for p in peers}
-
-        await self.peers.set(peers)
-        await self.peer_history.update(addresses_w_timestamp)
+        self.peers = {Peer(item.address) for item in results}
+        self.peer_history.update({item.address: datetime.now() for item in results})
 
         if addr := self.address:
-            PEERS_COUNT.labels(addr.native).set(len(peers))
+            PEERS_COUNT.labels(addr.native).set(len(self.peers))
 
     @master(keepalive, connectguard)
     async def retrieve_channels(self):
@@ -384,66 +382,58 @@ class Node:
 
     @master(keepalive, connectguard)
     async def observe_message_queue(self):
-        if self.channels is None:
-            logger.warning("No channels found yet")
-            await asyncio.sleep(5)
-            return
+        checklists = {
+            "peers": [peer.address.native for peer in self.peers],
+            "channels": (
+                [channel.destination for channel in self.channels.outgoing] if self.channels else []
+            ),
+        }
+
+        # check if one of the checklist is empty
+        for key, checklist in checklists.items():
+            if not checklist:
+                logger.debug("Checklist is empty", {"checklist": key, **self.log_base_params})
+                await asyncio.sleep(5)
+                return
 
         message: MessageFormat = await MessageQueue().get_async()
 
-        peers: list[str] = [peer.address.native for peer in await self.peers.get()]
-        channels: list[str] = [channel.destination for channel in self.channels.outgoing]
-
-        for checklist in [peers, channels, self.session_management]:
+        for key, checklist in checklists.items():
             if message.relayer not in checklist:
+                # logger.warning(
+                #     "Message relayer not found in checklist",
+                #     {"relayer": message.relayer, "key": key, **self.log_base_params},
+                # )
                 return
 
-        sess_and_socket: SessionToSocket = self.session_management[message.relayer]
-        message.sender = self.address.native
-        message.packet_size = sess_and_socket.session.payload
+        destination = random.choice(self.ct_node_addresses)
 
-        AsyncLoop.add(
-            sess_and_socket.send,
-            message,
-            publish_to_task_set=False,
-        )
+        async with ManageSession(
+            self.address,
+            self.api,
+            destination,
+            message.relayer,
+            self.p2p_endpoint,
+        ) as session:
+            if not session:
+                return
 
-    @keepalive
-    async def observe_sockets(self):
-        for sess_and_socket in self.session_management.values():
-            if sess_and_socket.socket is None:
-                continue
+            sess_and_socket: SessionToSocket = SessionToSocket(session, self.p2p_endpoint)
 
-            AsyncLoop.add(
-                sess_and_socket.receive,
-                sess_and_socket.session.payload,
-                publish_to_task_set=False,
-            )
+            message.sender = self.address.native
+            message.packet_size = sess_and_socket.session.payload
 
-    @master(keepalive, connectguard)
-    async def close_sessions(self):
-        active_sessions = await self.api.list_sessions(Protocol.UDP)
-
-        to_remove = [
-            address
-            for address, s in self.session_management.items()
-            if s.session not in active_sessions
-        ]
-
-        for address in to_remove:
-            AsyncLoop.add(
-                NodeHelper.close_session,
-                self.address,
-                self.api,
-                address,
-                self.session_management.pop(address),
-                publish_to_task_set=False,
-            )
+            for _ in range(20):
+                AsyncLoop.add(
+                    sess_and_socket.send,
+                    message,
+                    publish_to_task_set=False,
+                )
+                asyncio.sleep(0.02)
 
     async def close_all_sessions(self):
         """
         Close all sessions without checking if they are active, or if a socket is associated.
-        Also, doesn't remove the session from the session_management dict.
         This method should run on startup to clean up any old sessions.
         """
         active_sessions = await self.api.list_sessions(Protocol.UDP)
@@ -456,31 +446,6 @@ class Node:
                 session,
                 publish_to_task_set=False,
             )
-
-    async def open_sessions(self, allowed: list[Address], destinations: list[Address]):
-        if self.channels is None:
-            logger.warning("No channels found yet", self.log_base_params)
-            return
-
-        addresses_with_channels = set([c.destination for c in self.channels.outgoing])
-
-        allowed_addresses = set([address.native for address in allowed])
-        addresses_with_session = set(self.session_management.keys())
-        addresses_without_session = allowed_addresses - addresses_with_session
-
-        for address in addresses_without_session.intersection(addresses_with_channels):
-            destination: Address = random.choice(list(set(destinations) - {self.address}))
-            AsyncLoop.add(self.open_session, destination, address, publish_to_task_set=False)
-
-    async def open_session(self, destination: Address, relayer: str):
-        if session := await NodeHelper.open_session(
-            self.address,
-            self.api,
-            destination,
-            relayer,
-            self.p2p_endpoint,
-        ):
-            self.session_management[relayer] = SessionToSocket(session, self.p2p_endpoint)
 
     @property
     def tasks(self) -> list[Callable]:

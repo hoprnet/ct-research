@@ -33,12 +33,12 @@ async def test_retrieve_balances(node: Node):
 
 @pytest.mark.asyncio
 async def test_retrieve_peers(node: Node, peers: list[Peer]):
-    await node.peers.set(set())
-    await node.peer_history.set(dict())
+    node.peers = set()
+    node.peer_history = dict()
     await node.retrieve_peers()
 
-    assert len(await node.peers.get()) == len(peers) - 1
-    assert await node.peer_history.get() != dict()
+    assert len(node.peers) == len(peers) - 1
+    assert node.peer_history != dict()
 
 
 @pytest.mark.asyncio

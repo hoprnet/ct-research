@@ -62,8 +62,10 @@ class CreateSessionBody(ApiRequestObject):
 
 @dataclass
 class SessionCapabilitiesBody(ApiRequestObject):
-    retransmission: bool = api_field("Retransmission", "false")
-    segmentation: bool = api_field("Segmentation", "false")
+    retransmission: bool = api_field("Retransmission", False)
+    segmentation: bool = api_field("Segmentation", False)
+    no_delay: bool = api_field("NoDelay", False)
+    no_rate_control: bool = api_field("NoRateControl", True)
 
     @property
     def as_array(self) -> list:

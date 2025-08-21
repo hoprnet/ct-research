@@ -113,7 +113,7 @@ class Core:
 
         async with self.all_peers as current_peers:
             visible_peers: set[Peer] = set()
-            visible_peers.update(*[await node.peers.get() for node in self.nodes])
+            visible_peers.update(*[node.peers for node in self.nodes])
             visible_peers: list[Peer] = list(visible_peers)
 
             for peer in current_peers:
@@ -336,19 +336,6 @@ class Core:
             self.ticket_price = ticket_price
             TICKET_STATS.labels("price").set(ticket_price.value.value)
 
-    @keepalive
-    async def open_sessions(self):
-        """
-        Opens sessions for all eligible peers.
-        """
-        eligible_addresses = [
-            peer.address
-            for peer in await self.all_peers.get()
-            if peer.yearly_message_count is not None
-        ]
-        for node in self.nodes:
-            await node.open_sessions(eligible_addresses, self.ct_nodes_addresses)
-
     @property
     def tasks(self) -> list[Callable]:
         return [getattr(self, method) for method in Utils.decorated_methods(__file__, "keepalive")]
@@ -374,9 +361,12 @@ class Core:
         """
         logger.info("CTCore started", {"num_nodes": len(self.nodes)})
 
-        await AsyncLoop.gather_any([node._healthcheck() for node in self.nodes])
+        addresses = await AsyncLoop.gather_any([node._healthcheck() for node in self.nodes])
         await AsyncLoop.gather_any([node.close_all_sessions() for node in self.nodes])
         await AsyncLoop.gather_any([self.get_nft_holders()])
+
+        for node in self.nodes:
+            node.ct_node_addresses = [addr for addr in addresses if addr != node.address]
 
         AsyncLoop.update(sum([node.tasks for node in self.nodes], self.tasks))
 
@@ -388,7 +378,3 @@ class Core:
         """
         logger.info("CTCore stopped")
         self.running = False
-
-        for node in self.nodes:
-            for s in node.session_management.values():
-                s.socket.close()

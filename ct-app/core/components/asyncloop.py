@@ -2,7 +2,7 @@ import asyncio
 import logging
 import threading
 from signal import SIGINT, SIGTERM
-from typing import Callable, Iterable
+from typing import Any, Callable, Iterable
 
 from core.components.logs import configure_logging
 
@@ -66,7 +66,7 @@ class AsyncLoop(metaclass=Singleton):
         await asyncio.gather(*cls().tasks)
 
     @classmethod
-    async def gather_any(cls, futures: list[asyncio.Future]) -> list:
+    async def gather_any(cls, futures: list[asyncio.Future]) -> tuple[Any]:
         return await asyncio.gather(*futures)
 
     @classmethod

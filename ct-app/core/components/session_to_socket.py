@@ -2,7 +2,7 @@ import asyncio
 import logging
 import socket
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 
 from prometheus_client import Gauge, Histogram
 
@@ -18,7 +18,7 @@ MESSAGES_DELAYS = Histogram(
     buckets=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2.5, 5],
 )
 MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer"])
-
+MESSAGE_SENDING_REQUEST = Gauge("ct_message_sending_request", "", ["sender", "relayer"])
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -72,33 +72,31 @@ class SessionToSocket:
         else:
             raise ValueError(f"Invalid protocol: {self.session.protocol}")
 
-        # # SET CUSTOM SND AND RCV BUFFER SIZES
-        # import math
-
-        # buffer_size = 2**(int(math.log2(self.session.payload)+0.5) + 2)
-        # s.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, self.session.payload)
-        # s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, buffer_size)
-
         s.settimeout(timeout)
 
         return s
 
-    async def send(self, message: MessageFormat) -> bytes:
+    async def send(self, message: Union[MessageFormat, bytes]) -> bytes:
         """
         Sends data to the peer.
         """
-        payload: bytes = message.bytes()
+        if isinstance(message, MessageFormat):
+            MESSAGE_SENDING_REQUEST.labels(message.sender, message.relayer).inc()
+
+        payload: bytes = message.bytes() if isinstance(message, MessageFormat) else message
 
         match self.session.protocol:
             case Protocol.UDP:
-                self.socket.sendto(payload, self.address)
+                data = self.socket.sendto(payload, self.address)
             case Protocol.TCP:
-                self.socket.send(payload)
+                data = self.socket.send(payload)
 
-        MESSAGES_STATS.labels("sent", message.sender, message.relayer).inc()
-        return payload
+        if isinstance(message, MessageFormat):
+            MESSAGES_STATS.labels("sent", message.sender, message.relayer).inc()
 
-    async def receive(self, chunk_size: int, timeout: float = 1) -> tuple[list[str], int]:
+        return data
+
+    async def receive(self, chunk_size: int, timeout: float = 1) -> int:
         """
         Receives data from the peer. In case off multiple message in the same packet, which should
         not happen, they are already split and returned as a list.
@@ -126,19 +124,22 @@ class SessionToSocket:
         now = int(datetime.now().timestamp() * 1000)
         recv_size: int = len(recv_data)
 
-        recv_data: list[str] = [
-            item for item in recv_data.decode().split(b"\0".decode()) if len(item) > 0
-        ]
+        try:
+            recv_data: list[str] = [
+                item for item in recv_data.decode().split(b"\0".decode()) if len(item) > 0
+            ]
+        except Exception:
+            logger.error("Failed to decode received data")
+        else:
+            for data in recv_data:
+                try:
+                    message = MessageFormat.parse(data)
+                except ValueError as e:
+                    logger.error(f"Failed to parse message: {e}")
+                    continue
 
-        for data in recv_data:
-            try:
-                message = MessageFormat.parse(data)
-            except ValueError as e:
-                logger.error(f"Failed to parse message: {e}")
-                continue
+                rtt = (now - message.timestamp) / 1000
+                MESSAGES_STATS.labels("received", message.sender, message.relayer).inc()
+                MESSAGES_DELAYS.labels(message.sender, message.relayer).observe(rtt)
 
-            rtt = (now - message.timestamp) / 1000
-            MESSAGES_STATS.labels("received", message.sender, message.relayer).inc()
-            MESSAGES_DELAYS.labels(message.sender, message.relayer).observe(rtt)
-
-        return recv_data, recv_size
+        return recv_size

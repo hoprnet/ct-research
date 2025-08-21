@@ -117,3 +117,30 @@ class NodeHelper:
             logger.info("Closed the session blindly", logs_params)
         else:
             logger.warning("Failed to close the session blindly", logs_params)
+
+
+class ManageSession:
+    def __init__(
+        self,
+        initiator: Address,
+        api: HoprdAPI,
+        destination: Address,
+        relayer: str,
+        listen_host: str,
+    ):
+        self.initiator = initiator
+        self.api = api
+        self.destination = destination
+        self.relayer = relayer
+        self.listen_host = listen_host
+        self.session = None
+
+    async def __aenter__(self) -> Optional[Session]:
+        self.session = await NodeHelper.open_session(
+            self.initiator, self.api, self.destination, self.relayer, self.listen_host
+        )
+        return self.session
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        if self.session:
+            await NodeHelper.close_session_blindly(self.initiator, self.api, self.session)

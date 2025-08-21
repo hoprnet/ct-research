@@ -7,8 +7,6 @@ from core.components.balance import Balance
 from .channelstatus import ChannelStatus
 from .protocol import Protocol
 
-SURB_SIZE: int = 400
-
 
 def try_to_lower(value: Any):
     if isinstance(value, str):
@@ -182,10 +180,11 @@ class Session(ApiResponseObject):
     protocol: Protocol = field()
     target: str = field()
     mtu: int = field()
+    surb_size: int = field(metadata={"path": "surbLen"})
 
     @property
     def payload(self):
-        return self.mtu - SURB_SIZE
+        return self.mtu - self.surb_size
 
     @property
     def as_path(self):
@@ -199,6 +198,7 @@ class Session(ApiResponseObject):
             "protocol": self.protocol.value,
             "target": self.target,
             "mtu": self.mtu,
+            "surb_size": self.surb_size,
         }
 
 
