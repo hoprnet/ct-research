@@ -16,7 +16,7 @@ from .components.config_parser import Parameters
 from .components.decorators import connectguard, keepalive, master
 from .components.logs import configure_logging
 from .components.messages import MessageFormat, MessageQueue
-from .components.node_helper import NodeHelper
+from .components.node_helper import ManageSession, NodeHelper
 from .components.pattern_matcher import PatternMatcher
 from .components.session_to_socket import SessionToSocket
 
@@ -58,10 +58,10 @@ class Node:
         self._safe_address = None
 
         self.params = Parameters()
-        self.session_management = dict[str, SessionToSocket]()
 
         self.connected = False
         self.running = True
+        self.ct_node_addresses: list[Address] = []
 
     @property
     def log_base_params(self):
@@ -108,8 +108,10 @@ class Node:
             HEALTH.labels(addr.native).set(int(health))
             if not health:
                 logger.warning("Node is not reachable", self.log_base_params)
+            return addr
         else:
             logger.warning("No address found", self.log_base_params)
+            return None
 
     @keepalive
     async def healthcheck(self):
@@ -385,7 +387,6 @@ class Node:
             "channels": (
                 [channel.destination for channel in self.channels.outgoing] if self.channels else []
             ),
-            "sessions": self.session_management,
         }
 
         # check if one of the checklist is empty
@@ -405,49 +406,35 @@ class Node:
                 # )
                 return
 
-        sess_and_socket: SessionToSocket = self.session_management[message.relayer]
-        message.sender = self.address.native
-        message.packet_size = sess_and_socket.session.payload
+        destination = random.choice(self.ct_node_addresses)
 
-        AsyncLoop.add(
-            sess_and_socket.send,
-            message,
-            publish_to_task_set=False,
-        )
+        
+        async with ManageSession(
+            self.address,
+            self.api,
+            destination,
+            message.relayer,
+            self.p2p_endpoint,
+        ) as session:
+            if not session:
+                return
+                
+            sess_and_socket: SessionToSocket = SessionToSocket(session, self.p2p_endpoint)
 
-    @keepalive
-    async def observe_sockets(self):
-        for sess_and_socket in self.session_management.values():
-            if sess_and_socket.socket is None:
-                continue
+            message.sender = self.address.native
+            message.packet_size = sess_and_socket.session.payload
 
-            AsyncLoop.add(
-                sess_and_socket.receive,
-                sess_and_socket.session.payload,
-                publish_to_task_set=False,
-            )
-
-    @master(keepalive, connectguard)
-    async def manage_active_sessions(self):
-        active_sessions = await self.api.list_sessions(Protocol.UDP)
-
-        to_remove = [
-            address
-            for address, s in self.session_management.items()
-            if s.session not in active_sessions
-        ]
-
-        for address in to_remove:
-            logger.warning(
-                "Session for peer not found in active session list. Removing it from cache.",
-                {"relayer": address, **self.log_base_params},
-            )
-            self.session_management.pop(address),
+            for _ in range(20):
+                AsyncLoop.add(
+                    sess_and_socket.send,
+                    message,
+                    publish_to_task_set=False,
+                )
+                asyncio.sleep(0.02)
 
     async def close_all_sessions(self):
         """
         Close all sessions without checking if they are active, or if a socket is associated.
-        Also, doesn't remove the session from the session_management dict.
         This method should run on startup to clean up any old sessions.
         """
         active_sessions = await self.api.list_sessions(Protocol.UDP)
@@ -460,31 +447,6 @@ class Node:
                 session,
                 publish_to_task_set=False,
             )
-
-    async def open_sessions(self, allowed: list[Address], destinations: list[Address]):
-        if self.channels is None:
-            logger.warning("No channels found yet", self.log_base_params)
-            return
-
-        addresses_with_channels = set([c.destination for c in self.channels.outgoing])
-
-        allowed_addresses = set([address.native for address in allowed])
-        addresses_with_session = set(self.session_management.keys())
-        addresses_without_session = allowed_addresses - addresses_with_session
-
-        for address in addresses_without_session.intersection(addresses_with_channels):
-            destination: Address = random.choice(list(set(destinations) - {self.address}))
-            AsyncLoop.add(self.open_session, destination, address, publish_to_task_set=False)
-
-    async def open_session(self, destination: Address, relayer: str):
-        if session := await NodeHelper.open_session(
-            self.address,
-            self.api,
-            destination,
-            relayer,
-            self.p2p_endpoint,
-        ):
-            self.session_management[relayer] = SessionToSocket(session, self.p2p_endpoint)
 
     @property
     def tasks(self) -> list[Callable]:

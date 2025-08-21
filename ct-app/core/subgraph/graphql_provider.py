@@ -78,7 +78,7 @@ class GraphQLProvider:
                 ) as response,
             ):
                 SUBGRAPH_CALLS.labels(self.url.params.slug, self.url.mode).inc()
-                return await response.json(), response.headers
+                return await response.json(), response.headers  # ty: ignore[invalid-return-type]
         except TimeoutError as err:
             logger.error("Timeout error", {"error": str(err)})
         except Exception as err:

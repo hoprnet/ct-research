@@ -64,7 +64,7 @@ class CreateSessionBody(ApiRequestObject):
 class SessionCapabilitiesBody(ApiRequestObject):
     retransmission: bool = api_field("Retransmission", False)
     segmentation: bool = api_field("Segmentation", False)
-    no_delay: bool = api_field("NoDelay", True)
+    no_delay: bool = api_field("NoDelay", False)
     no_rate_control: bool = api_field("NoRateControl", True)
 
     @property
