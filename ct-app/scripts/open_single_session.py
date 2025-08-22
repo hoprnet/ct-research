@@ -18,7 +18,8 @@ from scripts.lib.state import State
 load_dotenv()
 
 configure_logging()
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("api-lib")
+logger.setLevel(logging.INFO)
 
 
 def p2p_endpoint(api_endpoint: str, env: str):
@@ -61,7 +62,7 @@ async def main(deployment: str = "green", environment: str = "staging"):
 
     await NodeHelper.open_session(
         rand_apis[0],
-        dst_address,
+        dst_address.native,
         relayer,
         p2p_endpoint(rand_apis[0].host, environment),
     )

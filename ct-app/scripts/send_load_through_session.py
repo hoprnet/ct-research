@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 
 sys.path.insert(1, "./")
 
+from api_lib.headers.authorization import Bearer
+
 from core.api.hoprd_api import HoprdAPI
 from core.api.protocol import Protocol
 from core.api.response_objects import Metrics, Session, SessionFailure
@@ -19,7 +21,7 @@ from scripts.lib.decorators import asynchronous
 from scripts.lib.state import State
 from scripts.lib.tools import packet_statistics, print_path
 
-logger = logging.getLogger("core.api.hoprd_api")
+logger = logging.getLogger("api-lib")
 logger.setLevel(logging.INFO)
 
 load_dotenv()
@@ -70,7 +72,7 @@ class Node:
     @property
     def api(self):
         if self._api is None:
-            self._api = HoprdAPI(self.api_host, self.token)
+            self._api = HoprdAPI(self.api_host, Bearer(self.token), "/api/v4")
         return self._api
 
     @property
@@ -114,8 +116,8 @@ async def main(deployment: str, environment: str, waves: int):
             Node(host_format % (deployment, idx, environment), 443, token) for idx in range(1, 6)
         ]
 
-    # path: list[Node] = [nodes[idx] for idx in [0, 2, 3]]
-    path = random.sample(nodes, k=3)
+    path = [nodes[idx] for idx in [0, 2, 3]]
+    # path = random.sample(nodes, k=3)
 
     [await hop.address for hop in path]
 
@@ -143,7 +145,7 @@ async def main(deployment: str, environment: str, waves: int):
 
     # open session
     session = await path[0].api.post_session(
-        await path[0].address, await path[1].address, path[0].p2p_host, Protocol.UDP
+        await path[2].address, await path[1].address, path[0].p2p_host, Protocol.UDP
     )
 
     match session:

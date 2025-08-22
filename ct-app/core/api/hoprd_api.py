@@ -64,16 +64,18 @@ class HoprdAPI(ApiLib):
         Returns all channels.
         :return: channels: list
         """
-        header = req.GetChannelsBody(full_topology, False).as_header_string
-        return await self.try_req(HTTPMethod.GET, f"/channels?{header}", resp_type=resp.Channels)
+        header = req.GetChannelsBody(full_topology, False)
+        return await self.try_req(
+            HTTPMethod.GET, f"/channels?{header.as_header_string}", resp_type=resp.Channels
+        )
 
     async def metrics(self) -> Optional[resp.Metrics]:
         """
         Returns the metrics of the node.
         :return: metrics: list
         """
-        return await self.request(
-            HTTPMethod.GET, "/metrics", resp_type=resp.Metrics, use_api_path=False
+        return await self.try_req(
+            HTTPMethod.GET, "/metrics", resp_type=resp.Metrics, use_api_prefix=False
         )
 
     async def peers(
@@ -169,7 +171,7 @@ class HoprdAPI(ApiLib):
             f"/session/{protocol.name.lower()}",
             resp.Session,
             data,
-            timeout=1,
+            timeout=10,
         ):
             return r
         else:

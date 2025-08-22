@@ -84,7 +84,7 @@ class NodeHelper:
         session: Session,
         relayer: Optional[str] = None,
     ):
-        logs_params = {"relayer": relayer} if relayer else {}
+        logs_params = {"relayer": relayer if relayer else ""}
 
         logger.debug("Closing the session", logs_params)
 
