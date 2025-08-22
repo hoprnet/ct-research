@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 
 sys.path.insert(1, "./")
 
+from api_lib.headers.authorization import Bearer
+
 from core.api.hoprd_api import HoprdAPI
 from scripts.lib.state import State
 
@@ -28,7 +30,7 @@ async def main(deployment: str = "green", environment: str = "staging"):
     for idx in range(1, 6):
         host = host_format % (deployment, idx, environment)
 
-        api = HoprdAPI(host, token)
+        api = HoprdAPI(host, Bearer(token), "/api/v4")
 
         # get sessions
         sessions = await api.list_sessions()

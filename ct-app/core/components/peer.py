@@ -4,8 +4,7 @@ from typing import Optional
 
 from prometheus_client import Gauge
 
-from core.components.balance import Balance
-
+from ..components.balance import Balance
 from .address import Address
 from .asyncloop import AsyncLoop
 from .decorators import keepalive
@@ -98,15 +97,11 @@ class Peer:
         self,
         min_allowance: Balance,
         min_stake: float,
-        ct_nodes: list[Address],
         nft_holders: list[str],
         nft_threshold: Balance,
     ) -> bool:
         try:
             if self.safe.allowance < min_allowance:
-                return False
-
-            if self.address in ct_nodes:
                 return False
 
             if (

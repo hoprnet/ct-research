@@ -166,7 +166,7 @@ async def main(deployment: str, environment: str, waves: int):
     metrics_before: dict[str, Metrics] = {hop.host_root: await hop.api.metrics() for hop in path}
 
     send_start_time: float = time.time()
-    sent_size = sum([await socket.send(random.randbytes(session.payload)) for _ in range(waves)])
+    sent_size = sum([socket.send(random.randbytes(session.payload)) for _ in range(waves)])
     send_elapsed_time: float = time.time() - send_start_time
 
     print(

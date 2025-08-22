@@ -5,12 +5,11 @@
 environment: local
 
 flags:
-  core: 
+  node:
     apply_economic_model: 30
     ticket_parameters: 60
 
-    connected_peers: 30
-    topology: 30
+    outgoing_channels_balances: 30
 
     rotate_subgraphs: 60
 
@@ -22,7 +21,6 @@ flags:
     allocations: 300
     eoa_balances: 300
     
-  node:
     healthcheck: 15
     retrieve_peers: 60
     retrieve_channels: 120
@@ -101,6 +99,24 @@ channel:
   funding_amount: "0.1 wxHOPR"
   max_age_seconds: 86400
 
+# =============================================================================
+# 
+# =============================================================================
+sessions:
+  possible_green_destinations:
+  - "destination_1"
+  - "destination_2"
+  - "destination_3"
+  - "destination_4"
+  - "destination_5"
+
+  possible_blue_destinations:
+  - "destination_1"
+  - "destination_2"
+  - "destination_3"
+  - "destination_4"
+  - "destination_5"
+  
 # =============================================================================
 # 
 # =============================================================================

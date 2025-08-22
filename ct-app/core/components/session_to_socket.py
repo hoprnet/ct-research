@@ -6,10 +6,10 @@ from typing import Optional, Union
 
 from prometheus_client import Gauge, Histogram
 
-from core.api.protocol import Protocol
-from core.api.response_objects import Session
-from core.components.logs import configure_logging
-from core.components.messages.message_format import MessageFormat
+from ..api.protocol import Protocol
+from ..api.response_objects import Session
+from ..components.logs import configure_logging
+from ..components.messages.message_format import MessageFormat
 
 MESSAGES_DELAYS = Histogram(
     "ct_messages_delays",
@@ -39,8 +39,7 @@ class SessionToSocket:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         try:
-            if self.socket:
-                self.socket.close()
+            self.close_socket()
         except Exception as e:
             self.socket = None
             raise ValueError(f"Error closing socket: {e}") from e
@@ -76,7 +75,11 @@ class SessionToSocket:
 
         return s
 
-    async def send(self, message: Union[MessageFormat, bytes]) -> bytes:
+    def close_socket(self):
+        if self.socket:
+            self.socket.close()
+
+    def send(self, message: Union[MessageFormat, bytes]) -> bytes:
         """
         Sends data to the peer.
         """
@@ -142,4 +145,5 @@ class SessionToSocket:
                 MESSAGES_STATS.labels("received", message.sender, message.relayer).inc()
                 MESSAGES_DELAYS.labels(message.sender, message.relayer).observe(rtt)
 
+        return recv_size
         return recv_size

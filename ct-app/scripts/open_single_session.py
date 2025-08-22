@@ -7,6 +7,8 @@ import sys
 from dotenv import load_dotenv
 
 sys.path.insert(1, "./")
+from api_lib.headers.authorization import Bearer
+
 from core.api.hoprd_api import HoprdAPI
 from core.components.logs import configure_logging
 from core.components.node_helper import NodeHelper
@@ -44,21 +46,20 @@ async def main(deployment: str = "green", environment: str = "staging"):
         return
 
     apis: list[HoprdAPI] = [
-        HoprdAPI(host_format % (deployment, idx, environment), token) for idx in range(2, 6)
+        HoprdAPI(host_format % (deployment, idx, environment), Bearer(token), "/api/v4")
+        for idx in range(2, 6)
     ]
 
     rand_apis: list[HoprdAPI] = random.sample(apis, k=2)
-    src_address = await rand_apis[0].address()
     dst_address = await rand_apis[1].address()
     relayer: str = "0x56425002D7912e35d8D7F35575B1ec4c9f547D73"
 
     logger.info(f"{rand_apis[0].host} <> {relayer} <> {rand_apis[1].host}")
 
     for session in await rand_apis[0].list_sessions():
-        await NodeHelper.close_session_blindly(src_address, rand_apis[0], session)
+        await NodeHelper.close_session(rand_apis[0], session)
 
     await NodeHelper.open_session(
-        src_address,
         rand_apis[0],
         dst_address,
         relayer,

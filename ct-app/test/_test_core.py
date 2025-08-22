@@ -2,8 +2,6 @@ import pytest
 
 from core.components import Peer
 
-from .conftest import Core
-
 
 @pytest.mark.asyncio
 async def test_connected_peers(core: Core, peers: list[Peer]):
@@ -66,4 +64,5 @@ async def test_get_topology_data(core: Core, peers: list[Peer]):
 
     await core.topology()
 
+    assert len(core.topology_data) == len(peers)
     assert len(core.topology_data) == len(peers)

@@ -4,8 +4,7 @@ import threading
 from signal import SIGINT, SIGTERM
 from typing import Any, Callable, Iterable
 
-from core.components.logs import configure_logging
-
+from ..components.logs import configure_logging
 from .singleton import Singleton
 
 configure_logging()

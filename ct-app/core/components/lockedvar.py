@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Any
 
-from core.components.logs import configure_logging
+from ..components.logs import configure_logging
 
 configure_logging()
 logger = logging.getLogger(__name__)

@@ -1,29 +1,15 @@
 import ast
+import os
 
-from core.components.balance import Balance
-from core.subgraph.entries import Safe
-
-from .environment_utils import EnvironmentUtils
+from ..components.balance import Balance
+from ..subgraph.entries import Safe
 
 
 class Utils:
     @classmethod
-    def nodesCredentials(cls, address_prefix: str, keyenv: str) -> tuple[list[str], list[str]]:
-        """
-        Returns a tuple containing the addresses and keys of the nodes.
-        :param address_prefix: The prefix of the environment variables containing addresses.
-        :param keyenv: The prefix of the environment variables containing keys.
-        :returns: A tuple containing the addresses and keys.
-        """
-        addresses = EnvironmentUtils.envvarWithPrefix(address_prefix).values()
-        keys = EnvironmentUtils.envvarWithPrefix(keyenv).values()
-
-        return list(addresses), list(keys)
-
-    @classmethod
     async def mergeDataSources(
         cls,
-        topology: list,
+        outgoing_channel_balance: dict[str, Balance],
         peers: list,
         nodes: list,
         allocations: list,
@@ -40,7 +26,7 @@ class Utils:
             return item.address.lower() == true_value.node_address.lower()
 
         for peer in peers:
-            topo = next(filter(lambda t: filter_func(t, peer), topology), None)
+            balance = outgoing_channel_balance.get(peer.address.native, None)
             node = next(filter(lambda n: filter_func(n, peer), nodes), None)
 
             peer.safe = getattr(node, "safe", Safe.default())
@@ -59,8 +45,8 @@ class Utils:
                         eoa_balance.balance / eoa_balance.num_linked_safes
                     )
 
-            if topo is not None:
-                peer.channel_balance = topo.channels_balance
+            if balance is not None:
+                peer.channel_balance = balance
             else:
                 peer.yearly_message_count = None
 
@@ -118,49 +104,53 @@ class Utils:
         return results
 
     @classmethod
-    def decorated_methods(cls, file: str, target: str):
-        try:
-            with open(file, "r") as f:
-                source_code = f.read()
-
-            tree = ast.parse(source_code)
-        except FileNotFoundError as e:
-            cls().error(f"Could not find file {file}: {e}")
-            return []
-        except SyntaxError as e:
-            cls().error(f"Could not parse {file}: {e}")
-            return []
-
+    def get_methods(cls, folder: str, target: str):
         keepalive_methods = []
 
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.FunctionDef) and not isinstance(node, ast.AsyncFunctionDef):
-                continue
-
-            for decorator in node.decorator_list:
+        for root, _, files in os.walk(folder):
+            for file in files:
+                if not file.endswith(".py"):
+                    continue
+                file_path = os.path.join(root, file)
                 try:
-                    if isinstance(decorator, ast.Call):
-                        args_name = [
-                            arg.id  # ty: ignore[unresolved-attribute]
-                            for arg in decorator.args
-                            if isinstance(arg, ast.Name)
-                        ]
-
-                        if not hasattr(decorator.func, "id") or (
-                            decorator.func.id != target  # ty: ignore[unresolved-attribute]
-                            and target not in args_name
-                        ):
-                            continue
-
-                    elif isinstance(decorator, ast.Name):
-                        if not hasattr(decorator, "id") or decorator.id != target:
-                            continue
-                    else:
-                        continue
-                except AttributeError:
+                    with open(file_path, "r") as f:
+                        source_code = f.read()
+                    tree = ast.parse(source_code)
+                except FileNotFoundError as e:
+                    cls().error(f"Could not find file {file_path}: {e}")
+                    continue
+                except SyntaxError as e:
+                    cls().error(f"Could not parse {file_path}: {e}")
                     continue
 
-                keepalive_methods.append(node.name)
-                break
+                for node in ast.walk(tree):
+                    if not isinstance(node, ast.FunctionDef) and not isinstance(
+                        node, ast.AsyncFunctionDef
+                    ):
+                        continue
 
+                    for decorator in node.decorator_list:
+                        try:
+                            if isinstance(decorator, ast.Call):
+                                args_name = [
+                                    arg.id for arg in decorator.args if isinstance(arg, ast.Name)
+                                ]
+
+                                if not hasattr(decorator.func, "id") or (
+                                    decorator.func.id != target and target not in args_name
+                                ):
+                                    continue
+
+                            elif isinstance(decorator, ast.Name):
+                                if not hasattr(decorator, "id") or decorator.id != target:
+                                    continue
+                            else:
+                                continue
+                        except AttributeError:
+                            continue
+
+                        keepalive_methods.append(f"{node.name}")
+                        break
+
+        return keepalive_methods
         return keepalive_methods

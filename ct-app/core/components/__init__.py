@@ -1,7 +1,6 @@
 from . import config_parser, decorators
 from .address import Address
 from .asyncloop import AsyncLoop
-from .environment_utils import EnvironmentUtils
 from .lockedvar import LockedVar
 from .messages import MessageFormat, MessageQueue
 from .peer import Peer
@@ -21,7 +20,6 @@ __all__ = [
     "Singleton",
     "Utils",
     "decorators",
-    "EnvironmentUtils",
     "Address",
     "Peer",
 ]

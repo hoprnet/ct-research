@@ -5,12 +5,11 @@
 environment: staging
 
 flags:
-  core: 
+  node:
     apply_economic_model: 30
     ticket_parameters: 60
 
-    connected_peers: 30
-    topology: 30
+    outgoing_channels_balances: 30
 
     rotate_subgraphs: 300
 
@@ -22,7 +21,6 @@ flags:
     allocations: 300
     eoa_balances: 300
     
-  node:
     healthcheck: 15
     retrieve_peers: 60
     retrieve_channels: 120
@@ -101,6 +99,25 @@ channel:
   min_balance: "0.05 wxHOPR"
   funding_amount: "0.1 wxHOPR"
   max_age_seconds: 86400
+
+# =============================================================================
+# 
+# =============================================================================
+sessions:
+  possible_green_destinations:
+  - "0xac3c2d1f751d9c763be29aabb20cf31295f3ea27"
+  - "0x154a32241dacd34c55ca65c2dfdef173d6d9e7f3"
+  - "0x7673daf47ae218d7d9b2fa0e8fc397c2a6940bc1"
+  - "0xc2421cc4e9b3eeaefea2d87d2ee3dde9cc772e8a"
+  - "0x4b306f6a7fee6cbfdab11645b81337cbaab59900"
+
+  possible_blue_destinations:
+  - "destination_1"
+  - "destination_2"
+  - "destination_3"
+  - "destination_4"
+  - "destination_5"
+
 
 # =============================================================================
 # 

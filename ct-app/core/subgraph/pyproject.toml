@@ -1,7 +1,7 @@
 [project]
 name = "core-subgraph"
 version = "1.0.1"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
     "aiohttp>=3.10.11",
     "multidict>=6.4.3",

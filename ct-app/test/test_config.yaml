@@ -5,12 +5,12 @@
 environment: test
 
 flags:
-  core: 
+  node: 
     apply_economic_model: 30
     ticket_parameters: 30
 
-    connected_peers: 30
-    topology: 30
+    # connected_peers: 30
+    outgoing_channels_balances: 30
 
     rotate_subgraphs: 30
 
@@ -22,7 +22,6 @@ flags:
     allocations: 30
     eoa_balances: 30
     
-  node:
     healthcheck: 10
     retrieve_peers: 30
     retrieve_channels: 30
@@ -100,6 +99,24 @@ channel:
   min_balance: "0.05 wxHOPR"
   funding_amount: "0.2 wxHOPR"
   max_age_seconds: 60
+  
+# =============================================================================
+# 
+# =============================================================================
+sessions:
+  possible_green_destinations:
+  - "destination_1"
+  - "destination_2"
+  - "destination_3"
+  - "destination_4"
+  - "destination_5"
+
+  possible_blue_destinations:
+  - "destination_1"
+  - "destination_2"
+  - "destination_3"
+  - "destination_4"
+  - "destination_5"
   
 # =============================================================================
 # 

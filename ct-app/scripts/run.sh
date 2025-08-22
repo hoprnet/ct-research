@@ -73,10 +73,8 @@ for arg in "$@"; do
 done
 
 if [ $env == "local" ]; then
-    for i in $(seq 1 6); do
-        export NODE_ADDRESS_${i}=$(get_local_node_address $i)
-        export NODE_KEY_${i}="e2e-API-token^^"
-    done
+    export NODE_ADDRESS=$(get_local_node_address 1)
+    export NODE_KEY="e2e-API-token^^"
 
 else
     # Check deployment if it's set to auto
@@ -85,14 +83,12 @@ else
     fi
 
     # Node parameters
-    for i in $(seq 1 $count); do
-        export NODE_ADDRESS_${i}=$(printf $HOST_FORMAT $deployment $i $env)
-        if [ $env == "prod" ]; then
-            export NODE_KEY_${i}=$PROD_TOKEN
-        elif [ $env == "staging" ]; then
-            export NODE_KEY_${i}=$STAGING_TOKEN
-        fi
-    done
+    export NODE_ADDRESS=$(printf $HOST_FORMAT $deployment 1 $env)
+    if [ $env == "prod" ]; then
+        export NODE_KEY=$PROD_TOKEN
+    elif [ $env == "staging" ]; then
+        export NODE_KEY=$STAGING_TOKEN
+    fi
 fi
 
 

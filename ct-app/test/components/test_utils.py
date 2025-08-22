@@ -6,8 +6,6 @@ from core.components.balance import Balance
 from core.rpc import entries as rpc_entries
 from core.subgraph import entries as sg_entries
 
-from .utils import handle_envvars
-
 
 @pytest.fixture
 def channel_topology():
@@ -60,26 +58,13 @@ def channel_topology():
     ]
 
 
-def test_nodesCredentials():
-    with handle_envvars(
-        node_address_1="address_1",
-        node_address_2="address_2",
-        node_key_1="address_1_key",
-        node_key_2="address_2_key",
-    ):
-        addresses, keys = Utils.nodesCredentials("NODE_ADDRESS", "NODE_KEY")
-        assert addresses == ["address_1", "address_2"]
-        assert keys == ["address_1_key", "address_2_key"]
-
-
 @pytest.mark.asyncio
 async def test_mergeDataSources():
-    topology_list = [
-        sg_entries.Topology("address_1", Balance("1 wxHOPR")),
-        sg_entries.Topology("address_2", Balance("2 wxHOPR")),
-        sg_entries.Topology(None, Balance("3 wxHOPR")),
-        sg_entries.Topology("address_4", Balance("4 wxHOPR")),
-    ]
+    topology_list = {
+        "address_1": Balance("1 wxHOPR"),
+        "address_2": Balance("2 wxHOPR"),
+        "address_4": Balance("4 wxHOPR"),
+    }
     peers_list = [
         Peer("address_1"),
         Peer("address_2"),

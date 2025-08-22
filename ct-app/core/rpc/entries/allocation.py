@@ -1,5 +1,6 @@
 from core.components.balance import Balance
-from core.rpc.entries.entry import RPCEntry
+
+from .entry import RPCEntry
 
 
 class Allocation(RPCEntry):

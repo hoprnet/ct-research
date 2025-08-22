@@ -17,3 +17,4 @@ class Account(SubgraphEntry):
 
         self.address = address.lower() if address is not None else None
         self.redeemed_value = Balance(f"{redeemed_value} wxHOPR")
+        self.redeemed_value = Balance(f"{redeemed_value} wxHOPR")

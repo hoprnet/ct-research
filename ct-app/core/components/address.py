@@ -1,6 +1,6 @@
 from typing import Any
 
-from core.api.response_objects import try_to_lower
+from ..api.response_objects import try_to_lower
 
 
 class Address:

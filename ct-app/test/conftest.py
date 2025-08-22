@@ -16,7 +16,6 @@ from core.api.response_objects import (
 from core.components import Peer
 from core.components.balance import Balance
 from core.components.config_parser import LegacyParams, Parameters
-from core.core import Core
 from core.node import Node
 
 
@@ -148,18 +147,6 @@ def channels(peers: set[Peer]) -> Channels:
     channels.all = all_channels
 
     return channels
-
-
-@pytest.fixture
-async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
-
-    with open("./test/test_config.yaml", "r") as file:
-        params = Parameters(yaml.safe_load(file))
-    setattr(params.subgraph, "api_key", "foo_deployer_key")
-
-    core = Core(nodes, params)
-
-    return core
 
 
 @pytest.fixture

@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 
-from core.api.request_objects import ApiRequestObject, api_field
+from api_lib.objects.request import APIfield, RequestData
 
 
 @dataclass
-class FooRequestObject(ApiRequestObject):
-    foo: str = api_field("fooForApi")
-    bar: str = api_field("barForApi")
+class FooRequestObject(RequestData):
+    foo: str = APIfield("fooForApi")
+    bar: str = APIfield("barForApi")
 
 
 def test_parse_request_object_to_dict():

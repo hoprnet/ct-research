@@ -77,7 +77,7 @@ async def only_send(
 
     for _ in range(loops):
         message = MessageFormat(await path[1].address, await path[0].address, message_size)
-        sent_data.append(await socket.send(message))
+        sent_data.append(socket.send(message))
 
     sent_size: int = sum(len(data) for data in sent_data)
     return sent_data, sent_size

@@ -23,3 +23,6 @@ class Protocol(enum.Enum):
     @property
     def retransmit(self):
         return False
+
+    def __repr__(self):
+        return f"<Protocol.{self.name}>"
