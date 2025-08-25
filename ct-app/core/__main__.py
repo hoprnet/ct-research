@@ -39,7 +39,7 @@ def main(configfile: str):
         logger.info("Prometheus client started on port 8080")
 
     # create the core and nodes instances
-    host: str = str(os.environ.get("NODE_ADDRESS", "http://localhost:3001"))
+    host: str = str(os.environ.get("HOPRD_API_HOST", "http://localhost:3001"))
     token: str = str(os.environ.get("HOPRD_API_TOKEN"))
 
     node = Node(host, token, params)
