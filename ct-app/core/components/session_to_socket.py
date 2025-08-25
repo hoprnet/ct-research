@@ -25,9 +25,14 @@ logger = logging.getLogger(__name__)
 
 
 class SessionToSocket:
-    def __init__(self, session: Session, connect_address: str, timeout: Optional[float] = 0.05):
+    def __init__(
+        self,
+        session: Session,
+        connect_address: Optional[str] = None,
+        timeout: Optional[float] = 0.05,
+    ):
         self.session = session
-        self.connect_address = connect_address
+        self.connect_address = connect_address if connect_address else "localhost"
 
         try:
             self.socket = self.create_socket(timeout)
@@ -145,5 +150,4 @@ class SessionToSocket:
                 MESSAGES_STATS.labels("received", message.sender, message.relayer).inc()
                 MESSAGES_DELAYS.labels(message.sender, message.relayer).observe(rtt)
 
-        return recv_size
         return recv_size

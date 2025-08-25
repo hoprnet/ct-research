@@ -60,12 +60,12 @@ class SessionMixin(HasAPI, HasChannels, HasParams):
         )
 
         async with ManageSession(
-            self.api, destination, message.relayer, self.p2p_endpoint
+            self.api, destination, message.relayer  # , self.p2p_endpoint
         ) as session:
             if not session:
                 return
 
-            sess_and_socket = SessionToSocket(session, self.p2p_endpoint)
+            sess_and_socket = SessionToSocket(session)  # , self.p2p_endpoint)
 
             message.sender = self.address.native
             message.packet_size = sess_and_socket.session.payload

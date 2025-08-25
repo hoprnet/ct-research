@@ -105,12 +105,12 @@ class ManageSession:
         api: HoprdAPI,
         destination: str,
         relayer: str,
-        listen_host: str,
+        listen_host: Optional[str] = None,
     ):
         self.api = api
         self.destination = destination
         self.relayer = relayer
-        self.listen_host = listen_host
+        self.listen_host = listen_host if listen_host else "localhost"
         self.session = None
 
     async def __aenter__(self) -> Optional[Session]:
