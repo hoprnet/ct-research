@@ -74,7 +74,7 @@ done
 
 if [ $env == "local" ]; then
     export NODE_ADDRESS=$(get_local_node_address 1)
-    export NODE_KEY="e2e-API-token^^"
+    export HOPRD_API_TOKEN="e2e-API-token^^"
 
 else
     # Check deployment if it's set to auto
@@ -85,9 +85,9 @@ else
     # Node parameters
     export NODE_ADDRESS=$(printf $HOST_FORMAT $deployment 1 $env)
     if [ $env == "prod" ]; then
-        export NODE_KEY=$PROD_TOKEN
+        export HOPRD_API_TOKEN=$PROD_TOKEN
     elif [ $env == "staging" ]; then
-        export NODE_KEY=$STAGING_TOKEN
+        export HOPRD_API_TOKEN=$STAGING_TOKEN
     fi
 fi
 
