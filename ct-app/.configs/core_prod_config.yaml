@@ -103,19 +103,8 @@ channel:
 # 
 # =============================================================================
 sessions:
-  possible_green_destinations:
-  - "destination_1"
-  - "destination_2"
-  - "destination_3"
-  - "destination_4"
-  - "destination_5"
-
-  possible_blue_destinations:
-  - "destination_1"
-  - "destination_2"
-  - "destination_3"
-  - "destination_4"
-  - "destination_5"
+  green_destinations: []
+  blue_destinations: []
 
 # =============================================================================
 # 

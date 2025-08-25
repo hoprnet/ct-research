@@ -47,14 +47,17 @@ class SessionMixin(HasAPI, HasChannels, HasParams):
         if message.relayer not in channels:
             return
 
-        # TODO: Get the list depending on the deployment (blue or green)
-        destinations = [
-            item
-            for item in getattr(self.params.sessions, "possible_green_destinations")
-            if item != self.address.native
-        ]
+        if self.address.native in self.params.sessions.green_destinations:
+            possible_destinations: list[str] = self.params.sessions.green_destinations
+        elif self.address.native in self.params.sessions.blue_destinations:
+            possible_destinations: list[str] = self.params.sessions.blue_destinations
+        else:
+            logger.warning("Node address not found in any deployment destinations.")
+            return
 
-        destination = random.choice(destinations)
+        destination = random.choice(
+            [item for item in possible_destinations if item != self.address.native]
+        )
 
         async with ManageSession(
             self.api, destination, message.relayer, self.p2p_endpoint
