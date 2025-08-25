@@ -4,8 +4,7 @@ from decimal import Decimal
 from math import log, prod
 from typing import Optional
 
-from core.api.response_objects import TicketPrice
-
+from ...api.response_objects import TicketPrice
 from ..balance import Balance
 from ..logs import configure_logging
 from .base_classes import ExplicitParams

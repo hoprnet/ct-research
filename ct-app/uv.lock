@@ -70,14 +70,14 @@ wheels = [
 
 [[package]]
 name = "api-lib"
-version = "0.0.3"
+version = "0.0.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/04/ae/0e87a80ed134b8b288d695c13e23d4f149e6e777d8591f7c6f2b247b9783/api_lib-0.0.3.tar.gz", hash = "sha256:9db9e26bd762793bde4b5ee7073264483871b60cc9f54e05bf265df460e7fd0b", size = 55341, upload-time = "2025-06-26T21:36:49.776Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/f3/90662d6f0b8299b3374f9ea4134ada69f88b4eaf490e54163d5030cc7845/api_lib-0.0.4.tar.gz", hash = "sha256:682eb86a1478353d151c20f21bb7cadec040724f17615918be7e2039b7494593", size = 64208, upload-time = "2025-08-22T22:53:53.358Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6a/f9/90b8029ae16b58f70394c1b34f0cfc823a3cd8422a3b6e32af285d5acedc/api_lib-0.0.3-py3-none-any.whl", hash = "sha256:9f1d0107938fa83caca9f41c2320c3a417575e485f5147553b7805b9415f2ee7", size = 8170, upload-time = "2025-06-26T21:36:48.829Z" },
+    { url = "https://files.pythonhosted.org/packages/22/f9/f5526ea4946ebe888c090b6691ead9145c96109ff1e0036bc076a2dddf49/api_lib-0.0.4-py3-none-any.whl", hash = "sha256:233c770019cea3bfdc4ee8fc4db99ef7ddadbba9861bd2eaa8c8468afe6a9a39", size = 10181, upload-time = "2025-08-22T22:53:52.349Z" },
 ]
 
 [[package]]
@@ -158,7 +158,7 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "api-lib", specifier = ">=0.0.3" }]
+requires-dist = [{ name = "api-lib", specifier = ">=0.0.4" }]
 
 [[package]]
 name = "core-components"

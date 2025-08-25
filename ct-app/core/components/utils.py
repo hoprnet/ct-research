@@ -1,8 +1,13 @@
 import ast
+import logging
 import os
 
 from ..components.balance import Balance
+from ..components.logs import configure_logging
 from ..subgraph.entries import Safe
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 
 class Utils:
@@ -117,10 +122,10 @@ class Utils:
                         source_code = f.read()
                     tree = ast.parse(source_code)
                 except FileNotFoundError as e:
-                    cls().error(f"Could not find file {file_path}: {e}")
+                    logger.error(f"Could not find file {file_path}: {e}")
                     continue
                 except SyntaxError as e:
-                    cls().error(f"Could not parse {file_path}: {e}")
+                    logger.error(f"Could not parse {file_path}: {e}")
                     continue
 
                 for node in ast.walk(tree):
@@ -152,5 +157,4 @@ class Utils:
                         keepalive_methods.append(f"{node.name}")
                         break
 
-        return keepalive_methods
         return keepalive_methods

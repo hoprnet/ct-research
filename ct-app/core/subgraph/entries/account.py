@@ -1,5 +1,4 @@
-from core.components.balance import Balance
-
+from ...components.balance import Balance
 from .entry import SubgraphEntry
 
 
@@ -16,5 +15,4 @@ class Account(SubgraphEntry):
         """
 
         self.address = address.lower() if address is not None else None
-        self.redeemed_value = Balance(f"{redeemed_value} wxHOPR")
         self.redeemed_value = Balance(f"{redeemed_value} wxHOPR")

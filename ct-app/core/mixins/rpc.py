@@ -10,6 +10,7 @@ from ..rpc.providers import (
     wxHOPRBalance,
     xHOPRBalance,
 )
+from ..rpc.query_provider import BalanceProvider
 from .protocols import HasParams, HasRPCs
 
 configure_logging()
@@ -51,7 +52,7 @@ class RPCMixin(HasParams, HasRPCs):
         """
         addresses: list[str] = self.params.investors.addresses
 
-        providers = [
+        providers: list[BalanceProvider] = [
             HOPRBalance(self.params.rpc.mainnet),
             xHOPRBalance(self.params.rpc.gnosis),
             wxHOPRBalance(self.params.rpc.gnosis),

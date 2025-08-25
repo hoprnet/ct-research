@@ -3,5 +3,5 @@ name = "core-api"
 version = "1.2.0"
 requires-python = ">=3.13"
 dependencies = [
-    "api-lib>=0.0.3",
+    "api-lib>=0.0.4",
 ]

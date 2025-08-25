@@ -25,7 +25,7 @@ class HoprdAPI(ApiLib):
         Returns the balance of the node.
         :return: balances: Balances | undefined
         """
-        return await self.try_req(HTTPMethod.GET, "/account/balances", resp_type=resp.Balances)
+        return await self.try_req(HTTPMethod.GET, "/account/balances", resp.Balances)
 
     async def open_channel(
         self, peer_address: str, amount: Balance
@@ -37,7 +37,7 @@ class HoprdAPI(ApiLib):
         :return: channel id: str | undefined
         """
         data = req.OpenChannelBody(amount.as_str, peer_address)
-        return await self.try_req(HTTPMethod.POST, "/channels", data, resp_type=resp.OpenedChannel)
+        return await self.try_req(HTTPMethod.POST, "/channels", resp.OpenedChannel, data)
 
     async def fund_channel(self, channel_id: str, amount: Balance) -> bool:
         """
@@ -66,7 +66,7 @@ class HoprdAPI(ApiLib):
         """
         header = req.GetChannelsBody(full_topology, False)
         return await self.try_req(
-            HTTPMethod.GET, f"/channels?{header.as_header_string}", resp_type=resp.Channels
+            HTTPMethod.GET, f"/channels?{header.as_header_string}", resp.Channels
         )
 
     async def metrics(self) -> Optional[resp.Metrics]:
@@ -74,9 +74,7 @@ class HoprdAPI(ApiLib):
         Returns the metrics of the node.
         :return: metrics: list
         """
-        return await self.try_req(
-            HTTPMethod.GET, "/metrics", resp_type=resp.Metrics, use_api_prefix=False
-        )
+        return await self.try_req(HTTPMethod.GET, "/metrics", resp.Metrics, use_api_prefix=False)
 
     async def peers(
         self,
@@ -101,7 +99,7 @@ class HoprdAPI(ApiLib):
         Returns the address of the node.
         :return: address: Addresses | undefined
         """
-        return await self.try_req(HTTPMethod.GET, "/account/addresses", resp_type=resp.Addresses)
+        return await self.try_req(HTTPMethod.GET, "/account/addresses", resp.Addresses)
 
     async def node_info(self) -> Optional[resp.Infos]:
         """
@@ -116,9 +114,7 @@ class HoprdAPI(ApiLib):
         :return: TicketPrice
         """
 
-        if config := await self.try_req(
-            HTTPMethod.GET, "/node/configuration", resp_type=resp.Configuration
-        ):
+        if config := await self.try_req(HTTPMethod.GET, "/node/configuration", resp.Configuration):
             price = resp.TicketPrice(config.as_dict)
         else:
             price = None
@@ -135,7 +131,7 @@ class HoprdAPI(ApiLib):
         :return: list[Session]
         """
         return await self.try_req(
-            HTTPMethod.GET, f"/session/{protocol.name.lower()}", resp_type=list[resp.Session]
+            HTTPMethod.GET, f"/session/{protocol.name.lower()}", list[resp.Session]
         )
 
     async def post_session(
@@ -170,7 +166,7 @@ class HoprdAPI(ApiLib):
             HTTPMethod.POST,
             f"/session/{protocol.name.lower()}",
             resp.Session,
-            data,
+            data=data,
             timeout=10,
         ):
             return r

@@ -104,7 +104,7 @@ class ChannelMixin(HasAPI, HasChannels, HasParams, HasPeers):
                     NodeHelper.fund_channel,
                     self.api,
                     channel,
-                    self.params.channel.funding_amount.as_str,
+                    self.params.channel.funding_amount,
                     publish_to_task_set=False,
                 )
 

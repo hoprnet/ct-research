@@ -8,8 +8,7 @@ from typing import Any, Optional, Tuple
 import aiohttp
 from prometheus_client import Gauge
 
-from core.components.logs import configure_logging
-
+from ..components.logs import configure_logging
 from .mode import Mode
 from .url import URL
 

@@ -21,13 +21,13 @@ class PeersMixin(HasAPI, HasPeers):
         """
         Aggregates the peers from all nodes and sets the all_peers LockedVar.
         """
-        visible_peers = {Peer(item.address) for item in await self.api.peers()}
+        visible_peers: set[Peer] = {Peer(item.address) for item in await self.api.peers()}
 
         if len(visible_peers) == 0:
             logger.warning("No results while retrieving peers")
             return
 
-        self.peer_history.update({item.address: datetime.now() for item in visible_peers})
+        self.peer_history.update({item.address.native: datetime.now() for item in visible_peers})
 
         counts = {"new": 0, "known": 0, "unreachable": 0}
 
