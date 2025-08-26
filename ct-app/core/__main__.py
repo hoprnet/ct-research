@@ -32,11 +32,11 @@ def main(configfile: str):
         start_http_server(8081)
     except OSError as err:
         logger.error(
-            "Could not start the prometheus client on port 4677",
+            "Could not start the prometheus client on port 8081",
             {"error": f"[Errno {err.args[0]}]: {err.args[1]}"},
         )
     else:
-        logger.info("Prometheus client started on port 8080")
+        logger.info("Prometheus client started on port 8081")
 
     # create the core and nodes instances
     host: str = str(os.environ.get("HOPRD_API_HOST", "http://localhost:3001"))
