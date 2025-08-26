@@ -32,7 +32,7 @@ class SessionToSocket:
         timeout: Optional[float] = 0.05,
     ):
         self.session = session
-        self.connect_address = connect_address if connect_address else "localhost"
+        self.connect_address = connect_address if connect_address else "http://127.0.0.1"
 
         try:
             self.socket = self.create_socket(timeout)

@@ -110,7 +110,7 @@ class ManageSession:
         self.api = api
         self.destination = destination
         self.relayer = relayer
-        self.listen_host = listen_host if listen_host else "localhost"
+        self.listen_host = listen_host if listen_host else "http://127.0.0.1"
         self.session = None
 
     async def __aenter__(self) -> Optional[Session]:
