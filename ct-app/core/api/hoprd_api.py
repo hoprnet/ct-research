@@ -146,7 +146,7 @@ class HoprdAPI(ApiLib):
         :param: protocol: Protocol (UDP or TCP)
         :return: Session
         """
-        capabilities_body = req.SessionCapabilitiesBody(protocol.retransmit, protocol.segment)
+        capabilities_body = req.SessionCapabilitiesBody()
         target_body = req.SessionTargetBody()
         path_body = req.SessionPathBodyRelayers([relayer])
 

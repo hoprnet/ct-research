@@ -16,13 +16,5 @@ class Protocol(enum.Enum):
 
         return super()._missing_(value)
 
-    @property
-    def segment(self):
-        return False
-
-    @property
-    def retransmit(self):
-        return False
-
     def __repr__(self):
         return f"<Protocol.{self.name}>"
