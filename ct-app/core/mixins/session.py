@@ -70,6 +70,6 @@ class SessionMixin(HasAPI, HasChannels, HasParams):
             message.sender = self.address.native
             message.packet_size = sess_and_socket.session.payload
 
-            [sess_and_socket.send(message) for _ in range(20)]
+            [sess_and_socket.send(message) for _ in range(self.params.sessions.batch_size)]
 
             sess_and_socket.close_socket()

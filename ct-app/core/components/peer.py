@@ -5,6 +5,7 @@ from typing import Optional
 from prometheus_client import Gauge
 
 from ..components.balance import Balance
+from ..components.config_parser.parameters import Parameters
 from .address import Address
 from .asyncloop import AsyncLoop
 from .decorators import keepalive
@@ -38,7 +39,7 @@ class Peer:
 
         self.yearly_message_count = 0
 
-        self.params = None
+        self.params: Optional[Parameters] = None
         self.running = False
 
     @property
@@ -125,7 +126,7 @@ class Peer:
 
         if delay := await self.message_delay:
             await MessageQueue().put_async(MessageFormat(self.address.native))
-            await asyncio.sleep(delay * 20)
+            await asyncio.sleep(delay * self.params.sessions.batch_size)
 
         else:
             await asyncio.sleep(

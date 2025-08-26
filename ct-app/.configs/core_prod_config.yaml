@@ -103,6 +103,7 @@ channel:
 # 
 # =============================================================================
 sessions:
+  batch_size: 20
   green_destinations: []
   blue_destinations: []
 
