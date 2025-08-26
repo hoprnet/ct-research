@@ -24,7 +24,7 @@ check_deployment() {
 
 get_local_node_address() {
     port=$((3000 + $1 * 3))
-    echo "http://0.0.0.0:$port"
+    echo "http://localhost:$port"
 }
 
 

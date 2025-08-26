@@ -50,7 +50,7 @@ class NodeHelper:
         ok = await api.fund_channel(channel.id, amount)
 
         if ok:
-            logger.info("Funded channel", logs_params)
+            logger.info("Fund channel", logs_params)
             CHANNELS_OPS.labels("fund").inc()
         else:
             logger.warning("Failed to fund channel", logs_params)
@@ -69,7 +69,7 @@ class NodeHelper:
         session = await api.post_session(destination, relayer, listen_host)
         match session:
             case Session():
-                logger.debug("Opened session", {**logs_params, **session.as_dict})
+                logger.info("Opened session", {**logs_params, **session.as_dict})
                 SESSION_OPS.labels(relayer, "opened", "yes").inc()
                 return session
             case SessionFailure():
@@ -91,7 +91,7 @@ class NodeHelper:
         ok = await api.close_session(session)
 
         if ok:
-            logger.debug("Closed the session", logs_params)
+            logger.info("Closed the session", logs_params)
         else:
             logger.warning("Failed to close the session", logs_params)
 
@@ -110,7 +110,7 @@ class ManageSession:
         self.api = api
         self.destination = destination
         self.relayer = relayer
-        self.listen_host = listen_host if listen_host else "http://localhost"
+        self.listen_host = listen_host if listen_host else "127.0.0.1"
         self.session = None
 
     async def __aenter__(self) -> Optional[Session]:

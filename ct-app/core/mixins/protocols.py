@@ -16,7 +16,6 @@ class HasAPI(Protocol):
     api: HoprdAPI
     address: Address
     url: str
-    # _p2p_endpoint: str
 
 
 class HasChannels(Protocol):

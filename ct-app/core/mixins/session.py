@@ -52,20 +52,24 @@ class SessionMixin(HasAPI, HasChannels, HasParams):
         elif self.address.native in self.params.sessions.blue_destinations:
             possible_destinations: list[str] = self.params.sessions.blue_destinations
         else:
-            logger.warning("Node address not found in any deployment destinations.")
+            logger.warning(
+                "Node address not found in any deployment destinations. Skipping sending"
+            )
             return
 
         destination = random.choice(
-            [item for item in possible_destinations if item != self.address.native]
+            [
+                item
+                for item in possible_destinations
+                if item not in [self.address.native, message.relayer]
+            ]
         )
 
-        async with ManageSession(
-            self.api, destination, message.relayer  # , self.p2p_endpoint
-        ) as session:
+        async with ManageSession(self.api, destination, message.relayer) as session:
             if not session:
                 return
 
-            sess_and_socket = SessionToSocket(session)  # , self.p2p_endpoint)
+            sess_and_socket = SessionToSocket(session)
 
             message.sender = self.address.native
             message.packet_size = sess_and_socket.session.payload

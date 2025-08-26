@@ -43,7 +43,7 @@ class RPCMixin(HasParams, HasRPCs):
 
         self.allocations_data = await AsyncLoop.gather_any(futures)
 
-        logger.debug("Fetched investors allocations", {"counts": len(self.allocations_data)})
+        logger.info("Fetched investors allocations", {"counts": len(self.allocations_data)})
 
     @keepalive
     async def eoa_balances(self):
@@ -64,4 +64,4 @@ class RPCMixin(HasParams, HasRPCs):
 
         self.eoa_balances_data = await AsyncLoop.gather_any(futures)
 
-        logger.debug("Fetched investors EOA balances", {"count": len(self.eoa_balances_data)})
+        logger.info("Fetched investors EOA balances", {"count": len(self.eoa_balances_data)})

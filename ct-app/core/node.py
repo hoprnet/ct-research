@@ -15,8 +15,6 @@ from .components.utils import Utils
 from .rpc import entries as rpc_entries
 from .subgraph import entries as subgraph_entries
 
-# from .components.pattern_matcher import PatternMatcher
-
 configure_logging()
 logger = logging.getLogger(__name__)
 
@@ -62,27 +60,6 @@ class Node(
 
         self.connected = False
         self.running = True
-
-    # @property
-    # def p2p_endpoint(self):
-    #     if hasattr(self, "_p2p_endpoint"):
-    #         return self._p2p_endpoint
-
-    #     target_url = "ctdapp-{}-node-{}-p2p.ctdapp.{}.hoprnet.link"
-    #     patterns: list[PatternMatcher] = [
-    #         PatternMatcher(r"ctdapp-([a-zA-Z]+)-node-(\d+)\.ctdapp\.([a-zA-Z]+)"),
-    #         PatternMatcher(r"ctdapp-([a-zA-Z]+)-node-(\d+)-p2p-tcp", self.params.environment),
-    #     ]
-
-    #     for pattern in patterns:
-    #         if groups := pattern.search(self.url):
-    #             self._p2p_endpoint = target_url.format(*groups)
-    #             break
-    #     else:
-    #         logger.warning("No match found for p2p endpoint, using url", {"url": self.url})
-    #         self._p2p_endpoint = self.url
-
-    #     return self._p2p_endpoint
 
     async def start(self):
         logger.info("CT started")

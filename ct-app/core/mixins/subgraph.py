@@ -30,7 +30,7 @@ class SubgraphMixin(HasParams, HasSubgraphs):
         """
         Checks the subgraph URLs and sets the subgraph mode in use (default, backup or none).
         """
-        logger.info("Rotating subgraphs")
+        logger.debug("Rotating subgraphs")
         for provider in self.graphql_providers.values():
             await provider.test(self.params.subgraph.type)
 
@@ -45,7 +45,7 @@ class SubgraphMixin(HasParams, HasSubgraphs):
             )
 
         self.peers_rewards_data = results
-        logger.debug("Fetched peers rewards amounts", {"count": len(results)})
+        logger.info("Fetched peers rewards amounts", {"count": len(results)})
 
     @keepalive
     async def registered_nodes(self):
@@ -70,5 +70,5 @@ class SubgraphMixin(HasParams, HasSubgraphs):
             )
 
         self.registered_nodes_data = results
-        logger.debug("Fetched registered nodes in the safe registry", {"count": len(results)})
+        logger.info("Fetched registered nodes in the safe registry", {"count": len(results)})
         SUBGRAPH_SIZE.set(len(results))

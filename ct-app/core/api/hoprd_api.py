@@ -4,15 +4,12 @@ from typing import Optional, Union
 from api_lib import ApiLib
 
 from ..components.balance import Balance
-from ..components.logs import configure_logging
 from . import request_objects as req
 from . import response_objects as resp
 from .http_method import HTTPMethod
 from .protocol import Protocol
 
-configure_logging()
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logging.getLogger("api-lib").setLevel(logging.WARNING)
 
 
 class HoprdAPI(ApiLib):
@@ -119,7 +116,7 @@ class HoprdAPI(ApiLib):
         else:
             price = None
 
-        if price and price.value != "None":
+        if price and price.value not in ["None", None]:
             return price
 
         return await self.try_req(HTTPMethod.GET, "/network/price", resp.TicketPrice)
@@ -167,7 +164,7 @@ class HoprdAPI(ApiLib):
             f"/session/{protocol.name.lower()}",
             resp.Session,
             data=data,
-            timeout=10,
+            timeout=1,
         ):
             return r
         else:

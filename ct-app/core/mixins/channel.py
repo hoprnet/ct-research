@@ -77,7 +77,7 @@ class ChannelMixin(HasAPI, HasChannels, HasParams, HasPeers):
         )
 
         self.topology_data = await Utils.balanceInChannels(channels.all)
-        logger.debug("Fetched all topology links", {"count": len(self.topology_data)})
+        logger.info("Fetched all topology links", {"count": len(self.topology_data)})
         TOPOLOGY_SIZE.set(len(self.topology_data))
 
     @master(keepalive, connectguard)
@@ -91,7 +91,7 @@ class ChannelMixin(HasAPI, HasChannels, HasParams, HasPeers):
         out_opens = [c for c in self.channels.outgoing if c.status.is_open]
         low_balances = [c for c in out_opens if c.balance <= self.params.channel.min_balance]
 
-        logger.info(
+        logger.debug(
             "Starting funding of channels where balance is too low",
             {"count": len(low_balances), "threshold": self.params.channel.min_balance.as_str},
         )
@@ -136,7 +136,7 @@ class ChannelMixin(HasAPI, HasChannels, HasParams, HasPeers):
 
         self.peer_history.update(to_peer_history)
 
-        logger.info(
+        logger.debug(
             "Starting closure of dangling channels open with peer visible for too long",
             {"count": len(channels_to_close)},
         )
@@ -161,7 +161,7 @@ class ChannelMixin(HasAPI, HasChannels, HasParams, HasPeers):
         out_pendings = [c for c in self.channels.outgoing if c.status.is_pending]
 
         if len(out_pendings) > 0:
-            logger.info(
+            logger.debug(
                 "Starting closure of pending channels",
                 {"count": len(out_pendings)},
             )
@@ -185,7 +185,7 @@ class ChannelMixin(HasAPI, HasChannels, HasParams, HasPeers):
 
         in_opens = [c for c in self.channels.incoming if c.status.is_open]
 
-        logger.info(
+        logger.debug(
             "Starting closure of incoming channels",
             {"count": len(in_opens)},
         )
@@ -212,7 +212,7 @@ class ChannelMixin(HasAPI, HasChannels, HasParams, HasPeers):
         all_addresses = {p.address.native for p in self.peers}
         addresses_without_channels = all_addresses - addresses_with_channels
 
-        logger.info(
+        logger.debug(
             "Starting opening of channels",
             {"count": len(addresses_without_channels)},
         )

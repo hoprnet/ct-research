@@ -19,7 +19,7 @@ class PeersMixin(HasAPI, HasPeers):
     @master(keepalive, connectguard)
     async def retrieve_peers(self):
         """
-        Aggregates the peers from all nodes and sets the all_peers LockedVar.
+        Aggregates the peers from all nodes and sets the all_peers.
         """
         visible_peers: set[Peer] = {Peer(item.address) for item in await self.api.peers()}
 

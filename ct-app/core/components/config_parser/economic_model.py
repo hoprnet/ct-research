@@ -137,7 +137,7 @@ class SigmoidParams(ExplicitParams):
                 + self.offset
             )
         except ValueError as err:
-            logger.exception("Value error in APR calculation", {"error": err})
+            logger.error("Value error in APR calculation", {"error": str(err)})
             apr: Decimal = Decimal(0)
 
         if self.max_apr is not None:

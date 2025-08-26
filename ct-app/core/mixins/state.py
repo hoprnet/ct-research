@@ -30,7 +30,7 @@ class StateMixin(HasAPI):
             return None
 
         if addr := self.address:
-            logger.debug(
+            logger.info(
                 "Retrieved balances",
                 {key: str(value) for key, value in balances.as_dict.items()},
             )
@@ -47,7 +47,7 @@ class StateMixin(HasAPI):
         """
         if address := await self.api.address():
             self.address = Address(address.native)
-            logger.debug("Retrieved addresses")
+            logger.info("Retrieved addresses")
             return self.address
         else:
             logger.warning("No results while retrieving addresses")
@@ -80,11 +80,13 @@ class StateMixin(HasAPI):
         """
         ticket_price = await self.api.ticket_price()
 
-        logger.debug(
-            "Fetched ticket price",
-            {"value": str(getattr(getattr(ticket_price, "value", None), "value", None))},
-        )
-
         if ticket_price is not None:
+            logger.info(
+                "Fetched ticket price",
+                {"value": ticket_price.value.as_str},
+            )
+
             self.ticket_price = ticket_price
             TICKET_STATS.labels("price").set(ticket_price.value.value)
+        else:
+            logger.warning("No results while retrieving ticket price")

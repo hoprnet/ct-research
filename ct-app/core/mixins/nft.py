@@ -25,5 +25,5 @@ class NftMixin(HasNFT, HasParams):
 
         self.nft_holders_data: list[str] = data
 
-        logger.debug("Fetched NFT holders", {"count": len(self.nft_holders_data)})
+        logger.info("Fetched NFT holders", {"count": len(self.nft_holders_data)})
         NFT_HOLDERS.set(len(self.nft_holders_data))
