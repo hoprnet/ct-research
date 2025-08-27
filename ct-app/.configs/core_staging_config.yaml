@@ -6,7 +6,7 @@ environment: staging
 
 flags:
   node:
-    apply_economic_model: 30
+    apply_economic_model: 15
     ticket_parameters: 60
 
     outgoing_channels_balances: 30

@@ -82,7 +82,6 @@ else
     fi
 fi
 
-
 # Create log folder
 mkdir -p $log_folder
 time=$(date '+%Y%m%d_%H%M%S')

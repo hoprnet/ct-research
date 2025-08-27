@@ -36,6 +36,10 @@ class HasPeers(Protocol):
     peer_history: dict[str, datetime]
 
 
+class HasSession(Protocol):
+    session_destinations: list[str]
+
+
 class HasRPCs(Protocol):
     allocations_data: list[Allocation]
     eoa_balances_data: list[ExternalBalance]

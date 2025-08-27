@@ -36,9 +36,7 @@ async def test_request_relay(exc_time: int, min_range: float, max_range: float):
 
     queue = MessageQueue()
 
-    calls_and_delays = {
-        p.address.native: {"calls": 0, "delay": await p.message_delay} for p in peers
-    }
+    calls_and_delays = {p.address.native: {"calls": 0, "delay": p.message_delay} for p in peers}
 
     while queue.size > 0:
         calls_and_delays[await queue.get_async()]["calls"] += 1

@@ -35,17 +35,15 @@ class Node(
         :param url: The url of the node.
         :param key: The key of the node.
         """
-        super().__init__()
-
         self.api: HoprdAPI = HoprdAPI(url, Bearer(key), "/api/v4")
         self.url = url
 
         self.peers = set[Peer]()
         self.peer_history = dict[str, datetime]()
+        self.session_destinations: list[str] = []
 
         self.address = None
         self.channels = None
-        self._safe_address = None
 
         self.topology_data = dict[str, Balance]()
         self.registered_nodes_data = list[subgraph_entries.Node]()
@@ -64,9 +62,10 @@ class Node(
     async def start(self):
         logger.info("CT started")
 
+        await self.retrieve_address()
+
         self.get_graphql_providers()
         self.get_nft_holders()
-        await self._healthcheck()
         await self.close_all_sessions()
 
         tasks = [getattr(self, m) for m in Utils.get_methods(mixins.__path__[0], "keepalive")]

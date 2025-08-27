@@ -10,13 +10,13 @@ from ..components.logs import configure_logging
 from ..components.messages import MessageFormat, MessageQueue
 from ..components.node_helper import ManageSession, NodeHelper
 from ..components.session_to_socket import SessionToSocket
-from .protocols import HasAPI, HasChannels, HasParams
+from .protocols import HasAPI, HasChannels, HasParams, HasSession
 
 configure_logging()
 logger = logging.getLogger(__name__)
 
 
-class SessionMixin(HasAPI, HasChannels, HasParams):
+class SessionMixin(HasAPI, HasChannels, HasParams, HasSession):
     async def close_all_sessions(self):
         """
         Close all sessions without checking if they are active, or if a socket is associated.
@@ -47,22 +47,8 @@ class SessionMixin(HasAPI, HasChannels, HasParams):
         if message.relayer not in channels:
             return
 
-        if self.address.native in self.params.sessions.green_destinations:
-            possible_destinations: list[str] = self.params.sessions.green_destinations
-        elif self.address.native in self.params.sessions.blue_destinations:
-            possible_destinations: list[str] = self.params.sessions.blue_destinations
-        else:
-            logger.warning(
-                "Node address not found in any deployment destinations. Skipping sending"
-            )
-            return
-
         destination = random.choice(
-            [
-                item
-                for item in possible_destinations
-                if item not in [self.address.native, message.relayer]
-            ]
+            [item for item in self.session_destinations if item not in [message.relayer]]
         )
 
         async with ManageSession(self.api, destination, message.relayer) as session:

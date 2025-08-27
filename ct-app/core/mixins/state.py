@@ -1,12 +1,12 @@
+import asyncio
 import logging
-from typing import Optional
 
 from prometheus_client import Gauge
 
 from ..components.address import Address
 from ..components.decorators import connectguard, keepalive, master
 from ..components.logs import configure_logging
-from .protocols import HasAPI
+from .protocols import HasAPI, HasParams, HasSession
 
 BALANCE = Gauge("ct_balance", "Node balance", ["address", "token"])
 HEALTH = Gauge("ct_node_health", "Node health", ["address"])
@@ -17,7 +17,7 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 
-class StateMixin(HasAPI):
+class StateMixin(HasAPI, HasParams, HasSession):
     @master(keepalive, connectguard)
     async def retrieve_balances(self):
         """
@@ -41,36 +41,47 @@ class StateMixin(HasAPI):
 
         return balances
 
-    async def retrieve_address(self) -> Optional[Address]:
+    async def retrieve_address(self, retry_delay: float = 10.0):
         """
         Retrieve the address of the node.
         """
-        if address := await self.api.address():
-            self.address = Address(address.native)
-            logger.info("Retrieved addresses")
-            return self.address
-        else:
-            logger.warning("No results while retrieving addresses")
-            return None
 
-    async def _healthcheck(self):
+        address = None
+        while not address:
+            address = await self.api.address()
+            if not address:
+                logger.warning(
+                    f"No results while retrieving addresses, retrying in {retry_delay}s..."
+                )
+                await asyncio.sleep(retry_delay)
+
+        self.address = Address(address.native)
+        self.connected = True
+
+        if self.address.native in self.params.sessions.green_destinations:
+            self.session_destinations = self.params.sessions.green_destinations
+        elif self.address.native in self.params.sessions.blue_destinations:
+            self.session_destinations = self.params.sessions.blue_destinations
+        else:
+            logger.warning(
+                "Node address not found in any deployment destinations. Skipping sending"
+            )
+
+        if self.session_destinations:
+            self.session_destinations = [
+                item for item in self.session_destinations if item != self.address.native
+            ]
+
+    @keepalive
+    async def healthcheck(self):
         """
         Perform a healthcheck on the node.
         """
         self.connected = await self.api.healthyz()
 
-        if addr := await self.retrieve_address():
-            if not self.connected:
-                logger.warning("Node is not reachable")
-            HEALTH.labels(addr.native).set(int(self.connected))
-            return addr
-        else:
-            logger.warning("No address found")
-            return None
-
-    @keepalive
-    async def healthcheck(self):
-        await self._healthcheck()
+        if not self.connected:
+            logger.warning("Node is not reachable")
+        HEALTH.labels(self.address.native).set(int(self.connected))
 
     @keepalive
     async def ticket_parameters(self):

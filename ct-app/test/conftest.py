@@ -114,7 +114,6 @@ async def nodes(
 
         mocker.patch.object(node.api, "healthyz", return_value=True)
         mocker.patch.object(node.api, "ticket_price", return_value=Balance("0.0001 wxHOPR"))
-        await node.retrieve_address()
 
     return nodes
 
@@ -165,18 +164,16 @@ async def node(
     )
     mocker.patch.object(node.api, "address", return_value=Addresses(addresses[0]))
     mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
-    # mocker.patch.object(node.api, "send_message", return_value=1)
     mocker.patch.object(node.api, "healthyz", return_value=True)
 
-    params = Parameters()
     with open("./test/test_config.yaml", "r") as file:
         params = Parameters(yaml.safe_load(file))
     setattr(params.subgraph, "api_key", "foo_deployer_key")
 
     node.params = params
 
-    await node.healthcheck()
     await node.retrieve_address()
+    await node.healthcheck()
 
     return node
 

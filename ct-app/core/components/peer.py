@@ -83,7 +83,7 @@ class Peer:
         return self.safe.total_balance / self.safe_address_count + self.channel_balance
 
     @property
-    async def message_delay(self) -> Optional[float]:
+    def message_delay(self) -> Optional[float]:
         value = None
         if self.yearly_message_count is not None and self.yearly_message_count > 0:
             value = (
@@ -100,8 +100,12 @@ class Peer:
         min_stake: float,
         nft_holders: list[str],
         nft_threshold: Balance,
+        ct_nodes: list[str],
     ) -> bool:
         try:
+            if self.address.native in ct_nodes:
+                return False
+
             if self.safe.allowance < min_allowance:
                 return False
 
@@ -124,7 +128,7 @@ class Peer:
         if self.address is None:
             return
 
-        if delay := await self.message_delay:
+        if delay := self.message_delay:
             await MessageQueue().put_async(MessageFormat(self.address.native))
             await asyncio.sleep(delay * self.params.sessions.batch_size)
 

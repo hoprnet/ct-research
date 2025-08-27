@@ -8,7 +8,7 @@ from ..components.config_parser.economic_model import LegacyParams, SigmoidParam
 from ..components.decorators import keepalive
 from ..components.logs import configure_logging
 from ..components.utils import Utils
-from .protocols import HasNFT, HasParams, HasPeers, HasRPCs, HasSubgraphs
+from .protocols import HasNFT, HasParams, HasPeers, HasRPCs, HasSession, HasSubgraphs
 
 ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
 MESSAGE_COUNT = Gauge(
@@ -19,7 +19,7 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 
-class EconomicSystemMixin(HasNFT, HasParams, HasPeers, HasRPCs, HasSubgraphs):
+class EconomicSystemMixin(HasNFT, HasParams, HasPeers, HasRPCs, HasSession, HasSubgraphs):
     @keepalive
     async def apply_economic_model(self):
         """
@@ -49,6 +49,7 @@ class EconomicSystemMixin(HasNFT, HasParams, HasPeers, HasRPCs, HasSubgraphs):
                 self.params.economic_model.legacy.coefficients.lowerbound,
                 self.nft_holders_data,
                 self.params.economic_model.nft_threshold,
+                self.params.sessions.blue_destinations + self.params.sessions.green_destinations,
             ):
                 p.yearly_message_count = None
 
@@ -88,8 +89,16 @@ class EconomicSystemMixin(HasNFT, HasParams, HasPeers, HasRPCs, HasSubgraphs):
 
                 MESSAGE_COUNT.labels(peer.address.native, name).set(message_count[model])
 
-            peer.yearly_message_count = sum(message_count.values())
+            peer.yearly_message_count = sum(message_count.values()) / (
+                len(self.session_destinations) + 1
+            )
 
         eligible_count = sum([p.yearly_message_count is not None for p in self.peers])
-        logger.info("Generated the eligible nodes set", {"count": eligible_count})
+        expected_rate = sum(
+            [1 / p.message_delay for p in self.peers if p.message_delay is not None]
+        )
+        logger.info(
+            "Generated the eligible nodes set",
+            {"count": eligible_count, "expected_rate": expected_rate},
+        )
         ELIGIBLE_PEERS.set(eligible_count)
