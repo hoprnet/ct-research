@@ -103,7 +103,7 @@ class SessionToSocket:
 
         return data
 
-    async def receive(self, chunk_size: int, timeout: float = 1) -> int:
+    async def receive(self, chunk_size: int, total_size: int, timeout: float = 2) -> int:
         """
         Receives data from the peer. In case off multiple message in the same packet, which should
         not happen, they are already split and returned as a list.
@@ -112,7 +112,7 @@ class SessionToSocket:
 
         start_time = datetime.now().timestamp()
 
-        while True:
+        while len(recv_data) < total_size:
             if (datetime.now().timestamp() - start_time) >= timeout:
                 break
 

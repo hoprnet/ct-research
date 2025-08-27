@@ -160,7 +160,7 @@ async def main(waves: int, batch_size: int, timeout: float, protocol: Protocol):
 
     # receive data in socket
     recv_start_time: float = time.time()
-    recv_size = await socket.receive(batch_size * session.payload, timeout)
+    recv_size = await socket.receive(session.payload, session.payload * batch_size, timeout)
     recv_elapsed_time: float = time.time() - recv_start_time
 
     metrics_after: dict[str, Metrics] = {hop.host_root: await hop.api.metrics() for hop in path}
