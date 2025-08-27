@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 from api_lib.headers.authorization import Bearer
+from prometheus_client import Gauge
 
 from . import mixins
 from .api.hoprd_api import HoprdAPI
@@ -14,6 +15,8 @@ from .components.peer import Peer
 from .components.utils import Utils
 from .rpc import entries as rpc_entries
 from .subgraph import entries as subgraph_entries
+
+BALANCE_MULTIPLIER = Gauge("ct_balance_multiplier", "factor to multiply the balance by")
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -58,6 +61,8 @@ class Node(
 
         self.connected = False
         self.running = True
+
+        BALANCE_MULTIPLIER.set(1.0)
 
     async def start(self):
         logger.info("CT started")

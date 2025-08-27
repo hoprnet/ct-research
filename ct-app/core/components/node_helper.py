@@ -8,7 +8,7 @@ from ..api.response_objects import Channel, Session, SessionFailure
 from ..components.balance import Balance
 from ..components.logs import configure_logging
 
-CHANNELS_OPS = Gauge("ct_channel_operation", "Channel operation", ["op"])
+CHANNELS_OPS = Gauge("ct_channel_operation", "Channel operation", ["op", "success"])
 SESSION_OPS = Gauge("ct_session_operation", "Session operation", ["relayer", "op", "success"])
 
 
@@ -25,9 +25,9 @@ class NodeHelper:
 
         if channel is not None:
             logger.info("Opened channel", log_params)
-            CHANNELS_OPS.labels("opened").inc()
         else:
             logger.warning(f"Failed to open channel to {address}", log_params)
+        CHANNELS_OPS.labels("opened", "yes" if channel else "no").inc()
 
     @classmethod
     async def close_channel(cls, api: HoprdAPI, channel: Channel, type: str):
@@ -38,9 +38,9 @@ class NodeHelper:
 
         if ok:
             logger.info(f"Closed {type} channel", logs_params)
-            CHANNELS_OPS.labels(type).inc()
         else:
             logger.warning(f"Failed to close {type}", logs_params)
+        CHANNELS_OPS.labels(type, "yes" if ok else "no").inc()
 
     @classmethod
     async def fund_channel(cls, api: HoprdAPI, channel: Channel, amount: Balance):
@@ -51,9 +51,9 @@ class NodeHelper:
 
         if ok:
             logger.info("Fund channel", logs_params)
-            CHANNELS_OPS.labels("fund").inc()
         else:
             logger.warning("Failed to fund channel", logs_params)
+        CHANNELS_OPS.labels("fund", "yes" if ok else "no").inc()
 
     @classmethod
     async def open_session(
