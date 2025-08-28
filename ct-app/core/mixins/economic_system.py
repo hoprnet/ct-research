@@ -85,13 +85,13 @@ class EconomicSystemMixin(HasNFT, HasParams, HasPeers, HasRPCs, HasSession, HasS
                     peer.split_stake,
                     self.ticket_price,
                     model_input[model],
+                ) / (
+                    len(self.session_destinations) + 1
                 )
 
                 MESSAGE_COUNT.labels(peer.address.native, name).set(message_count[model])
 
-            peer.yearly_message_count = sum(message_count.values()) / (
-                len(self.session_destinations) + 1
-            )
+            peer.yearly_message_count = sum(message_count.values())
 
         eligible_count = sum([p.yearly_message_count is not None for p in self.peers])
         expected_rate = sum(
