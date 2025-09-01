@@ -104,7 +104,7 @@ channel:
 # 
 # =============================================================================
 sessions:
-  batch_size: 50
+  batch_size: 100
   green_destinations:
   - "0xac3c2d1f751d9c763be29aabb20cf31295f3ea27"
   - "0x154a32241dacd34c55ca65c2dfdef173d6d9e7f3"
