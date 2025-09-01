@@ -8,7 +8,7 @@ from ..components.logs import configure_logging
 from ..components.peer import Peer
 from .protocols import HasAPI, HasPeers
 
-PEERS_COUNT = Gauge("ct_peers_count", "Node peers", ["address"])
+PEERS_COUNT = Gauge("ct_peers_count", "Node peers")
 UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers", ["type"])
 
 configure_logging()
@@ -56,6 +56,6 @@ class PeersMixin(HasAPI, HasPeers):
 
         logger.info("Retrieved visible peers", counts)
 
-        PEERS_COUNT.labels(self.address.native).set(len(self.peers))
+        PEERS_COUNT.set(len(self.peers))
         for key, value in counts.items():
             UNIQUE_PEERS.labels(key).set(value)

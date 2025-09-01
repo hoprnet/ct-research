@@ -11,14 +11,14 @@ from ..api.response_objects import Session
 from ..components.logs import configure_logging
 from ..components.messages.message_format import MessageFormat
 
-MESSAGES_DELAYS = Histogram(
+MESSAGES_RTT = Histogram(
     "ct_messages_delays",
     "Messages delays",
     ["sender", "relayer"],
     buckets=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2.5, 5],
 )
-MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "sender", "relayer"])
-MESSAGE_SENDING_REQUEST = Gauge("ct_message_sending_request", "", ["sender", "relayer"])
+MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "relayer"])
+MESSAGE_SENDING_REQUEST = Gauge("ct_message_sending_request", "", ["relayer"])
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -88,7 +88,7 @@ class SessionToSocket:
         Sends data to the peer.
         """
         if isinstance(message, MessageFormat):
-            MESSAGE_SENDING_REQUEST.labels(message.sender, message.relayer).inc()
+            MESSAGE_SENDING_REQUEST.labels(message.relayer).inc()
 
         payload: bytes = message.bytes() if isinstance(message, MessageFormat) else message
 
@@ -99,7 +99,7 @@ class SessionToSocket:
                 data = self.socket.send(payload)
 
         if isinstance(message, MessageFormat):
-            MESSAGES_STATS.labels("sent", message.sender, message.relayer).inc()
+            MESSAGES_STATS.labels("sent", message.relayer).inc()
 
         return data
 
@@ -146,7 +146,7 @@ class SessionToSocket:
                     continue
 
                 rtt = (now - message.timestamp) / 1000
-                MESSAGES_STATS.labels("received", message.sender, message.relayer).inc()
-                MESSAGES_DELAYS.labels(message.sender, message.relayer).observe(rtt)
+                MESSAGES_STATS.labels("received", message.relayer).inc()
+                MESSAGES_RTT.labels(message.sender, message.relayer).observe(rtt)
 
         return recv_size

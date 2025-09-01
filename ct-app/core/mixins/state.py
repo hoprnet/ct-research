@@ -8,8 +8,8 @@ from ..components.decorators import connectguard, keepalive, master
 from ..components.logs import configure_logging
 from .protocols import HasAPI, HasParams, HasSession
 
-BALANCE = Gauge("ct_balance", "Node balance", ["address", "token"])
-HEALTH = Gauge("ct_node_health", "Node health", ["address"])
+BALANCE = Gauge("ct_balance", "Node balance", ["token"])
+HEALTH = Gauge("ct_node_health", "Node health")
 TICKET_STATS = Gauge("ct_ticket_stats", "Ticket stats", ["type"])
 
 
@@ -29,15 +29,14 @@ class StateMixin(HasAPI, HasParams, HasSession):
             logger.warning("No results while retrieving balances")
             return None
 
-        if addr := self.address:
-            logger.info(
-                "Retrieved balances",
-                {key: str(value) for key, value in balances.as_dict.items()},
-            )
-            for token, balance in vars(balances).items():
-                if balance is None:
-                    continue
-                BALANCE.labels(addr.native, token).set(balance.value)
+        logger.info(
+            "Retrieved balances",
+            {key: str(value) for key, value in balances.as_dict.items()},
+        )
+        for token, balance in vars(balances).items():
+            if balance is None:
+                continue
+            BALANCE.labels(token).set(balance.value)
 
         return balances
 
@@ -81,7 +80,7 @@ class StateMixin(HasAPI, HasParams, HasSession):
 
         if not self.connected:
             logger.warning("Node is not reachable")
-        HEALTH.labels(self.address.native).set(int(self.connected))
+        HEALTH.set(int(self.connected))
 
     @keepalive
     async def ticket_parameters(self):

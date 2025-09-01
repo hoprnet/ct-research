@@ -12,8 +12,8 @@ from ..components.node_helper import NodeHelper
 from ..components.utils import Utils
 from .protocols import HasAPI, HasChannels, HasParams, HasPeers
 
-CHANNELS = Gauge("ct_channels", "Node channels", ["address", "direction"])
-CHANNEL_FUNDS = Gauge("ct_channel_funds", "Total funds in out. channels", ["address"])
+CHANNELS = Gauge("ct_channels", "Node channels", ["direction"])
+CHANNEL_FUNDS = Gauge("ct_channel_funds", "Total funds in out. channels")
 TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
 
 configure_logging()
@@ -40,7 +40,7 @@ class ChannelMixin(HasAPI, HasChannels, HasParams, HasPeers):
             "Retrieved total amount stored in outgoing channels",
             {"amount": balance.as_str},
         )
-        CHANNEL_FUNDS.labels(self.address.native).set(balance.value)
+        CHANNEL_FUNDS.set(balance.value)
 
         return balance
 
@@ -65,8 +65,8 @@ class ChannelMixin(HasAPI, HasChannels, HasParams, HasPeers):
 
             self.channels = channels
 
-            CHANNELS.labels(addr.native, "outgoing").set(len(channels.outgoing))
-            CHANNELS.labels(addr.native, "incoming").set(len(channels.incoming))
+            CHANNELS.labels("outgoing").set(len(channels.outgoing))
+            CHANNELS.labels("incoming").set(len(channels.incoming))
 
         incoming_count = len(channels.incoming) if channels else 0
         outgoing_count = len(channels.outgoing) if channels else 0
