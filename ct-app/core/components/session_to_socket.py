@@ -14,8 +14,8 @@ from ..components.messages.message_format import MessageFormat
 MESSAGES_RTT = Histogram(
     "ct_messages_delays",
     "Messages delays",
-    ["sender", "relayer"],
-    buckets=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 2.5, 5],
+    ["relayer"],
+    buckets=[0.5, 0.75, 1, 2, 3, 4, 5],
 )
 MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "relayer"])
 MESSAGE_SENDING_REQUEST = Gauge("ct_message_sending_request", "", ["relayer"])
@@ -147,6 +147,6 @@ class SessionToSocket:
 
                 rtt = (now - message.timestamp) / 1000
                 MESSAGES_STATS.labels("received", message.relayer).inc()
-                MESSAGES_RTT.labels(message.sender, message.relayer).observe(rtt)
+                MESSAGES_RTT.labels(message.relayer).observe(rtt)
 
         return recv_size
