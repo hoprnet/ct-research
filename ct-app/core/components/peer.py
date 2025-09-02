@@ -13,9 +13,9 @@ from .messages import MessageFormat, MessageQueue
 
 CHANNEL_STAKE = Gauge("ct_peer_channels_balance", "Balance in outgoing channels", ["address"])
 DELAY = Gauge("ct_peer_delay", "Delay between two messages", ["address"])
-# NODES_LINKED_TO_SAFE_COUNT = Gauge(
-#     "ct_peer_safe_count", "Number of nodes linked to the safes", ["address", "safe"]
-# )
+NODES_LINKED_TO_SAFE_COUNT = Gauge(
+    "ct_peer_safe_count", "Number of nodes linked to the safes", ["address", "safe"]
+)
 SECONDS_IN_A_NON_LEAP_YEAR = 365 * 24 * 60 * 60
 
 
@@ -67,7 +67,7 @@ class Peer:
     @safe_address_count.setter
     def safe_address_count(self, value: int):
         self._safe_address_count = value
-        # NODES_LINKED_TO_SAFE_COUNT.labels(self.address.native, self.safe.address).set(value)
+        NODES_LINKED_TO_SAFE_COUNT.labels(self.address.native, self.safe.address).set(value)
 
     @property
     def split_stake(self) -> Balance:
