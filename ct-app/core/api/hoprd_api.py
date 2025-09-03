@@ -7,7 +7,6 @@ from ..components.balance import Balance
 from . import request_objects as req
 from . import response_objects as resp
 from .http_method import HTTPMethod
-from .protocol import Protocol
 
 logging.getLogger("api-lib").setLevel(logging.WARNING)
 
@@ -121,29 +120,24 @@ class HoprdAPI(ApiLib):
 
         return await self.try_req(HTTPMethod.GET, "/network/price", resp.TicketPrice)
 
-    async def list_sessions(self, protocol: Protocol = Protocol.UDP) -> list[resp.Session]:
+    async def list_udp_sessions(self) -> list[resp.Session]:
         """
-        Lists existing Session listeners for the given IP protocol
-        :param: protocol: Protocol
+        Lists existing Session listeners over UDP
         :return: list[Session]
         """
-        return await self.try_req(
-            HTTPMethod.GET, f"/session/{protocol.name.lower()}", list[resp.Session]
-        )
+        return await self.try_req(HTTPMethod.GET, "/session/udp", list[resp.Session])
 
-    async def post_session(
+    async def post_udp_session(
         self,
         destination: str,
         relayer: str,
         listen_host: str = ":0",
-        protocol: Protocol = Protocol.UDP,
     ) -> Union[resp.Session, resp.SessionFailure]:
         """
-        Creates a new session returning the session listening host & port over TCP or UDP.
+        Creates a new session returning the session listening host & port over UDP.
         :param: destination: Address of the recipient
         :param: relayer: Address of the relayer
         :param: listen_host: str
-        :param: protocol: Protocol (UDP or TCP)
         :return: Session
         """
         capabilities_body = req.SessionCapabilitiesBody()
@@ -161,7 +155,7 @@ class HoprdAPI(ApiLib):
         )
         if r := await self.try_req(
             HTTPMethod.POST,
-            f"/session/{protocol.name.lower()}",
+            "/session/udp",
             resp.Session,
             data=data,
             timeout=1,

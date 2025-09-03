@@ -6,10 +6,10 @@ from typing import Optional, Union
 
 from prometheus_client import Gauge, Histogram
 
-from ..api.protocol import Protocol
-from ..api.response_objects import Session
+from ..api.hoprd_api import HoprdAPI
 from ..components.logs import configure_logging
 from ..components.messages.message_format import MessageFormat
+from ..components.node_helper import NodeHelper
 
 MESSAGES_RTT = Histogram(
     "ct_messages_delays",
@@ -24,25 +24,44 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 
-class SessionToSocket:
+class SocketThroughNetwork:
     def __init__(
         self,
-        session: Session,
-        connect_address: Optional[str] = None,
+        api: HoprdAPI,
+        destination: str,
+        relayer: str,
+        listen_host: Optional[str] = None,
         timeout: Optional[float] = 0.05,
     ):
-        self.session = session
-        self.connect_address = connect_address if connect_address else "127.0.0.1"
+        self.api = api
+        self.destination = destination
+        self.relayer = relayer
+        self.listen_host = listen_host if listen_host else "127.0.0.1"
+        self.timeout = timeout
+        self.session = None
+        self.socket = None
+
+    async def __aenter__(self):
+        self.session = await NodeHelper.open_session(
+            self.api, self.destination, self.relayer, self.listen_host
+        )
+
+        if not self.session:
+            return None
 
         try:
-            self.socket = self.create_socket(timeout)
+            self.socket = self.create_socket(self.timeout)
         except (socket.error, ValueError) as e:
             raise ValueError(f"Error while creating socket: {e}")
 
-    def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        if self.session:
+            await NodeHelper.close_session(self.api, self.session, self.relayer)
+        else:
+            return
+
         try:
             self.close_socket()
         except Exception as e:
@@ -51,30 +70,8 @@ class SessionToSocket:
         finally:
             self.socket = None
 
-    @property
-    def port(self) -> int:
-        """
-        Returns the session port number.
-        """
-        return self.session.port
-
-    @property
-    def address(self):
-        """
-        Returns the socket address tuple.
-        """
-        return (self.connect_address, self.session.port)
-
     def create_socket(self, timeout: Optional[float] = None) -> socket.socket:
-        if self.session.protocol == Protocol.UDP:
-            s: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        elif self.session.protocol == Protocol.TCP:
-            s: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            s.connect(self.address)
-        else:
-            raise ValueError(f"Invalid protocol: {self.session.protocol}")
-
+        s: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.settimeout(timeout)
 
         return s
@@ -91,12 +88,7 @@ class SessionToSocket:
             MESSAGE_SENDING_REQUEST.labels(message.relayer).inc()
 
         payload: bytes = message.bytes() if isinstance(message, MessageFormat) else message
-
-        match self.session.protocol:
-            case Protocol.UDP:
-                data = self.socket.sendto(payload, self.address)
-            case Protocol.TCP:
-                data = self.socket.send(payload)
+        data = self.socket.sendto(payload, (self.listen_host, self.session.port))
 
         if isinstance(message, MessageFormat):
             MESSAGES_STATS.labels("sent", message.relayer).inc()
@@ -117,11 +109,7 @@ class SessionToSocket:
                 break
 
             try:
-                if self.session.protocol == Protocol.UDP:
-                    data: bytes = self.socket.recvfrom(chunk_size)[0]
-                if self.session.protocol == Protocol.TCP:
-                    data: bytes = self.socket.recv(chunk_size)
-                recv_data += data
+                recv_data += self.socket.recvfrom(chunk_size)[0]
             except socket.timeout:
                 await asyncio.sleep(0.02)
                 pass

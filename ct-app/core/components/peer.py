@@ -151,7 +151,10 @@ class Peer:
         return f"Peer(address: {self.address}, safe: {self.safe})"
 
     def __eq__(self, other):
-        return self.address == other.address
-
+        if hasattr(other, "address"):
+            return self.address == other.address
+        else:
+            return self.address == other
+            
     def __hash__(self):
         return hash(self.address)

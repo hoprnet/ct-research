@@ -11,7 +11,6 @@ from api_lib.objects.response import (
 
 from ..components.balance import Balance
 from .channelstatus import ChannelStatus
-from .protocol import Protocol
 
 
 def try_to_lower(value: Any):
@@ -110,7 +109,7 @@ class Channels:
 class Session(JsonResponse):
     ip: str
     port: int
-    protocol: Protocol
+    protocol: str
     target: str
     mtu: int
     surb_size: int = APIfield("surbLen")
@@ -121,7 +120,7 @@ class Session(JsonResponse):
 
     @property
     def as_path(self):
-        return f"/session/{self.protocol.value}/{self.ip}/{self.port}"
+        return f"/session/{self.protocol}/{self.ip}/{self.port}"
 
     @property
     def as_dict(self) -> dict:

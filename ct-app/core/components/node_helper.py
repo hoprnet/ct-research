@@ -66,7 +66,7 @@ class NodeHelper:
         }
         logger.debug("Opening session", logs_params)
 
-        session = await api.post_session(destination, relayer, listen_host)
+        session = await api.post_udp_session(destination, relayer, listen_host)
         match session:
             case Session():
                 logger.info("Opened session", {**logs_params, **session.as_dict})
@@ -97,28 +97,3 @@ class NodeHelper:
 
         if relayer:
             SESSION_OPS.labels(relayer, "closed", "yes" if ok else "no").inc()
-
-
-class ManageSession:
-    def __init__(
-        self,
-        api: HoprdAPI,
-        destination: str,
-        relayer: str,
-        listen_host: Optional[str] = None,
-    ):
-        self.api = api
-        self.destination = destination
-        self.relayer = relayer
-        self.listen_host = listen_host if listen_host else "127.0.0.1"
-        self.session = None
-
-    async def __aenter__(self) -> Optional[Session]:
-        self.session = await NodeHelper.open_session(
-            self.api, self.destination, self.relayer, self.listen_host
-        )
-        return self.session
-
-    async def __aexit__(self, exc_type, exc_value, traceback):
-        if self.session:
-            await NodeHelper.close_session(self.api, self.session, self.relayer)
