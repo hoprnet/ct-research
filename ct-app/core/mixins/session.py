@@ -9,13 +9,13 @@ from ..components.logs import configure_logging
 from ..components.messages import MessageFormat, MessageQueue
 from ..components.node_helper import ManageSession, NodeHelper
 from ..components.session_to_socket import SessionToSocket
-from .protocols import HasAPI, HasChannels, HasParams, HasSession
+from .protocols import HasAPI, HasChannels, HasParams, HasPeers, HasSession
 
 configure_logging()
 logger = logging.getLogger(__name__)
 
 
-class SessionMixin(HasAPI, HasChannels, HasParams, HasSession):
+class SessionMixin(HasAPI, HasChannels, HasParams, HasPeers, HasSession):
     async def close_all_sessions(self):
         """
         Close all sessions without checking if they are active, or if a socket is associated.
@@ -42,9 +42,17 @@ class SessionMixin(HasAPI, HasChannels, HasParams, HasSession):
         if not channels or message.relayer not in channels:
             return
 
-        destination = random.choice(
-            [item for item in self.session_destinations if item != message.relayer]
-        )
+        try:
+            destination = random.choice(
+                [
+                    item
+                    for item in self.session_destinations
+                    if item != message.relayer and item in self.peers
+                ]
+            )
+        except IndexError:
+            logger.debug("No valid session destination found")
+            return
 
         async with ManageSession(self.api, destination, message.relayer) as session:
             if not session:
@@ -55,6 +63,7 @@ class SessionMixin(HasAPI, HasChannels, HasParams, HasSession):
                 message.packet_size = socket.session.payload
 
                 [socket.send(message) for _ in range(self.params.sessions.batch_size)]
+
                 await socket.receive(
                     message.packet_size, self.params.sessions.batch_size * message.packet_size
                 )
