@@ -171,7 +171,7 @@ class HoprdAPI(ApiLib):
         Closes an existing Session listener for the given IP protocol, IP and port.
         :param: session: Session
         """
-        return await self.try_req(HTTPMethod.DELETE, session.as_path, return_state=True)
+        return await self.try_req(HTTPMethod.DELETE, session.as_path, return_state=True, timeout=1)
 
     async def healthyz(self, timeout: int = 20) -> bool:
         """

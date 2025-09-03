@@ -1,10 +1,11 @@
 import logging
 import random
 
+from ..components.asyncloop import AsyncLoop
 from ..components.decorators import connectguard, keepalive, master
 from ..components.logs import configure_logging
 from ..components.messages import MessageFormat, MessageQueue
-from ..components.socket_through_network import SocketThroughNetwork
+from ..components.node_helper import NodeHelper
 from .protocols import HasAPI, HasChannels, HasPeers, HasSession
 
 configure_logging()
@@ -35,15 +36,11 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
             logger.debug("No valid session destination found")
             return
 
-        async with SocketThroughNetwork(self.api, destination, message.relayer) as socket:
-            if not socket:
-                return
-
-            message.sender = self.address.native
-            message.packet_size = socket.session.payload
-
-            # taking into account the session opening packets
-            batch_size: int = message.batch_size - 2
-
-            [socket.send(message) for _ in range(batch_size)]
-            await socket.receive(message.packet_size, batch_size * message.packet_size)
+        AsyncLoop.add(
+            NodeHelper.send_batch_messages,
+            self.api,
+            self.address.native,
+            destination,
+            message,
+            publish_to_task_set=False,
+        )
