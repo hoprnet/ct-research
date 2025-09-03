@@ -158,7 +158,7 @@ class HoprdAPI(ApiLib):
             "/session/udp",
             resp.Session,
             data=data,
-            timeout=1,
+            timeout=2,
         ):
             return r
         else:
