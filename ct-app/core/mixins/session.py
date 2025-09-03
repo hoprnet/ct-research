@@ -5,13 +5,13 @@ from ..components.decorators import connectguard, keepalive, master
 from ..components.logs import configure_logging
 from ..components.messages import MessageFormat, MessageQueue
 from ..components.socket_through_network import SocketThroughNetwork
-from .protocols import HasAPI, HasChannels, HasParams, HasPeers, HasSession
+from .protocols import HasAPI, HasChannels, HasPeers, HasSession
 
 configure_logging()
 logger = logging.getLogger(__name__)
 
 
-class SessionMixin(HasAPI, HasChannels, HasParams, HasPeers, HasSession):
+class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
     @master(keepalive, connectguard)
     async def observe_message_queue(self):
         channels: list[str] = (
