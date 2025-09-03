@@ -5,5 +5,6 @@ from .base_classes import ExplicitParams
 
 @dataclass(init=False)
 class PeerParams(ExplicitParams):
-    sleep_mean_time: int
-    sleep_std_time: int
+    minimum_delay_between_batches: float
+    sleep_mean_time: float
+    sleep_std_time: float

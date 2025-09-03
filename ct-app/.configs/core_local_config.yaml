@@ -88,6 +88,7 @@ economic_model:
 # 
 # =============================================================================
 peer:
+  minimum_delay_between_batches: 2
   sleep_mean_time: 10
   sleep_std_time: 2
 
@@ -103,7 +104,6 @@ channel:
 # 
 # =============================================================================
 sessions:
-  batch_size: 20
   green_destinations: 
   - "0x7d1e530e9c82c21b75644a2c23402aa858ae4a69"
   - "0x1b482420afa04aec1ef0e4a00c18451e84466c75"

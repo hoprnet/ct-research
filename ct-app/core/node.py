@@ -38,12 +38,12 @@ class Node(
         :param url: The url of the node.
         :param key: The key of the node.
         """
-        self.api: HoprdAPI = HoprdAPI(url, Bearer(key), "/api/v4")
+        self.api = HoprdAPI(url, Bearer(key), "/api/v4")
         self.url = url
 
         self.peers = set[Peer]()
         self.peer_history = dict[str, datetime]()
-        self.session_destinations: list[str] = []
+        self.session_destinations = list[str]()
 
         self.address = None
         self.channels = None
@@ -57,7 +57,7 @@ class Node(
 
         self.ticket_price = None
 
-        self.params = params if params else Parameters()
+        self.params = params or Parameters()
 
         self.connected = False
         self.running = True
@@ -65,19 +65,15 @@ class Node(
         BALANCE_MULTIPLIER.set(1.0)
 
     async def start(self):
-        logger.info("CT started")
-
         await self.retrieve_address()
 
         self.get_graphql_providers()
         self.get_nft_holders()
-        await self.close_all_sessions()
 
-        tasks = [getattr(self, m) for m in Utils.get_methods(mixins.__path__[0], "keepalive")]
-        AsyncLoop.update(tasks)
+        keep_alive_methods: list[str] = Utils.get_methods(mixins.__path__[0], "keepalive")
+        AsyncLoop.update([getattr(self, m) for m in keep_alive_methods])
 
         await AsyncLoop.gather()
 
     def stop(self):
-        logger.info("CT stopped")
         self.running = False

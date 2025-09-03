@@ -28,7 +28,7 @@ class Address:
             return self.native == other.native
         else:
             return self.native == other
-            
+
     def __hash__(self):
         return hash(self.native)
 

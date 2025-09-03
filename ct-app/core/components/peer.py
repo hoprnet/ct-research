@@ -129,8 +129,14 @@ class Peer:
             return
 
         if delay := self.message_delay:
-            await MessageQueue().put_async(MessageFormat(self.address.native))
-            await asyncio.sleep(delay * self.params.sessions.batch_size)
+            # minimum 3 as 2 of those packets will be sent as session initialization packets
+            batch_size: int = max(
+                3, int(self.params.peer.minimum_delay_between_batches / delay + 0.5)
+            )
+
+            message = MessageFormat(self.address.native, batch_size=batch_size)
+            await MessageQueue().put(message)
+            await asyncio.sleep(batch_size * delay)
 
         else:
             await asyncio.sleep(
@@ -155,6 +161,6 @@ class Peer:
             return self.address == other.address
         else:
             return self.address == other
-            
+
     def __hash__(self):
         return hash(self.address)

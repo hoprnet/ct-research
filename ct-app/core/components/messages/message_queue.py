@@ -1,4 +1,5 @@
-from janus import Queue
+from asyncio import Queue
+
 from prometheus_client import Gauge
 
 from ..singleton import Singleton
@@ -11,28 +12,13 @@ class MessageQueue(metaclass=Singleton):
     def __init__(self):
         self._buffer = Queue()
 
-    def get_sync(self) -> MessageFormat:
-        return self.buffer.sync_q.get()
+    async def get(self) -> MessageFormat:
+        return await self.buffer.get()
 
-    def put_sync(self, item: MessageFormat):
-        self.buffer.sync_q.put(item)
-
-    async def get_async(self) -> MessageFormat:
-        return await self.buffer.async_q.get()
-
-    async def put_async(self, item: MessageFormat):
-        await self.buffer.async_q.put(item)
-
-    @property
-    def size(self):
-        return self._buffer.sync_q.qsize()
+    async def put(self, item: MessageFormat):
+        await self.buffer.put(item)
 
     @property
     def buffer(self):
-        QUEUE_SIZE.set(self.size)
+        QUEUE_SIZE.set(self._buffer.qsize())
         return self._buffer
-
-    @classmethod
-    def clear(cls):
-        while cls().size:
-            cls().get_sync()

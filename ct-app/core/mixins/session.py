@@ -1,12 +1,9 @@
 import logging
 import random
 
-from ..api.response_objects import Session
-from ..components.asyncloop import AsyncLoop
 from ..components.decorators import connectguard, keepalive, master
 from ..components.logs import configure_logging
 from ..components.messages import MessageFormat, MessageQueue
-from ..components.node_helper import NodeHelper
 from ..components.socket_through_network import SocketThroughNetwork
 from .protocols import HasAPI, HasChannels, HasParams, HasPeers, HasSession
 
@@ -15,28 +12,13 @@ logger = logging.getLogger(__name__)
 
 
 class SessionMixin(HasAPI, HasChannels, HasParams, HasPeers, HasSession):
-    async def close_all_sessions(self):
-        """
-        Close all sessions without checking if they are active, or if a socket is associated.
-        This method should run on startup to clean up any old sessions.
-        """
-        active_sessions: list[Session] = await self.api.list_udp_sessions()
-
-        for session in active_sessions:
-            AsyncLoop.add(
-                NodeHelper.close_session,
-                self.api,
-                session,
-                publish_to_task_set=False,
-            )
-
     @master(keepalive, connectguard)
     async def observe_message_queue(self):
         channels: list[str] = (
             [channel.destination for channel in self.channels.outgoing] if self.channels else []
         )
 
-        message: MessageFormat = await MessageQueue().get_async()
+        message: MessageFormat = await MessageQueue().get()
 
         if not channels or message.relayer not in channels:
             return
@@ -60,8 +42,8 @@ class SessionMixin(HasAPI, HasChannels, HasParams, HasPeers, HasSession):
             message.sender = self.address.native
             message.packet_size = socket.session.payload
 
-            [socket.send(message) for _ in range(self.params.sessions.batch_size)]
+            # taking into account the session opening packets
+            batch_size: int = message.batch_size - 2
 
-            await socket.receive(
-                message.packet_size, self.params.sessions.batch_size * message.packet_size
-            )
+            [socket.send(message) for _ in range(batch_size)]
+            await socket.receive(message.packet_size, batch_size * message.packet_size)
