@@ -5,7 +5,6 @@ from copy import deepcopy
 
 from ..components.balance import Balance
 from ..components.logs import configure_logging
-from ..subgraph.entries import Safe
 
 configure_logging()
 logger = logging.getLogger(__name__)
