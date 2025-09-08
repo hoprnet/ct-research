@@ -1,4 +1,4 @@
-from core.subgraph.entries import Safe
+from copy import deepcopy
 
 from .environment_utils import EnvironmentUtils
 
@@ -42,7 +42,10 @@ class Utils:
             topo = next(filter(lambda t: filter_func(t, peer), topology), None)
             node = next(filter(lambda n: filter_func(n, peer), nodes), None)
 
-            peer.safe = getattr(node, "safe", Safe.default())
+            if node is None or not hasattr(node, "safe"):
+                continue
+
+            peer.safe = deepcopy(node.safe)
 
             peer.safe.additional_balance = 0
 
@@ -122,4 +125,5 @@ class Utils:
 
             results[c.source_peer_id]["channels_balance"] += int(c.balance) / 1e18
 
+        return results
         return results
