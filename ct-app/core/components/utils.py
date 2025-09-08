@@ -1,6 +1,7 @@
 import ast
 import logging
 import os
+from copy import deepcopy
 
 from ..components.balance import Balance
 from ..components.logs import configure_logging
@@ -34,7 +35,10 @@ class Utils:
             balance = outgoing_channel_balance.get(peer.address.native, None)
             node = next(filter(lambda n: filter_func(n, peer), nodes), None)
 
-            peer.safe = getattr(node, "safe", Safe.default())
+            if node is None or not hasattr(node, "safe"):
+                continue
+
+            peer.safe = deepcopy(node.safe)
 
             peer.safe.additional_balance = Balance.zero("wxHOPR")
 
