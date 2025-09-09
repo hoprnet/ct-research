@@ -111,7 +111,7 @@ class Session(JsonResponse):
     port: int
     protocol: str
     target: str
-    mtu: int = APIfield("hopr_mtu")
+    mtu: int = APIfield("hoprMtu")
     surb_size: int = APIfield("surbLen")
 
     @property
