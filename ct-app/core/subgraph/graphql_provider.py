@@ -8,8 +8,7 @@ from typing import Any, Optional, Tuple
 import aiohttp
 from prometheus_client import Gauge
 
-from core.components.logs import configure_logging
-
+from ..components.logs import configure_logging
 from .mode import Mode
 from .url import URL
 
@@ -150,10 +149,10 @@ class GraphQLProvider:
                     self._execute(self._sku_query, kwargs), timeout=30
                 )
             except asyncio.TimeoutError:
-                logger.exception("Timeout error while fetching data from subgraph")
+                logger.error("Timeout error while fetching data from subgraph")
                 break
             except ProviderError as err:
-                logger.exception("ProviderError error", {"error": str(err)})
+                logger.error("ProviderError error", {"error": str(err)})
                 break
 
             if response is None:
@@ -239,7 +238,7 @@ class GraphQLProvider:
         if self.url.mode == Mode.NONE:
             logger.warning(f"No subgraph available for '{self.url.params.slug}'")
 
-        logger.debug(
+        logger.info(
             "Subgraph endpoint probing done",
             {
                 "url": self.url.url,

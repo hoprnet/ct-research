@@ -8,6 +8,7 @@ class MessageFormat:
         "relayer",
         "sender",
         "packet_size",
+        "batch_size",
         "index",
         "inner_index",
         "timestamp",
@@ -20,13 +21,15 @@ class MessageFormat:
         relayer: str,
         sender: Optional[str] = None,
         packet_size: Optional[int] = None,
+        batch_size: Optional[int] = None,
         index: Optional[int | str] = None,
         inner_index: Optional[int | str] = None,
         timestamp: Optional[int | str] = None,
     ):
-        self.packet_size = int(packet_size) if packet_size else 0
-        self.sender = sender
         self.relayer = relayer
+        self.sender = sender
+        self.packet_size = int(packet_size) if packet_size else 0
+        self.batch_size = int(batch_size) if batch_size else 1
         self.index = int(index) if index else self.message_index
         self.inner_index = int(inner_index) if inner_index else 1
         self.update_timestamp(timestamp)

@@ -4,8 +4,8 @@ from dataclasses import fields, is_dataclass
 from decimal import Decimal
 from typing import Optional
 
-from core.components.balance import Balance
-from core.components.logs import configure_logging
+from ..balance import Balance
+from ..logs import configure_logging
 
 configure_logging()
 logger = logging.getLogger(__name__)

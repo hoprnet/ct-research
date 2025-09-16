@@ -1,6 +1,6 @@
 from typing import Any
 
-from core.api.response_objects import try_to_lower
+from ..api.response_objects import try_to_lower
 
 
 class Address:
@@ -24,7 +24,10 @@ class Address:
         self._native = try_to_lower(value)
 
     def __eq__(self, other):
-        return self.native == other.native
+        if hasattr(other, "native"):
+            return self.native == other.native
+        else:
+            return self.native == other
 
     def __hash__(self):
         return hash(self.native)

@@ -1,5 +1,4 @@
-from core.components.balance import Balance
-
+from ...components.balance import Balance
 from .entry import SubgraphEntry
 
 

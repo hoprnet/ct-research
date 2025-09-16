@@ -4,8 +4,8 @@ from typing import Optional
 
 from prometheus_client import Gauge
 
-from core.components.balance import Balance
-
+from ..components.balance import Balance
+from ..components.config_parser.parameters import Parameters
 from .address import Address
 from .asyncloop import AsyncLoop
 from .decorators import keepalive
@@ -39,7 +39,7 @@ class Peer:
 
         self.yearly_message_count = 0
 
-        self.params = None
+        self.params: Optional[Parameters] = None
         self.running = False
 
     @property
@@ -83,7 +83,7 @@ class Peer:
         return self.safe.total_balance / self.safe_address_count + self.channel_balance
 
     @property
-    async def message_delay(self) -> Optional[float]:
+    def message_delay(self) -> Optional[float]:
         value = None
         if self.yearly_message_count is not None and self.yearly_message_count > 0:
             value = (
@@ -98,15 +98,15 @@ class Peer:
         self,
         min_allowance: Balance,
         min_stake: float,
-        ct_nodes: list[Address],
         nft_holders: list[str],
         nft_threshold: Balance,
+        ct_nodes: list[str],
     ) -> bool:
         try:
-            if self.safe.allowance < min_allowance:
+            if self.address.native in ct_nodes:
                 return False
 
-            if self.address in ct_nodes:
+            if self.safe.allowance < min_allowance:
                 return False
 
             if (
@@ -128,9 +128,15 @@ class Peer:
         if self.address is None:
             return
 
-        if delay := await self.message_delay:
-            await MessageQueue().put_async(MessageFormat(self.address.native))
-            await asyncio.sleep(delay * 20)
+        if delay := self.message_delay:
+            # minimum 3 as 2 of those packets will be sent as session initialization packets
+            batch_size: int = max(
+                3, int(self.params.peer.minimum_delay_between_batches / delay + 0.5)
+            )
+
+            message = MessageFormat(self.address.native, batch_size=batch_size)
+            await MessageQueue().put(message)
+            await asyncio.sleep(batch_size * delay)
 
         else:
             await asyncio.sleep(
@@ -151,7 +157,10 @@ class Peer:
         return f"Peer(address: {self.address}, safe: {self.safe})"
 
     def __eq__(self, other):
-        return self.address == other.address
+        if hasattr(other, "address"):
+            return self.address == other.address
+        else:
+            return self.address == other
 
     def __hash__(self):
         return hash(self.address)

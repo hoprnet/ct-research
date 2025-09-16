@@ -1,17 +1,14 @@
-from dataclasses import dataclass, field
+from api_lib.objects.response import APIfield, APIobject, JsonResponse
 
-from core.api.response_objects import ApiResponseObject
 from core.components.balance import Balance
 
 
-@dataclass(init=False)
-class FooResponse(ApiResponseObject):
-    foo: str = field(default="", metadata={"path": "fooInTheApi"})
-    bar: float = field(default=0.0, metadata={"path": "barInTheApi"})
-    baz: Balance = field(
-        default_factory=lambda: Balance.zero("HOPR"), metadata={"path": "bazInTheApi"}
-    )
-    qux: int = field(default=0, metadata={"path": "quxInTheApi"})
+@APIobject
+class FooResponse(JsonResponse):
+    foo: str = APIfield("fooInTheApi", "")
+    bar: float = APIfield("barInTheApi", 0.0)
+    baz: Balance = APIfield("bazInTheApi", Balance.zero("HOPR"))
+    qux: int = APIfield("quxInTheApi", 0)
 
 
 def test_parse_response_object():

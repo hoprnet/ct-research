@@ -1,8 +1,7 @@
 [project]
 name = "core-components"
 version = "1.1.0"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
     "prometheus_client==0.21.1", 
-    "janus==2.0.0"
 ]

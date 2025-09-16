@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
-from core.components.balance import Balance
-
+from ..balance import Balance
 from .base_classes import ExplicitParams
 
 

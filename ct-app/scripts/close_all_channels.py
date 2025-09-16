@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 
 sys.path.insert(1, "./")
 
+from api_lib.headers.authorization import Bearer
+
 from core.api.hoprd_api import HoprdAPI
 from scripts.lib.state import State
 
@@ -25,7 +27,10 @@ async def main(deployment: str = "green", environment: str = "staging"):
         print(State.FAILURE, "HOST_FORMAT or TOKEN not set in .env file")
         return
 
-    apis = [HoprdAPI(host_format % (deployment, idx, environment), token) for idx in range(1, 6)]
+    apis = [
+        HoprdAPI(host_format % (deployment, idx, environment), Bearer(token), "/api/v4")
+        for idx in range(1, 6)
+    ]
 
     tasks = set()
     for api in apis:

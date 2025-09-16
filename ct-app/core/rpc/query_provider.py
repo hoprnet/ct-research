@@ -6,11 +6,10 @@ from typing import Any
 
 import aiohttp
 
-from core.components.balance import Balance
-from core.components.logs import configure_logging
-from core.rpc.entries.external_balance import ExternalBalance
-
+from ..components.balance import Balance
+from ..components.logs import configure_logging
 from .entries.allocation import Allocation
+from .entries.external_balance import ExternalBalance
 
 BLOCK_SIZE: int = 64
 

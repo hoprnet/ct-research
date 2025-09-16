@@ -16,7 +16,6 @@ from core.api.response_objects import (
 from core.components import Peer
 from core.components.balance import Balance
 from core.components.config_parser import LegacyParams, Parameters
-from core.core import Core
 from core.node import Node
 
 
@@ -115,7 +114,6 @@ async def nodes(
 
         mocker.patch.object(node.api, "healthyz", return_value=True)
         mocker.patch.object(node.api, "ticket_price", return_value=Balance("0.0001 wxHOPR"))
-        await node.retrieve_address()
 
     return nodes
 
@@ -151,18 +149,6 @@ def channels(peers: set[Peer]) -> Channels:
 
 
 @pytest.fixture
-async def core(mocker: MockerFixture, nodes: list[Node]) -> Core:
-
-    with open("./test/test_config.yaml", "r") as file:
-        params = Parameters(yaml.safe_load(file))
-    setattr(params.subgraph, "api_key", "foo_deployer_key")
-
-    core = Core(nodes, params)
-
-    return core
-
-
-@pytest.fixture
 async def node(
     nodes: list[Node],
     mocker: MockerFixture,
@@ -178,18 +164,16 @@ async def node(
     )
     mocker.patch.object(node.api, "address", return_value=Addresses(addresses[0]))
     mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
-    # mocker.patch.object(node.api, "send_message", return_value=1)
     mocker.patch.object(node.api, "healthyz", return_value=True)
 
-    params = Parameters()
     with open("./test/test_config.yaml", "r") as file:
         params = Parameters(yaml.safe_load(file))
     setattr(params.subgraph, "api_key", "foo_deployer_key")
 
     node.params = params
 
-    await node.healthcheck()
     await node.retrieve_address()
+    await node.healthcheck()
 
     return node
 

@@ -4,20 +4,17 @@ from .base_classes import ExplicitParams, Flag
 
 
 @dataclass(init=False)
-class FlagCoreParams(ExplicitParams):
+class FlagNodeParams(ExplicitParams):
     apply_economic_model: Flag
     ticket_parameters: Flag
-    connected_peers: Flag
-    topology: Flag
+    # connected_peers: Flag
+    outgoing_channels_balances: Flag
     rotate_subgraphs: Flag
     peers_rewards: Flag
     registered_nodes: Flag
     allocations: Flag
     eoa_balances: Flag
 
-
-@dataclass(init=False)
-class FlagNodeParams(ExplicitParams):
     healthcheck: Flag
     retrieve_peers: Flag
     retrieve_channels: Flag
@@ -38,6 +35,5 @@ class FlagPeerParams(ExplicitParams):
 
 @dataclass(init=False)
 class FlagParams(ExplicitParams):
-    core: FlagCoreParams
     node: FlagNodeParams
     peer: FlagPeerParams

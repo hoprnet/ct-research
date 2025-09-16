@@ -4,10 +4,9 @@ from decimal import Decimal
 from math import log, prod
 from typing import Optional
 
-from core.api.response_objects import TicketPrice
-from core.components.balance import Balance
-from core.components.logs import configure_logging
-
+from ...api.response_objects import TicketPrice
+from ..balance import Balance
+from ..logs import configure_logging
 from .base_classes import ExplicitParams
 
 configure_logging()
@@ -138,7 +137,7 @@ class SigmoidParams(ExplicitParams):
                 + self.offset
             )
         except ValueError as err:
-            logger.exception("Value error in APR calculation", {"error": err})
+            logger.error("Value error in APR calculation", {"error": str(err)})
             apr: Decimal = Decimal(0)
 
         if self.max_apr is not None:

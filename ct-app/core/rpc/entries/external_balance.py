@@ -1,5 +1,5 @@
-from core.components.balance import Balance
-from core.rpc.entries.entry import RPCEntry
+from ...components.balance import Balance
+from .entry import RPCEntry
 
 
 class ExternalBalance(RPCEntry):

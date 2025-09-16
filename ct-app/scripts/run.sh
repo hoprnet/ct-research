@@ -4,7 +4,6 @@ export $(grep -v '^#' .env | xargs)
 
 # Default values
 env="local"
-count=5
 deployment="auto"
 log_folder=".logs"
 
@@ -25,7 +24,7 @@ check_deployment() {
 
 get_local_node_address() {
     port=$((3000 + $1 * 3))
-    echo "http://0.0.0.0:$port"
+    echo "http://localhost:$port"
 }
 
 
@@ -34,10 +33,6 @@ for arg in "$@"; do
     case $arg in
         --env=*)
             env="${arg#*=}"
-            shift
-            ;;
-        --count=*)
-            count="${arg#*=}"
             shift
             ;;
         --deployment=*)
@@ -52,10 +47,6 @@ for arg in "$@"; do
             env="${arg#*=}"
             shift
             ;;
-        -c*)
-            count="${arg#*=}"
-            shift
-            ;;
         -d*)
             deployment="${arg#*=}"
             shift
@@ -66,17 +57,15 @@ for arg in "$@"; do
             ;;
         *)
             # Invalid argument
-            echo "Usage: $0 [--env=ENV] [--count=COUNT] [--deployment=DEPLOYMENT] [--log-folder=LOG_FOLDER]"
+            echo "Usage: $0 [--env=ENV] [--deployment=DEPLOYMENT] [--log-folder=LOG_FOLDER]"
             exit 1
             ;;
     esac
 done
 
 if [ $env == "local" ]; then
-    for i in $(seq 1 6); do
-        export NODE_ADDRESS_${i}=$(get_local_node_address $i)
-        export NODE_KEY_${i}="e2e-API-token^^"
-    done
+    export HOPRD_API_HOST=$(get_local_node_address 1)
+    export HOPRD_API_TOKEN="e2e-API-token^^"
 
 else
     # Check deployment if it's set to auto
@@ -85,20 +74,17 @@ else
     fi
 
     # Node parameters
-    for i in $(seq 1 $count); do
-        export NODE_ADDRESS_${i}=$(printf $HOST_FORMAT $deployment $i $env)
-        if [ $env == "prod" ]; then
-            export NODE_KEY_${i}=$PROD_TOKEN
-        elif [ $env == "staging" ]; then
-            export NODE_KEY_${i}=$STAGING_TOKEN
-        fi
-    done
+    export HOPRD_API_HOST=$(printf $HOST_FORMAT $deployment 1 $env)
+    if [ $env == "prod" ]; then
+        export HOPRD_API_TOKEN=$PROD_TOKEN
+    elif [ $env == "staging" ]; then
+        export HOPRD_API_TOKEN=$STAGING_TOKEN
+    fi
 fi
-
 
 # Create log folder
 mkdir -p $log_folder
 time=$(date '+%Y%m%d_%H%M%S')
 
-echo "Starting core in $env mode ($count nodes), storing logs in $log_folder"
+echo "Starting CT in $env mode, storing logs in $log_folder"
 uv run -m core --configfile ./.configs/core_${env}_config.yaml 2>&1 | tee "$log_folder/core_$time.log"
