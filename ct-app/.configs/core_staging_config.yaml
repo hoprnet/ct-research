@@ -48,7 +48,7 @@ economic_model:
 
   legacy:
     proportion: 1.0
-    apr: 0.000002
+    apr: 0.000001
 
     coefficients:
       a: 1
@@ -108,14 +108,10 @@ sessions:
   - "0xac3c2d1f751d9c763be29aabb20cf31295f3ea27"
   - "0x154a32241dacd34c55ca65c2dfdef173d6d9e7f3"
   - "0x7673daf47ae218d7d9b2fa0e8fc397c2a6940bc1"
-  - "0xc2421cc4e9b3eeaefea2d87d2ee3dde9cc772e8a"
-  - "0x4b306f6a7fee6cbfdab11645b81337cbaab59900"
   blue_destinations:
   - "0x2eb08c7d673c4b7e8c017471e8d4de996aa82e83"
   - "0x0d3832bf4e8dd5f0ccd996fa2a27e1f864fd91bc"
   - "0xe5ad48d9005f9529da75ded5d931c72bb14b0b19"
-  - "0x89764aea7c471e4e04c67ee20b0b4ee3662cc9e4"
-  - "0xd33888a2a4cd8d4ddc6c499967934cf8111b79fc"
 
 
 # =============================================================================
