@@ -44,7 +44,7 @@ class HoprdAPI(ApiLib):
         """
         data = req.FundChannelBody(amount.as_str)
         return await self.try_req(
-            HTTPMethod.POST, f"/channels/{channel_id}/fund", data, return_state=True
+            HTTPMethod.POST, f"/channels/{channel_id}/fund", data=data, return_state=True
         )
 
     async def close_channel(self, channel_id: str) -> bool:
