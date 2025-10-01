@@ -88,7 +88,7 @@ economic_model:
 # 
 # =============================================================================
 peer:
-  minimum_delay_between_batches: 20
+  minimum_delay_between_batches: 60
   sleep_mean_time: 30
   sleep_std_time: 2
 
