@@ -7,7 +7,7 @@ from core.components.balance import Balance
 class FooResponse(JsonResponse):
     foo: str = APIfield("fooInTheApi", "")
     bar: float = APIfield("barInTheApi", 0.0)
-    baz: Balance = APIfield("bazInTheApi", Balance.zero("HOPR"))
+    baz: Balance = APIfield("bazInTheApi", Balance.zero("wxHOPR"))
     qux: int = APIfield("quxInTheApi", 0)
 
 
@@ -16,12 +16,12 @@ def test_parse_response_object():
         {
             "fooInTheApi": "value1",
             "barInTheApi": "10.1",
-            "bazInTheApi": "120.1 HOPR",
+            "bazInTheApi": "120.1 wxHOPR",
             "quxInTheApi": "10",
         }
     )
 
     assert isinstance(data.foo, str) and data.foo == "value1"
     assert isinstance(data.bar, float) and data.bar == 10.1
-    assert isinstance(data.baz, Balance) and data.baz == Balance("120.1 HOPR")
+    assert isinstance(data.baz, Balance) and data.baz == Balance("120.1 wxHOPR")
     assert isinstance(data.qux, int) and data.qux == 10
