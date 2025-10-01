@@ -50,7 +50,7 @@ class Utils:
             for eoa_balance in eoa_balances:
                 if peer.safe.address in eoa_balance.linked_safes:
                     peer.safe.additional_balance += (
-                        eoa_balance.balance / eoa_balance.num_linked_safes
+                        eoa_balance.amount / eoa_balance.num_linked_safes
                     )
 
             if balance is not None:
