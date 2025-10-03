@@ -62,15 +62,25 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
 
     @master(keepalive, connectguard)
     async def maintain_sessions(self):
-        active_sessions_ips: list[str] = [
-            session.ip for session in await self.api.list_udp_sessions()
+        active_sessions_ports: list[str] = [
+            session.port for session in await self.api.list_udp_sessions()
         ]
         reachable_peers_addresses = [peer.address.native for peer in self.peers]
 
         for relayer, session in self.sessions.items():
             if relayer not in reachable_peers_addresses:
                 await NodeHelper.close_session(self.api, session, relayer)
-                del self.sessions[relayer]
+                session.close_socket()
+                self.sessions.pop(relayer, None)
+                logger.debug(
+                    "Session's relayer no longer reachable, removing from cache",
+                    {"relayer": relayer, "port": session.port},
+                )
 
-            if session.ip not in active_sessions_ips:
-                del self.sessions[relayer]            
+            if session.port not in active_sessions_ports:
+                session.close_socket()
+                self.sessions.pop(relayer, None)
+                logger.debug(
+                    "Session no longer active, removing from cache",
+                    {"relayer": relayer, "port": session.port},
+                )

@@ -68,7 +68,6 @@ class Node(
 
     async def start(self):
         await self.retrieve_address()
-
         self.get_graphql_providers()
         self.get_nft_holders()
 
