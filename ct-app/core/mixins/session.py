@@ -66,21 +66,26 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
             session.port for session in await self.api.list_udp_sessions()
         ]
         reachable_peers_addresses = [peer.address.native for peer in self.peers]
+        session_relayers_to_remove = set[str]()
 
         for relayer, session in self.sessions.items():
             if relayer not in reachable_peers_addresses:
                 await NodeHelper.close_session(self.api, session, relayer)
-                session.close_socket()
-                self.sessions.pop(relayer, None)
+                session_relayers_to_remove.add(relayer)
                 logger.debug(
                     "Session's relayer no longer reachable, removing from cache",
                     {"relayer": relayer, "port": session.port},
                 )
 
             if session.port not in active_sessions_ports:
-                session.close_socket()
-                self.sessions.pop(relayer, None)
+                session_relayers_to_remove.add(relayer)
                 logger.debug(
                     "Session no longer active, removing from cache",
                     {"relayer": relayer, "port": session.port},
                 )
+
+        for relayer in session_relayers_to_remove:
+            if session := self.sessions.pop(relayer, None):
+                session.close_socket()
+            else:
+                logger.warning("Session to remove not found in cache", {"relayer": relayer})
