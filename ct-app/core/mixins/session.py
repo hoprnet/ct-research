@@ -36,11 +36,41 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
             logger.debug("No valid session destination found")
             return
 
+        if session := self.sessions.get(message.relayer):
+            pass
+        else:
+            session = await NodeHelper.open_session(
+                self.api, destination, message.relayer, "127.0.0.1"
+            )
+            if not session:
+                logger.debug("Failed to open session")
+                return
+
+            session.create_socket()
+            logger.debug("Created socket", {"ip": session.ip, "port": session.port})
+            self.sessions[message.relayer] = session
+
+        message.sender = self.address.native
+        message.packet_size = session.payload
+
         AsyncLoop.add(
             NodeHelper.send_batch_messages,
-            self.api,
-            self.address.native,
-            destination,
+            self.sessions[message.relayer],
             message,
             publish_to_task_set=False,
         )
+
+    @master(keepalive, connectguard)
+    async def maintain_sessions(self):
+        active_sessions_ips: list[str] = [
+            session.ip for session in await self.api.list_udp_sessions()
+        ]
+        reachable_peers_addresses = [peer.address.native for peer in self.peers]
+
+        for relayer, session in self.sessions.items():
+            if relayer not in reachable_peers_addresses:
+                await NodeHelper.close_session(self.api, session, relayer)
+                del self.sessions[relayer]
+
+            if session.ip not in active_sessions_ips:
+                del self.sessions[relayer]            

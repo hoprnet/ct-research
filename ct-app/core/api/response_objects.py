@@ -1,5 +1,8 @@
+import asyncio
+import socket as socket_lib
 from dataclasses import fields
-from typing import Any
+from datetime import datetime
+from typing import Any, Optional, Union
 
 from api_lib.objects.response import (
     APIfield,
@@ -8,9 +11,20 @@ from api_lib.objects.response import (
     JsonResponse,
     MetricResponse,
 )
+from prometheus_client import Gauge, Histogram
 
 from ..components.balance import Balance
+from ..components.messages.message_format import MessageFormat
 from .channelstatus import ChannelStatus
+
+MESSAGES_RTT = Histogram(
+    "ct_messages_delays",
+    "Messages delays",
+    ["relayer"],
+    buckets=[0.5, 0.75, 1, 2, 3, 4, 5],
+)
+MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "relayer"])
+MESSAGE_SENDING_REQUEST = Gauge("ct_message_sending_request", "", ["relayer"])
 
 
 def try_to_lower(value: Any):
@@ -113,6 +127,7 @@ class Session(JsonResponse):
     target: str
     mtu: int = APIfield("hoprMtu")
     surb_size: int = APIfield("surbLen")
+    socket: Optional[socket_lib.socket] = None
 
     @property
     def payload(self):
@@ -125,6 +140,76 @@ class Session(JsonResponse):
     @property
     def as_dict(self) -> dict:
         return {key: str(getattr(self, key)) for key in [f.name for f in fields(self)]}
+
+    def create_socket(self) -> socket_lib.socket:
+        self.socket: socket_lib.socket = socket_lib.socket(
+            socket_lib.AF_INET, socket_lib.SOCK_DGRAM
+        )
+        self.socket.settimeout(0.05)
+        return self.socket
+
+    def close_socket(self):
+        if self.socket:
+            self.socket.close()
+            self.socket = None
+
+    def send(self, message: Union[MessageFormat, bytes]) -> bytes:
+        """
+        Sends data to the peer.
+        """
+        if isinstance(message, MessageFormat):
+            MESSAGE_SENDING_REQUEST.labels(message.relayer).inc()
+
+        payload: bytes = message.bytes() if isinstance(message, MessageFormat) else message
+        data = self.socket.sendto(payload, (self.ip, self.port))
+
+        if isinstance(message, MessageFormat):
+            MESSAGES_STATS.labels("sent", message.relayer).inc()
+
+        return data
+
+    async def receive(self, chunk_size: int, total_size: int, timeout: float = 2) -> int:
+        """
+        Receives data from the peer. In case off multiple message in the same packet, which should
+        not happen, they are already split and returned as a list.
+        """
+        recv_data = b""
+
+        start_time = datetime.now().timestamp()
+
+        while len(recv_data) < total_size:
+            if (datetime.now().timestamp() - start_time) >= timeout:
+                break
+
+            try:
+                recv_data += self.socket.recvfrom(chunk_size)[0]
+            except socket_lib.timeout:
+                await asyncio.sleep(0.02)
+                pass
+            except ConnectionResetError:
+                break
+
+        now = int(datetime.now().timestamp() * 1000)
+        recv_size: int = len(recv_data)
+
+        try:
+            recv_data: list[str] = [
+                item for item in recv_data.decode().split(b"\0".decode()) if len(item) > 0
+            ]
+        except Exception:
+            pass
+        else:
+            for data in recv_data:
+                try:
+                    message = MessageFormat.parse(data)
+                except ValueError as _e:
+                    continue
+
+                rtt = (now - message.timestamp) / 1000
+                MESSAGES_STATS.labels("received", message.relayer).inc()
+                MESSAGES_RTT.labels(message.relayer).observe(rtt)
+
+        return recv_size
 
 
 @APIobject
