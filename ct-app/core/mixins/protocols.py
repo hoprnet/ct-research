@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional, Protocol
 
 from ..api.hoprd_api import HoprdAPI
-from ..api.response_objects import Channels
+from ..api.response_objects import Channels, Session
 from ..components.address import Address
 from ..components.balance import Balance
 from ..components.config_parser.parameters import Parameters
@@ -38,6 +38,7 @@ class HasPeers(Protocol):
 
 class HasSession(Protocol):
     session_destinations: list[str]
+    sessions: dict[str, Session]
 
 
 class HasRPCs(Protocol):

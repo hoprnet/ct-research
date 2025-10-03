@@ -35,6 +35,7 @@ flags:
     get_total_channel_funds: 300
     
     observe_message_queue: On
+    maintain_sessions: 15
 
   peer:
     message_relay_request: On

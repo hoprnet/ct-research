@@ -7,7 +7,7 @@ from .base_classes import ExplicitParams, Flag
 class FlagNodeParams(ExplicitParams):
     apply_economic_model: Flag
     ticket_parameters: Flag
-    # connected_peers: Flag
+
     outgoing_channels_balances: Flag
     rotate_subgraphs: Flag
     peers_rewards: Flag
@@ -25,7 +25,9 @@ class FlagNodeParams(ExplicitParams):
     close_pending_channels: Flag
     close_incoming_channels: Flag
     get_total_channel_funds: Flag
+
     observe_message_queue: Flag
+    maintain_sessions: Flag
 
 
 @dataclass(init=False)

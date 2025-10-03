@@ -4,10 +4,11 @@ from typing import Optional
 
 from prometheus_client import Gauge
 
-from ..components.balance import Balance
-from ..components.config_parser.parameters import Parameters
+from ..subgraph.entries.safe import Safe
 from .address import Address
 from .asyncloop import AsyncLoop
+from .balance import Balance
+from .config_parser.parameters import Parameters
 from .decorators import keepalive
 from .messages import MessageFormat, MessageQueue
 
@@ -33,14 +34,14 @@ class Peer:
         """
         self.address = Address(address)
 
-        self.safe = None
-        self._safe_address_count = None
-        self._channel_balance = None
+        self.safe: Optional[Safe] = None
+        self._safe_address_count: Optional[int] = None
+        self._channel_balance: Optional[Balance] = None
 
-        self.yearly_message_count = 0
+        self.yearly_message_count: int = 0
 
         self.params: Optional[Parameters] = None
-        self.running = False
+        self.running: bool = False
 
     @property
     def channel_balance(self) -> Balance:

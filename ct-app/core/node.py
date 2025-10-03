@@ -7,6 +7,7 @@ from prometheus_client import Gauge
 
 from . import mixins
 from .api.hoprd_api import HoprdAPI
+from .api.response_objects import Session
 from .components.asyncloop import AsyncLoop
 from .components.balance import Balance
 from .components.config_parser import Parameters
@@ -44,6 +45,7 @@ class Node(
         self.peers = set[Peer]()
         self.peer_history = dict[str, datetime]()
         self.session_destinations = list[str]()
+        self.sessions = dict[str, Session]()
 
         self.address = None
         self.channels = None
@@ -66,7 +68,6 @@ class Node(
 
     async def start(self):
         await self.retrieve_address()
-
         self.get_graphql_providers()
         self.get_nft_holders()
 

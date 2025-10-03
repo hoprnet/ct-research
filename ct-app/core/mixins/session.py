@@ -36,11 +36,56 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
             logger.debug("No valid session destination found")
             return
 
+        if session := self.sessions.get(message.relayer):
+            pass
+        else:
+            session = await NodeHelper.open_session(
+                self.api, destination, message.relayer, "127.0.0.1"
+            )
+            if not session:
+                logger.debug("Failed to open session")
+                return
+
+            session.create_socket()
+            logger.debug("Created socket", {"ip": session.ip, "port": session.port})
+            self.sessions[message.relayer] = session
+
+        message.sender = self.address.native
+        message.packet_size = session.payload
+
         AsyncLoop.add(
             NodeHelper.send_batch_messages,
-            self.api,
-            self.address.native,
-            destination,
+            self.sessions[message.relayer],
             message,
             publish_to_task_set=False,
         )
+
+    @master(keepalive, connectguard)
+    async def maintain_sessions(self):
+        active_sessions_ports: list[str] = [
+            session.port for session in await self.api.list_udp_sessions()
+        ]
+        reachable_peers_addresses = [peer.address.native for peer in self.peers]
+        session_relayers_to_remove = set[str]()
+
+        for relayer, session in self.sessions.items():
+            if relayer not in reachable_peers_addresses:
+                await NodeHelper.close_session(self.api, session, relayer)
+                session_relayers_to_remove.add(relayer)
+                logger.debug(
+                    "Session's relayer no longer reachable, removing from cache",
+                    {"relayer": relayer, "port": session.port},
+                )
+
+            if session.port not in active_sessions_ports:
+                session_relayers_to_remove.add(relayer)
+                logger.debug(
+                    "Session no longer active, removing from cache",
+                    {"relayer": relayer, "port": session.port},
+                )
+
+        for relayer in session_relayers_to_remove:
+            if session := self.sessions.pop(relayer, None):
+                session.close_socket()
+            else:
+                logger.warning("Session to remove not found in cache", {"relayer": relayer})
