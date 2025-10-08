@@ -130,9 +130,11 @@ class Peer:
             return
 
         if delay := self.message_delay:
-            # minimum 3 as 2 of those packets will be sent as session initialization packets
-            batch_size = self.params.peer.minimum_delay_between_batches / delay
-            refactored_batch_size: int = max(3, int(batch_size + 0.5))
+            batch_size = (
+                random.uniform(self.params.peer.minimum_delay, self.params.peer.maximum_delay)
+                / delay
+            )
+            refactored_batch_size: int = int(batch_size + 0.5)
 
             message = MessageFormat(self.address.native, batch_size=refactored_batch_size)
             await MessageQueue().put(message)

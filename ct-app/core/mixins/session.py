@@ -15,22 +15,11 @@ logger = logging.getLogger(__name__)
 class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
     @master(keepalive, connectguard)
     async def observe_message_queue(self):
-        channels: list[str] = (
-            [channel.destination for channel in self.channels.outgoing] if self.channels else []
-        )
-
         message: MessageFormat = await MessageQueue().get()
-
-        if not channels or message.relayer not in channels:
-            return
 
         try:
             destination = random.choice(
-                [
-                    item
-                    for item in self.session_destinations
-                    if item != message.relayer and item in self.peers
-                ]
+                [item for item in self.session_destinations if item != message.relayer]
             )
         except IndexError:
             logger.debug("No valid session destination found")

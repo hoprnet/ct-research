@@ -142,9 +142,7 @@ class Session(JsonResponse):
         return {key: str(getattr(self, key)) for key in [f.name for f in fields(self)]}
 
     def create_socket(self) -> socket_lib.socket:
-        self.socket: socket_lib.socket = socket_lib.socket(
-            socket_lib.AF_INET, socket_lib.SOCK_DGRAM
-        )
+        self.socket = socket_lib.socket(socket_lib.AF_INET, socket_lib.SOCK_DGRAM)
         self.socket.settimeout(0.05)
         return self.socket
 
