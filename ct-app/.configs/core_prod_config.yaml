@@ -89,8 +89,8 @@ economic_model:
 # 
 # =============================================================================
 peer:
-  minimum_delay: 40
-  maximum_delay: 80
+  minimum_delay: 60
+  maximum_delay: 120
   sleep_mean_time: 30
   sleep_std_time: 2
 
