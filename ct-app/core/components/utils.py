@@ -62,6 +62,8 @@ class Utils:
     def associateEntitiesToNodes(cls, entities, nodes):
         entity_addresses = [e.address for e in entities]
         for n in nodes:
+            if not n.safe:
+                continue
             for owner in n.safe.owners:
                 try:
                     index = entity_addresses.index(owner)
@@ -78,14 +80,18 @@ class Utils:
         :param peer: list of peers
         :returns: nothing.
         """
-        safe_counts = {peer.safe.address: 0 for peer in peers}
+        safe_counts = {peer.safe.address: 0 for peer in peers if peer.safe}
 
         # Calculate the number of safe_addresses related to a node address
         for peer in peers:
+            if not peer.safe:
+                continue
             safe_counts[peer.safe.address] += 1
 
         # Update the input_dict with the calculated splitted_stake
         for peer in peers:
+            if not peer.safe:
+                continue
             peer.safe_address_count = safe_counts[peer.safe.address]
 
     @classmethod
