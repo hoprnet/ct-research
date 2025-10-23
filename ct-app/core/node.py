@@ -411,23 +411,31 @@ class Node:
 
     @master(flagguard, formalin, connectguard)
     async def close_sessions(self):
-        active_sessions = await self.api.get_sessions(Protocol.UDP)
+        """
+        TODO: to remove, temporarily disabled
+        
+        Reason: the quality metric cannot be relied on when the node is
+        saturated, causing an overmanagement of session and premature
+        closures.
+        """
 
-        to_remove = [
-            peer_id
-            for peer_id, s in self.session_management.items()
-            if s.session not in active_sessions
-        ]
-
-        for peer_id in to_remove:
-            AsyncLoop.add(
-                NodeHelper.close_session,
-                self.address,
-                self.api,
-                peer_id,
-                self.session_management.pop(peer_id),
-                publish_to_task_set=False,
-            )
+        # active_sessions = await self.api.get_sessions(Protocol.UDP)
+        # to_remove = [
+        #     peer_id
+        #     for peer_id, s in self.session_management.items()
+        #     if s.session not in active_sessions
+        # ]
+        #
+        # for peer_id in to_remove:
+        #     AsyncLoop.add(
+        #         NodeHelper.close_session,
+        #         self.address,
+        #         self.api,
+        #         peer_id,
+        #         self.session_management.pop(peer_id),
+        #         publish_to_task_set=False,
+        #     )
+        pass
 
     async def close_all_sessions(self):
         """
