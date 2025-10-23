@@ -435,7 +435,7 @@ class Node:
         #         self.session_management.pop(peer_id),
         #         publish_to_task_set=False,
         #     )
-        logging.info("close_sessions called, but currently disabled (see docstring).")
+        logger.info("close_sessions called, but currently disabled (see docstring).")
 
     async def close_all_sessions(self):
         """
