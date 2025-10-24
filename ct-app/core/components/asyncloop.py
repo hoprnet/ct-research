@@ -55,7 +55,22 @@ class AsyncLoop(metaclass=Singleton):
         if publish_to_task_set:
             cls().tasks.add(task)
         else:
-            task.add_done_callback(lambda t: t.cancel() if not t.done() else None)
+            # Fire-and-forget tasks: log exceptions but don't crash
+            def _log_task_result(t):
+                try:
+                    t.result()  # Retrieve result to surface exceptions
+                except asyncio.CancelledError:
+                    pass  # Expected during shutdown
+                except Exception as e:
+                    logger.error(
+                        "Background task failed",
+                        {
+                            "task": getattr(callback, "__name__", str(callback)),
+                            "error": str(e),
+                        },
+                    )
+            
+            task.add_done_callback(_log_task_result)
 
     @classmethod
     def run_in_thread(cls, callback: Callable, *args):

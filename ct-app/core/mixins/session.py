@@ -1,6 +1,6 @@
 import logging
 import random
-from datetime import datetime
+import time
 
 from ..components.asyncloop import AsyncLoop
 from ..components.decorators import connectguard, keepalive, master
@@ -26,11 +26,13 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
             return
 
         try:
+            # Get reachable peer addresses for filtering
+            reachable_addresses = {peer.address.native for peer in self.peers}
             destination = random.choice(
                 [
                     item
                     for item in self.session_destinations
-                    if item != message.relayer and item in self.peers
+                    if item != message.relayer and item in reachable_addresses
                 ]
             )
         except IndexError:
@@ -67,11 +69,12 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
         # At this point, session is guaranteed to be in dict
         # Get a local reference (no await between get and use)
         message.sender = self.address.native
-        message.packet_size = session.payload
 
         # Get session reference for sending (avoid dict lookup in background task)
         session_ref = self.sessions.get(message.relayer)
         if session_ref:
+            # Use the actual session reference for packet_size
+            message.packet_size = session_ref.payload
             AsyncLoop.add(
                 NodeHelper.send_batch_messages,
                 session_ref,
@@ -84,7 +87,7 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
     @master(keepalive, connectguard)
     async def maintain_sessions(self):
         # Phase 1: Gather all data (all I/O operations)
-        active_sessions_ports: list[str] = [
+        active_sessions_ports: list[int] = [
             session.port for session in await self.api.list_udp_sessions()
         ]
         reachable_peers_addresses = [peer.address.native for peer in self.peers]
@@ -94,7 +97,7 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
         grace_periods_snapshot = dict(self.session_close_grace_period)
 
         GRACE_PERIOD_SECONDS = 60  # 1 minute grace period
-        now = datetime.now().timestamp()
+        now = time.monotonic()
 
         # Phase 3: Determine what to remove (no dict modifications yet)
         session_relayers_to_remove = set[str]()
@@ -168,12 +171,22 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
                     del self.session_close_grace_period[relayer]
 
         # Remove closed sessions (still no awaits!)
-        for relayer in session_relayers_to_remove:
+        # Use sessions_to_close to get the inspected session for identity check
+        for relayer, inspected_session in sessions_to_close:
             # Clean up grace period tracking
             self.session_close_grace_period.pop(relayer, None)
 
-            # Verify session still exists before removing
-            if session := self.sessions.pop(relayer, None):
-                session.close_socket()  # Synchronous operation
+            # Check if session still exists and matches what we inspected
+            current_session = self.sessions.get(relayer)
+            if current_session:
+                # Only remove if it's the same session (check by port)
+                if current_session.port == inspected_session.port:
+                    self.sessions.pop(relayer, None)
+                    current_session.close_socket()  # Synchronous operation
+                else:
+                    logger.debug(
+                        "Session changed during maintenance, skipping removal",
+                        {"relayer": relayer, "old_port": inspected_session.port, "new_port": current_session.port}
+                    )
             else:
-                logger.warning("Session to remove not found in cache", {"relayer": relayer})
+                logger.debug("Session already removed by another coroutine", {"relayer": relayer})

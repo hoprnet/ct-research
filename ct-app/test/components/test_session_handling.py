@@ -1,18 +1,17 @@
 """
 Integration tests for session handling and cleanup.
 
-These tests demonstrate critical issues in session management:
+These tests verify fixes for critical issues in session management:
 1. Premature session closure when peers are temporarily unreachable
 2. Race conditions in concurrent session access
 3. Session leaks when cleanup fails or is disabled
 4. Missing cleanup on node shutdown
 
-All tests are designed to FAIL initially, demonstrating the bugs.
-After fixes are implemented, they should PASS.
+After fixes are implemented, all tests should PASS.
 """
 
 import asyncio
-from datetime import datetime
+import time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
