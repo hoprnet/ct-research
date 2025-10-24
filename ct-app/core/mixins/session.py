@@ -37,9 +37,12 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
             logger.debug("No valid session destination found")
             return
 
-        if session := self.sessions.get(message.relayer):
-            pass
-        else:
+        # First check: get session if exists
+        session = self.sessions.get(message.relayer)
+
+        # If no session, create one
+        if not session:
+            # I/O operations (outside critical section)
             session = await NodeHelper.open_session(
                 self.api, destination, message.relayer, "127.0.0.1"
             )
@@ -49,55 +52,79 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
 
             session.create_socket()
             logger.debug("Created socket", {"ip": session.ip, "port": session.port})
-            self.sessions[message.relayer] = session
 
+            # Double-check: another coroutine might have created it during our I/O
+            if message.relayer not in self.sessions:
+                # Safe to add - no await between check and add
+                self.sessions[message.relayer] = session
+            else:
+                # Another coroutine created it while we were creating ours
+                # Close our socket and use the existing session
+                session.close_socket()
+                session = self.sessions[message.relayer]
+                logger.debug("Session created by another coroutine, using existing")
+
+        # At this point, session is guaranteed to be in dict
+        # Get a local reference (no await between get and use)
         message.sender = self.address.native
         message.packet_size = session.payload
 
-        AsyncLoop.add(
-            NodeHelper.send_batch_messages,
-            self.sessions[message.relayer],
-            message,
-            publish_to_task_set=False,
-        )
+        # Get session reference for sending (avoid dict lookup in background task)
+        session_ref = self.sessions.get(message.relayer)
+        if session_ref:
+            AsyncLoop.add(
+                NodeHelper.send_batch_messages,
+                session_ref,
+                message,
+                publish_to_task_set=False,
+            )
+        else:
+            logger.debug("Session disappeared before sending")
 
     @master(keepalive, connectguard)
     async def maintain_sessions(self):
+        # Phase 1: Gather all data (all I/O operations)
         active_sessions_ports: list[str] = [
             session.port for session in await self.api.list_udp_sessions()
         ]
         reachable_peers_addresses = [peer.address.native for peer in self.peers]
-        session_relayers_to_remove = set[str]()
+
+        # Phase 2: Take snapshot BEFORE any dict operations
+        sessions_snapshot = list(self.sessions.items())
+        grace_periods_snapshot = dict(self.session_close_grace_period)
 
         GRACE_PERIOD_SECONDS = 60  # 1 minute grace period
         now = datetime.now().timestamp()
 
-        for relayer, session in self.sessions.items():
+        # Phase 3: Determine what to remove (no dict modifications yet)
+        session_relayers_to_remove = set[str]()
+        sessions_to_close = []  # Store (relayer, session) tuples for API calls
+
+        for relayer, session in sessions_snapshot:
             should_remove = False
 
             # Check if peer is unreachable
             if relayer not in reachable_peers_addresses:
                 # Start grace period if not already started
-                if relayer not in self.session_close_grace_period:
-                    self.session_close_grace_period[relayer] = now
+                if relayer not in grace_periods_snapshot:
+                    # Will start timer in Phase 5
                     logger.debug(
-                        "Session's relayer unreachable, starting grace period",
+                        "Session's relayer unreachable, will start grace period",
                         {"relayer": relayer, "port": session.port, "grace_seconds": GRACE_PERIOD_SECONDS},
                     )
                 # Check if grace period has expired
-                elif now - self.session_close_grace_period[relayer] > GRACE_PERIOD_SECONDS:
+                elif now - grace_periods_snapshot[relayer] > GRACE_PERIOD_SECONDS:
                     should_remove = True
                     logger.debug(
                         "Grace period expired, marking session for removal",
                         {"relayer": relayer, "port": session.port},
                     )
             else:
-                # Peer is reachable again, cancel grace period
-                if relayer in self.session_close_grace_period:
-                    grace_duration = now - self.session_close_grace_period[relayer]
-                    del self.session_close_grace_period[relayer]
+                # Peer is reachable again
+                if relayer in grace_periods_snapshot:
+                    grace_duration = now - grace_periods_snapshot[relayer]
                     logger.debug(
-                        "Peer reachable again, canceling grace period",
+                        "Peer reachable again, will cancel grace period",
                         {"relayer": relayer, "grace_duration_seconds": grace_duration},
                     )
 
@@ -109,16 +136,34 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
                     {"relayer": relayer, "port": session.port},
                 )
 
-            # Mark for removal if needed
             if should_remove:
-                await NodeHelper.close_session(self.api, session, relayer)
                 session_relayers_to_remove.add(relayer)
+                sessions_to_close.append((relayer, session))
 
+        # Phase 4: Close sessions at API level (I/O operations)
+        for relayer, session in sessions_to_close:
+            await NodeHelper.close_session(self.api, session, relayer)
+
+        # Phase 5: Update dictionaries (NO awaits between operations!)
+        # This entire block is atomic from asyncio perspective
+
+        # Update grace periods for unreachable peers
+        for relayer, session in sessions_snapshot:
+            if relayer not in reachable_peers_addresses:
+                if relayer not in self.session_close_grace_period:
+                    self.session_close_grace_period[relayer] = now
+            else:
+                # Cancel grace period if peer is reachable
+                if relayer in self.session_close_grace_period:
+                    del self.session_close_grace_period[relayer]
+
+        # Remove closed sessions (still no awaits!)
         for relayer in session_relayers_to_remove:
             # Clean up grace period tracking
             self.session_close_grace_period.pop(relayer, None)
 
+            # Verify session still exists before removing
             if session := self.sessions.pop(relayer, None):
-                session.close_socket()
+                session.close_socket()  # Synchronous operation
             else:
                 logger.warning("Session to remove not found in cache", {"relayer": relayer})
