@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import socket as socket_lib
 from dataclasses import fields
 from datetime import datetime
@@ -25,6 +26,8 @@ MESSAGES_RTT = Histogram(
 )
 MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "relayer"])
 MESSAGE_SENDING_REQUEST = Gauge("ct_message_sending_request", "", ["relayer"])
+
+logger = logging.getLogger(__name__)
 
 
 def try_to_lower(value: Any):
@@ -150,8 +153,13 @@ class Session(JsonResponse):
 
     def close_socket(self):
         if self.socket:
-            self.socket.close()
-            self.socket = None
+            try:
+                self.socket.close()
+            except Exception as e:
+                logger.error("Failed to close socket", {"error": str(e), "port": self.port})
+            finally:
+                # Always clear socket reference, even if close failed
+                self.socket = None
 
     def send(self, message: Union[MessageFormat, bytes]) -> bytes:
         """

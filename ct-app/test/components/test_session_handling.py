@@ -515,9 +515,10 @@ async def test_orphaned_sessions_after_api_close_failure(
     session_node.sessions[relayer] = session
     session.create_socket()
 
-    # Mock API to show session is not active
+    # Mock API to show session is not active at API level
+    # This triggers immediate removal, bypassing grace period
     mocker.patch.object(
-        session_node.api, "list_udp_sessions", return_value=[session]
+        session_node.api, "list_udp_sessions", return_value=[]
     )
 
     # Mock API close_session to FAIL
@@ -574,8 +575,8 @@ async def test_sessions_not_cleaned_on_node_stop(
     open_sockets = [s for s in session_node.sessions.values() if s.socket is not None]
     assert len(open_sockets) == 5
 
-    # Call stop
-    session_node.stop()
+    # Call stop (now async)
+    await session_node.stop()
 
     # BUG: Sessions and sockets remain open
     assert len(session_node.sessions) == 0, (
@@ -628,7 +629,7 @@ async def test_in_flight_messages_lost_on_shutdown(
     await asyncio.sleep(0.01)
 
     # Call stop immediately (ungraceful)
-    session_node.stop()
+    await session_node.stop()
 
     # Wait for message task
     await asyncio.sleep(0.01)

@@ -141,8 +141,18 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
                 sessions_to_close.append((relayer, session))
 
         # Phase 4: Close sessions at API level (I/O operations)
+        sessions_failed_to_close = []
+
         for relayer, session in sessions_to_close:
-            await NodeHelper.close_session(self.api, session, relayer)
+            close_ok = await NodeHelper.close_session(self.api, session, relayer)
+
+            if not close_ok:
+                logger.warning(
+                    "Failed to close session at API level, session may be orphaned",
+                    {"relayer": relayer, "port": session.port},
+                )
+                sessions_failed_to_close.append(relayer)
+                # Still proceed with local cleanup, but log the issue
 
         # Phase 5: Update dictionaries (NO awaits between operations!)
         # This entire block is atomic from asyncio perspective

@@ -26,7 +26,11 @@ class AsyncLoop(metaclass=Singleton):
         except asyncio.CancelledError:
             logger.error("Stopping the instance")
         finally:
-            stop_callback()
+            # Handle both sync and async stop callbacks
+            if asyncio.iscoroutinefunction(stop_callback):
+                cls().loop.run_until_complete(stop_callback())
+            else:
+                stop_callback()
             cls().stop()
 
     @classmethod

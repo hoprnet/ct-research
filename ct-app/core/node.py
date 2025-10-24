@@ -77,5 +77,49 @@ class Node(
 
         await AsyncLoop.gather()
 
-    def stop(self):
+    async def stop(self):
+        """
+        Gracefully stop the node and clean up all resources.
+        """
+        import asyncio
+
+        from .components.node_helper import NodeHelper
+
         self.running = False
+
+        # Close all active sessions
+        # Create snapshot to avoid modification during iteration
+        sessions_to_close = list(self.sessions.items())
+
+        if not sessions_to_close:
+            logger.info("Node stopped, no sessions to close")
+            return
+
+        # Phase 1: Close all sessions at API level in parallel
+        async def close_session_safely(relayer: str, session):
+            try:
+                await NodeHelper.close_session(self.api, session, relayer)
+                logger.debug("Closed session during shutdown", {"relayer": relayer})
+                return True
+            except Exception as e:
+                logger.error(
+                    "Error closing session at API", {"relayer": relayer, "error": str(e)}
+                )
+                return False
+
+        # Run all API close operations in parallel
+        close_tasks = [close_session_safely(relayer, session) for relayer, session in sessions_to_close]
+        await asyncio.gather(*close_tasks, return_exceptions=True)
+
+        # Phase 2: Close all sockets (fast, synchronous operations)
+        for relayer, session in sessions_to_close:
+            try:
+                session.close_socket()
+            except Exception as e:
+                logger.error("Error closing socket", {"relayer": relayer, "error": str(e)})
+
+        # Phase 3: Clear session caches
+        self.sessions.clear()
+        self.session_close_grace_period.clear()
+
+        logger.info("Node stopped, all sessions closed", {"session_count": len(sessions_to_close)})
