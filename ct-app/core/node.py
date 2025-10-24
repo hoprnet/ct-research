@@ -46,6 +46,7 @@ class Node(
         self.peer_history = dict[str, datetime]()
         self.session_destinations = list[str]()
         self.sessions = dict[str, Session]()
+        self.session_close_grace_period = dict[str, float]()  # relayer -> timestamp when grace period started
 
         self.address = None
         self.channels = None

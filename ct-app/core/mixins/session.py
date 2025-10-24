@@ -1,5 +1,6 @@
 import logging
 import random
+from datetime import datetime
 
 from ..components.asyncloop import AsyncLoop
 from ..components.decorators import connectguard, keepalive, master
@@ -68,23 +69,55 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
         reachable_peers_addresses = [peer.address.native for peer in self.peers]
         session_relayers_to_remove = set[str]()
 
+        GRACE_PERIOD_SECONDS = 60  # 1 minute grace period
+        now = datetime.now().timestamp()
+
         for relayer, session in self.sessions.items():
+            should_remove = False
+
+            # Check if peer is unreachable
             if relayer not in reachable_peers_addresses:
+                # Start grace period if not already started
+                if relayer not in self.session_close_grace_period:
+                    self.session_close_grace_period[relayer] = now
+                    logger.debug(
+                        "Session's relayer unreachable, starting grace period",
+                        {"relayer": relayer, "port": session.port, "grace_seconds": GRACE_PERIOD_SECONDS},
+                    )
+                # Check if grace period has expired
+                elif now - self.session_close_grace_period[relayer] > GRACE_PERIOD_SECONDS:
+                    should_remove = True
+                    logger.debug(
+                        "Grace period expired, marking session for removal",
+                        {"relayer": relayer, "port": session.port},
+                    )
+            else:
+                # Peer is reachable again, cancel grace period
+                if relayer in self.session_close_grace_period:
+                    grace_duration = now - self.session_close_grace_period[relayer]
+                    del self.session_close_grace_period[relayer]
+                    logger.debug(
+                        "Peer reachable again, canceling grace period",
+                        {"relayer": relayer, "grace_duration_seconds": grace_duration},
+                    )
+
+            # Check if session no longer active at API level (immediate removal)
+            if session.port not in active_sessions_ports:
+                should_remove = True
+                logger.debug(
+                    "Session no longer active at API level, marking for removal",
+                    {"relayer": relayer, "port": session.port},
+                )
+
+            # Mark for removal if needed
+            if should_remove:
                 await NodeHelper.close_session(self.api, session, relayer)
                 session_relayers_to_remove.add(relayer)
-                logger.debug(
-                    "Session's relayer no longer reachable, removing from cache",
-                    {"relayer": relayer, "port": session.port},
-                )
-
-            if session.port not in active_sessions_ports:
-                session_relayers_to_remove.add(relayer)
-                logger.debug(
-                    "Session no longer active, removing from cache",
-                    {"relayer": relayer, "port": session.port},
-                )
 
         for relayer in session_relayers_to_remove:
+            # Clean up grace period tracking
+            self.session_close_grace_period.pop(relayer, None)
+
             if session := self.sessions.pop(relayer, None):
                 session.close_socket()
             else:
