@@ -10,7 +10,7 @@ QUEUE_SIZE = Gauge("ct_queue_size", "Size of the message queue")
 
 class MessageQueue(metaclass=Singleton):
     def __init__(self):
-        self._buffer = Queue()
+        self._buffer: Queue[MessageFormat] = Queue()
 
     async def get(self) -> MessageFormat:
         return await self.buffer.get()
@@ -19,6 +19,6 @@ class MessageQueue(metaclass=Singleton):
         await self.buffer.put(item)
 
     @property
-    def buffer(self):
+    def buffer(self) -> Queue[MessageFormat]:
         QUEUE_SIZE.set(self._buffer.qsize())
         return self._buffer

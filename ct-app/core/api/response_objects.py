@@ -2,7 +2,6 @@ import asyncio
 import logging
 import socket as socket_lib
 from dataclasses import fields
-from datetime import datetime
 from typing import Any, Optional, Union
 
 from api_lib.objects.response import (
@@ -246,7 +245,7 @@ class Session(JsonResponse):
                 # Always clear socket reference, even if close failed
                 self.socket = None
 
-    def send(self, message: Union[MessageFormat, bytes]) -> bytes:
+    def send(self, message: Union[MessageFormat, bytes]) -> int:
         """
         Send data to the peer via UDP socket.
 
@@ -257,7 +256,7 @@ class Session(JsonResponse):
             message: Either a MessageFormat object or raw bytes to send
 
         Returns:
-            bytes: Number of bytes sent (from socket.sendto())
+            int: Number of bytes sent (from socket.sendto())
 
         Metrics:
             - MESSAGE_SENDING_REQUEST: Incremented when send is called
@@ -274,11 +273,14 @@ class Session(JsonResponse):
             For batch sends, use NodeHelper.send_batch_messages() which handles
             receive operations.
         """
+        if self.socket is None:
+            raise AttributeError(f"Socket is None for session on port {self.port}")
+
         if isinstance(message, MessageFormat):
             MESSAGE_SENDING_REQUEST.labels(message.relayer).inc()
 
         payload: bytes = message.bytes() if isinstance(message, MessageFormat) else message
-        
+
         try:
             data = self.socket.sendto(payload, (self.ip, self.port))
         except BlockingIOError:
@@ -363,9 +365,9 @@ class Session(JsonResponse):
         except Exception:
             return recv_size
 
-        for data in parts:
+        for msg_str in parts:
             try:
-                message = MessageFormat.parse(data)
+                message = MessageFormat.parse(msg_str)
             except ValueError:
                 continue
 

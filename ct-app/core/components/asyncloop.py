@@ -127,7 +127,16 @@ class AsyncLoop(metaclass=Singleton):
         await asyncio.gather(*cls().tasks)
 
     @classmethod
-    async def gather_any(cls, futures: list[asyncio.Future]) -> tuple[Any]:
+    async def gather_any(cls, futures: list[asyncio.Future]) -> list[Any]:
+        """
+        Gather multiple futures and return their results.
+
+        Args:
+            futures: List of asyncio futures to gather
+
+        Returns:
+            list[Any]: Results from all futures (asyncio.gather returns a list)
+        """
         return await asyncio.gather(*futures)
 
     @classmethod
