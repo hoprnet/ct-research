@@ -30,11 +30,11 @@ class GetPeersBody(RequestData):
 class CreateSessionBody(RequestData):
     capabilities: list[Any]
     destination: str
+    target: Union[str, dict]
     listen_host: str = APIfield("listenHost")
     forward_path: Union[str, dict] = APIfield("forwardPath")
     return_path: Union[str, dict] = APIfield("returnPath")
     response_buffer: str = APIfield("responseBuffer")
-    target: Union[str, dict]
 
 
 @dataclass

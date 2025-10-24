@@ -27,7 +27,8 @@ from prometheus_client import Gauge
 
 from . import mixins
 from .api.hoprd_api import HoprdAPI
-from .api.response_objects import Session
+from .api.response_objects import Channels, Session
+from .components.address import Address
 from .components.asyncloop import AsyncLoop
 from .components.balance import Balance
 from .components.config_parser import Parameters
@@ -86,8 +87,8 @@ class Node(
         self.sessions = dict[str, Session]()
         self.session_close_grace_period = dict[str, float]()  # relayer -> timestamp when grace period started
 
-        self.address = None
-        self.channels = None
+        self.address: Optional[Address] = None
+        self.channels: Optional[Channels] = None
 
         self.topology_data = dict[str, Balance]()
         self.registered_nodes_data = list[subgraph_entries.Node]()

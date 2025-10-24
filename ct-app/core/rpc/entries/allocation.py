@@ -8,7 +8,7 @@ class Allocation(RPCEntry):
         self.schedule = schedule
         self.amount = amount
         self.claimed = claimed
-        self.linked_safes = set()
+        self.linked_safes: set[str] = set()
 
     @property
     def unclaimed_amount(self) -> Balance:

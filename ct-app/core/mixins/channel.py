@@ -27,10 +27,10 @@ class ChannelMixin(HasAPI, HasChannels, HasParams, HasPeers):
         Retrieve total funds.
         """
         if self.address is None:
-            return
+            return None
 
         if self.channels is None:
-            return
+            return None
 
         results: dict[str, Balance] = await Utils.balanceInChannels(self.channels.outgoing)
 
