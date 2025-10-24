@@ -199,11 +199,11 @@ class Session(JsonResponse):
         """
         Create and configure UDP socket for this session.
 
-        Creates a non-blocking UDP socket with 50ms timeout. The short timeout
-        allows the asyncio event loop to remain responsive while waiting for data.
+        Creates a non-blocking UDP socket for use with asyncio event loop.
+        The socket is set to non-blocking mode to work with loop.sock_recvfrom().
 
         Returns:
-            socket: Configured UDP socket
+            socket: Configured non-blocking UDP socket
 
         Note:
             Should only be called once per session. Multiple calls will replace
@@ -212,7 +212,7 @@ class Session(JsonResponse):
         self.socket: socket_lib.socket = socket_lib.socket(
             socket_lib.AF_INET, socket_lib.SOCK_DGRAM
         )
-        self.socket.settimeout(0.05)
+        self.socket.setblocking(False)
         return self.socket
 
     def close_socket(self):
@@ -265,17 +265,29 @@ class Session(JsonResponse):
 
         Raises:
             AttributeError: If socket is None (session closed)
-            OSError: If socket send fails
+            OSError: If socket send fails (rare for UDP)
+            BlockingIOError: If socket buffer is full (rare, logged but not raised)
 
         Note:
-            This is a synchronous operation. For batch sends, use
-            NodeHelper.send_batch_messages() which handles receive operations.
+            This is a synchronous operation using a non-blocking socket. UDP sends
+            rarely block, but if they do, a BlockingIOError is caught and logged.
+            For batch sends, use NodeHelper.send_batch_messages() which handles
+            receive operations.
         """
         if isinstance(message, MessageFormat):
             MESSAGE_SENDING_REQUEST.labels(message.relayer).inc()
 
         payload: bytes = message.bytes() if isinstance(message, MessageFormat) else message
-        data = self.socket.sendto(payload, (self.ip, self.port))
+        
+        try:
+            data = self.socket.sendto(payload, (self.ip, self.port))
+        except BlockingIOError:
+            # Rare case: socket buffer full on non-blocking socket
+            logger.warning(
+                "Socket buffer full, send would block",
+                {"port": self.port, "payload_size": len(payload)}
+            )
+            return 0
 
         if isinstance(message, MessageFormat):
             MESSAGES_STATS.labels("sent", message.relayer).inc()
@@ -284,11 +296,11 @@ class Session(JsonResponse):
 
     async def receive(self, chunk_size: int, total_size: int, timeout: float = 2) -> int:
         """
-        Receive data from the peer via UDP socket with timeout.
+        Receive data from the peer via UDP socket with timeout (non-blocking).
 
-        Continuously receives data until total_size is reached or timeout expires.
-        Handles multiple messages in a single packet, parses them, and updates
-        Prometheus metrics for round-trip time (RTT) tracking.
+        Uses asyncio event loop integration via loop.sock_recvfrom() for truly
+        non-blocking I/O. Continuously receives data until total_size is reached
+        or timeout expires. Parses messages and updates Prometheus metrics.
 
         Args:
             chunk_size (int): Maximum bytes to receive per recvfrom() call
@@ -299,14 +311,15 @@ class Session(JsonResponse):
             int: Total bytes received (may be less than total_size if timeout)
 
         Behavior:
-            - Loops until total_size received or timeout expires
-            - Yields to event loop every 20ms during socket timeout
+            - Non-blocking I/O via loop.sock_recvfrom()
+            - Monotonic timeout tracking via asyncio.timeout (Python 3.11+)
+            - Event loop efficiently wakes on socket readiness (no polling)
             - Handles ConnectionResetError gracefully
             - Parses MessageFormat from received data
             - Updates MESSAGES_STATS and MESSAGES_RTT metrics
 
         Exception Handling:
-            - socket.timeout: Yields to event loop, continues receiving
+            - asyncio.TimeoutError: Returns partial data received
             - ConnectionResetError: Breaks loop, returns partial data
             - Decode/parse errors: Logged and skipped, doesn't fail
 
@@ -318,41 +331,47 @@ class Session(JsonResponse):
             >>> await session.receive(500, 5000, timeout=3.0)
             4500  # Received 4500 bytes before timeout
         """
-        recv_data = b""
+        if not self.socket:
+            return 0
 
-        start_time = datetime.now().timestamp()
-
-        while len(recv_data) < total_size:
-            if (datetime.now().timestamp() - start_time) >= timeout:
-                break
-
-            try:
-                recv_data += self.socket.recvfrom(chunk_size)[0]
-            except socket_lib.timeout:
-                await asyncio.sleep(0.02)
-                pass
-            except ConnectionResetError:
-                break
-
-        now = int(datetime.now().timestamp() * 1000)
-        recv_size: int = len(recv_data)
+        loop = asyncio.get_running_loop()
+        recv_data = bytearray()
 
         try:
-            recv_data: list[str] = [
-                item for item in recv_data.decode().split(b"\0".decode()) if len(item) > 0
+            async with asyncio.timeout(timeout):
+                while len(recv_data) < total_size:
+                    to_read = min(chunk_size, total_size - len(recv_data))
+                    data, _ = await loop.sock_recvfrom(self.socket, to_read)
+                    if not data:
+                        break
+                    recv_data += data
+        except ConnectionResetError:
+            pass
+        except TimeoutError:
+            pass
+
+        # Use wall-clock time for RTT calculation (must match sender's timestamp)
+        import time
+        now_ms = int(time.time() * 1000)
+        recv_size: int = len(recv_data)
+
+        # Parse received messages and update metrics
+        try:
+            parts: list[str] = [
+                item for item in recv_data.decode().split("\0") if item
             ]
         except Exception:
-            pass
-        else:
-            for data in recv_data:
-                try:
-                    message = MessageFormat.parse(data)
-                except ValueError as _e:
-                    continue
+            return recv_size
 
-                rtt = (now - message.timestamp) / 1000
-                MESSAGES_STATS.labels("received", message.relayer).inc()
-                MESSAGES_RTT.labels(message.relayer).observe(rtt)
+        for data in parts:
+            try:
+                message = MessageFormat.parse(data)
+            except ValueError:
+                continue
+
+            rtt = (now_ms - message.timestamp) / 1000
+            MESSAGES_STATS.labels("received", message.relayer).inc()
+            MESSAGES_RTT.labels(message.relayer).observe(rtt)
 
         return recv_size
 
