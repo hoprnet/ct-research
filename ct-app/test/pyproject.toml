@@ -7,3 +7,6 @@ dependencies = [
     "pytest-asyncio==0.26.0",
     "pytest-mock==3.14.0",
 ]
+
+[tool.setuptools]
+packages = ["api", "components", "rpc", "subgraph"]

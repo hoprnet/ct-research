@@ -26,20 +26,17 @@ jobs:
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Verify config files
+      - name: Format, lint, and type check
         working-directory: ct-app
-        run: |
-          nix develop -c uv run scripts/verify_config.py -f .configs/core_prod_config.yaml -f .configs/core_staging_config.yaml -f test/test_config.yaml
-          
-      - name: Lint with ruff
-        working-directory: ct-app
-        run: |
-          nix develop -c uvx ruff check . --output-format=github --ignore E501 --target-version=py313
+        run: nix develop -c make fmt
 
       - name: Test with pytest
         working-directory: ct-app
-        run: |
-          nix develop -c uv run pytest
+        run: nix develop -c make test
+
+      - name: Run stress tests
+        working-directory: ct-app
+        run: nix develop -c make stress
 
   image:
     name: Build and push container image

@@ -5,3 +5,7 @@ requires-python = ">=3.13"
 dependencies = [
     "api-lib>=0.0.4",
 ]
+
+[tool.setuptools]
+packages = []
+py-modules = ["__init__", "channelstatus", "hoprd_api", "http_method", "request_objects", "response_objects"]

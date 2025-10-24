@@ -11,6 +11,7 @@ After fixes are implemented, all tests should PASS.
 """
 
 import asyncio
+from typing import Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -38,7 +39,7 @@ from core.node import Node
 def mock_sessions():
     """Helper to create mock Session objects."""
 
-    def _create_session(relayer: str, port: int = None) -> Session:
+    def _create_session(relayer: str, port: Optional[int] = None) -> Session:
         if port is None:
             # Generate port from relayer hash for consistency
             port = 9000 + abs(hash(relayer)) % 1000
@@ -107,8 +108,6 @@ def mock_peers() -> set[Peer]:
 
     for addr in peer_addresses:
         peer = Peer(addr)
-        peer.safe_balance = Balance("100 wxHOPR")
-        peer.channel_balance = Balance("10 wxHOPR")
         peers.add(peer)
 
     return peers

@@ -12,6 +12,7 @@ Exclude with: pytest -m "not stress" -v
 
 import asyncio
 import time
+from typing import Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -39,7 +40,7 @@ from core.node import Node
 def mock_sessions():
     """Helper to create mock Session objects."""
 
-    def _create_session(relayer: str, port: int = None) -> Session:
+    def _create_session(relayer: str, port: Optional[int] = None) -> Session:
         if port is None:
             # Generate port from relayer hash for consistency
             port = 9000 + abs(hash(relayer)) % 1000
@@ -109,8 +110,6 @@ def mock_peers():
         peers = set()
         for i in range(count):
             peer = Peer(f"peer_{i}")
-            peer.safe_balance = Balance(f"{100 + i} wxHOPR")
-            peer.channel_balance = Balance(f"{10 + i} wxHOPR")
             peers.add(peer)
         return peers
 
@@ -287,7 +286,7 @@ async def test_concurrent_session_creation_race(
     mocker.patch.object(stress_node.api, "list_udp_sessions", return_value=[])
 
     # Track socket creation attempts
-    socket_creation_count = {}
+    socket_creation_count: dict[str, int] = {}
 
     original_create_socket = Session.create_socket
 
@@ -300,7 +299,7 @@ async def test_concurrent_session_creation_race(
 
     # Set up session destinations
     stress_node.session_destinations = [f"peer_{i}" for i in range(UNIQUE_RELAYERS)]
-    stress_node.peers = {f"peer_{i}" for i in range(UNIQUE_RELAYERS)}
+    stress_node.peers = {Peer(f"peer_{i}") for i in range(UNIQUE_RELAYERS)}
 
     # Create concurrent tasks attempting to create sessions for same relayers
     async def attempt_session_creation(relayer_id):

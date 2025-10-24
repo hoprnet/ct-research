@@ -1,32 +1,68 @@
-# cache
+# Byte-compiled / optimized / DLL files
 __pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+.venv*/
+venv/
+ENV/
+env/
+env*/
+.direnv/
+
+# Environment files
+simulation.env
+*.*env
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
 .pytest_cache/
 .ruff_cache/
-
-# envs
-.venv*/
-env*/
-
-.direnv/
-simulation.env
-.vscode/
-*.*env
-*.log
-*_rules.yaml
-
-# logs
-net_viz-*.png
-out.mp4
-websocket_client.log
-logs/
-*.log
-.logs/
-
-#misc
+.coverage
 .coverage*
 htmlcov/
+.coveragehtml/
+
+# Logs
+*.log
+logs/
+.logs/
+websocket_client.log
+
+# Project-specific
+*_rules.yaml
+net_viz-*.png
+out.mp4
 foo*.*
 foo*/
 run_*.sh
 
+# OS
 .DS_Store
+Thumbs.db
