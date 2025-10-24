@@ -1,3 +1,42 @@
+"""
+SessionMixin - Session lifecycle management for HOPR nodes.
+
+This mixin provides session management functionality including:
+- Automatic session creation when messages need to be sent
+- Grace period mechanism to prevent premature session closure
+- Lock-free thread-safe session operations
+- Parallel session cleanup on shutdown
+
+Key Concepts:
+
+    Grace Period (60 seconds):
+        When a peer becomes unreachable, sessions are not immediately closed.
+        Instead, a 60-second grace period begins. If the peer becomes reachable
+        again within this window, the session is preserved. This prevents session
+        churn during temporary network issues.
+
+    Lock-Free Thread Safety:
+        Instead of using asyncio.Lock, this implementation leverages the fact that
+        asyncio runs in a single thread. By avoiding `await` statements between
+        related dictionary operations, we ensure atomicity without locks.
+
+    Double-Check Pattern:
+        When creating sessions, we check if a session exists, perform I/O to create
+        it, then check again before adding to the dict. This prevents race conditions
+        where multiple coroutines might create sessions for the same relayer.
+
+    Five-Phase Maintenance Algorithm:
+        maintain_sessions() uses a carefully designed 5-phase approach to avoid
+        race conditions while maintaining performance. See maintain_sessions()
+        docstring for details.
+
+Thread Safety Guarantees:
+    - No RuntimeError from dictionary modification during iteration
+    - No duplicate sessions for the same relayer
+    - No use-after-free of session objects
+    - Consistent state across concurrent operations
+"""
+
 import logging
 import random
 import time
@@ -16,6 +55,36 @@ logger = logging.getLogger(__name__)
 class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
     @master(keepalive, connectguard)
     async def observe_message_queue(self):
+        """
+        Monitor the message queue and create/reuse sessions for message relay.
+
+        This method continuously monitors the message queue and ensures that sessions
+        exist for relaying messages. It implements the double-check pattern to prevent
+        race conditions when multiple coroutines attempt to create sessions concurrently.
+
+        Double-Check Pattern:
+            1. Check if session exists (first check)
+            2. If not, perform I/O to create session
+            3. Check again before adding to dict (second check)
+            4. If another coroutine created it meanwhile, close our socket and use theirs
+
+        This pattern ensures only one session exists per relayer without using locks.
+
+        Thread Safety:
+            - Uses dict.get() which is atomic in Python
+            - No await between final dict check and dict assignment
+            - Closes duplicate sockets if race condition occurs
+
+        Flow:
+            1. Get message from queue
+            2. Validate relayer has outgoing channel
+            3. Select random reachable destination
+            4. Get or create session using double-check pattern
+            5. Launch background task to send messages
+
+        Returns:
+            None. Operates continuously as a keepalive task.
+        """
         channels: list[str] = (
             [channel.destination for channel in self.channels.outgoing] if self.channels else []
         )
@@ -86,6 +155,77 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
 
     @master(keepalive, connectguard)
     async def maintain_sessions(self):
+        """
+        Maintain active sessions by closing stale ones and managing grace periods.
+
+        Implements a five-phase algorithm designed to avoid race conditions while
+        maintaining high performance. The key insight is that asyncio runs in a single
+        thread, so we can ensure atomicity by avoiding `await` between related
+        dictionary operations.
+
+        Five-Phase Algorithm:
+
+            Phase 1 - Gather Data (I/O):
+                Fetch all data from external sources (API calls). This is done first
+                to minimize time spent in critical sections later.
+                - Query API for active sessions
+                - Get list of reachable peers
+
+            Phase 2 - Snapshot State:
+                Create immutable snapshots of dictionaries BEFORE any operations.
+                This prevents RuntimeError from dictionary modification during iteration.
+                - sessions_snapshot = list(self.sessions.items())
+                - grace_periods_snapshot = dict(self.session_close_grace_period)
+
+            Phase 3 - Determine Actions:
+                Analyze snapshots to determine what needs to be done, but don't modify
+                any dictionaries yet. Build up sets/lists of planned actions.
+                - Check grace periods for unreachable peers
+                - Check if sessions are still active at API level
+                - Build list of sessions to close
+
+            Phase 4 - Execute I/O:
+                Perform all API close operations. This is separated from Phase 5 to
+                avoid `await` during dictionary modifications.
+                - Close sessions at API level
+                - Log any failures but continue
+
+            Phase 5 - Update State (ATOMIC):
+                Update all dictionaries with NO `await` statements between operations.
+                This ensures consistency across self.sessions and
+                self.session_close_grace_period.
+                - Start/cancel grace period timers
+                - Remove closed sessions
+                - Close sockets
+
+        Grace Period Logic (60 seconds):
+            - When peer becomes unreachable: Start grace period timer
+            - If peer returns within 60s: Cancel timer, preserve session
+            - If timer expires: Remove session
+            - If API shows session inactive: Remove immediately (bypass grace period)
+
+        Thread Safety:
+            - No locks required (asyncio single-threaded)
+            - No `await` between Phase 5 dictionary operations
+            - Snapshot pattern prevents iteration errors
+
+        Performance:
+            - O(n) where n = number of sessions
+            - All API closes happen in parallel (see Node.stop())
+            - Minimal critical section time
+
+        Example Scenarios:
+            1. Peer temporarily unreachable:
+               - Iteration 1: Grace period starts, session preserved
+               - Peer returns: Grace period cancelled, session preserved
+
+            2. Peer permanently unreachable:
+               - Iteration 1: Grace period starts (t=0)
+               - Iteration N: Grace period expires (t>60s), session closed
+
+            3. API session disappears:
+               - Immediate removal regardless of grace period
+        """
         # Phase 1: Gather all data (all I/O operations)
         active_sessions_ports: list[int] = [
             session.port for session in await self.api.list_udp_sessions()

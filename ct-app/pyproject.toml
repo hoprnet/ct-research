@@ -47,6 +47,9 @@ minversion = "7.0"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 addopts = ["-ra", "-q"]
+markers = [
+    "stress: marks tests as stress tests (deselect with '-m \"not stress\"')"
+]
 
 log_cli = true
 log_cli_level = "CRITICAL"
