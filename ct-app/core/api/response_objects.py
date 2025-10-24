@@ -156,6 +156,7 @@ class Session(JsonResponse):
         4. Closed via close_socket() when peer unreachable or node stopping
         5. Removed from API via NodeHelper.close_session()
     """
+
     ip: str
     port: int
     protocol: str
@@ -287,7 +288,7 @@ class Session(JsonResponse):
             # Rare case: socket buffer full on non-blocking socket
             logger.warning(
                 "Socket buffer full, send would block",
-                {"port": self.port, "payload_size": len(payload)}
+                {"port": self.port, "payload_size": len(payload)},
             )
             return 0
 
@@ -354,14 +355,13 @@ class Session(JsonResponse):
 
         # Use wall-clock time for RTT calculation (must match sender's timestamp)
         import time
+
         now_ms = int(time.time() * 1000)
         recv_size: int = len(recv_data)
 
         # Parse received messages and update metrics
         try:
-            parts: list[str] = [
-                item for item in recv_data.decode().split("\0") if item
-            ]
+            parts: list[str] = [item for item in recv_data.decode().split("\0") if item]
         except Exception:
             return recv_size
 

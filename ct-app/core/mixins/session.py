@@ -253,7 +253,11 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
                     # Will start timer in Phase 5
                     logger.debug(
                         "Session's relayer unreachable, will start grace period",
-                        {"relayer": relayer, "port": session.port, "grace_seconds": GRACE_PERIOD_SECONDS},
+                        {
+                            "relayer": relayer,
+                            "port": session.port,
+                            "grace_seconds": GRACE_PERIOD_SECONDS,
+                        },
                     )
                 # Check if grace period has expired
                 elif now - grace_periods_snapshot[relayer] > GRACE_PERIOD_SECONDS:
@@ -326,7 +330,11 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
                 else:
                     logger.debug(
                         "Session changed during maintenance, skipping removal",
-                        {"relayer": relayer, "old_port": inspected_session.port, "new_port": current_session.port}
+                        {
+                            "relayer": relayer,
+                            "old_port": inspected_session.port,
+                            "new_port": current_session.port,
+                        },
                     )
             else:
                 logger.debug("Session already removed by another coroutine", {"relayer": relayer})

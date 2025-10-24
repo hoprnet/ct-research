@@ -106,7 +106,7 @@ class AsyncLoop(metaclass=Singleton):
                             "error": str(e),
                         },
                     )
-            
+
             task.add_done_callback(_log_task_result)
 
     @classmethod

@@ -85,7 +85,8 @@ class Node(
         self.peer_history = dict[str, datetime]()
         self.session_destinations = list[str]()
         self.sessions = dict[str, Session]()
-        self.session_close_grace_period = dict[str, float]()  # relayer -> timestamp when grace period started
+        # relayer -> timestamp when grace period started
+        self.session_close_grace_period = dict[str, float]()
 
         self.address: Optional[Address] = None
         self.channels: Optional[Channels] = None
@@ -175,13 +176,13 @@ class Node(
                 logger.debug("Closed session during shutdown", {"relayer": relayer})
                 return True
             except Exception as e:
-                logger.error(
-                    "Error closing session at API", {"relayer": relayer, "error": str(e)}
-                )
+                logger.error("Error closing session at API", {"relayer": relayer, "error": str(e)})
                 return False
 
         # Run all API close operations in parallel
-        close_tasks = [close_session_safely(relayer, session) for relayer, session in sessions_to_close]
+        close_tasks = [
+            close_session_safely(relayer, session) for relayer, session in sessions_to_close
+        ]
         await asyncio.gather(*close_tasks, return_exceptions=True)
 
         # Phase 2: Close all sockets (fast, synchronous operations)

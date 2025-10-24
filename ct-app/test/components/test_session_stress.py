@@ -12,7 +12,7 @@ Exclude with: pytest -m "not stress" -v
 
 import asyncio
 import time
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 import yaml
@@ -64,9 +64,7 @@ async def stress_node(mocker: MockerFixture) -> Node:
     node = Node("http://localhost:3001", "test_token")
 
     # Mock API methods
-    mocker.patch.object(
-        node.api, "address", return_value=Addresses({"native": "node_address"})
-    )
+    mocker.patch.object(node.api, "address", return_value=Addresses({"native": "node_address"}))
     mocker.patch.object(
         node.api,
         "balances",
@@ -167,10 +165,10 @@ async def test_high_session_count_parallel_close(
 
     # Verify all sessions were closed
     assert len(stress_node.sessions) == 0, "All sessions should be cleared from cache"
+    assert len(stress_node.session_close_grace_period) == 0, "Grace period cache should be cleared"
     assert (
-        len(stress_node.session_close_grace_period) == 0
-    ), "Grace period cache should be cleared"
-    assert close_call_count == SESSION_COUNT, f"All {SESSION_COUNT} sessions should be closed at API"
+        close_call_count == SESSION_COUNT
+    ), f"All {SESSION_COUNT} sessions should be closed at API"
 
     # Verify performance (parallel execution should be much faster than sequential)
     # Sequential would take: 200 * 0.01s = 2s
@@ -255,7 +253,8 @@ async def test_grace_period_under_load(
         ), f"Iteration {iteration}: All sessions should be preserved"
 
     print(
-        f"✓ Grace period handled {FLAP_ITERATIONS} iterations of {flapping_peer_count} peers flapping"
+        f"✓ Grace period handled {FLAP_ITERATIONS} iterations "
+        f"of {flapping_peer_count} peers flapping"
     )
 
 
@@ -282,9 +281,7 @@ async def test_concurrent_session_creation_race(
         await asyncio.sleep(0.01)
         return mock_sessions(relayer)
 
-    mocker.patch.object(
-        stress_node.api, "post_udp_session", side_effect=mock_post_udp_session
-    )
+    mocker.patch.object(stress_node.api, "post_udp_session", side_effect=mock_post_udp_session)
 
     # Mock API list_udp_sessions
     mocker.patch.object(stress_node.api, "list_udp_sessions", return_value=[])
@@ -308,9 +305,7 @@ async def test_concurrent_session_creation_race(
     # Create concurrent tasks attempting to create sessions for same relayers
     async def attempt_session_creation(relayer_id):
         # Simulate message triggering session creation
-        message = MessageFormat(
-            f"peer_{relayer_id % UNIQUE_RELAYERS}", "sender", 500, 10
-        )
+        message = MessageFormat(f"peer_{relayer_id % UNIQUE_RELAYERS}", "sender", 500, 10)
 
         # Get or create session (mimics observe_message_queue behavior)
         session = stress_node.sessions.get(message.relayer)
@@ -344,13 +339,9 @@ async def test_concurrent_session_creation_race(
     # Verify each relayer has exactly one session
     for i in range(UNIQUE_RELAYERS):
         relayer = f"peer_{i}"
-        assert (
-            relayer in stress_node.sessions
-        ), f"Session for {relayer} should exist"
+        assert relayer in stress_node.sessions, f"Session for {relayer} should exist"
 
-    print(
-        f"✓ {CONCURRENT_ATTEMPTS} concurrent attempts created exactly {UNIQUE_RELAYERS} sessions"
-    )
+    print(f"✓ {CONCURRENT_ATTEMPTS} concurrent attempts created exactly {UNIQUE_RELAYERS} sessions")
 
 
 @pytest.mark.stress
@@ -426,15 +417,14 @@ async def test_concurrent_maintenance_and_message_sending(
     assert len(errors) == 0, f"Errors occurred during concurrent operations: {errors}"
 
     # Verify state is consistent
-    assert isinstance(
-        stress_node.sessions, dict
-    ), "Sessions dict should still be a dict"
+    assert isinstance(stress_node.sessions, dict), "Sessions dict should still be a dict"
     assert isinstance(
         stress_node.session_close_grace_period, dict
     ), "Grace period dict should still be a dict"
 
     print(
-        f"✓ Ran {MAINTENANCE_ITERATIONS} maintenance + {MESSAGE_ITERATIONS} message operations concurrently"
+        f"✓ Ran {MAINTENANCE_ITERATIONS} maintenance + "
+        f"{MESSAGE_ITERATIONS} message operations concurrently"
     )
 
 
@@ -468,9 +458,7 @@ async def test_memory_usage_with_many_sessions(
         created_sockets.append(socket)
 
     # Verify sessions created
-    assert (
-        len(stress_node.sessions) == SESSION_COUNT
-    ), f"Should have {SESSION_COUNT} sessions"
+    assert len(stress_node.sessions) == SESSION_COUNT, f"Should have {SESSION_COUNT} sessions"
     assert all(
         session.socket is not None for session in stress_node.sessions.values()
     ), "All sessions should have sockets"
@@ -489,9 +477,7 @@ async def test_memory_usage_with_many_sessions(
 
     # Verify complete cleanup
     assert len(stress_node.sessions) == 0, "All sessions should be removed from cache"
-    assert (
-        len(stress_node.session_close_grace_period) == 0
-    ), "Grace period cache should be cleared"
+    assert len(stress_node.session_close_grace_period) == 0, "Grace period cache should be cleared"
     assert (
         len(close_calls) == SESSION_COUNT
     ), f"All {SESSION_COUNT} sessions should be closed at API"

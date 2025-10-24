@@ -11,8 +11,7 @@ After fixes are implemented, all tests should PASS.
 """
 
 import asyncio
-import time
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 import yaml
@@ -21,9 +20,7 @@ from pytest_mock import MockerFixture
 from core.api.response_objects import (
     Addresses,
     Balances,
-    ConnectedPeer,
     Session,
-    SessionFailure,
 )
 from core.components import Peer
 from core.components.balance import Balance
@@ -66,9 +63,7 @@ async def session_node(mocker: MockerFixture) -> Node:
     node = Node("http://localhost:3001", "test_token")
 
     # Mock API methods
-    mocker.patch.object(
-        node.api, "address", return_value=Addresses({"native": "node_address"})
-    )
+    mocker.patch.object(node.api, "address", return_value=Addresses({"native": "node_address"}))
     mocker.patch.object(
         node.api,
         "balances",
@@ -145,9 +140,7 @@ async def test_session_closed_when_peer_temporarily_unreachable(
     session.create_socket()
 
     # Mock API to return the session as active
-    mocker.patch.object(
-        session_node.api, "list_udp_sessions", return_value=[session]
-    )
+    mocker.patch.object(session_node.api, "list_udp_sessions", return_value=[session])
     mocker.patch.object(session_node.api, "close_session", return_value=True)
 
     # Verify session exists
@@ -188,9 +181,7 @@ async def test_session_persists_with_grace_period(
     session_node.sessions[relayer] = session
     session.create_socket()
 
-    mocker.patch.object(
-        session_node.api, "list_udp_sessions", return_value=[session]
-    )
+    mocker.patch.object(session_node.api, "list_udp_sessions", return_value=[session])
     mocker.patch.object(session_node.api, "close_session", return_value=True)
 
     # Peer becomes unreachable
@@ -206,9 +197,9 @@ async def test_session_persists_with_grace_period(
     await session_node.maintain_sessions()
 
     # With grace period: session should still exist
-    assert relayer in session_node.sessions, (
-        "Session should persist if peer comes back within grace period"
-    )
+    assert (
+        relayer in session_node.sessions
+    ), "Session should persist if peer comes back within grace period"
 
 
 @pytest.mark.asyncio
@@ -229,9 +220,7 @@ async def test_peer_quality_flapping_causes_session_churn(
     session_node.sessions[relayer] = session
     session.create_socket()
 
-    mocker.patch.object(
-        session_node.api, "list_udp_sessions", return_value=[session]
-    )
+    mocker.patch.object(session_node.api, "list_udp_sessions", return_value=[session])
     close_count = 0
 
     def track_close(*args, **kwargs):
@@ -254,8 +243,9 @@ async def test_peer_quality_flapping_causes_session_churn(
         await asyncio.sleep(0.01)
 
     # BUG: Session gets closed multiple times due to flapping
-    # Due to current implementation, session will be closed at least once when peer becomes unavailable
-    # With grace period, it should only be closed once at the end if peer doesn't come back
+    # Due to current implementation, session will be closed at least once when
+    # peer becomes unavailable. With grace period, it should only be closed
+    # once at the end if peer doesn't come back
     assert close_count <= 1, (
         f"Session closed {close_count} times due to peer flapping. "
         f"Grace period should prevent excessive churn. Expected: ≤1, Got: {close_count}"
@@ -287,9 +277,7 @@ async def test_concurrent_session_access_race_condition(
     session_node.channels.outgoing = []
 
     # Mock API calls
-    mocker.patch.object(
-        session_node.api, "list_udp_sessions", return_value=[session]
-    )
+    mocker.patch.object(session_node.api, "list_udp_sessions", return_value=[session])
     mocker.patch.object(session_node.api, "close_session", return_value=True)
     mocker.patch.object(session_node.api, "post_udp_session", return_value=session)
 
@@ -302,9 +290,7 @@ async def test_concurrent_session_access_race_condition(
         await asyncio.sleep(0.001)  # Small delay to allow interleaving
         return message
 
-    mocker.patch(
-        "core.mixins.session.MessageQueue.get", side_effect=mock_message_get
-    )
+    mocker.patch("core.mixins.session.MessageQueue.get", side_effect=mock_message_get)
 
     exceptions = []
 
@@ -396,9 +382,7 @@ async def test_dictionary_changed_during_iteration(
     )
 
     # Check for dictionary iteration errors
-    dict_changed_errors = [
-        e for e in iteration_errors if "dictionary" in str(e).lower()
-    ]
+    dict_changed_errors = [e for e in iteration_errors if "dictionary" in str(e).lower()]
 
     assert len(dict_changed_errors) == 0, (
         f"Dictionary modification during iteration detected: {len(dict_changed_errors)} error(s). "
@@ -466,9 +450,7 @@ async def test_sessions_accumulate_when_cleanup_disabled(
     Expected: FAIL (sessions accumulate)
     """
     # Mock API to return active sessions
-    mocker.patch.object(
-        session_node.api, "list_udp_sessions", return_value=[]
-    )
+    mocker.patch.object(session_node.api, "list_udp_sessions", return_value=[])
 
     # Disable cleanup by making close_session a no-op
     mocker.patch.object(session_node.api, "close_session", return_value=False)
@@ -516,9 +498,7 @@ async def test_orphaned_sessions_after_api_close_failure(
 
     # Mock API to show session is not active at API level
     # This triggers immediate removal, bypassing grace period
-    mocker.patch.object(
-        session_node.api, "list_udp_sessions", return_value=[]
-    )
+    mocker.patch.object(session_node.api, "list_udp_sessions", return_value=[])
 
     # Mock API close_session to FAIL
     close_called = False
@@ -584,9 +564,7 @@ async def test_sessions_not_cleaned_on_node_stop(
     )
 
     # Check sockets are closed
-    open_sockets_after = [
-        s for s in session_node.sessions.values() if s.socket is not None
-    ]
+    open_sockets_after = [s for s in session_node.sessions.values() if s.socket is not None]
     assert len(open_sockets_after) == 0, (
         f"{len(open_sockets_after)} sockets still open after stop. "
         "All sockets should be closed during shutdown."
@@ -621,8 +599,9 @@ async def test_in_flight_messages_lost_on_shutdown(
     session.send = track_send
 
     # Simulate message sending in progress
-    message = MessageFormat(relayer, "sender", 500, 10)  # relayer, sender, packet_size, batch_size
-    message_task = asyncio.create_task(asyncio.to_thread(session.send, message))
+    # relayer, sender, packet_size, batch_size
+    message = MessageFormat(relayer, "sender", 500, 10)
+    asyncio.create_task(asyncio.to_thread(session.send, message))
 
     # Give it a moment to start
     await asyncio.sleep(0.01)
