@@ -84,18 +84,8 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
                     {"relayer": relayer, "port": session.port},
                 )
 
-                 
-        """
-        TODO: to remove, temporarily disabled
-        
-        Reason: the quality metric cannot be relied on when the node is
-        saturated, causing an overmanagement of session and premature
-        closures.
-        """
         for relayer in session_relayers_to_remove:
-            logger.debug("Ignoring session to remove workaround", {"relayer": relayer})
-
-            # if session := self.sessions.pop(relayer, None):
-            #     session.close_socket()
-            # else:
-            #     logger.warning("Session to remove not found in cache", {"relayer": relayer})
+            if session := self.sessions.pop(relayer, None):
+                session.close_socket()
+            else:
+                logger.warning("Session to remove not found in cache", {"relayer": relayer})
