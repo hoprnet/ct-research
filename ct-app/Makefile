@@ -4,7 +4,7 @@ run:
 
 .PHONY: endurance
 endurance:
-	@python -m tests_endurance --file .configs/endurance_rules.yaml
+	@uv run python -m tests_endurance --file .configs/endurance_rules.yaml
 
 .PHONY: fmt
 fmt:
@@ -15,7 +15,7 @@ fmt:
 
 .PHONY: test
 test:
-	@uv run pytest --cov=core --cov-report html:.coveragehtml
+	@uv run pytest -m "not stress" --cov=core --cov-report html:.coveragehtml
 
 .PHONY: stress
 stress:
