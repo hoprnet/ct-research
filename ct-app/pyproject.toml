@@ -12,12 +12,12 @@ test = { workspace = true }
 
 [tool.uv.workspace]
 members = [
-    "core", 
+    "core",
     "core/api",
     "core/components",
     "core/subgraph",
     "core/rpc",
-    "test" 
+    "test"
 ]
 
 [dependency-groups]
@@ -59,3 +59,72 @@ log_cli = true
 log_cli_level = "CRITICAL"
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+
+[tool.mypy]
+# Python version
+python_version = "3.13"
+
+# Follow imports
+follow_imports = "normal"
+ignore_missing_imports = true
+
+# Show error codes
+show_error_codes = true
+show_column_numbers = true
+pretty = true
+
+# Explicit package bases to avoid module name conflicts
+explicit_package_bases = true
+
+# Warn on certain issues but don't require full type annotations
+warn_return_any = false
+warn_unused_configs = true
+disallow_untyped_defs = false
+
+# Check the bodies of functions without type annotations
+check_untyped_defs = true
+
+# Allow operations on Optional without strict checking
+no_implicit_optional = true
+strict_optional = false
+
+# Paths to check
+files = ["core/", "test/", "scripts/"]
+
+# Exclude patterns
+exclude = "^(core/.*/__pycache__/|core/.*/\\..*|\\.venv/|build/|dist/).*"
+
+# Per-module options - external libraries
+[[tool.mypy.overrides]]
+module = ["core.api.*", "prometheus_client.*", "api_lib.*", "web3.*", "requests.*", "yaml.*"]
+ignore_missing_imports = true
+
+# Per-module options - complex files that need refactoring
+[[tool.mypy.overrides]]
+module = [
+    "scripts.lib.state",
+    "core.components.config_parser.base_classes",
+    "core.subgraph.graphql_provider",
+    "test.components.test_peer",
+    "core.rpc.providers",
+    "core.rpc.query_provider",
+    "core.components.messages.message_format",
+    "core.components.logs",
+    "core.components.config_parser.economic_model",
+    "core.mixins.economic_system",
+    "core.mixins.channel",
+    "core.subgraph.url",
+    "core.components.singleton",
+    "core.subgraph.mode",
+    "core.subgraph.entries.entry",
+    "core.rpc.entries.entry",
+    "test.components.test_balance",
+    "test.rpc.test_rpc_calls",
+    "test.components.test_utils",
+    "core.mixins.subgraph",
+    "core.mixins.session",
+    "core.mixins.rpc",
+    "core.mixins.peers",
+    "core.node",
+]
+ignore_errors = true
