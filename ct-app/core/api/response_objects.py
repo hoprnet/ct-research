@@ -250,7 +250,7 @@ class Session(JsonResponse):
             try:
                 self.socket.close()
             except Exception as e:
-                logger.error("Failed to close socket", {"error": str(e), "port": self.port})
+                logger.error(f"Failed to close socket on port {self.port}: {e}", exc_info=True)
             finally:
                 # Always clear socket reference, even if close failed
                 self.socket = None
@@ -296,8 +296,8 @@ class Session(JsonResponse):
         except BlockingIOError:
             # Rare case: socket buffer full on non-blocking socket
             logger.warning(
-                "Socket buffer full, send would block",
-                {"port": self.port, "payload_size": len(payload)},
+                f"Socket buffer full, send would block on port {self.port} "
+                f"(payload_size={len(payload)} bytes)"
             )
             return 0
 
@@ -315,12 +315,15 @@ class Session(JsonResponse):
         or timeout expires. Parses messages and updates Prometheus metrics.
 
         Args:
-            chunk_size (int): Maximum bytes to receive per recvfrom() call
-            total_size (int): Total expected bytes to receive
+            chunk_size (int): Maximum bytes to receive per recvfrom() call (must be > 0)
+            total_size (int): Total expected bytes to receive (if <= 0, returns 0)
             timeout (float): Maximum seconds to wait for data (default: 2)
 
         Returns:
             int: Total bytes received (may be less than total_size if timeout)
+
+        Raises:
+            ValueError: If chunk_size <= 0
 
         Behavior:
             - Non-blocking I/O via loop.sock_recvfrom()
@@ -346,6 +349,14 @@ class Session(JsonResponse):
         if not self.socket:
             return 0
 
+        # Validate inputs
+        if chunk_size <= 0:
+            raise ValueError(
+                f"chunk_size must be positive, got {chunk_size} for session on port {self.port}"
+            )
+        if total_size <= 0:
+            return 0  # Nothing to receive
+
         loop = asyncio.get_running_loop()
         recv_data = bytearray()
 
@@ -353,13 +364,15 @@ class Session(JsonResponse):
             async with asyncio.timeout(timeout):
                 while len(recv_data) < total_size:
                     to_read = min(chunk_size, total_size - len(recv_data))
+                    if to_read <= 0:
+                        break  # Safety check: avoid zero-length recv
                     data, _ = await loop.sock_recvfrom(self.socket, to_read)
                     if not data:
                         break
                     recv_data += data
         except ConnectionResetError:
             pass
-        except TimeoutError:
+        except asyncio.TimeoutError:
             pass
 
         # Use wall-clock time for RTT calculation (must match sender's timestamp)
