@@ -208,5 +208,6 @@ class NodeHelper:
         Note:
             Exceptions are logged by AsyncLoop but don't crash the main process.
         """
-        [session.send(message) for _ in range(message.batch_size)]
+        for _ in range(message.batch_size):
+            session.send(message)
         await session.receive(message.packet_size, message.batch_size * message.packet_size)
