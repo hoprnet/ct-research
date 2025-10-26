@@ -149,7 +149,7 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
             return False
 
     @master(keepalive, connectguard)
-    async def observe_message_queue(self):
+    async def observe_message_queue(self) -> None:
         """
         Monitor the message queue and create/reuse sessions for message relay.
 
@@ -364,7 +364,7 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
                 logger.debug("Session already removed by another coroutine", {"relayer": relayer})
 
     @master(keepalive, connectguard)
-    async def maintain_sessions(self):
+    async def maintain_sessions(self) -> None:
         """
         Maintain active sessions by closing stale ones and managing grace periods.
 

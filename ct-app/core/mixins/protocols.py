@@ -39,6 +39,7 @@ class HasPeers(Protocol):
 class HasSession(Protocol):
     session_destinations: list[str]
     sessions: dict[str, Session]
+    session_close_grace_period: dict[str, float]  # Tracks grace period start times
 
 
 class HasRPCs(Protocol):

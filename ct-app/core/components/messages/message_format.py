@@ -35,19 +35,19 @@ class MessageFormat:
         self.update_timestamp(timestamp)
 
     @property
-    def size(self):
+    def size(self) -> int:
         return self.packet_size
 
     @property
-    def message_index(self):
+    def message_index(self) -> int:
         value = self.__class__.index
         self.__class__.index += 1
         self.__class__.index %= self.__class__.range
         return value
 
     @classmethod
-    def pattern(self):
-        return " ".join([f"{{{param}}}" for param in self.params])
+    def pattern(cls) -> str:
+        return " ".join([f"{{{param}}}" for param in cls.params])
 
     @classmethod
     def parse(cls, input_string: str) -> "MessageFormat":
