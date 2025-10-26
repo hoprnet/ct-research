@@ -202,16 +202,25 @@ class Session(JsonResponse):
         Creates a non-blocking UDP socket for use with asyncio event loop.
         The socket is set to non-blocking mode to work with loop.sock_recvfrom().
 
+        Socket Lifecycle:
+            - If a socket already exists, it is closed before creating a new one
+            - This prevents resource leaks from multiple create_socket() calls
+            - Safe to call multiple times (idempotent with cleanup)
+
         Returns:
             socket: Configured non-blocking UDP socket
 
-        Note:
-            Should only be called once per session. Multiple calls will replace
-            the existing socket without closing it (resource leak).
+        Example:
+            >>> session.create_socket()  # Creates new socket
+            >>> session.create_socket()  # Closes old socket, creates new one
+            >>> session.close_socket()   # Closes and clears socket
         """
-        self.socket: socket_lib.socket = socket_lib.socket(
-            socket_lib.AF_INET, socket_lib.SOCK_DGRAM
-        )
+        # Close existing socket if present to prevent resource leak
+        if self.socket is not None:
+            self.close_socket()
+
+        # Create new non-blocking UDP socket
+        self.socket = socket_lib.socket(socket_lib.AF_INET, socket_lib.SOCK_DGRAM)
         self.socket.setblocking(False)
         return self.socket
 
