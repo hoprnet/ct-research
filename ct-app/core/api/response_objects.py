@@ -28,6 +28,9 @@ MESSAGE_SENDING_REQUEST = Gauge("ct_message_sending_request", "", ["relayer"])
 
 logger = logging.getLogger(__name__)
 
+# Socket I/O configuration
+DEFAULT_RECEIVE_TIMEOUT_SECONDS = 2.0  # Default timeout for receiving data from UDP socket
+
 
 def try_to_lower(value: Any):
     if isinstance(value, str):
@@ -306,7 +309,9 @@ class Session(JsonResponse):
 
         return data
 
-    async def receive(self, chunk_size: int, total_size: int, timeout: float = 2) -> int:
+    async def receive(
+        self, chunk_size: int, total_size: int, timeout: float = DEFAULT_RECEIVE_TIMEOUT_SECONDS
+    ) -> int:
         """
         Receive data from the peer via UDP socket with timeout (non-blocking).
 
