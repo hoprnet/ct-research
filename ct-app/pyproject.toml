@@ -1,7 +1,7 @@
 [project]
 name = "ct-app"
 version = "3.12.0"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
     "core",
 ]
@@ -37,7 +37,7 @@ typecheck = [
 
 [tool.black]
 line-length = 100
-target-version = ['py313']
+target-version = ['py314']
 include = '\.pyi?$'
 
 [tool.ruff]
@@ -62,7 +62,7 @@ log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 
 [tool.mypy]
 # Python version
-python_version = "3.13"
+python_version = "3.14"
 
 # Follow imports
 follow_imports = "normal"
