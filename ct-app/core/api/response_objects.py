@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import socket as socket_lib
+import time
 from dataclasses import fields
 from typing import Any, Optional, Union
 
@@ -381,8 +382,6 @@ class Session(JsonResponse):
             pass
 
         # Use wall-clock time for RTT calculation (must match sender's timestamp)
-        import time
-
         now_ms = int(time.time() * 1000)
         recv_size: int = len(recv_data)
 

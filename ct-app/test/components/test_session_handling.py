@@ -81,7 +81,9 @@ async def session_node(mocker: MockerFixture) -> Node:
     mocker.patch.object(node.api, "ticket_price", return_value=Balance("0.0001 wxHOPR"))
 
     # Load minimal test config
-    with open("./test/test_config.yaml", "r") as file:
+    from pathlib import Path
+    cfg = Path(__file__).resolve().parents[1] / "test_config.yaml"
+    with cfg.open("r") as file:
         params = Parameters(yaml.safe_load(file))
 
     # Override session-related flags for testing
