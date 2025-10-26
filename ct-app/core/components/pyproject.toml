@@ -7,4 +7,5 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["config_parser", "messages"]
+packages = ["core.components.config_parser", "core.components.messages"]
+package-dir = {"core.components.config_parser" = "config_parser", "core.components.messages" = "messages"}

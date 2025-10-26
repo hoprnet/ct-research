@@ -12,7 +12,7 @@ After fixes are implemented, all tests should PASS.
 
 import asyncio
 from typing import Optional
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import yaml
@@ -50,7 +50,7 @@ def mock_sessions():
                 "port": port,
                 "protocol": "udp",
                 "target": relayer,
-                "mtu": 1002,
+                "hoprMtu": 1002,
                 "surbLen": 395,
             }
         )
@@ -139,8 +139,10 @@ async def test_session_closed_when_peer_temporarily_unreachable(
     session.create_socket()
 
     # Mock API to return the session as active
-    mocker.patch.object(session_node.api, "list_udp_sessions", return_value=[session])
-    mocker.patch.object(session_node.api, "close_session", return_value=True)
+    mocker.patch.object(
+        session_node.api, "list_udp_sessions", new=AsyncMock(return_value=[session])
+    )
+    mocker.patch.object(session_node.api, "close_session", new=AsyncMock(return_value=True))
 
     # Verify session exists
     assert relayer in session_node.sessions
@@ -180,8 +182,10 @@ async def test_session_persists_with_grace_period(
     session_node.sessions[relayer] = session
     session.create_socket()
 
-    mocker.patch.object(session_node.api, "list_udp_sessions", return_value=[session])
-    mocker.patch.object(session_node.api, "close_session", return_value=True)
+    mocker.patch.object(
+        session_node.api, "list_udp_sessions", new=AsyncMock(return_value=[session])
+    )
+    mocker.patch.object(session_node.api, "close_session", new=AsyncMock(return_value=True))
 
     # Peer becomes unreachable
     session_node.peers = {p for p in mock_peers if p.address.native != relayer}
@@ -219,15 +223,17 @@ async def test_peer_quality_flapping_causes_session_churn(
     session_node.sessions[relayer] = session
     session.create_socket()
 
-    mocker.patch.object(session_node.api, "list_udp_sessions", return_value=[session])
+    mocker.patch.object(
+        session_node.api, "list_udp_sessions", new=AsyncMock(return_value=[session])
+    )
     close_count = 0
 
-    def track_close(*args, **kwargs):
+    async def track_close(*args, **kwargs):
         nonlocal close_count
         close_count += 1
         return True
 
-    mocker.patch.object(session_node.api, "close_session", side_effect=track_close)
+    mocker.patch.object(session_node.api, "close_session", new=AsyncMock(side_effect=track_close))
 
     # Simulate peer flapping: available → unavailable → available → unavailable
     peer_states = [True, False, True, False, True, False]
@@ -276,9 +282,11 @@ async def test_concurrent_session_access_race_condition(
     session_node.channels.outgoing = []
 
     # Mock API calls
-    mocker.patch.object(session_node.api, "list_udp_sessions", return_value=[session])
-    mocker.patch.object(session_node.api, "close_session", return_value=True)
-    mocker.patch.object(session_node.api, "post_udp_session", return_value=session)
+    mocker.patch.object(
+        session_node.api, "list_udp_sessions", new=AsyncMock(return_value=[session])
+    )
+    mocker.patch.object(session_node.api, "close_session", new=AsyncMock(return_value=True))
+    mocker.patch.object(session_node.api, "post_udp_session", new=AsyncMock(return_value=session))
 
     # Mock message queue to continuously provide messages
     message = MessageFormat(
@@ -409,9 +417,9 @@ async def test_session_used_after_removal(
     session.create_socket()
 
     mocker.patch.object(
-        session_node.api, "list_udp_sessions", return_value=[]
+        session_node.api, "list_udp_sessions", new=AsyncMock(return_value=[])
     )  # Session not active
-    mocker.patch.object(session_node.api, "close_session", return_value=True)
+    mocker.patch.object(session_node.api, "close_session", new=AsyncMock(return_value=True))
 
     # Verify session exists
     assert relayer in session_node.sessions
@@ -449,10 +457,10 @@ async def test_sessions_accumulate_when_cleanup_disabled(
     Expected: FAIL (sessions accumulate)
     """
     # Mock API to return active sessions
-    mocker.patch.object(session_node.api, "list_udp_sessions", return_value=[])
+    mocker.patch.object(session_node.api, "list_udp_sessions", new=AsyncMock(return_value=[]))
 
     # Disable cleanup by making close_session a no-op
-    mocker.patch.object(session_node.api, "close_session", return_value=False)
+    mocker.patch.object(session_node.api, "close_session", new=AsyncMock(return_value=False))
 
     # Create sessions for multiple relayers
     initial_count = 10
@@ -497,17 +505,17 @@ async def test_orphaned_sessions_after_api_close_failure(
 
     # Mock API to show session is not active at API level
     # This triggers immediate removal, bypassing grace period
-    mocker.patch.object(session_node.api, "list_udp_sessions", return_value=[])
+    mocker.patch.object(session_node.api, "list_udp_sessions", new=AsyncMock(return_value=[]))
 
     # Mock API close_session to FAIL
     close_called = False
 
-    def failing_close(*args, **kwargs):
+    async def failing_close(*args, **kwargs):
         nonlocal close_called
         close_called = True
         return False  # API close failed
 
-    mocker.patch.object(session_node.api, "close_session", side_effect=failing_close)
+    mocker.patch.object(session_node.api, "close_session", new=AsyncMock(side_effect=failing_close))
 
     # Run maintain_sessions
     await session_node.maintain_sessions()

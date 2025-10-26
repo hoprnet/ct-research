@@ -11,7 +11,7 @@ def test_session_in_list():
                 "port": 8080,
                 "protocol": "tcp",
                 "target": "localhost",
-                "mtu": 1002,
+                "hoprMtu": 1002,
                 "surbLen": 395,
             }
         ),
@@ -21,7 +21,7 @@ def test_session_in_list():
                 "port": 8081,
                 "protocol": "udp",
                 "target": "localhost",
-                "mtu": 1002,
+                "hoprMtu": 1002,
                 "surbLen": 395,
             }
         ),

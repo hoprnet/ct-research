@@ -12,6 +12,7 @@ Exclude with: pytest -m "not stress" -v
 
 import asyncio
 import time
+from pathlib import Path
 from typing import Optional
 from unittest.mock import MagicMock
 
@@ -82,7 +83,8 @@ async def stress_node(mocker: MockerFixture) -> Node:
     mocker.patch.object(node.api, "ticket_price", return_value=Balance("0.0001 wxHOPR"))
 
     # Load minimal test config
-    with open("./test/test_config.yaml", "r") as file:
+    cfg = Path(__file__).resolve().parents[1] / "test_config.yaml"
+    with cfg.open("r") as file:
         params = Parameters(yaml.safe_load(file))
 
     # Override session-related flags for testing
@@ -157,6 +159,9 @@ async def test_high_session_count_parallel_close(
 
     mocker.patch.object(stress_node.api, "close_session", side_effect=mock_close)
 
+    # Capture sessions snapshot before stop() clears them
+    sessions_snapshot = list(stress_node.sessions.items())
+
     # Measure parallel close performance
     start_time = time.time()
     await stress_node.stop()
@@ -174,8 +179,8 @@ async def test_high_session_count_parallel_close(
     # Parallel should take: ~0.01s (plus overhead)
     assert duration < 1.0, f"Parallel close took {duration:.2f}s, should be < 1s"
 
-    # Verify all sockets are closed
-    for relayer, session in list(stress_node.sessions.items()):
+    # Verify all sockets are closed using the snapshot captured before stop()
+    for relayer, session in sessions_snapshot:
         assert session.socket is None, f"Socket for {relayer} should be closed"
 
     print(f"✓ Successfully closed {SESSION_COUNT} sessions in {duration:.3f}s")

@@ -10,5 +10,5 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = []
-py-modules = ["__init__", "graphql_provider", "mode", "providers", "type", "url"]
+packages = ["core.subgraph"]
+package-dir = {"core.subgraph" = "."}
