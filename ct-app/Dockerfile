@@ -20,6 +20,17 @@ COPY core/subgraph/pyproject.toml ./core/subgraph/
 COPY core/rpc/pyproject.toml ./core/rpc/
 COPY test/pyproject.toml ./test/
 
+# Copy source code needed for editable installs (setuptools needs to find packages)
+COPY core/__init__.py ./core/
+COPY core/__main__.py ./core/
+COPY core/node.py ./core/
+COPY core/mixins ./core/mixins/
+COPY core/rpc ./core/rpc/
+COPY core/api ./core/api/
+COPY core/components ./core/components/
+COPY core/subgraph ./core/subgraph/
+COPY test ./test/
+
 # Install production dependencies only (no dev dependencies)
 RUN uv sync --frozen --no-dev
 
