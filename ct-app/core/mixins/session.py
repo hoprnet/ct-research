@@ -44,23 +44,60 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
         Returns:
             str | None: Selected destination address, or None if no valid destinations
         """
-        if not channels or message.relayer not in channels:
+        # Check if relayer has outgoing channels
+        if not channels:
+            logger.debug(
+                "No outgoing channels available",
+                {"relayer": message.relayer}
+            )
             return None
 
-        try:
-            # Get reachable peer addresses for filtering
-            reachable_addresses = {peer.address.native for peer in self.peers}
-            destination = random.choice(
-                [
-                    item
-                    for item in self.session_destinations
-                    if item != message.relayer and item in reachable_addresses
-                ]
+        if message.relayer not in channels:
+            logger.debug(
+                "Relayer not found in outgoing channels",
+                {"relayer": message.relayer, "channel_count": len(channels)}
             )
-            return destination
-        except IndexError:
-            logger.debug("No valid session destination found")
             return None
+
+        # Check if session destinations are configured
+        if not self.session_destinations:
+            logger.debug(
+                "No session destinations configured for this node",
+                {"relayer": message.relayer}
+            )
+            return None
+
+        # Get reachable peer addresses for filtering
+        reachable_addresses = {peer.address.native for peer in self.peers}
+
+        # Build candidate list with filtering
+        candidates = [
+            item
+            for item in self.session_destinations
+            if item != message.relayer and item in reachable_addresses
+        ]
+
+        if not candidates:
+            # Provide detailed context about why no candidates
+            reachable_destinations = [
+                item for item in self.session_destinations
+                if item in reachable_addresses
+            ]
+            logger.debug(
+                "No valid session destination found",
+                {
+                    "relayer": message.relayer,
+                    "total_destinations": len(self.session_destinations),
+                    "reachable_destinations": len(reachable_destinations),
+                    "reachable_peers": len(reachable_addresses),
+                    "reason": "no_reachable_destinations" if not reachable_destinations
+                             else "all_reachable_are_relayer"
+                }
+            )
+            return None
+
+        # Select random destination from valid candidates
+        return random.choice(candidates)
 
     async def _get_or_create_session(
         self,
