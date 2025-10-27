@@ -102,21 +102,23 @@ channel:
   max_age_seconds: 172800
 
 # =============================================================================
-# 
+#
 # =============================================================================
 sessions:
-  green_destinations: 
+  green_destinations:
   - "0xd30f8f6e5865d7ec947e101b1d6a183e9776ba40"
   - "0x5a5bf3d3ce59cd304f198b86c1a78adfadf31f83"
   - "0xa4642c066c1f8927db9d34abab599af784a2cff0"
   - "0xcbe8726c80cc0d7751b9545dd5a4b5b0e53e383d"
   - "0x764d3162a4024c5cba8817446ef563b27aa57598"
-  blue_destinations: 
+  blue_destinations:
   - "0x5927c321ca2a925d17edcf9c58343e24337d18ba"
   - "0x0543aa9d1dafa9cc49bf87ce5ea1e18277b3ae0f"
   - "0x29d61ddbc682f272fc7f0dfb203938e211471826"
   - "0x8fd1766b4215944f2eb21f03e6820bc3c75d936c"
   - "0x633382b748e34432df1dbdfdd234833454b3d768"
+  session_retry_base_delay_seconds: 2.0
+  session_retry_max_delay_seconds: 60.0
 
 
 # =============================================================================

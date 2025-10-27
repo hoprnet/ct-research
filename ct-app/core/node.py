@@ -33,6 +33,7 @@ from .components.balance import Balance
 from .components.config_parser import Parameters
 from .components.logs import configure_logging
 from .components.peer import Peer
+from .components.session_rate_limiter import SessionRateLimiter
 from .components.utils import Utils
 from .rpc import entries as rpc_entries
 from .subgraph import entries as subgraph_entries
@@ -87,6 +88,24 @@ class Node(
         # relayer -> timestamp when grace period started
         self.session_close_grace_period = dict[str, float]()
 
+        # Initialize params first so we can use session configuration
+        self.params = params or Parameters()
+
+        # Session rate limiter to prevent API overload from failed attempts
+        # Use default values if sessions config is not available
+        self.session_rate_limiter = SessionRateLimiter(
+            base_delay=(
+                getattr(self.params.sessions, "session_retry_base_delay_seconds", 2.0)
+                if hasattr(self.params, "sessions")
+                else 2.0
+            ),
+            max_delay=(
+                getattr(self.params.sessions, "session_retry_max_delay_seconds", 60.0)
+                if hasattr(self.params, "sessions")
+                else 60.0
+            ),
+        )
+
         self.address = None  # type: ignore[assignment]
         self.channels: Optional[Channels] = None
 
@@ -98,8 +117,6 @@ class Node(
         self.peers_rewards_data = dict[str, float]()
 
         self.ticket_price = None
-
-        self.params = params or Parameters()
 
         self.connected = False
         self.running = True
@@ -191,8 +208,9 @@ class Node(
             except Exception as e:
                 logger.error("Error closing socket", {"relayer": relayer, "error": str(e)})
 
-        # Phase 3: Clear session caches
+        # Phase 3: Clear session caches and rate limiter
         self.sessions.clear()
         self.session_close_grace_period.clear()
+        self.session_rate_limiter.reset()
 
         logger.info("Node stopped, all sessions closed", {"session_count": len(sessions_to_close)})

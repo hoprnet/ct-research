@@ -103,33 +103,52 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
         destination: str,
     ) -> "Session" | None:
         """
-        Get existing session or create new one (double-check pattern).
+        Get existing session or create new one (double-check pattern with rate limiting).
 
         Implements the double-check pattern to prevent race conditions when multiple
-        coroutines attempt to create sessions concurrently:
+        coroutines attempt to create sessions concurrently, with rate limiting to
+        prevent API overload from repeated failures:
         1. First check: Is session in dict?
-        2. If not: Create session (I/O operation)
-        3. Second check: Did another coroutine create it during our I/O?
-        4. If yes: Close our socket and use theirs
-        5. If no: Add ours to dict
+        2. Rate limit check: Can we attempt session opening?
+        3. If not: Create session (I/O operation)
+        4. Second check: Did another coroutine create it during our I/O?
+        5. If yes: Close our socket and use theirs
+        6. If no: Add ours to dict
 
         Args:
             relayer: Peer address that will relay messages
             destination: Target peer address for message routing
 
         Returns:
-            Session | None: Session object from dict, or None if creation failed
+            Session | None: Session object from dict, or None if creation failed or rate-limited
         """
         # First check: get session if exists
         session = self.sessions.get(relayer)
         if session:
             return session
 
+        # Rate limit check: can we attempt session opening?
+        can_attempt, wait_time = self.session_rate_limiter.can_attempt(relayer)
+        if not can_attempt:
+            logger.debug(
+                "Session opening rate-limited",
+                {"relayer": relayer, "wait_time_seconds": round(wait_time, 2)},
+            )
+            return None
+
+        # Record attempt before API call
+        self.session_rate_limiter.record_attempt(relayer)
+
         # Create new session (I/O operations outside critical section)
         session = await NodeHelper.open_session(self.api, destination, relayer, DEFAULT_LISTEN_HOST)
         if not session:
+            # Record failure for rate limiting
+            self.session_rate_limiter.record_failure(relayer)
             logger.debug("Failed to open session")
             return None
+
+        # Record success - clears all tracking for this relayer
+        self.session_rate_limiter.record_success(relayer)
 
         session.create_socket()
         logger.debug("Created socket", {"ip": session.ip, "port": session.port})
