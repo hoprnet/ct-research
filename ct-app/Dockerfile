@@ -31,8 +31,8 @@ LABEL maintainer="HOPR Team"
 LABEL description="CT-App - HOPR Cover Traffic Application"
 LABEL version="3.12.0"
 
-# Create non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+# Create non-root user for security with home directory
+RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 
 # Set working directory
 WORKDIR /code
