@@ -40,9 +40,10 @@ def main(configfile: str):
         logger.info("Prometheus client started", {"port": prometheus_server_port})
 
     # create the core and nodes instances
-    host: str = str(os.environ.get("HOPRD_API_HOST", "http://localhost:3001"))
+    host: str = str(os.environ.get("HOPRD_API_HOST", "http://127.0.0.1:3001"))
     token: str = str(os.environ.get("HOPRD_API_TOKEN"))
 
+    logger.info("Node configuration", {"host": host, "token_set": bool(token)})
     node = Node(host, token, params)
     AsyncLoop.run(node.start, node.stop)
 

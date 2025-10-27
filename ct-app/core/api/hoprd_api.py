@@ -8,7 +8,8 @@ from . import request_objects as req
 from . import response_objects as resp
 from .http_method import HTTPMethod
 
-logging.getLogger("api-lib").setLevel(logging.WARNING)
+logging.getLogger("api-lib").setLevel(logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 class HoprdAPI(ApiLib):
@@ -154,6 +155,18 @@ class HoprdAPI(ApiLib):
             target_body.as_dict,
         )
 
+        full_url = f"{self.host}{self.prefix}/session/udp"
+        logger.debug(
+            "Attempting to open session",
+            {
+                "destination": destination,
+                "relayer": relayer,
+                "full_url": full_url,
+                "host": self.host,
+                "prefix": self.prefix,
+            },
+        )
+
         try:
             r = await self.try_req(
                 HTTPMethod.POST,
@@ -166,6 +179,14 @@ class HoprdAPI(ApiLib):
                 return r
             else:
                 # API call returned None - could be timeout, network error, or API error
+                logger.error(
+                    "API call returned None for session open",
+                    {
+                        "destination": destination,
+                        "relayer": relayer,
+                        "full_url": full_url,
+                    },
+                )
                 return resp.SessionFailure(
                     {
                         "error": "api call returned none (timeout or connection error)",
