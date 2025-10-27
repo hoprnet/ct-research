@@ -82,6 +82,7 @@ async def session_node(mocker: MockerFixture) -> Node:
 
     # Load minimal test config
     from pathlib import Path
+
     cfg = Path(__file__).resolve().parents[1] / "test_config.yaml"
     with cfg.open("r") as file:
         params = Parameters(yaml.safe_load(file))

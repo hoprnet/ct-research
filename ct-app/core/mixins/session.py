@@ -46,24 +46,20 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
         """
         # Check if relayer has outgoing channels
         if not channels:
-            logger.debug(
-                "No outgoing channels available",
-                {"relayer": message.relayer}
-            )
+            logger.debug("No outgoing channels available", {"relayer": message.relayer})
             return None
 
         if message.relayer not in channels:
             logger.debug(
                 "Relayer not found in outgoing channels",
-                {"relayer": message.relayer, "channel_count": len(channels)}
+                {"relayer": message.relayer, "channel_count": len(channels)},
             )
             return None
 
         # Check if session destinations are configured
         if not self.session_destinations:
             logger.debug(
-                "No session destinations configured for this node",
-                {"relayer": message.relayer}
+                "No session destinations configured for this node", {"relayer": message.relayer}
             )
             return None
 
@@ -80,8 +76,7 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
         if not candidates:
             # Provide detailed context about why no candidates
             reachable_destinations = [
-                item for item in self.session_destinations
-                if item in reachable_addresses
+                item for item in self.session_destinations if item in reachable_addresses
             ]
             logger.debug(
                 "No valid session destination found",
@@ -90,9 +85,12 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
                     "total_destinations": len(self.session_destinations),
                     "reachable_destinations": len(reachable_destinations),
                     "reachable_peers": len(reachable_addresses),
-                    "reason": "no_reachable_destinations" if not reachable_destinations
-                             else "all_reachable_are_relayer"
-                }
+                    "reason": (
+                        "no_reachable_destinations"
+                        if not reachable_destinations
+                        else "all_reachable_are_relayer"
+                    ),
+                },
             )
             return None
 

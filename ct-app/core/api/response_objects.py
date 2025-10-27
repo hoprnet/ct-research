@@ -408,3 +408,5 @@ class Session(JsonResponse):
 class SessionFailure(JsonResponse):
     status: str = APIfield("status")
     error: str = APIfield("error")
+    destination: str = APIfield("destination", "")
+    relayer: str = APIfield("relayer", "")

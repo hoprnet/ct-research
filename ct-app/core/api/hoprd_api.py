@@ -153,17 +153,38 @@ class HoprdAPI(ApiLib):
             "0 KB",
             target_body.as_dict,
         )
-        if r := await self.try_req(
-            HTTPMethod.POST,
-            "/session/udp",
-            resp.Session,
-            data=data,
-            timeout=4,
-        ):
-            return r
-        else:
+
+        try:
+            r = await self.try_req(
+                HTTPMethod.POST,
+                "/session/udp",
+                resp.Session,
+                data=data,
+                timeout=4,
+            )
+            if r:
+                return r
+            else:
+                # API call returned None - could be timeout, network error, or API error
+                return resp.SessionFailure(
+                    {
+                        "error": "api call returned none (timeout or connection error)",
+                        "status": "NO_SESSION_OPENED",
+                        "destination": destination,
+                        "relayer": relayer,
+                    }
+                )
+        except Exception as e:
+            # Capture any exception details for better diagnostics
+            error_type = type(e).__name__
+            error_msg = str(e)
             return resp.SessionFailure(
-                {"error": "api call or timeout error", "status": "NO_SESSION_OPENED"}
+                {
+                    "error": f"{error_type}: {error_msg}",
+                    "status": "NO_SESSION_OPENED",
+                    "destination": destination,
+                    "relayer": relayer,
+                }
             )
 
     async def close_session(self, session: resp.Session) -> bool:
