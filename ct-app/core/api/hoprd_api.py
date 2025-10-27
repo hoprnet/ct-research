@@ -148,11 +148,11 @@ class HoprdAPI(ApiLib):
         data = req.CreateSessionBody(
             capabilities_body.as_array,
             destination,
+            target_body.as_dict,
             listen_host,
             path_body.as_dict,
             path_body.as_dict,
             "0 KB",
-            target_body.as_dict,
         )
 
         full_url = f"{self.host}{self.prefix}/session/udp"
