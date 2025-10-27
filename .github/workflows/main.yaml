@@ -29,7 +29,7 @@ jobs:
       - name: Set up Nix cache
         uses: cachix/cachix-action@0fc020193b5a1fa3ac4575aa3a7d3aa6a35435ad # v16 - 2025-01-15
         with:
-          name: hoprnet
+          name: ct-dapp
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
 
       - name: Format, lint, and type check
