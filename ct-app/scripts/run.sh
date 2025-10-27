@@ -164,36 +164,32 @@ if [[ "$env" == "local" ]]; then
     export HOPRD_API_TOKEN="e2e-API-token^^"
 
 else
-    # Validate required environment variables for remote environments
-    if [[ -z "${HOST_FORMAT:-}" ]]; then
-        echo "Error: HOST_FORMAT environment variable is required for non-local environments" >&2
-        echo "Please check your .env file." >&2
-        exit 1
-    fi
-
-    # Check deployment if it's set to auto
-    if [[ "$deployment" == "auto" ]]; then
-        deployment=$(check_deployment "$HOST_FORMAT" "$env")
-    fi
-
-    # Node parameters
-    HOPRD_API_HOST=$(printf '%s\n' "$HOST_FORMAT" | sed "s/%s/$deployment/; s/%s/1/; s/%s/$env/")
-    export HOPRD_API_HOST
-
-    if [[ "$env" == "prod" ]]; then
-        if [[ -z "${PROD_TOKEN:-}" ]]; then
-            echo "Error: PROD_TOKEN environment variable is required for production environment" >&2
-            echo "Please check your .env file." >&2
-            exit 1
+    # Setup HOPRD API configuration if HOST_FORMAT is provided
+    if [[ -n "${HOST_FORMAT:-}" ]]; then
+        # Check deployment if it's set to auto
+        if [[ "$deployment" == "auto" ]]; then
+            deployment=$(check_deployment "$HOST_FORMAT" "$env")
         fi
-        export HOPRD_API_TOKEN="$PROD_TOKEN"
-    elif [[ "$env" == "staging" ]]; then
-        if [[ -z "${STAGING_TOKEN:-}" ]]; then
-            echo "Error: STAGING_TOKEN environment variable is required for staging environment" >&2
-            echo "Please check your .env file." >&2
-            exit 1
+
+        # Node parameters
+        HOPRD_API_HOST=$(printf '%s\n' "$HOST_FORMAT" | sed "s/%s/$deployment/; s/%s/1/; s/%s/$env/")
+        export HOPRD_API_HOST
+
+        if [[ "$env" == "prod" ]]; then
+            if [[ -z "${PROD_TOKEN:-}" ]]; then
+                echo "Error: PROD_TOKEN environment variable is required for production environment" >&2
+                echo "Please check your .env file." >&2
+                exit 1
+            fi
+            export HOPRD_API_TOKEN="$PROD_TOKEN"
+        elif [[ "$env" == "staging" ]]; then
+            if [[ -z "${STAGING_TOKEN:-}" ]]; then
+                echo "Error: STAGING_TOKEN environment variable is required for staging environment" >&2
+                echo "Please check your .env file." >&2
+                exit 1
+            fi
+            export HOPRD_API_TOKEN="$STAGING_TOKEN"
         fi
-        export HOPRD_API_TOKEN="$STAGING_TOKEN"
     fi
 fi
 
