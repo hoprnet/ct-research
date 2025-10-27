@@ -52,7 +52,8 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 addopts = ["-ra", "-q"]
 markers = [
-    "stress: marks tests as stress tests (deselect with '-m \"not stress\"')"
+    "stress: marks tests as stress tests (deselect with '-m \"not stress\"')",
+    "benchmark: marks tests as performance benchmarks (run with '-m benchmark')"
 ]
 
 log_cli = true

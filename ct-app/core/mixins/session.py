@@ -24,6 +24,50 @@ DEFAULT_LISTEN_HOST = "127.0.0.1"  # Local socket binding address
 
 
 class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
+    @property
+    def peer_addresses(self) -> set[str]:
+        """
+        Cached property for peer addresses set.
+
+        Returns cached set of peer native addresses for O(1) membership testing.
+        Cache is invalidated when peers are modified via invalidate_peer_cache().
+
+        Performance: Eliminates repeated O(p) set comprehensions (where p = peer count).
+        With 100+ peers and frequent access, provides ~100x speedup for lookups.
+        """
+        # Track cache access for benchmarks (optional, won't fail if metrics not available)
+        try:
+            from ..components.messages.message_metrics import record_cache_access
+
+            record_cache_access("peer_addresses", self._cached_peer_addresses is not None)
+        except ImportError:
+            pass
+
+        if self._cached_peer_addresses is None:
+            self._cached_peer_addresses = {peer.address.native for peer in self.peers}
+        return self._cached_peer_addresses
+
+    def invalidate_peer_cache(self) -> None:
+        """Invalidate peer address cache when peers are modified."""
+        self._cached_peer_addresses = None
+        self._cached_reachable_destinations = None
+
+    @property
+    def reachable_destinations(self) -> set[str]:
+        """
+        Cached set of session destinations that are currently reachable.
+
+        Returns the intersection of session_destinations and peer_addresses.
+        Cache is invalidated when peers change.
+
+        Performance: Pre-computes the intersection once instead of filtering on every message.
+        """
+        if self._cached_reachable_destinations is None:
+            self._cached_reachable_destinations = (
+                set(self.session_destinations) & self.peer_addresses
+            )
+        return self._cached_reachable_destinations
+
     def _select_session_destination(
         self,
         message: MessageFormat,
@@ -63,28 +107,22 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
             )
             return None
 
-        # Get reachable peer addresses for filtering
-        reachable_addresses = {peer.address.native for peer in self.peers}
+        # Get reachable destinations (uses cached intersection of destinations & peers)
+        reachable_dest_set = self.reachable_destinations
 
-        # Build candidate list with filtering
-        candidates = [
-            item
-            for item in self.session_destinations
-            if item != message.relayer and item in reachable_addresses
-        ]
+        # Build candidate list - just exclude the relayer (O(d) where d = destinations count)
+        candidates = [item for item in reachable_dest_set if item != message.relayer]
 
         if not candidates:
             # Provide detailed context about why no candidates
-            reachable_destinations = [
-                item for item in self.session_destinations if item in reachable_addresses
-            ]
+            reachable_destinations = list(reachable_dest_set)
             logger.debug(
                 "No valid session destination found",
                 {
                     "relayer": message.relayer,
                     "total_destinations": len(self.session_destinations),
                     "reachable_destinations": len(reachable_destinations),
-                    "reachable_peers": len(reachable_addresses),
+                    "reachable_peers": len(self.peer_addresses),
                     "reason": (
                         "no_reachable_destinations"
                         if not reachable_destinations
@@ -253,6 +291,14 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
         # Schedule message batch for background sending
         self._schedule_message_batch(message, message.relayer)
 
+        # Track message processed for benchmarks (optional)
+        try:
+            from ..components.messages.message_metrics import MESSAGES_PROCESSED
+
+            MESSAGES_PROCESSED.inc()
+        except ImportError:
+            pass
+
     async def _gather_session_maintenance_data(self) -> tuple[set[int], set[str]]:
         """
         Phase 1: Gather all I/O data needed for session maintenance.
@@ -270,7 +316,7 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
             With 100+ sessions, this provides ~100x speedup for membership checks.
         """
         active_ports = {session.port for session in await self.api.list_udp_sessions()}
-        reachable_addresses = {peer.address.native for peer in self.peers}
+        reachable_addresses = self.peer_addresses  # Use cached property
         return active_ports, reachable_addresses
 
     def _should_remove_session(
@@ -537,3 +583,11 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
         # This entire block is atomic from asyncio perspective
         self._update_grace_periods(sessions_snapshot, reachable_addresses, now)
         self._remove_closed_sessions(sessions_to_close)
+
+        # Update session count metric for benchmarks (optional)
+        try:
+            from ..components.messages.message_metrics import SESSION_COUNT
+
+            SESSION_COUNT.set(len(self.sessions))
+        except ImportError:
+            pass

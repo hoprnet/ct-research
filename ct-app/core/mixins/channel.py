@@ -21,6 +21,55 @@ logger = logging.getLogger(__name__)
 
 
 class ChannelMixin(HasAPI, HasChannels, HasParams, HasPeers):
+    @property
+    def outgoing_open_channels(self) -> list:
+        """Cached list of open outgoing channels."""
+        if self._cached_outgoing_open is None and self.channels:
+            self._cached_outgoing_open = [c for c in self.channels.outgoing if c.status.is_open]
+        return self._cached_outgoing_open or []
+
+    @property
+    def incoming_open_channels(self) -> list:
+        """Cached list of open incoming channels."""
+        if self._cached_incoming_open is None and self.channels:
+            self._cached_incoming_open = [c for c in self.channels.incoming if c.status.is_open]
+        return self._cached_incoming_open or []
+
+    @property
+    def outgoing_pending_channels(self) -> list:
+        """Cached list of pending outgoing channels."""
+        if self._cached_outgoing_pending is None and self.channels:
+            self._cached_outgoing_pending = [
+                c for c in self.channels.outgoing if c.status.is_pending
+            ]
+        return self._cached_outgoing_pending or []
+
+    @property
+    def outgoing_not_closed_channels(self) -> list:
+        """Cached list of not-closed outgoing channels."""
+        if self._cached_outgoing_not_closed is None and self.channels:
+            self._cached_outgoing_not_closed = [
+                c for c in self.channels.outgoing if not c.status.is_closed
+            ]
+        return self._cached_outgoing_not_closed or []
+
+    @property
+    def address_to_open_channel(self) -> dict:
+        """Cached dict mapping destination address to open outgoing channel."""
+        if self._cached_address_to_open_channel is None and self.channels:
+            self._cached_address_to_open_channel = {
+                c.destination: c for c in self.channels.outgoing if c.status.is_open
+            }
+        return self._cached_address_to_open_channel or {}
+
+    def invalidate_channel_cache(self) -> None:
+        """Invalidate all channel caches when channels are modified."""
+        self._cached_outgoing_open = None
+        self._cached_incoming_open = None
+        self._cached_outgoing_pending = None
+        self._cached_outgoing_not_closed = None
+        self._cached_address_to_open_channel = None
+
     @master(keepalive, connectguard)
     async def get_total_channel_funds(self) -> Optional[Balance]:
         """
@@ -65,6 +114,9 @@ class ChannelMixin(HasAPI, HasChannels, HasParams, HasPeers):
 
             self.channels = channels
 
+            # Invalidate channel caches when channels are updated
+            self.invalidate_channel_cache()
+
             CHANNELS.labels("outgoing").set(len(channels.outgoing))
             CHANNELS.labels("incoming").set(len(channels.incoming))
 
@@ -88,7 +140,7 @@ class ChannelMixin(HasAPI, HasChannels, HasParams, HasPeers):
         if self.channels is None:
             return
 
-        out_opens = [c for c in self.channels.outgoing if c.status.is_open]
+        out_opens = self.outgoing_open_channels  # Use cached property
         low_balances = [c for c in out_opens if c.balance <= self.params.channel.min_balance]
 
         logger.debug(
@@ -120,7 +172,7 @@ class ChannelMixin(HasAPI, HasChannels, HasParams, HasPeers):
         to_peer_history = dict[str, datetime]()
         channels_to_close: list[str] = []
 
-        address_to_channel = {c.destination: c for c in self.channels.outgoing if c.status.is_open}
+        address_to_channel = self.address_to_open_channel  # Use cached property
 
         for address, channel in address_to_channel.items():
             timestamp = peer_history.get(address, None)
@@ -158,7 +210,7 @@ class ChannelMixin(HasAPI, HasChannels, HasParams, HasPeers):
         if self.channels is None:
             return
 
-        out_pendings = [c for c in self.channels.outgoing if c.status.is_pending]
+        out_pendings = self.outgoing_pending_channels  # Use cached property
 
         if len(out_pendings) > 0:
             logger.debug(
@@ -183,7 +235,7 @@ class ChannelMixin(HasAPI, HasChannels, HasParams, HasPeers):
         if self.channels is None:
             return
 
-        in_opens = [c for c in self.channels.incoming if c.status.is_open]
+        in_opens = self.incoming_open_channels  # Use cached property
 
         logger.debug(
             "Starting closure of incoming channels",
@@ -206,7 +258,7 @@ class ChannelMixin(HasAPI, HasChannels, HasParams, HasPeers):
         if self.channels is None:
             return
 
-        out_opens = [c for c in self.channels.outgoing if not c.status.is_closed]
+        out_opens = self.outgoing_not_closed_channels  # Use cached property
 
         addresses_with_channels = {c.destination for c in out_opens}
         all_addresses = {p.address.native for p in self.peers}

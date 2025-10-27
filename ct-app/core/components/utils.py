@@ -20,38 +20,58 @@ class Utils:
         allocations: list,
         eoa_balances: dict,
     ):
-        def filter_func(item, true_value):
-            if item is None:
-                return False
-            if not hasattr(item, "address") or not (hasattr, true_value, "address"):
-                return False
-            if item.address is None or true_value.node_address is None:
-                return False
+        # Pre-index nodes by address for O(1) lookup (eliminates O(n) per peer)
+        nodes_by_address = {}
+        for node in nodes:
+            if node and hasattr(node, "address") and node.address:
+                nodes_by_address[node.address.lower()] = node
 
-            return item.address.lower() == true_value.node_address.lower()
+        # Pre-index allocations by safe address for O(1) lookup (eliminates O(a) per peer)
+        allocations_by_safe: dict[str, list] = {}
+        for allocation in allocations:
+            if hasattr(allocation, "linked_safes"):
+                for safe_addr in allocation.linked_safes:
+                    if safe_addr not in allocations_by_safe:
+                        allocations_by_safe[safe_addr] = []
+                    allocations_by_safe[safe_addr].append(allocation)
 
+        # Pre-index eoa_balances by safe address for O(1) lookup (eliminates O(e) per peer)
+        eoa_balances_by_safe: dict[str, list] = {}
+        for eoa_balance in eoa_balances:
+            if hasattr(eoa_balance, "linked_safes"):
+                for safe_addr in eoa_balance.linked_safes:
+                    if safe_addr not in eoa_balances_by_safe:
+                        eoa_balances_by_safe[safe_addr] = []
+                    eoa_balances_by_safe[safe_addr].append(eoa_balance)
+
+        # Now process peers with O(1) lookups
         for peer in peers:
             balance = outgoing_channel_balance.get(peer.address.native, None)
-            node = next(filter(lambda n: filter_func(n, peer), nodes), None)
+
+            # O(1) node lookup instead of O(n) filter
+            node = (
+                nodes_by_address.get(peer.node_address.lower(), None)
+                if hasattr(peer, "node_address")
+                else None
+            )
 
             if node is None or not hasattr(node, "safe"):
                 continue
 
             peer.safe = deepcopy(node.safe)
-
             peer.safe.additional_balance = Balance.zero("wxHOPR")
 
-            for allocation in allocations:
-                if peer.safe.address in allocation.linked_safes:
-                    peer.safe.additional_balance += (
-                        allocation.unclaimed_amount / allocation.num_linked_safes
-                    )
+            # O(1) allocation lookup instead of O(a) iteration
+            safe_allocations = allocations_by_safe.get(peer.safe.address, [])
+            for allocation in safe_allocations:
+                peer.safe.additional_balance += (
+                    allocation.unclaimed_amount / allocation.num_linked_safes
+                )
 
-            for eoa_balance in eoa_balances:
-                if peer.safe.address in eoa_balance.linked_safes:
-                    peer.safe.additional_balance += (
-                        eoa_balance.amount / eoa_balance.num_linked_safes
-                    )
+            # O(1) eoa_balance lookup instead of O(e) iteration
+            safe_eoa_balances = eoa_balances_by_safe.get(peer.safe.address, [])
+            for eoa_balance in safe_eoa_balances:
+                peer.safe.additional_balance += eoa_balance.amount / eoa_balance.num_linked_safes
 
             if balance is not None:
                 peer.channel_balance = balance
