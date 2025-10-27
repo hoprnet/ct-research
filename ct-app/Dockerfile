@@ -40,6 +40,9 @@ WORKDIR /code
 # Copy installed dependencies from builder stage
 COPY --from=builder --chown=appuser:appuser /code/.venv /code/.venv
 
+# Copy uv binary from builder stage for running the application
+COPY --from=builder /bin/uv /bin/uvx /bin/
+
 # Copy application code
 COPY --chown=appuser:appuser . .
 
