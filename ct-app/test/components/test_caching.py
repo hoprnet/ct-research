@@ -1,5 +1,5 @@
 """
-Test suite for Phase 1 caching optimizations.
+Test suite caching optimizations.
 
 Tests cover:
 - Peer address caching and invalidation

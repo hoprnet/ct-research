@@ -1,21 +1,20 @@
 """
 Session management mixin with parallel message processing.
 
-ARCHITECTURE OVERVIEW - PHASE 2 PARALLEL PROCESSING
-====================================================
+ARCHITECTURE OVERVIEW
+=====================
 
 This module implements a worker pool architecture for high-throughput message processing.
 Messages are processed concurrently by multiple workers pulling from a shared queue.
 
 Performance Evolution:
 ----------------------
-- Phase 0 (Baseline): ~88 msg/sec with sequential processing
-- Phase 1 (Caching):  ~88 msg/sec with optimized data structures (O(n) → O(1))
-- Phase 2 (Parallel): ~119 msg/sec with 10 concurrent workers (+35% improvement)
+- Baseline without pool using async only: ~88 msg/sec with sequential processing
+- Parallel pool: ~119 msg/sec with 10 concurrent workers
 
 Worker Pool Architecture:
 -------------------------
-1. Main coordinator (`observe_message_queue`) spawns 10 worker tasks
+1. Main coordinator (`observe_message_queue`) spawns N worker tasks
 2. Each worker continuously pulls messages from shared MessageQueue
 3. Workers run until node.running = False
 4. Graceful shutdown waits for all workers to complete
@@ -29,8 +28,8 @@ Thread Safety Guarantees:
 
 Configuration:
 --------------
-- WORKER_COUNT = 10 (fixed, optimized for 100 peers)
-- Can be increased for higher throughput (diminishing returns after 20)
+- Worker count: Configure via sessions.message_worker_count in config.yaml
+- Default: 10 workers
 - Each worker has unique ID for metrics tracking
 
 Bottlenecks:
@@ -39,8 +38,6 @@ At 130 msg/sec with 10 workers:
 1. Session creation rate limiter (exponential backoff)
 2. Async context switching overhead
 3. Test environment adds ~10% overhead
-
-Production throughput: Expected 150-200+ msg/sec
 """
 
 from __future__ import annotations
@@ -77,18 +74,7 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
 
         Returns cached set of peer native addresses for O(1) membership testing.
         Cache is invalidated when peers are modified via invalidate_peer_cache().
-
-        Performance: Eliminates repeated O(p) set comprehensions (where p = peer count).
-        With 100+ peers and frequent access, provides ~100x speedup for lookups.
         """
-        # Track cache access for benchmarks (optional, won't fail if metrics not available)
-        try:
-            from ..components.messages.message_metrics import record_cache_access
-
-            record_cache_access("peer_addresses", self._cached_peer_addresses is not None)
-        except ImportError:
-            pass
-
         if self._cached_peer_addresses is None:
             self._cached_peer_addresses = {peer.address.native for peer in self.peers}
         return self._cached_peer_addresses
@@ -189,7 +175,7 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
         """
         Get existing session or create new one (double-check pattern with rate limiting).
 
-        Implements the double-check pattern to prevent race conditions when multiple
+        Implements a double-check pattern to prevent race conditions when multiple
         coroutines attempt to create sessions concurrently, with rate limiting to
         prevent API overload from repeated failures:
         1. First check: Is session in dict?
@@ -290,9 +276,6 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
         """
         Worker that continuously processes messages from the queue.
 
-        Part of Phase 2 parallel processing implementation. Multiple workers
-        run concurrently to maximize message throughput beyond 130 msg/sec.
-
         Processing Flow:
         ----------------
         1. Pull message from shared MessageQueue (1 second timeout)
@@ -309,8 +292,6 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
 
         Performance:
         ------------
-        - Each worker processes ~12 msg/sec independently
-        - 10 workers achieve ~119 msg/sec aggregate throughput
         - Timeout ensures responsive shutdown (checks self.running every 1s)
         - Errors don't crash worker (logged and continue)
 
@@ -355,7 +336,7 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
                 # Schedule message batch for background sending
                 self._schedule_message_batch(message, message.relayer)
 
-                # Track message processed for benchmarks (optional)
+                # Track message processed for benchmarks
                 try:
                     from ..components.messages.message_metrics import (
                         MESSAGES_PROCESSED,
@@ -382,34 +363,30 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
         """
         Spawn concurrent workers to process messages from the queue.
 
-        PHASE 2 PARALLEL PROCESSING COORDINATOR
-        ========================================
-
-        This method spawns a pool of 10 concurrent workers that pull messages
+        This method spawns a pool of concurrent workers that pull messages
         from the shared MessageQueue and process them in parallel, achieving
-        ~119 msg/sec throughput (35% improvement over Phase 1 sequential).
+        higher combined throughput.
 
         Architecture:
         -------------
-        - Coordinator spawns 10 asyncio tasks (_message_worker)
+        - Coordinator spawns N asyncio tasks (_message_worker)
         - Each worker independently pulls from shared MessageQueue
         - Workers process messages until self.running = False
         - Graceful shutdown via asyncio.gather() + try/finally
 
         Worker Pool Design:
         -------------------
-        - Fixed count: 10 workers (optimal for 100 peers)
-        - Each worker: ~12 msg/sec capacity
-        - Aggregate: ~119 msg/sec sustained throughput
+        - Configurable count via sessions.message_worker_count (default: 10)
         - Queue depth: Remains at 0 (no backpressure)
 
         Lifecycle:
         ----------
-        1. Set ACTIVE_WORKERS metric to 10
-        2. Create 10 asyncio tasks running _message_worker(id)
-        3. Wait for all workers with gather(..., return_exceptions=True)
-        4. On shutdown: Set ACTIVE_WORKERS to 0
-        5. Log completion
+        1. Read worker count from self.params.sessions.message_worker_count
+        2. Set ACTIVE_WORKERS metric
+        3. Create N asyncio tasks running _message_worker(id)
+        4. Wait for all workers with gather(..., return_exceptions=True)
+        5. On shutdown: Set ACTIVE_WORKERS to 0
+        6. Log completion
 
         Thread Safety:
         --------------
@@ -418,48 +395,28 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
         - Rate limiter per-relayer (independent locks, no contention)
         - Metrics are thread-safe (Prometheus atomic operations)
 
-        Performance Characteristics:
-        ---------------------------
-        - Target rate: 130 msg/sec
-        - Achieved: 119 msg/sec (91% of target)
-        - Queue depth: 0 (no backpressure)
-        - Latency P99: <0.001s
-        - Worker utilization: ~100% during burst traffic
-
-        Tuning:
-        -------
-        Increase WORKER_COUNT to 15-20 for higher throughput:
-        - 15 workers: ~150 msg/sec (estimated)
-        - 20 workers: ~180 msg/sec (estimated, diminishing returns)
-        - 30 workers: ~200 msg/sec (marginal gains, context switching overhead)
-
-        Bottlenecks (at 130 msg/sec):
-        ------------------------------
-        1. Session creation rate limiter (exponential backoff)
-        2. Async context switching (Python GIL, asyncio overhead)
-        3. UDP socket creation (OS-level limits)
-
         Returns:
             None. Runs continuously until node shutdown (self.running = False).
 
         Raises:
             None. All worker exceptions are caught and logged individually.
         """
-        WORKER_COUNT = 10
+        # Get configured worker count (default: 10)
+        worker_count = getattr(self.params.sessions, "message_worker_count", 10)
 
         # Update active workers metric
         try:
             from ..components.messages.message_metrics import ACTIVE_WORKERS
 
-            ACTIVE_WORKERS.set(WORKER_COUNT)
+            ACTIVE_WORKERS.set(worker_count)
         except ImportError:
             pass
 
         # Create worker tasks
-        logger.info(f"Starting {WORKER_COUNT} message processing workers")
+        logger.info(f"Starting {worker_count} message processing workers")
         workers = [
             asyncio.create_task(self._message_worker(worker_id))
-            for worker_id in range(WORKER_COUNT)
+            for worker_id in range(worker_count)
         ]
 
         try:
@@ -474,11 +431,11 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
             except ImportError:
                 pass
 
-            logger.info(f"All {WORKER_COUNT} message workers stopped")
+            logger.info(f"All {worker_count} message workers stopped")
 
     async def _gather_session_maintenance_data(self) -> tuple[set[int], set[str]]:
         """
-        Phase 1: Gather all I/O data needed for session maintenance.
+        Gather all I/O data needed for session maintenance.
 
         Performs all external API calls and data collection needed for maintaining
         sessions. This is done first to minimize time spent in critical sections later.
@@ -487,10 +444,6 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
             tuple: (active_ports, reachable_addresses) where:
                 - active_ports: Set of ports for active sessions at API level (O(1) lookup)
                 - reachable_addresses: Set of reachable peer addresses (O(1) lookup)
-
-        Performance:
-            Uses sets instead of lists for O(1) membership testing during session evaluation.
-            With 100+ sessions, this provides ~100x speedup for membership checks.
         """
         active_ports = {session.port for session in await self.api.list_udp_sessions()}
         reachable_addresses = self.peer_addresses  # Use cached property
@@ -506,7 +459,7 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
         now: float,
     ) -> tuple[bool, str | None]:
         """
-        Phase 3: Determine if a session should be removed and why.
+        Determine if a session should be removed and why.
 
         Evaluates session state against multiple criteria:
         1. Grace period: Peer unreachable and grace period expired
@@ -524,9 +477,6 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
             tuple: (should_remove, reason) where:
                 - should_remove: True if session should be closed
                 - reason: String describing why (for logging) or None
-
-        Performance:
-            Uses set membership (O(1)) instead of list membership (O(n)) for fast lookups.
         """
         # Check if session no longer active at API level (immediate removal, bypasses grace period)
         if session.port not in active_ports:
@@ -575,7 +525,7 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
         now: float,
     ) -> None:
         """
-        Phase 5a: Update grace period timers for unreachable peers.
+        Update grace period timers for unreachable peers.
 
         Manages the grace period dictionary by starting timers for newly unreachable
         peers and canceling timers for peers that have become reachable again.
@@ -603,7 +553,7 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
         sessions_to_close: list[tuple[str, "Session"]],
     ) -> None:
         """
-        Phase 5b: Remove closed sessions with identity check.
+        Remove closed sessions with identity check.
 
         Removes sessions from the local cache after API-level closure. Uses identity
         checking (comparing ports) to ensure we don't accidentally remove a newly-created
@@ -697,7 +647,6 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
             - Snapshot pattern prevents iteration errors
 
         Performance:
-            - O(n) where n = number of sessions
             - All API closes happen in parallel (see Node.stop())
             - Minimal critical section time
 

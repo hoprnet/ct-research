@@ -120,7 +120,6 @@ async def test_throughput_ceiling(
                 await benchmark_node.observe_message_queue()
 
         # Run test
-        start_time = time.time()
         workers_task = asyncio.create_task(run_workers())
         producer_task = asyncio.create_task(produce_messages())
 
@@ -135,8 +134,6 @@ async def test_throughput_ceiling(
             await asyncio.wait_for(workers_task, timeout=5.0)
         except asyncio.TimeoutError:
             workers_task.cancel()
-
-        duration = time.time() - start_time
 
         await collector.stop()
         metrics = collector.get_metrics()
@@ -176,7 +173,9 @@ async def test_throughput_ceiling(
     print(f"{'='*60}")
     for rate, data in results.items():
         status = "PASS ✓" if data["passed"] else "FAIL ✗"
-        print(f"{rate} msg/sec: {data['throughput']:.1f} actual | Queue: {data['max_queue']} | {status}")
+        throughput = data["throughput"]
+        queue_depth = data["max_queue"]
+        print(f"{rate} msg/sec: {throughput:.1f} actual | Queue: {queue_depth} | {status}")
 
     # Find maximum sustainable rate
     max_rate = max([rate for rate, data in results.items() if data["passed"]], default=0)

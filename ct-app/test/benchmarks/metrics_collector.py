@@ -5,7 +5,6 @@ Collects time-series data during benchmark execution including:
 - Message throughput (msg/sec)
 - Queue depth over time
 - Latency percentiles
-- Cache hit rates
 - Resource utilization
 """
 
@@ -28,8 +27,6 @@ class MetricsSnapshot:
     latency_p50: Optional[float] = None
     latency_p95: Optional[float] = None
     latency_p99: Optional[float] = None
-    cache_hits: Dict[str, int] = field(default_factory=dict)
-    cache_misses: Dict[str, int] = field(default_factory=dict)
     session_count: int = 0
 
 
@@ -153,10 +150,6 @@ class MetricsCollector:
         # Calculate latency percentiles from samples
         latency_p50, latency_p95, latency_p99 = self._calculate_latency_percentiles()
 
-        # Cache metrics
-        cache_hits = self._get_cache_metrics("hits")
-        cache_misses = self._get_cache_metrics("misses")
-
         # Session count
         session_count = self._get_metric("ct_session_count", default=0)
 
@@ -168,8 +161,6 @@ class MetricsCollector:
             latency_p50=latency_p50,
             latency_p95=latency_p95,
             latency_p99=latency_p99,
-            cache_hits=cache_hits,
-            cache_misses=cache_misses,
             session_count=int(session_count) if session_count else 0,
         )
 
@@ -186,21 +177,6 @@ class MetricsCollector:
         except Exception:
             pass
         return default
-
-    def _get_cache_metrics(self, metric_type: str) -> Dict[str, int]:
-        """Get cache hit/miss metrics by cache type."""
-        metrics = {}
-        metric_name = f"ct_cache_{metric_type}_total"
-        try:
-            for metric in REGISTRY.collect():
-                if metric.name == metric_name:
-                    for sample in metric.samples:
-                        if "cache_type" in sample.labels:
-                            cache_type = sample.labels["cache_type"]
-                            metrics[cache_type] = int(sample.value)
-        except Exception:
-            pass
-        return metrics
 
     def _calculate_latency_percentiles(
         self,

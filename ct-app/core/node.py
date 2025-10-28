@@ -121,7 +121,7 @@ class Node(
         self.connected = False
         self.running = True
 
-        # Initialize caching attributes for Phase 1 optimizations
+        # Initialize caching attributes
         # Peer address caching (SessionMixin)
         self._cached_peer_addresses: set[str] | None = None
         self._cached_reachable_destinations: set[str] | None = None

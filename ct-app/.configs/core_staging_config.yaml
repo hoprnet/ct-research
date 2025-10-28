@@ -115,6 +115,7 @@ sessions:
   - "0xe5ad48d9005f9529da75ded5d931c72bb14b0b19"
   session_retry_base_delay_seconds: 2.0
   session_retry_max_delay_seconds: 60.0
+  message_worker_count: 10
 
 
 # =============================================================================

@@ -114,7 +114,8 @@ sessions:
   blue_destinations: []
   session_retry_base_delay_seconds: 2.0
   session_retry_max_delay_seconds: 60.0
-  
+  message_worker_count: 10
+
 # =============================================================================
 # 
 # =============================================================================

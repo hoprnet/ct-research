@@ -1,17 +1,17 @@
 """
 Prometheus metrics for message processing performance.
 
-These metrics track message throughput, worker activity, cache efficiency,
-and processing latency for the parallel message processing system (Phase 2).
+These metrics track message throughput, worker activity, and processing latency
+for the parallel message processing system.
 
-PHASE 2 METRICS
-===============
+METRICS
+=======
 
 Worker Pool Metrics:
 --------------------
 - MESSAGES_PROCESSED: Total messages across all workers
 - WORKER_MESSAGES: Per-worker message count (labeled by worker_id)
-- ACTIVE_WORKERS: Current number of running workers (0 or 10)
+- ACTIVE_WORKERS: Current number of running workers
 
 Usage:
 ------
@@ -62,25 +62,6 @@ MESSAGE_LATENCY = Histogram(
     ["phase"],  # phases: queue_wait, session, send, total
     buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0),
 )
-
-# Cache performance metrics
-CACHE_HITS = Counter("ct_cache_hits_total", "Cache hits", ["cache_type"])
-
-CACHE_MISSES = Counter("ct_cache_misses_total", "Cache misses", ["cache_type"])
-
-
-def record_cache_access(cache_type: str, hit: bool):
-    """
-    Record a cache access (hit or miss).
-
-    Args:
-        cache_type: Type of cache (peer_addresses, channels, destinations)
-        hit: True if cache hit, False if cache miss
-    """
-    if hit:
-        CACHE_HITS.labels(cache_type=cache_type).inc()
-    else:
-        CACHE_MISSES.labels(cache_type=cache_type).inc()
 
 
 def record_message_latency(phase: str, duration_seconds: float):
