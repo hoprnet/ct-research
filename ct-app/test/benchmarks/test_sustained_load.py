@@ -145,6 +145,11 @@ async def test_sustained_100_msg_per_sec(
     # Analysis and assertions
     avg_throughput = metrics.avg_throughput()
     max_queue = metrics.max_queue_depth()
+    scheduled = metrics.total_messages_scheduled()
+    success = metrics.total_messages_sent_success()
+    failed = metrics.total_messages_sent_failed()
+    success_rate = metrics.delivery_success_rate()
+    e2e_p99 = metrics.avg_e2e_latency_p99()
 
     print(f"\n{'='*60}")
     print("Sustained Load Benchmark: 100 msg/sec")
@@ -154,6 +159,13 @@ async def test_sustained_100_msg_per_sec(
     print(f"Avg throughput:    {avg_throughput:.1f} msg/sec")
     print(f"Max queue depth:   {max_queue}")
     print(f"Avg P99 latency:   {metrics.avg_latency_p99():.3f}s")
+    print("")
+    print("Delivery Metrics:")
+    print(f"  Scheduled:       {scheduled}")
+    print(f"  Success:         {success}")
+    print(f"  Failed:          {failed}")
+    print(f"  Success rate:    {success_rate*100:.1f}%")
+    print(f"  E2E P99 latency: {e2e_p99:.3f}s")
     print(f"{'='*60}\n")
 
     # Assertions (80% tolerance accounts for test overhead and async scheduling)
@@ -161,6 +173,11 @@ async def test_sustained_100_msg_per_sec(
         avg_throughput >= TARGET_RATE * 0.80
     ), f"Throughput {avg_throughput:.1f} is below 80% of target {TARGET_RATE}"
     assert max_queue < 500, f"Max queue depth {max_queue} indicates backpressure"
+
+    # Delivery assertions (allow some overhead/async tasks to still be in flight)
+    if scheduled > 0:
+        assert success_rate >= 0.90, f"Success rate {success_rate*100:.1f}% is below 90%"
+        assert e2e_p99 < 5.0, f"E2E P99 latency {e2e_p99:.3f}s exceeds 5s threshold"
 
     # Save results
     results_dir = Path(__file__).parent / "results"
@@ -294,6 +311,11 @@ async def test_sustained_130_msg_per_sec(
     avg_throughput = metrics.avg_throughput()
     max_queue = metrics.max_queue_depth()
     queue_growth = _calculate_queue_growth_rate(metrics)
+    scheduled = metrics.total_messages_scheduled()
+    success = metrics.total_messages_sent_success()
+    failed = metrics.total_messages_sent_failed()
+    success_rate = metrics.delivery_success_rate()
+    e2e_p99 = metrics.avg_e2e_latency_p99()
 
     print(f"\n{'='*60}")
     print("Sustained Load Benchmark: 130 msg/sec (USER TARGET)")
@@ -304,6 +326,13 @@ async def test_sustained_130_msg_per_sec(
     print(f"Max queue depth:   {max_queue}")
     print(f"Queue growth rate: {queue_growth:.2f} msgs/sec")
     print(f"Avg P99 latency:   {metrics.avg_latency_p99():.3f}s")
+    print("")
+    print("Delivery Metrics:")
+    print(f"  Scheduled:       {scheduled}")
+    print(f"  Success:         {success}")
+    print(f"  Failed:          {failed}")
+    print(f"  Success rate:    {success_rate*100:.1f}%")
+    print(f"  E2E P99 latency: {e2e_p99:.3f}s")
     print("")
     status = "PASS" if max_queue < 100 and queue_growth < 1.0 else "FAIL - BACKPRESSURE DETECTED"
     print(f"Status: {status}")
@@ -318,6 +347,11 @@ async def test_sustained_130_msg_per_sec(
     assert (
         queue_growth < 1.0
     ), f"Queue growing at {queue_growth:.2f} msg/sec - system cannot sustain rate"
+
+    # Delivery assertions
+    if scheduled > 0:
+        assert success_rate >= 0.90, f"Success rate {success_rate*100:.1f}% is below 90%"
+        assert e2e_p99 < 5.0, f"E2E P99 latency {e2e_p99:.3f}s exceeds 5s threshold"
 
     # Save detailed results
     _save_results(metrics, "sustained_130", TARGET_RATE, duration, messages_sent)

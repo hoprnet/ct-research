@@ -28,6 +28,11 @@ class MetricsSnapshot:
     latency_p95: Optional[float] = None
     latency_p99: Optional[float] = None
     session_count: int = 0
+    # End-to-end delivery metrics
+    messages_scheduled: int = 0
+    messages_sent_success: int = 0
+    messages_sent_failed: int = 0
+    e2e_latency_p99: Optional[float] = None
 
 
 @dataclass
@@ -64,6 +69,39 @@ class BenchmarkMetrics:
     def avg_latency_p99(self) -> float:
         """Average P99 latency across snapshots."""
         p99_values = [s.latency_p99 for s in self.snapshots if s.latency_p99 is not None]
+        if not p99_values:
+            return 0.0
+        return sum(p99_values) / len(p99_values)
+
+    def total_messages_scheduled(self) -> int:
+        """Total messages scheduled across all snapshots."""
+        if not self.snapshots:
+            return 0
+        return self.snapshots[-1].messages_scheduled
+
+    def total_messages_sent_success(self) -> int:
+        """Total successful message sends."""
+        if not self.snapshots:
+            return 0
+        return self.snapshots[-1].messages_sent_success
+
+    def total_messages_sent_failed(self) -> int:
+        """Total failed message sends."""
+        if not self.snapshots:
+            return 0
+        return self.snapshots[-1].messages_sent_failed
+
+    def delivery_success_rate(self) -> float:
+        """Calculate delivery success rate (0.0 to 1.0)."""
+        scheduled = self.total_messages_scheduled()
+        if scheduled == 0:
+            return 0.0
+        success = self.total_messages_sent_success()
+        return success / scheduled
+
+    def avg_e2e_latency_p99(self) -> float:
+        """Average P99 end-to-end latency across snapshots."""
+        p99_values = [s.e2e_latency_p99 for s in self.snapshots if s.e2e_latency_p99 is not None]
         if not p99_values:
             return 0.0
         return sum(p99_values) / len(p99_values)
@@ -153,6 +191,14 @@ class MetricsCollector:
         # Session count
         session_count = self._get_metric("ct_session_count", default=0)
 
+        # End-to-end delivery metrics
+        messages_scheduled = self._get_metric("ct_messages_scheduled_total", default=0)
+        messages_sent_success = self._get_metric("ct_messages_sent_success_total", default=0)
+        messages_sent_failed = self._get_metric("ct_messages_sent_failed_total", default=0)
+
+        # E2E latency P99 from histogram
+        e2e_latency_p99 = self._get_histogram_quantile("ct_message_e2e_latency_seconds", 0.99)
+
         return MetricsSnapshot(
             timestamp=now,
             queue_size=int(queue_size) if queue_size else 0,
@@ -162,6 +208,10 @@ class MetricsCollector:
             latency_p95=latency_p95,
             latency_p99=latency_p99,
             session_count=int(session_count) if session_count else 0,
+            messages_scheduled=int(messages_scheduled) if messages_scheduled else 0,
+            messages_sent_success=int(messages_sent_success) if messages_sent_success else 0,
+            messages_sent_failed=int(messages_sent_failed) if messages_sent_failed else 0,
+            e2e_latency_p99=e2e_latency_p99,
         )
 
     def _get_metric(self, name: str, default: Optional[float] = None) -> Optional[float]:
@@ -177,6 +227,46 @@ class MetricsCollector:
         except Exception:
             pass
         return default
+
+    def _get_histogram_quantile(self, histogram_name: str, quantile: float) -> Optional[float]:
+        """
+        Calculate quantile from histogram bucket data.
+
+        This is a simplified quantile estimation from Prometheus histogram buckets.
+        For accurate quantiles, use Prometheus query language with histogram_quantile().
+        """
+        try:
+            buckets = []
+            for metric in REGISTRY.collect():
+                if metric.name == histogram_name:
+                    for sample in metric.samples:
+                        if sample.name == f"{histogram_name}_bucket":
+                            le = sample.labels.get("le")
+                            if le and le != "+Inf":
+                                buckets.append((float(le), sample.value))
+
+            if not buckets:
+                return None
+
+            # Sort by bucket upper bound
+            buckets.sort(key=lambda x: x[0])
+
+            # Find total count
+            total_count = buckets[-1][1] if buckets else 0
+            if total_count == 0:
+                return None
+
+            # Find bucket containing the quantile
+            target_count = total_count * quantile
+            for upper_bound, cumulative_count in buckets:
+                if cumulative_count >= target_count:
+                    return upper_bound
+
+            # If we didn't find it, return the max bucket
+            return buckets[-1][0] if buckets else None
+
+        except Exception:
+            return None
 
     def _calculate_latency_percentiles(
         self,

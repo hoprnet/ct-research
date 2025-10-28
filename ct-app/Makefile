@@ -15,7 +15,7 @@ fmt:
 
 .PHONY: test
 test:
-	@uv run pytest -m "not stress" --cov=core --cov-report html:.coveragehtml
+	@uv run pytest -m "not stress and not benchmark" --cov=core --cov-report html:.coveragehtml
 
 .PHONY: stress
 stress:

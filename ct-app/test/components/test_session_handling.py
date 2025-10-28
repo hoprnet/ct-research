@@ -304,13 +304,8 @@ async def test_concurrent_session_access_race_condition(
 
     exceptions = []
 
-    async def run_observe():
-        for _ in range(20):
-            try:
-                await session_node.observe_message_queue()
-            except Exception as e:
-                exceptions.append(e)
-            await asyncio.sleep(0.001)
+    # Start worker pool in background (new architecture spawns workers once)
+    observe_task = asyncio.create_task(session_node.observe_message_queue())
 
     async def run_maintain():
         for _ in range(20):
@@ -325,8 +320,18 @@ async def test_concurrent_session_access_race_condition(
                 exceptions.append(e)
             await asyncio.sleep(0.001)
 
-    # Run both coroutines concurrently
-    await asyncio.gather(run_observe(), run_maintain(), return_exceptions=True)
+    # Run maintenance while workers are running
+    try:
+        await asyncio.wait_for(run_maintain(), timeout=2.0)
+    except asyncio.TimeoutError:
+        pass
+
+    # Stop workers
+    session_node.running = False
+    try:
+        await asyncio.wait_for(observe_task, timeout=2.0)
+    except asyncio.TimeoutError:
+        observe_task.cancel()
 
     # BUG: Race conditions can cause RuntimeError or inconsistent state
     runtime_errors = [e for e in exceptions if isinstance(e, RuntimeError)]

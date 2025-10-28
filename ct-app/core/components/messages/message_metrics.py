@@ -63,6 +63,29 @@ MESSAGE_LATENCY = Histogram(
     buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0),
 )
 
+# End-to-end delivery metrics
+MESSAGES_SCHEDULED = Counter(
+    "ct_messages_scheduled_total",
+    "Total messages scheduled for sending (enqueued to AsyncLoop)",
+)
+
+MESSAGES_SENT_SUCCESS = Counter(
+    "ct_messages_sent_success_total",
+    "Total messages successfully sent (batch send completed)",
+)
+
+MESSAGES_SENT_FAILED = Counter(
+    "ct_messages_sent_failed_total",
+    "Total messages that failed to send",
+    ["reason"],  # reasons: timeout, socket_error, session_closed, unknown
+)
+
+MESSAGE_E2E_LATENCY = Histogram(
+    "ct_message_e2e_latency_seconds",
+    "End-to-end message latency from queue entry to send completion",
+    buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0),
+)
+
 
 def record_message_latency(phase: str, duration_seconds: float):
     """

@@ -187,6 +187,7 @@ class NodeHelper:
             1. Sends message.batch_size copies of the message
             2. Waits to receive responses (total size = batch_size * packet_size)
             3. Handles timeouts and partial receives gracefully
+            4. Records end-to-end delivery metrics (success/failure, latency)
 
         Background Task Pattern:
             This method is designed to run as a fire-and-forget background task:
@@ -205,9 +206,62 @@ class NodeHelper:
             its own socket, and we use session_ref from observe_message_queue()
             to avoid accessing the shared sessions dict during background execution.
 
+        Metrics:
+            Tracks end-to-end delivery success/failure and latency from queue
+            entry to send completion.
+
         Note:
             Exceptions are logged by AsyncLoop but don't crash the main process.
         """
-        for _ in range(message.batch_size):
-            session.send(message)
-        await session.receive(message.packet_size, message.batch_size * message.packet_size)
+        import asyncio
+        import time
+
+        # Import metrics (with graceful fallback for tests that don't have them)
+        try:
+            from ..messages.message_metrics import (
+                MESSAGES_SENT_SUCCESS,
+                MESSAGES_SENT_FAILED,
+                MESSAGE_E2E_LATENCY,
+            )
+
+            metrics_available = True
+        except ImportError:
+            metrics_available = False
+
+        failure_reason = None
+
+        try:
+            # Send batch
+            for _ in range(message.batch_size):
+                session.send(message)
+
+            # Wait for responses
+            await session.receive(message.packet_size, message.batch_size * message.packet_size)
+
+            # Success - record metrics
+            if metrics_available:
+                MESSAGES_SENT_SUCCESS.inc()
+                e2e_latency = time.time() - message.queued_at
+                MESSAGE_E2E_LATENCY.observe(e2e_latency)
+
+        except asyncio.TimeoutError:
+            failure_reason = "timeout"
+            raise
+        except AttributeError as e:
+            # Session socket is None (session closed)
+            if "socket is None" in str(e).lower():
+                failure_reason = "session_closed"
+            else:
+                failure_reason = "unknown"
+            raise
+        except OSError:
+            # Socket errors (rare for UDP but can happen)
+            failure_reason = "socket_error"
+            raise
+        except Exception:
+            failure_reason = "unknown"
+            raise
+        finally:
+            # Track failures
+            if failure_reason and metrics_available:
+                MESSAGES_SENT_FAILED.labels(reason=failure_reason).inc()

@@ -261,6 +261,15 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
         if session_ref:
             # Use the actual session reference for packet_size
             message.packet_size = session_ref.payload
+
+            # Track message scheduled for sending
+            try:
+                from ..components.messages.message_metrics import MESSAGES_SCHEDULED
+
+                MESSAGES_SCHEDULED.inc()
+            except ImportError:
+                pass
+
             AsyncLoop.add(
                 NodeHelper.send_batch_messages,
                 session_ref,
@@ -316,15 +325,14 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
                 # Get message with timeout to allow checking self.running flag
                 message: MessageFormat = await asyncio.wait_for(MessageQueue().get(), timeout=1.0)
 
-                # Get channels for validation
-                channels: list[str] = (
-                    [channel.destination for channel in self.channels.outgoing]
-                    if self.channels
-                    else []
-                )
+                # Check if relayer has open channel (O(1) lookup via cached dict)
+                if not self.channels or message.relayer not in self.address_to_open_channel:
+                    continue
 
                 # Select destination for session
-                destination = self._select_session_destination(message, channels)
+                destination = self._select_session_destination(
+                    message, list(self.address_to_open_channel.keys())
+                )
                 if not destination:
                     continue
 
