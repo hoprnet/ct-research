@@ -107,33 +107,35 @@ async def test_sustained_100_msg_per_sec(
             peer_idx += 1
             await asyncio.sleep(interval)
 
-    # Start message consumer (observe_message_queue processes messages from queue)
-    # Access the underlying function to bypass keepalive decorator
-    if hasattr(benchmark_node.observe_message_queue, "__wrapped__"):
-        # Decorated method - use unwrapped version
-        observe_fn = benchmark_node.observe_message_queue.__wrapped__
-
-        async def process_one_message():
+    # Start message consumer workers (Phase 2: workers run in background)
+    # Start the worker pool that will process messages concurrently
+    async def run_workers():
+        """Run the message worker pool for the test duration."""
+        # Access unwrapped function to get the actual worker spawning logic
+        if hasattr(benchmark_node.observe_message_queue, "__wrapped__"):
+            observe_fn = benchmark_node.observe_message_queue.__wrapped__
             await observe_fn(benchmark_node)
-
-    else:
-        # Undecorated method - use directly
-        async def process_one_message():
+        else:
             await benchmark_node.observe_message_queue()
 
-    async def consume_messages():
-        end_time = time.time() + DURATION
-
-        while time.time() < end_time:
-            try:
-                await asyncio.wait_for(process_one_message(), timeout=1.0)
-            except asyncio.TimeoutError:
-                # No message available, continue
-                continue
-
-    # Run producer and consumer concurrently
+    # Run producer and workers concurrently
+    # Workers will run until benchmark_node.running = False
     start_time = time.time()
-    await asyncio.gather(produce_messages(), consume_messages())
+    workers_task = asyncio.create_task(run_workers())
+    producer_task = asyncio.create_task(produce_messages())
+
+    # Wait for producer to finish
+    await producer_task
+
+    # Stop workers by setting running flag
+    benchmark_node.running = False
+
+    # Wait for workers to stop (with timeout)
+    try:
+        await asyncio.wait_for(workers_task, timeout=5.0)
+    except asyncio.TimeoutError:
+        workers_task.cancel()
+
     duration = time.time() - start_time
 
     # Stop metrics collection
@@ -257,32 +259,32 @@ async def test_sustained_130_msg_per_sec(
             peer_idx += 1
             await asyncio.sleep(interval)
 
-    # Access the underlying function to bypass keepalive decorator
-    if hasattr(benchmark_node.observe_message_queue, "__wrapped__"):
-        # Decorated method - use unwrapped version
-        observe_fn = benchmark_node.observe_message_queue.__wrapped__
-
-        async def process_one_message():
+    # Start message consumer workers (Phase 2: workers run in background)
+    async def run_workers():
+        """Run the message worker pool for the test duration."""
+        if hasattr(benchmark_node.observe_message_queue, "__wrapped__"):
+            observe_fn = benchmark_node.observe_message_queue.__wrapped__
             await observe_fn(benchmark_node)
-
-    else:
-        # Undecorated method - use directly
-        async def process_one_message():
+        else:
             await benchmark_node.observe_message_queue()
-
-    async def consume_messages():
-        end_time = time.time() + DURATION
-
-        while time.time() < end_time:
-            try:
-                await asyncio.wait_for(process_one_message(), timeout=1.0)
-            except asyncio.TimeoutError:
-                # No message available, continue
-                continue
 
     # Run test
     start_time = time.time()
-    await asyncio.gather(produce_messages(), consume_messages())
+    workers_task = asyncio.create_task(run_workers())
+    producer_task = asyncio.create_task(produce_messages())
+
+    # Wait for producer to finish
+    await producer_task
+
+    # Stop workers
+    benchmark_node.running = False
+
+    # Wait for workers to stop
+    try:
+        await asyncio.wait_for(workers_task, timeout=5.0)
+    except asyncio.TimeoutError:
+        workers_task.cancel()
+
     duration = time.time() - start_time
 
     await collector.stop()

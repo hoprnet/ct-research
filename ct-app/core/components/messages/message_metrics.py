@@ -1,14 +1,56 @@
 """
 Prometheus metrics for message processing performance.
 
-These metrics are used by the benchmark suite to measure throughput,
-latency, and cache performance.
+These metrics track message throughput, worker activity, cache efficiency,
+and processing latency for the parallel message processing system (Phase 2).
+
+PHASE 2 METRICS
+===============
+
+Worker Pool Metrics:
+--------------------
+- MESSAGES_PROCESSED: Total messages across all workers
+- WORKER_MESSAGES: Per-worker message count (labeled by worker_id)
+- ACTIVE_WORKERS: Current number of running workers (0 or 10)
+
+Usage:
+------
+- MESSAGES_PROCESSED.inc() - Increments total counter
+- WORKER_MESSAGES.labels(worker_id=0).inc() - Increments worker 0's counter
+- ACTIVE_WORKERS.set(10) - Sets active workers to 10
+
+Performance Monitoring:
+-----------------------
+Query WORKER_MESSAGES to identify:
+- Load imbalance (some workers process more than others)
+- Worker stalls (worker_id counter not incrementing)
+- Throughput per worker (rate(WORKER_MESSAGES[1m]))
+
+Aggregate throughput:
+  rate(MESSAGES_PROCESSED[1m])
+
+Per-worker throughput:
+  rate(WORKER_MESSAGES{worker_id="0"}[1m])
+
+Worker utilization:
+  ACTIVE_WORKERS / 10 * 100%
 """
 
 from prometheus_client import Counter, Gauge, Histogram
 
 # Message processing counters
 MESSAGES_PROCESSED = Counter("ct_messages_processed_total", "Total messages processed")
+
+# Worker metrics (Phase 2 parallel processing)
+WORKER_MESSAGES = Counter(
+    "ct_worker_messages_total",
+    "Messages processed per worker (Phase 2 parallel processing)",
+    ["worker_id"],
+)
+ACTIVE_WORKERS = Gauge(
+    "ct_active_workers",
+    "Number of active message workers (0=stopped, 10=running)",
+)
 
 # Session count
 SESSION_COUNT = Gauge("ct_session_count", "Number of active sessions")

@@ -101,6 +101,11 @@ class MetricsCollector:
 
     async def start(self):
         """Start collecting metrics."""
+        # Initialize counter baseline from current Prometheus value
+        # to avoid including messages from previous test runs
+        current_count = self._get_metric("ct_messages_processed_total")
+        self._last_message_count = int(current_count) if current_count else 0
+
         self._running = True
         self._task = asyncio.create_task(self._collection_loop())
 
