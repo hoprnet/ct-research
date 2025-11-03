@@ -119,6 +119,7 @@ sessions:
   - "0x633382b748e34432df1dbdfdd234833454b3d768"
   session_retry_base_delay_seconds: 2.0
   session_retry_max_delay_seconds: 60.0
+  message_worker_count: 10
 
 
 # =============================================================================

@@ -206,6 +206,7 @@ async def test_grace_period_under_load(
     # Create 100 sessions with peers
     peers = mock_peers(SESSION_COUNT)
     stress_node.peers = peers
+    stress_node.invalidate_peer_cache()  # Must invalidate cache when modifying peers
 
     for i in range(SESSION_COUNT):
         relayer = f"peer_{i}"
@@ -230,6 +231,7 @@ async def test_grace_period_under_load(
     for iteration in range(FLAP_ITERATIONS):
         # Make 50% of peers unreachable
         stress_node.peers = set(list(peers)[flapping_peer_count:])
+        stress_node.invalidate_peer_cache()  # Must invalidate cache when modifying peers
         await stress_node.maintain_sessions()
 
         # Verify grace periods started for unreachable peers
@@ -244,6 +246,7 @@ async def test_grace_period_under_load(
 
         # Make peers reachable again
         stress_node.peers = peers
+        stress_node.invalidate_peer_cache()  # Must invalidate cache when modifying peers
         await stress_node.maintain_sessions()
 
         # Verify grace periods cancelled

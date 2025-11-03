@@ -54,6 +54,10 @@ class PeersMixin(HasAPI, HasPeers):
                 self.peers.add(peer)
                 counts["new"] += 1
 
+        # Invalidate peer address cache after modifications
+        if counts["new"] > 0 or counts["unreachable"] > 0:
+            self.invalidate_peer_cache()
+
         logger.info("Retrieved visible peers", counts)
 
         PEERS_COUNT.set(len(self.peers))

@@ -15,8 +15,28 @@ fmt:
 
 .PHONY: test
 test:
-	@uv run pytest -m "not stress" --cov=core --cov-report html:.coveragehtml
+	@uv run pytest -m "not stress and not benchmark" --cov=core --cov-report html:.coveragehtml
 
 .PHONY: stress
 stress:
 	@uv run pytest -m stress
+
+.PHONY: benchmark
+benchmark:
+	@echo "Running sustained load benchmarks (30 min)..."
+	@uv run pytest test/benchmarks -m benchmark -v
+
+.PHONY: benchmark-quick
+benchmark-quick:
+	@echo "Running quick benchmarks (5 min)..."
+	@uv run pytest test/benchmarks/test_sustained_load.py::test_sustained_100_msg_per_sec -v --duration=60
+
+.PHONY: benchmark-130
+benchmark-130:
+	@echo "Running 130 msg/sec benchmark (10 min)..."
+	@uv run pytest test/benchmarks/test_sustained_load.py::test_sustained_130_msg_per_sec -v
+
+.PHONY: benchmark-ramping
+benchmark-ramping:
+	@echo "Running ramping load test to find limits..."
+	@uv run pytest test/benchmarks/test_ramping_load.py -v

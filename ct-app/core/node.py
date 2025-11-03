@@ -121,6 +121,18 @@ class Node(
         self.connected = False
         self.running = True
 
+        # Initialize caching attributes
+        # Peer address caching (SessionMixin)
+        self._cached_peer_addresses: set[str] | None = None
+        self._cached_reachable_destinations: set[str] | None = None
+
+        # Channel caching (ChannelMixin)
+        self._cached_outgoing_open: list | None = None
+        self._cached_incoming_open: list | None = None
+        self._cached_outgoing_pending: list | None = None
+        self._cached_outgoing_not_closed: list | None = None
+        self._cached_address_to_open_channel: dict | None = None
+
         BALANCE_MULTIPLIER.set(1.0)
 
     async def start(self):

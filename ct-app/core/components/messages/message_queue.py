@@ -13,12 +13,17 @@ class MessageQueue(metaclass=Singleton):
         self._buffer: Queue[MessageFormat] = Queue()
 
     async def get(self) -> MessageFormat:
-        return await self.buffer.get()
+        """Get message from queue and update gauge after operation completes."""
+        item = await self._buffer.get()
+        QUEUE_SIZE.set(self._buffer.qsize())
+        return item
 
     async def put(self, item: MessageFormat):
-        await self.buffer.put(item)
+        """Put message in queue and update gauge after operation completes."""
+        await self._buffer.put(item)
+        QUEUE_SIZE.set(self._buffer.qsize())
 
     @property
     def buffer(self) -> Queue[MessageFormat]:
-        QUEUE_SIZE.set(self._buffer.qsize())
+        """Direct access to buffer (used for qsize checks in tests)."""
         return self._buffer

@@ -1,4 +1,5 @@
 import re
+import time
 from datetime import datetime
 from typing import Optional
 
@@ -33,6 +34,8 @@ class MessageFormat:
         self.index = int(index) if index else self.message_index
         self.inner_index = int(inner_index) if inner_index else 1
         self.update_timestamp(timestamp)
+        # Track queue entry time for end-to-end latency metrics
+        self.queued_at: float = time.time()
 
     @property
     def size(self) -> int:
