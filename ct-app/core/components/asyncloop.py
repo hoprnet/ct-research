@@ -21,12 +21,53 @@ class AsyncLoop(metaclass=Singleton):
 
     @classmethod
     def run(cls, process: Callable, stop_callback: Callable):
+        """
+        Run an async process with graceful shutdown support.
+
+        Executes the main process and ensures cleanup via stop_callback even if
+        the process is cancelled or fails. Supports both synchronous and asynchronous
+        stop callbacks for flexible shutdown strategies.
+
+        Args:
+            process: Async callable to run (e.g., node.start)
+            stop_callback: Cleanup function called on shutdown (sync or async)
+
+        Behavior:
+            1. Runs process() to completion
+            2. On completion or cancellation, calls stop_callback
+            3. Stops the event loop and cancels all tasks
+
+        Async Stop Callback Support:
+            This method detects if stop_callback is async using
+            asyncio.iscoroutinefunction() and runs it appropriately:
+            - Async: await stop_callback() using run_until_complete()
+            - Sync: stop_callback() called directly
+
+            This enables graceful shutdown with parallel session closing in
+            Node.stop(), which requires async/await for API calls.
+
+        Exception Handling:
+            - CancelledError: Logged, cleanup proceeds
+            - Any exception: Cleanup guaranteed via finally block
+
+        Example:
+            >>> loop = AsyncLoop()
+            >>> async def main():
+            ...     await node.start()
+            >>> async def cleanup():
+            ...     await node.stop()  # Async cleanup
+            >>> loop.run(main, cleanup)  # Runs async cleanup
+        """
         try:
             cls().loop.run_until_complete(process())
         except asyncio.CancelledError:
             logger.error("Stopping the instance")
         finally:
-            stop_callback()
+            # Handle both sync and async stop callbacks
+            if asyncio.iscoroutinefunction(stop_callback):
+                cls().loop.run_until_complete(stop_callback())
+            else:
+                stop_callback()
             cls().stop()
 
     @classmethod
@@ -51,7 +92,22 @@ class AsyncLoop(metaclass=Singleton):
         if publish_to_task_set:
             cls().tasks.add(task)
         else:
-            task.add_done_callback(lambda t: t.cancel() if not t.done() else None)
+            # Fire-and-forget tasks: log exceptions but don't crash
+            def _log_task_result(t):
+                try:
+                    t.result()  # Retrieve result to surface exceptions
+                except asyncio.CancelledError:
+                    pass  # Expected during shutdown
+                except Exception as e:
+                    logger.error(
+                        "Background task failed",
+                        {
+                            "task": getattr(callback, "__name__", str(callback)),
+                            "error": str(e),
+                        },
+                    )
+
+            task.add_done_callback(_log_task_result)
 
     @classmethod
     def run_in_thread(cls, callback: Callable, *args):
@@ -71,7 +127,16 @@ class AsyncLoop(metaclass=Singleton):
         await asyncio.gather(*cls().tasks)
 
     @classmethod
-    async def gather_any(cls, futures: list[asyncio.Future]) -> tuple[Any]:
+    async def gather_any(cls, futures: list[asyncio.Future]) -> list[Any]:
+        """
+        Gather multiple futures and return their results.
+
+        Args:
+            futures: List of asyncio futures to gather
+
+        Returns:
+            list[Any]: Results from all futures (asyncio.gather returns a list)
+        """
         return await asyncio.gather(*futures)
 
     @classmethod

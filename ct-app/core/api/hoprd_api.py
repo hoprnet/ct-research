@@ -8,7 +8,8 @@ from . import request_objects as req
 from . import response_objects as resp
 from .http_method import HTTPMethod
 
-logging.getLogger("api-lib").setLevel(logging.WARNING)
+logging.getLogger("api-lib").setLevel(logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 class HoprdAPI(ApiLib):
@@ -147,23 +148,64 @@ class HoprdAPI(ApiLib):
         data = req.CreateSessionBody(
             capabilities_body.as_array,
             destination,
+            target_body.as_dict,
             listen_host,
             path_body.as_dict,
             path_body.as_dict,
             "0 KB",
-            target_body.as_dict,
         )
-        if r := await self.try_req(
-            HTTPMethod.POST,
-            "/session/udp",
-            resp.Session,
-            data=data,
-            timeout=4,
-        ):
-            return r
-        else:
+
+        full_url = f"{self.host}{self.prefix}/session/udp"
+        logger.debug(
+            "Attempting to open session",
+            {
+                "destination": destination,
+                "relayer": relayer,
+                "full_url": full_url,
+                "host": self.host,
+                "prefix": self.prefix,
+            },
+        )
+
+        try:
+            r = await self.try_req(
+                HTTPMethod.POST,
+                "/session/udp",
+                resp.Session,
+                data=data,
+                timeout=4,
+            )
+            if r:
+                return r
+            else:
+                # API call returned None - could be timeout, network error, or API error
+                logger.error(
+                    "API call returned None for session open",
+                    {
+                        "destination": destination,
+                        "relayer": relayer,
+                        "full_url": full_url,
+                    },
+                )
+                return resp.SessionFailure(
+                    {
+                        "error": "api call returned none (timeout or connection error)",
+                        "status": "NO_SESSION_OPENED",
+                        "destination": destination,
+                        "relayer": relayer,
+                    }
+                )
+        except Exception as e:
+            # Capture any exception details for better diagnostics
+            error_type = type(e).__name__
+            error_msg = str(e)
             return resp.SessionFailure(
-                {"error": "api call or timeout error", "status": "NO_SESSION_OPENED"}
+                {
+                    "error": f"{error_type}: {error_msg}",
+                    "status": "NO_SESSION_OPENED",
+                    "destination": destination,
+                    "relayer": relayer,
+                }
             )
 
     async def close_session(self, session: resp.Session) -> bool:

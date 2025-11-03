@@ -69,10 +69,6 @@ def peers_raw() -> list[dict]:
 @pytest.fixture
 def peers(peers_raw: list[dict]) -> set[Peer]:
     peers = [Peer(peer["address"]) for peer in peers_raw]
-    for peer in peers:
-        peer.safe_balance = Balance(f"{randint(100, 200)} wxHOPR")
-        peer.channel_balance = Balance(f"{randint(10, 50)} wxHOPR")
-
     return set(peers)
 
 

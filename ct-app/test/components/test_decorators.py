@@ -1,5 +1,6 @@
 import asyncio
 from dataclasses import dataclass
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -45,7 +46,10 @@ def foo_class():
 
 
 @pytest.mark.asyncio
-async def test_connectguard(foo_class: FooClass):
+async def test_connectguard(foo_class: FooClass, mocker):
+    # Mock asyncio.sleep to avoid 15-second delay in connectguard decorator
+    mocker.patch("core.components.decorators.asyncio.sleep", new=AsyncMock())
+
     foo_class.connected = False
     res = await foo_class.foo_connectguard_func()
     assert res is None

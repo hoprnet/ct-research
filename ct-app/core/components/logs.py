@@ -32,6 +32,9 @@ class JSONFormatter(logging.Formatter):
                 record.exc_info[0], record.exc_info[1], record.exc_info[2]
             )
 
+        if record.levelname == "WARNING":
+            result["level"] = "WARN"
+
         return json.dumps(result)
 
 

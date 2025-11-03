@@ -1,10 +1,14 @@
 [project]
 name = "core-subgraph"
 version = "1.0.1"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
     "aiohttp>=3.10.11",
     "multidict>=6.4.3",
-    "prometheus_client==0.21.1",
+    "prometheus_client>=0.22.0",
     "pyyaml>=6.0.1"
 ]
+
+[tool.setuptools]
+packages = ["core.subgraph"]
+package-dir = {"core.subgraph" = "."}
