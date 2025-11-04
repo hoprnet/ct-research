@@ -167,7 +167,7 @@ class MetricsCollector:
                 self.metrics.add_snapshot(snapshot)
                 await asyncio.sleep(self.interval)
             except Exception as e:
-                print(f"Error collecting metrics: {e}")
+                print(f"Error collecting metrics: {str(e)}")
                 await asyncio.sleep(self.interval)
 
     def _collect_snapshot(self) -> MetricsSnapshot:

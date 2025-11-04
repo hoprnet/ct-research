@@ -361,7 +361,7 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
                 continue
             except Exception as e:
                 # Log error but keep worker running
-                logger.error(f"Message worker {worker_id} error: {e}", exc_info=True)
+                logger.error(f"Message worker {worker_id} error: {str(e)}", exc_info=True)
                 continue
 
         logger.debug(f"Message worker {worker_id} stopped")

@@ -65,7 +65,7 @@ def main(configfile: str):
             try:
                 success = eval(value.get("executor"))(**stage)()
             except Exception as e:
-                EnduranceTest.error(f"{e.__class__.__name__}: {e}", prefix="\t")
+                EnduranceTest.error(f"{e.__class__.__name__}: {str(e)}", prefix="\t")
                 success = (False, "Exception raised")
 
             stage_results.append(success)
