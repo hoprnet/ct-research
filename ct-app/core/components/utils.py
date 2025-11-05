@@ -150,10 +150,10 @@ class Utils:
                         source_code = f.read()
                     tree = ast.parse(source_code)
                 except FileNotFoundError as e:
-                    logger.error(f"Could not find file {file_path}: {e}")
+                    logger.error(f"Could not find file {file_path}: {str(e)}")
                     continue
                 except SyntaxError as e:
-                    logger.error(f"Could not parse {file_path}: {e}")
+                    logger.error(f"Could not parse {file_path}: {str(e)}")
                     continue
 
                 for node in ast.walk(tree):

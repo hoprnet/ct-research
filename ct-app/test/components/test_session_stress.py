@@ -20,17 +20,12 @@ import pytest
 import yaml
 from pytest_mock import MockerFixture
 
-from core.api.response_objects import (
-    Addresses,
-    Balances,
-    Session,
-)
+from core.api.response_objects import Addresses, Balances, Session
 from core.components import Peer
 from core.components.balance import Balance
 from core.components.config_parser import Parameters
 from core.components.messages import MessageFormat
 from core.node import Node
-
 
 # ============================================================================
 # Fixtures
@@ -398,7 +393,7 @@ async def test_concurrent_maintenance_and_message_sending(
                 await stress_node.maintain_sessions()
                 await asyncio.sleep(0.001)
         except Exception as e:
-            errors.append(f"Maintenance error: {e}")
+            errors.append(f"Maintenance error: {str(e)}")
 
     # Task 2: Continuously simulate message queue operations
     async def message_loop():
@@ -415,7 +410,7 @@ async def test_concurrent_maintenance_and_message_sending(
 
                 await asyncio.sleep(0.001)
         except Exception as e:
-            errors.append(f"Message error: {e}")
+            errors.append(f"Message error: {str(e)}")
 
     # Run both concurrently
     await asyncio.gather(maintenance_loop(), message_loop())

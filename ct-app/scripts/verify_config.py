@@ -20,10 +20,10 @@ def main(file: list[str]):
         try:
             _ = Parameters.verify(data)
         except KeyError as e:
-            click.echo(f"KeyError in {f}: {e}")
+            click.echo(f"KeyError in {f}: {str(e)}")
             result.append(1)
         except ValueError as e:
-            click.echo(f"ValueError in {f}: {e}")
+            click.echo(f"ValueError in {f}: {str(e)}")
             result.append(1)
         else:
             result.append(0)
