@@ -35,7 +35,7 @@ class RPCQueryProvider:
         }
 
     #### PRIVATE METHODS ####
-    async def _execute(self, to: str, data: list[str]) -> tuple[dict, dict]:
+    async def _execute(self, to: str, data: str) -> tuple[dict, dict]:
         self.query["params"][0]["to"] = to
         self.query["params"][0]["data"] = data
 
@@ -60,7 +60,7 @@ class RPCQueryProvider:
     def convert_result(self, result: dict, status: int) -> Any:
         return result
 
-    async def get(self, to: str, data: list[str], timeout: int = 30) -> Any:
+    async def get(self, to: str, data: str, timeout: int = 30) -> Any:
         try:
             res = await asyncio.wait_for(self._execute(to, data), timeout)
         except asyncio.TimeoutError:
