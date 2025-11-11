@@ -28,11 +28,9 @@ class JSONFormatter(logging.Formatter):
                 result["fields"][key] = str(value)
 
         if record.exc_info:
-            result["full_message"] = str(
-                traceback.format_exception(
-                    record.exc_info[0], record.exc_info[1], record.exc_info[2]
-                )
-            )
+            result["full_message"] = str(traceback.format_exception(
+                record.exc_info[0], record.exc_info[1], record.exc_info[2]
+            ))
 
         if record.levelname == "WARNING":
             result["level"] = "WARN"

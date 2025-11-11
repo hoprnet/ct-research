@@ -10,7 +10,7 @@ from ..rpc.providers import (
     wxHOPRBalance,
     xHOPRBalance,
 )
-from ..rpc.query_provider import BalanceProvider, ProviderError
+from ..rpc.query_provider import BalanceProvider
 from .protocols import HasParams, HasRPCs
 
 configure_logging()
@@ -41,10 +41,7 @@ class RPCMixin(HasParams, HasRPCs):
             [],
         )
 
-        try:
-            self.allocations_data = await AsyncLoop.gather_any(futures)
-        except ProviderError as e:
-            logger.error("Error fetching allocations", {"error": str(e)})
+        self.allocations_data = await AsyncLoop.gather_any(futures)
 
         logger.info("Fetched investors allocations", {"counts": len(self.allocations_data)})
 
@@ -65,9 +62,6 @@ class RPCMixin(HasParams, HasRPCs):
             [[provider.balance_of(addr) for addr in addresses] for provider in providers], []
         )
 
-        try:
-            self.eoa_balances_data = await AsyncLoop.gather_any(futures)
-        except ProviderError as e:
-            logger.error("Error fetching EOA balances", {"error": str(e)})
+        self.eoa_balances_data = await AsyncLoop.gather_any(futures)
 
         logger.info("Fetched investors EOA balances", {"count": len(self.eoa_balances_data)})
