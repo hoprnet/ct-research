@@ -1,7 +1,5 @@
 import logging
 
-from core.subgraph.graphql_provider import ProviderError
-
 from ..components.asyncloop import AsyncLoop
 from ..components.decorators import keepalive
 from ..components.logs import configure_logging
@@ -12,7 +10,7 @@ from ..rpc.providers import (
     wxHOPRBalance,
     xHOPRBalance,
 )
-from ..rpc.query_provider import BalanceProvider
+from ..rpc.query_provider import BalanceProvider, ProviderError
 from .protocols import HasParams, HasRPCs
 
 configure_logging()
@@ -74,4 +72,5 @@ class RPCMixin(HasParams, HasRPCs):
             logger.error("Error fetching investors EOA balances", {"error": str(e)})
             self.eoa_balances_data = []
 
+        logger.info("Fetched investors EOA balances", {"count": len(self.eoa_balances_data)})
         logger.info("Fetched investors EOA balances", {"count": len(self.eoa_balances_data)})
