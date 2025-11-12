@@ -38,7 +38,7 @@ class Peer:
         self._safe_address_count: Optional[int] = None
         self._channel_balance: Optional[Balance] = None
 
-        self.yearly_message_count: int = 0
+        self.yearly_message_count: Optional[int] = 0
 
         self.params: Optional[Parameters] = None
         self.running: bool = False
@@ -98,12 +98,16 @@ class Peer:
     def is_eligible(
         self,
         min_allowance: Balance,
-        min_stake: float,
+        min_stake: Balance,
         nft_holders: list[str],
         nft_threshold: Balance,
         ct_nodes: list[str],
+        exclusion_list: list[str],
     ) -> bool:
         try:
+            if self.address.native in exclusion_list:
+                return False
+
             if self.address.native in ct_nodes:
                 return False
 
