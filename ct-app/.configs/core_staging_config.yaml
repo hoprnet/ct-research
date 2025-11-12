@@ -92,6 +92,11 @@ peer:
   minimum_delay_between_batches: 10
   sleep_mean_time: 10
   sleep_std_time: 2
+  excluded_peers:
+  - "0xcd9d0e23cd999dfc0d1400d837f8e612dbbbdfaa"
+  - "0x7220cfe91f369bfe79f883c2891e97407d7a4d48"
+  - "0xfe3af421afb84eed445c2b8f1892e3984d3e41ea"
+  - "0xc00b7d90463394ec29a080393ff09a2ed82a0f86"
 
 # =============================================================================
 # 
