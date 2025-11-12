@@ -23,7 +23,7 @@ jobs:
           ref: ${{ inputs.branch }}
       - name: Set environment variables
         id: tags
-        shell: sh
+        shell: bash
         run: |
           base_version=$(grep -E '^version\s*=' ct-app/pyproject.toml | awk -F\" '{print $2}')
           if [[ "${{ inputs.version_type }}" == "commit" ]]; then
