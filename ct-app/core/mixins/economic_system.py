@@ -8,7 +8,15 @@ from ..components.config_parser.economic_model import LegacyParams, SigmoidParam
 from ..components.decorators import keepalive
 from ..components.logs import configure_logging
 from ..components.utils import Utils
-from .protocols import HasNFT, HasParams, HasPeers, HasRPCs, HasSession, HasSubgraphs
+from .protocols import (
+    HasChannels,
+    HasNFT,
+    HasParams,
+    HasPeers,
+    HasRPCs,
+    HasSession,
+    HasSubgraphs,
+)
 
 ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
 MESSAGE_COUNT = Gauge(
@@ -19,7 +27,9 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 
-class EconomicSystemMixin(HasNFT, HasParams, HasPeers, HasRPCs, HasSession, HasSubgraphs):
+class EconomicSystemMixin(
+    HasChannels, HasNFT, HasParams, HasPeers, HasRPCs, HasSession, HasSubgraphs
+):
     @keepalive
     async def apply_economic_model(self):
         """
@@ -50,6 +60,7 @@ class EconomicSystemMixin(HasNFT, HasParams, HasPeers, HasRPCs, HasSession, HasS
                 self.nft_holders_data,
                 self.params.economic_model.nft_threshold,
                 self.params.sessions.blue_destinations + self.params.sessions.green_destinations,
+                self.params.peer.excluded_peers,
             ):
                 p.yearly_message_count = None
 
