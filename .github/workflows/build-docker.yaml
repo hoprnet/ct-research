@@ -21,10 +21,14 @@ jobs:
         uses: actions/checkout@v5
         with:
           ref: ${{ inputs.branch }}
+      - name: Get PR labels
+        id: pr-labels
+        uses: joerick/pr-labels-action@0543b277721e852d821c6738d449f2f4dea03d5f # v1.0.9
       - name: Set environment variables
         id: tags
-        shell: sh
+        shell: bash
         run: |
+          set -x
           base_version=$(grep -E '^version\s*=' ct-app/pyproject.toml | awk -F\" '{print $2}')
           if [[ "${{ inputs.version_type }}" == "commit" ]]; then
             main_docker_tag=${base_version}+commit.$(git rev-parse --short HEAD)
@@ -42,6 +46,8 @@ jobs:
           repository="europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic"
           if [[ "${{ inputs.version_type }}" == "pr" ]]; then
             docker_tags="${repository}:${main_docker_tag},${repository}:latest"
+          elif [[ "${{ inputs.version_type }}" == "commit" ]] && [[ "${GITHUB_PR_LABEL_DEPLOY_STAGING:-0}" == '1' ]]; then
+            docker_tags="${repository}:${main_docker_tag},${repository}:staging"
           else
             docker_tags="${repository}:${main_docker_tag}"
           fi

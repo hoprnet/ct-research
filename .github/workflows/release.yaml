@@ -87,7 +87,6 @@ jobs:
       - uses: EndBug/add-and-commit@v9
         with:
           add: '["ct-app/pyproject.toml" ]'
-          new_branch: main
           message: "Bump to version ${{ steps.bump.outputs.bump_version }}"
           pathspec_error_handling: exitImmediately
       - name: Notify release
@@ -100,6 +99,6 @@ jobs:
           to: "HOPRd"
           topic: "Releases"
           content: |
-            I'm thrilled to inform the new cover-traffic version v${{ steps.bump.outputs.current_version }} has been released.
-            [Release Notes](https://github.com/${{ github.repository }}/releases/tag/v${{ steps.bump.outputs.current_version }})
-            docker pull europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic:${{ steps.bump.outputs.current_version }}
+            I'm thrilled to inform the new cover-traffic version v${{ steps.release.outputs.current_version }} has been released.
+            [Release Notes](https://github.com/${{ github.repository }}/releases/tag/v${{ steps.release.outputs.current_version }})
+            docker pull europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic:${{ steps.release.outputs.current_version }}
