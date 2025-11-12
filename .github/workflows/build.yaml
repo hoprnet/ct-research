@@ -28,7 +28,7 @@ jobs:
       - name: Lint
         working-directory: ct-app
         run: |
-          nix develop -c uvx ruff check . --output-format=github --ignore E501 --target-version=py312
+          nix develop -c make fmt
       - name: Test
         working-directory: ct-app
         run: |
