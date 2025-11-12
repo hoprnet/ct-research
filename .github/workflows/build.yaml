@@ -1,0 +1,44 @@
+name: Build
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+concurrency:
+  group: ${{ github.event.pull_request.number || github.ref }}-build
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint and Test
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+      - name: Use Nix Cache
+        uses: cachix/cachix-action@v16
+        with:
+          name: ct-dapp
+        env:
+          USER: runner
+      - name: Lint
+        run: |
+          nix develop -c uvx ruff check . --output-format=github --ignore E501 --target-version=py312
+        working-directory: ct-app
+      - name: Test
+        run: |
+          nix develop -c uv run -m pytest test
+        working-directory: ct-app
+  build-docker:
+    name: Build docker
+    uses: ./.github/workflows/build-docker.yaml
+    needs: checks
+    with:
+      branch: ${{ github.event.pull_request.head.ref }}
+      version_type: "commit"
+    secrets: inherit
+

@@ -1,0 +1,18 @@
+name: Merge PR
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+concurrency:
+  group: merge
+  cancel-in-progress: false
+jobs:
+  build-docker:
+    name: Build docker
+    uses: ./.github/workflows/build-docker.yaml
+    with:
+      branch: ${{ github.event.pull_request.base.ref }}
+      version_type: "pr"
+    secrets: inherit
