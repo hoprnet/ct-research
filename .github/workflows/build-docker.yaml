@@ -36,7 +36,8 @@ jobs:
             main_docker_tag=${base_version}+pr.${{ github.event.pull_request.number }}
             echo "main_docker_tag=${main_docker_tag}" | tee -a $GITHUB_OUTPUT
           elif [[ "${{ inputs.version_type }}" == "release" ]]; then
-            echo "main_docker_tag=${base_version}" | tee -a $GITHUB_OUTPUT
+            main_docker_tag=${base_version}
+            echo "main_docker_tag=${main_docker_tag}" | tee -a $GITHUB_OUTPUT
           else
             echo "Invoked with unknown version_type (workflow dispatch), defaulting to commit-based versioning"
             exit 1

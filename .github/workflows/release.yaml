@@ -101,4 +101,4 @@ jobs:
           content: |
             I'm thrilled to inform the new cover-traffic version v${{ steps.release.outputs.current_version }} has been released.
             [Release Notes](https://github.com/${{ github.repository }}/releases/tag/v${{ steps.release.outputs.current_version }})
-            docker pull europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic:${{ steps.release.outputs.current_version }}
+            Docker image: `docker pull europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic:${{ steps.release.outputs.current_version }}`
