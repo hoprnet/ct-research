@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build-docker:
-    name: Build docker
+    name: Build
     uses: ./.github/workflows/build-docker.yaml
     with:
       branch: main
@@ -87,7 +87,6 @@ jobs:
       - uses: EndBug/add-and-commit@v9
         with:
           add: '["ct-app/pyproject.toml" ]'
-          new_branch: main
           message: "Bump to version ${{ steps.bump.outputs.bump_version }}"
           pathspec_error_handling: exitImmediately
       - name: Notify release

@@ -38,7 +38,7 @@ jobs:
         run: |
           nix develop -c make stress
   build-docker:
-    name: Build docker
+    name: Build
     uses: ./.github/workflows/build-docker.yaml
     needs: checks
     with:

@@ -14,13 +14,16 @@ concurrency:
 
 jobs:
   build:
-    name: Build
+    name: Docker
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
           ref: ${{ inputs.branch }}
+      - name: Get PR labels
+        id: pr-labels
+        uses: joerick/pr-labels-action@0543b277721e852d821c6738d449f2f4dea03d5f # v1.0.9
       - name: Set environment variables
         id: tags
         shell: bash
@@ -33,17 +36,21 @@ jobs:
             main_docker_tag=${base_version}+pr.${{ github.event.pull_request.number }}
             echo "main_docker_tag=${main_docker_tag}" | tee -a $GITHUB_OUTPUT
           elif [[ "${{ inputs.version_type }}" == "release" ]]; then
-            echo "main_docker_tag=${base_version}" | tee -a $GITHUB_OUTPUT
+            main_docker_tag=${base_version}
+            echo "main_docker_tag=${main_docker_tag}" | tee -a $GITHUB_OUTPUT
           else
-            echo "Invoked with unknown version_type"
+            echo "Invoked with unknown version_type (workflow dispatch), defaulting to commit-based versioning"
             exit 1
           fi
           sed -i.bak -E "s/(^version = \")([0-9]+\.[0-9]+\.[0-9]+)(\")/\1${main_docker_tag}\3/" ct-app/pyproject.toml
+          main_docker_tag=${main_docker_tag//+/-}  # Docker tags cannot have '+', replace with '-'
           repository="europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic"
           if [[ "${{ inputs.version_type }}" == "pr" ]]; then
-            docker_tags="${repository}:${main_docker_tag//+/-},${repository}:latest"
+            docker_tags="${repository}:${main_docker_tag},${repository}:latest"
+          elif [[ "${{ inputs.version_type }}" == "commit" ]] && [[ "${GITHUB_PR_LABEL_DEPLOY_STAGING:-0}" == '1' ]]; then
+            docker_tags="${repository}:${main_docker_tag},${repository}:staging"
           else
-            docker_tags="${repository}:${main_docker_tag//+/-}"
+            docker_tags="${repository}:${main_docker_tag}"
           fi
           echo "docker_tags=${docker_tags}" | tee -a $GITHUB_OUTPUT
       - name: Setup GCP
@@ -52,7 +59,7 @@ jobs:
           google-credentials: ${{ secrets.GOOGLE_HOPRASSOCIATION_CREDENTIALS_REGISTRY }}
           login-artifact-registry: 'true'
           install-sdk: 'false'
-      - name: Build container image
+      - name: Build docker image
         uses: docker/build-push-action@v5
         with:
           push: true
