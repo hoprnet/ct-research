@@ -25,7 +25,6 @@ jobs:
         id: tags
         shell: bash
         run: |
-          set -x
           base_version=$(grep -E '^version\s*=' ct-app/pyproject.toml | awk -F\" '{print $2}')
           if [[ "${{ inputs.version_type }}" == "commit" ]]; then
             main_docker_tag=${base_version}+commit.$(git rev-parse --short HEAD)
