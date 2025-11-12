@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build
+    name: Docker
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
@@ -31,7 +31,7 @@ jobs:
           set -x
           base_version=$(grep -E '^version\s*=' ct-app/pyproject.toml | awk -F\" '{print $2}')
           if [[ "${{ inputs.version_type }}" == "commit" ]]; then
-            main_docker_tag=${base_version}+commit.$(git rev-parse --short HEAD)
+            main_docker_tag=${base_version}-commit.$(git rev-parse --short HEAD)
             echo "main_docker_tag=${main_docker_tag}" | tee -a $GITHUB_OUTPUT
           elif [[ "${{ inputs.version_type }}" == "pr" ]]; then
             main_docker_tag=${base_version}+pr.${{ github.event.pull_request.number }}
