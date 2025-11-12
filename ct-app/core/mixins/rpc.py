@@ -73,4 +73,3 @@ class RPCMixin(HasParams, HasRPCs):
             self.eoa_balances_data = []
 
         logger.info("Fetched investors EOA balances", {"count": len(self.eoa_balances_data)})
-        logger.info("Fetched investors EOA balances", {"count": len(self.eoa_balances_data)})
