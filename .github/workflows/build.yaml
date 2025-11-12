@@ -30,9 +30,11 @@ jobs:
           nix develop -c uvx ruff check . --output-format=github --ignore E501 --target-version=py312
         working-directory: ct-app
       - name: Test
+        working-directory: ct-app
         run: |
           nix develop -c make test
       - name: Test Stress
+        working-directory: ct-app
         run: |
           nix develop -c make stress
         working-directory: ct-app
