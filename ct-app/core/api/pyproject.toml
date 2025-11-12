@@ -1,7 +1,11 @@
 [project]
 name = "core-api"
-version = "1.1.0"
-requires-python = ">=3.12"
+version = "1.2.0"
+requires-python = ">=3.14"
 dependencies = [
-    "aiohttp>=3.10.11",
+    "api-lib>=0.0.4",
 ]
+
+[tool.setuptools]
+packages = ["core.api"]
+package-dir = {"core.api" = "."}

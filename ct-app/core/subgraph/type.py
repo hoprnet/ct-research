@@ -1,27 +1,16 @@
 from enum import Enum
+from typing import Callable
 
 from . import providers
 
 
 class Type(Enum):
-    SAFES = "safesBalance"
-    STAKING = "staking"
+    SAFES = "safes_balance"
     REWARDS = "rewards"
-    MAINNET_ALLOCATIONS = "mainnetAllocations"
-    GNOSIS_ALLOCATIONS = "gnosisAllocations"
-    MAINNET_BALANCES = "hoprOnMainnet"
-    GNOSIS_BALANCES = "hoprOnGnosis"
-    FUNDINGS = "fundings"
 
     @property
-    def provider(self):
+    def provider(self) -> Callable:
         return {
             Type.SAFES: providers.Safes,
-            Type.STAKING: providers.Staking,
             Type.REWARDS: providers.Rewards,
-            Type.MAINNET_ALLOCATIONS: providers.Allocations,
-            Type.GNOSIS_ALLOCATIONS: providers.Allocations,
-            Type.MAINNET_BALANCES: providers.EOABalance,
-            Type.GNOSIS_BALANCES: providers.EOABalance,
-            Type.FUNDINGS: providers.Fundings,
         }[self]

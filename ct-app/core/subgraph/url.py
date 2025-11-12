@@ -1,14 +1,13 @@
-from core.components.parameters import Parameters
-
+from ..components.config_parser import SubgraphEndpointParams
 from .mode import Mode
 
 
 class URL:
-    def __init__(self, params: Parameters, key: str):
+    def __init__(self, user_id: str, api_key: str, params: SubgraphEndpointParams):
         super().__init__()
-        self.params = getattr(params, key)
-        self.deployer_key = params.apiKey
-        self.user_id = params.userID
+        self.params = params
+        self.deployer_key = api_key
+        self.user_id = user_id
         self.mode = Mode.DEFAULT
 
         self._urls = {
@@ -19,7 +18,7 @@ class URL:
 
     def _construct_default(self):
         base = "https://gateway-arbitrum.network.thegraph.com/api/%s/subgraphs/id/%s"
-        return base % (self.deployer_key, self.params.queryID)
+        return base % (self.deployer_key, self.params.query_id)
 
     def _construct_backup(self):
         base = "https://api.studio.thegraph.com/query/%s/%s/%s"

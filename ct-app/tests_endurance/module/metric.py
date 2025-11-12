@@ -1,5 +1,8 @@
+from typing import Optional
+
+
 class Metric:
-    def __init__(self, text: str, value: float, suffix: str = "", cdt: bool or str = None):
+    def __init__(self, text: str, value: float, suffix: str = "", cdt: Optional[bool | str] = None):
         """
         Initialisation of the class.
         """
@@ -26,7 +29,7 @@ class Metric:
         return self._suffix
 
     @property
-    def cdt(self) -> bool:
+    def cdt(self) -> Optional[bool]:
         if self._cdt is None:
             return None
         if isinstance(self._cdt, str):

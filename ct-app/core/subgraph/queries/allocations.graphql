@@ -1,7 +1,0 @@
-allocations(first: $first, skip: $skip, where: {schedule_in: $schedule_in}) {
-  account {
-    id
-    claimedAmount
-    allocatedAmount
-  }
-}
