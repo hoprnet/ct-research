@@ -28,7 +28,6 @@ jobs:
         id: tags
         shell: bash
         run: |
-          set -x
           base_version=$(grep -E '^version\s*=' ct-app/pyproject.toml | awk -F\" '{print $2}')
           if [[ "${{ inputs.version_type }}" == "commit" ]]; then
             main_docker_tag=${base_version}+commit.$(git rev-parse --short HEAD)
@@ -59,7 +58,7 @@ jobs:
           google-credentials: ${{ secrets.GOOGLE_HOPRASSOCIATION_CREDENTIALS_REGISTRY }}
           login-artifact-registry: 'true'
           install-sdk: 'false'
-      - name: Build container image
+      - name: Build docker image
         uses: docker/build-push-action@v5
         with:
           push: true
