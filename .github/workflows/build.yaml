@@ -31,7 +31,10 @@ jobs:
         working-directory: ct-app
       - name: Test
         run: |
-          nix develop -c uv run -m pytest test
+          nix develop -c make test
+      - name: Test Stress
+        run: |
+          nix develop -c make stress
         working-directory: ct-app
   build-docker:
     name: Build docker
