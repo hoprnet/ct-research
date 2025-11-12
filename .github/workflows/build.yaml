@@ -26,9 +26,9 @@ jobs:
         env:
           USER: runner
       - name: Lint
+        working-directory: ct-app
         run: |
           nix develop -c uvx ruff check . --output-format=github --ignore E501 --target-version=py312
-        working-directory: ct-app
       - name: Test
         working-directory: ct-app
         run: |
@@ -37,7 +37,6 @@ jobs:
         working-directory: ct-app
         run: |
           nix develop -c make stress
-        working-directory: ct-app
   build-docker:
     name: Build docker
     uses: ./.github/workflows/build-docker.yaml
