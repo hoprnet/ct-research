@@ -113,11 +113,3 @@ class EconomicSystemMixin(
             {"count": eligible_count, "expected_rate": expected_rate},
         )
         ELIGIBLE_PEERS.set(eligible_count)
-        expected_rate = sum(
-            [1 / p.message_delay for p in self.peers if p.message_delay is not None]
-        )
-        logger.info(
-            "Generated the eligible nodes set",
-            {"count": eligible_count, "expected_rate": expected_rate},
-        )
-        ELIGIBLE_PEERS.set(eligible_count)
