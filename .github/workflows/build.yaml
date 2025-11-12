@@ -34,7 +34,7 @@ jobs:
           nix develop -c uv run -m pytest test
         working-directory: ct-app
   build-docker:
-    name: Build
+    name: Build docker
     uses: ./.github/workflows/build-docker.yaml
     needs: checks
     with:

@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build-docker:
-    name: Build
+    name: Build docker
     uses: ./.github/workflows/build-docker.yaml
     with:
       branch: ${{ github.event.pull_request.base.ref }}
