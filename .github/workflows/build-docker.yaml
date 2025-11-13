@@ -65,3 +65,16 @@ jobs:
           push: true
           context: ct-app
           tags: ${{ steps.tags.outputs.docker_tags }}
+      - name: Trigger deploy workflow if needed
+        if: env.GITHUB_PR_LABEL_DEPLOY_STAGING == '1'
+        uses: peter-evans/repository-dispatch@5fc4efd1a4797ddb68ffd0714a238564e4cc0e6f # v4.0.0
+        with:
+          token: ${{ secrets.GH_RUNNER_TOKEN }}
+          repository: hoprnet/gitops
+          event-type: restart_deployment
+          client-payload: |-
+            {
+              "environment": "staging",
+              "namespace": "ctdapp",
+              "label_selector": "hoprds.hoprnet.org/cluster=${{ vars.CTDAPP_STAGING_DEPLOYMENT_CLUSTER }}"
+            }
