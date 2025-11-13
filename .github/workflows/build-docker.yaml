@@ -76,5 +76,5 @@ jobs:
             {
               "environment": "staging",
               "namespace": "ctdapp",
-              "label_selector": "hoprds.hoprnet.org/cluster=${{ vars.CTDAPP_STAGING_DEPLOYMENT_CLUSTER }}",
+              "label_selector": "hoprds.hoprnet.org/cluster=${{ vars.CTDAPP_STAGING_DEPLOYMENT_CLUSTER }}"
             }
