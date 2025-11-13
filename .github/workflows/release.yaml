@@ -1,0 +1,104 @@
+name: Close release
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Next version type"
+        required: true
+        type: choice
+        default: "patch"
+        options:
+          - patch
+          - minor
+          - major
+concurrency:
+  group: release
+  cancel-in-progress: false
+jobs:
+  build-docker:
+    name: Build
+    uses: ./.github/workflows/build-docker.yaml
+    with:
+      branch: main
+      version_type: "release"
+    secrets: inherit
+  release:
+    name: Close release
+    needs: build-docker
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+      - name: Setup GCP
+        id: gcp
+        uses: hoprnet/hopr-workflows/actions/setup-gcp@master
+        with:
+          google-credentials: ${{ secrets.GOOGLE_HOPRASSOCIATION_CREDENTIALS_REGISTRY }}
+          install-sdk: "true"
+      - name: Create release
+        id: release
+        run: |
+          current_version=$(grep -E '^version\s*=' ct-app/pyproject.toml | awk -F\" '{print $2}')
+          echo "current_version=${current_version}" | tee -a $GITHUB_OUTPUT
+          gh release create v${current_version} --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Bump Version
+        id: bump
+        shell: bash
+        run: |
+          current_version=${{ steps.release.outputs.current_version }}
+          # Extract parts without IFS or read
+          IFS='.' read -r major_version minor_version patch_version <<< "${current_version}"
+          echo "Current version $major_version $minor_version $patch_version"
+
+          # Bump the appropriate part
+          echo "Bumping ${{ inputs.release_type }} version"
+          case "${{ inputs.release_type }}" in
+              major)
+                  major_version=$((major_version+1))
+                  minor_version=0
+                  patch_version=0
+                  ;;
+              minor)
+                  minor_version=$((minor_version+1))
+                  patch_version=0
+                  ;;
+              patch)
+                  patch_version=$((patch_version+1))
+                  ;;
+              *)
+                  echo "Invalid release type"
+                  exit 1
+                  ;;
+          esac
+          echo "New version: ${major_version}.${minor_version}.${patch_version}"
+          bump_version="${major_version}.${minor_version}.${patch_version}"
+          echo "Updating version from $current_version to $bump_version"
+
+          # Update the version in Cargo.toml
+          # capture group 1: version = "
+          # capture group 2: the version number
+          # capture group 3: "
+          sed -i.bak -E "s/(^version = \")([0-9]+\.[0-9]+\.[0-9]+)(\")/\1${bump_version}\3/" ct-app/pyproject.toml
+          rm ct-app/pyproject.toml.bak
+
+          echo "bump_version=${bump_version}" | tee -a $GITHUB_OUTPUT
+      - uses: EndBug/add-and-commit@v9
+        with:
+          add: '["ct-app/pyproject.toml" ]'
+          message: "Bump to version ${{ steps.bump.outputs.bump_version }}"
+          pathspec_error_handling: exitImmediately
+      - name: Notify release
+        uses: zulip/github-actions-zulip/send-message@e4c8f27c732ba9bd98ac6be0583096dea82feea5 # v1.0.2
+        with:
+          api-key: ${{ secrets.ZULIP_API_KEY }}
+          email: ${{ secrets.ZULIP_EMAIL }}
+          organization-url: "https://hopr.zulipchat.com"
+          type: "stream"
+          to: "HOPRd"
+          topic: "Releases"
+          content: |
+            I'm thrilled to inform the new cover-traffic version v${{ steps.release.outputs.current_version }} has been released.
+            [Release Notes](https://github.com/${{ github.repository }}/releases/tag/v${{ steps.release.outputs.current_version }})
+            Docker image: `docker pull europe-west3-docker.pkg.dev/hoprassociation/docker-images/cover-traffic:${{ steps.release.outputs.current_version }}`
