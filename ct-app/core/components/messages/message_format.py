@@ -1,16 +1,17 @@
 import re
+import time
 from datetime import datetime
 from typing import Optional
 
 
 class MessageFormat:
     params = [
-        "packet_size",
         "relayer",
         "sender",
+        "packet_size",
+        "batch_size",
         "index",
         "inner_index",
-        "multiplier",
         "timestamp",
     ]
     range = int(1e5)
@@ -18,39 +19,41 @@ class MessageFormat:
 
     def __init__(
         self,
-        packet_size: int,
         relayer: str,
-        sender: str = None,
-        index: str = None,
-        inner_index: int = None,
-        multiplier: int = None,
-        timestamp: str = None,
+        sender: Optional[str] = None,
+        packet_size: Optional[int] = None,
+        batch_size: Optional[int] = None,
+        index: Optional[int | str] = None,
+        inner_index: Optional[int | str] = None,
+        timestamp: Optional[int | str] = None,
     ):
-        self.packet_size = int(packet_size)
-        self.sender = sender
         self.relayer = relayer
+        self.sender = sender
+        self.packet_size = int(packet_size) if packet_size else 0
+        self.batch_size = int(batch_size) if batch_size else 1
         self.index = int(index) if index else self.message_index
-        self.update_timestamp(timestamp)
-        self.multiplier = int(multiplier) if multiplier else 1
         self.inner_index = int(inner_index) if inner_index else 1
+        self.update_timestamp(timestamp)
+        # Track queue entry time for end-to-end latency metrics
+        self.queued_at: float = time.time()
 
     @property
-    def size(self):
-        return self.packet_size * self.multiplier
+    def size(self) -> int:
+        return self.packet_size
 
     @property
-    def message_index(self):
+    def message_index(self) -> int:
         value = self.__class__.index
         self.__class__.index += 1
         self.__class__.index %= self.__class__.range
         return value
 
     @classmethod
-    def pattern(self):
-        return " ".join([f"{{{param}}}" for param in self.params])
+    def pattern(cls) -> str:
+        return " ".join([f"{{{param}}}" for param in cls.params])
 
     @classmethod
-    def parse(cls, input_string: str):
+    def parse(cls, input_string: str) -> "MessageFormat":
         if len(input_string) == 0:
             raise ValueError("Input string is empty")
 
@@ -60,7 +63,7 @@ class MessageFormat:
         if not match:
             raise ValueError(
                 f"Input string format is incorrect. `{input_string}`"
-                + "incompatible with format {cls.pattern()}"
+                + f"incompatible with format {cls.pattern()}"
             )
 
         return cls(*[match.group(param) for param in cls.params])
@@ -78,7 +81,7 @@ class MessageFormat:
             raise ValueError(
                 f"Encoded message is exceeds specified size ({len(message_as_bytes)} > {self.size})"
             )
-        return message_as_bytes + b"\0" * (self.size - len(message_as_bytes))
+        return message_as_bytes.ljust(self.size, b"\0")
 
     def update_timestamp(self, timestamp: Optional[str] = None):
         if timestamp is not None:

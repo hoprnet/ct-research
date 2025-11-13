@@ -1,0 +1,154 @@
+---
+# =============================================================================
+# 
+# =============================================================================
+environment: local
+
+flags:
+  node:
+    apply_economic_model: 30
+    ticket_parameters: 60
+
+    outgoing_channels_balances: 30
+
+    rotate_subgraphs: 60
+
+    # through subgraph queries
+    peers_rewards: 300
+    registered_nodes: 300
+    
+    # through rpc calls
+    allocations: 300
+    eoa_balances: 300
+    
+    healthcheck: 15
+    retrieve_peers: 60
+    retrieve_channels: 120
+    retrieve_balances: 300
+
+    open_channels: 300
+    fund_channels: 300
+    close_old_channels: 300
+    close_pending_channels: 300
+    close_incoming_channels: Off
+
+    get_total_channel_funds: 300
+
+    observe_message_queue: On
+  
+  peer:
+    message_relay_request: On
+    
+# =============================================================================
+# 
+# =============================================================================
+economic_model:
+  min_safe_allowance: "0 wxHOPR"
+  nft_threshold: "0 wxHOPR"
+
+  legacy:
+    proportion: 1.0
+    apr: 0.000002
+
+    coefficients:
+      a: 1
+      b: 1.4
+      upperbound: "15 wxHOPR"
+      lowerbound: "0.1 wxHOPR"
+    
+    equations: 
+      fx: 
+        formula: "a * x"
+        condition: "lowerbound <= x <= upperbound"
+      gx:
+        formula: "a * upperbound + (x - upperbound) ** (1 / b)"
+        condition: "x > upperbound"
+
+  sigmoid:
+    proportion: 0
+    max_apr: 0.0000001
+    network_capacity: 100
+    total_token_supply: "5000 wxHOPR"
+
+    offset: 10
+    buckets:
+      economic_security:
+        flatness: 1.65
+        skewness: 1.50
+        upperbound: 0.75
+        offset: 0
+
+      network_capacity:
+        flatness: 10.0
+        skewness: 2.75
+        upperbound: 1.0
+        offset: 0
+
+# =============================================================================
+# 
+# =============================================================================
+peer:
+  minimum_delay_between_batches: 2
+  sleep_mean_time: 10
+  sleep_std_time: 2
+  excluded_peers: []
+
+# =============================================================================
+# 
+# =============================================================================
+channel:
+  min_balance: "0.05 wxHOPR"
+  funding_amount: "0.1 wxHOPR"
+  max_age_seconds: 86400
+
+# =============================================================================
+#
+# =============================================================================
+sessions:
+  green_destinations:
+  - "0x7d1e530e9c82c21b75644a2c23402aa858ae4a69"
+  - "0x1b482420afa04aec1ef0e4a00c18451e84466c75"
+  - "0x05b17e37fd43c18741877fca80846ad8c84aa750"
+  - "0xcc70a22331998454160472f097acb43ca9b1e646"
+  - "0xe4bb1970e6c9e5689c5ef68ee2545b4366c49be4"
+  - "0xf90c1eb2557a443c2b27d399afac075fa752cd92"
+  blue_destinations: []
+  session_retry_base_delay_seconds: 2.0
+  session_retry_max_delay_seconds: 60.0
+  message_worker_count: 10
+
+# =============================================================================
+# 
+# =============================================================================
+investors:
+  schedule:
+  addresses: []
+
+# =============================================================================
+# 
+# =============================================================================
+nft_holders:
+  filepath: ".configs/nft_holders.txt"
+
+# =============================================================================
+# 
+# =============================================================================
+rpc:
+  gnosis: https://gnosis-rpc.publicnode.com
+  mainnet: https://ethereum-rpc.publicnode.com
+
+# =============================================================================
+# 
+# =============================================================================
+subgraph:
+  type: auto # auto | default | backup
+  user_id: 78696
+  api_key: 
+  
+  rewards:
+    query_id: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
+    slug: hopr-channels
+  safes_balance:
+    query_id: GmbJTpa1o4baeStDT48TfQu4ditJmQwwXYPG1DvEiufB
+    slug: hopr-nodes-rotsee
+...

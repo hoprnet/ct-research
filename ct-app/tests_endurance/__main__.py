@@ -1,4 +1,5 @@
 import os
+from typing import Any
 
 import click
 import yaml
@@ -7,11 +8,11 @@ from . import *  # noqa: F403
 from . import EnduranceTest
 
 
-def set_envvars(pairs: list[tuple[str, str]]):
-    if isinstance(pairs, tuple):
-        pairs = [pairs]
+def set_envvars(pair: tuple[str, str]):
+    if isinstance(pair, tuple):
+        pair: list[Any] = [pair]
 
-    for name, value in pairs:
+    for name, value in pair:
         os.environ[name] = str(value)
 
 
@@ -64,7 +65,7 @@ def main(configfile: str):
             try:
                 success = eval(value.get("executor"))(**stage)()
             except Exception as e:
-                EnduranceTest.error(f"{e.__class__.__name__}: {e}", prefix="\t")
+                EnduranceTest.error(f"{e.__class__.__name__}: {str(e)}", prefix="\t")
                 success = (False, "Exception raised")
 
             stage_results.append(success)

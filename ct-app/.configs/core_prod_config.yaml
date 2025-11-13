@@ -5,51 +5,47 @@
 environment: prod
 
 flags:
-  core: 
-    applyEconomicModel: 30
-    ticketParameters: 60
-
-    connectedPeers: 30
-    topology: 30
-
-    openSessions: 60
-
-    rotateSubgraphs: 60
-
-    peersRewards: 300
-    registeredNodes: 300
-    allocations: 300
-    EOABalances: 300
-    NFTHolders: 300
-    safeFundings: 300
-    
   node:
-    healthcheck: 15
-    retrievePeers: 60
-    retrieveChannels: 120
-    retrieveBalances: 300
+    apply_economic_model: 30
+    ticket_parameters: 60
 
-    openChannels: 300
-    fundChannels: 300
-    closeOldChannels: 300
-    closePendingChannels: 300
-    closeIncomingChannels: Off
+    outgoing_channels_balances: 30
 
-    getTotalChannelFunds: 300
+    rotate_subgraphs: 300
+
+    # through subgraph queries
+    peers_rewards: 300
+    registered_nodes: 300
+
+    # through rpc calls
+    allocations: 300
+    eoa_balances: 300
     
-    closeSessions: 30
+    healthcheck: 15
+    retrieve_peers: 60
+    retrieve_channels: 120
+    retrieve_balances: 300
 
-    observeMessageQueue: On # should only be On / Off
+    open_channels: 300
+    fund_channels: 300
+    close_old_channels: 300
+    close_pending_channels: 300
+    close_incoming_channels: Off
+
+    get_total_channel_funds: 300
+    
+    observe_message_queue: On
+    maintain_sessions: 15
 
   peer:
-    messageRelayRequest: On # should only be On / Off
+    message_relay_request: On
 
 # =============================================================================
 # 
 # =============================================================================
-economicModel:
-  minSafeAllowance: -1
-  NFTThreshold: 30000
+economic_model:
+  min_safe_allowance: "0 wxHOPR"
+  nft_threshold: "30000 wxHOPR"
 
   legacy:
     proportion: 1.0
@@ -58,32 +54,32 @@ economicModel:
     coefficients:
       a: 1
       b: 1.4
-      c: 75000
-      l: 10000
+      upperbound: "75000 wxHOPR"
+      lowerbound: "10000 wxHOPR"
     
     equations: 
       fx: 
         formula: "a * x"
-        condition: "l <= x <= c"
+        condition: "lowerbound <= x <= upperbound"
       gx:
-        formula: "a * c + (x - c) ** (1 / b)"
-        condition: "x > c"
+        formula: "a * upperbound + (x - upperbound) ** (1 / b)"
+        condition: "x > upperbound"
 
   sigmoid:
     proportion: 0
-    maxAPR: 15
-    networkCapacity: 2000
-    totalTokenSupply: 450000000
+    max_apr: 15
+    network_capacity: 2000
+    total_token_supply: "450000000 wxHOPR"
 
     offset: -0.9
     buckets:
-      economicSecurity:
+      economic_security:
         flatness: 1.8
         skewness: 1.52
         upperbound: 0.4
         offset: 3.14
 
-      networkCapacity:
+      network_capacity:
         flatness: 2.97
         skewness: 0.72
         upperbound: 1.0
@@ -93,76 +89,80 @@ economicModel:
 # 
 # =============================================================================
 peer:
-  minVersion: '2.2.1'
-  initialSleep:
-    mean: 30
-    std: 2
-
-  # Controls how many messages are batched at a time. Increasing this reduces
-  # the queue size but also privacy as the load gets less spread over time. 
-  # NOTE: Should be replaced by a dynamic approch, by setting the minimum delay
-  # acceptable before increasing the batch size accordingly (auto-mode)
-  messageMultiplier: 1
-
+  minimum_delay_between_batches: 60
+  sleep_mean_time: 30
+  sleep_std_time: 2
+  excluded_peers: []
+  
 # =============================================================================
 # 
 # =============================================================================
 channel:
-  minBalance: 20
-  fundingAmount: 30
-  maxAgeSeconds: 172800
-  
+  min_balance: "20 wxHOPR"
+  funding_amount: "30 wxHOPR"
+  max_age_seconds: 172800
+
 # =============================================================================
-# 
+#
 # =============================================================================
 sessions:
-  packetSize: 462 # TODO 3.0: change to 762
-  aggregatedPackets: 10
-  batchSize: 5
+  green_destinations:
+  - "0xd30f8f6e5865d7ec947e101b1d6a183e9776ba40"
+  - "0x5a5bf3d3ce59cd304f198b86c1a78adfadf31f83"
+  - "0xa4642c066c1f8927db9d34abab599af784a2cff0"
+  - "0xcbe8726c80cc0d7751b9545dd5a4b5b0e53e383d"
+  - "0x764d3162a4024c5cba8817446ef563b27aa57598"
+  blue_destinations:
+  - "0x5927c321ca2a925d17edcf9c58343e24337d18ba"
+  - "0x0543aa9d1dafa9cc49bf87ce5ea1e18277b3ae0f"
+  - "0x29d61ddbc682f272fc7f0dfb203938e211471826"
+  - "0x8fd1766b4215944f2eb21f03e6820bc3c75d936c"
+  - "0x633382b748e34432df1dbdfdd234833454b3d768"
+  session_retry_base_delay_seconds: 2.0
+  session_retry_max_delay_seconds: 60.0
+  message_worker_count: 10
+
 
 # =============================================================================
 # 
 # =============================================================================
-fundings:
-  constant: 626500
-  
+investors:
+  schedule: "investor-node-remainder-2024-01"
+  addresses:
+    - "0xebad8a12451bd17f7708a325a150f06cb0ec6e7c"
+    - "0x9263a4d34c3fe5a3e5a281c78f652ee84abc56ae"
+    - "0x3228413375817f8201c78a61ee86c5b8689343bb"
+    - "0x06c2c4db3776d500636de63e4f109386dcba6ae2"
+    - "0xcf2878a10cca65e3ec3569e0d9634d431bcbef9e"
+    - "0x329c54289ff5d6b7b7dae13592c6b1eda1543ed4"
+    - "0xa96bc337f5966c8ecba27fc4d46c75712790997c"
+    - "0xb11dd162fc6c31cb5560f2310de3283bb913b91e"
+
+# =============================================================================
+# 
+# =============================================================================
+nft_holders:
+  filepath: ".configs/nft_holders.txt"
+
+# =============================================================================
+# 
+# =============================================================================
+rpc:
+  gnosis: 
+  mainnet: 
+
 # =============================================================================
 # 
 # =============================================================================
 subgraph:
   type: auto # auto | default | backup
-  userID: 78696
+  user_id: 78696
+  api_key: 
 
-  mainnetAllocations:
-    queryID: FhU1GxUovoP1zphNbWFEQHwpabLGELQBdWWyFX1yjBkf
-    slug: hopr-allocations
-    inputs:
-      schedule_in:
-        - investor-node-remainder-2024-01
-  gnosisAllocations:
-    queryID: DXy4UwhNms3zm7abYeSYaD3hTkuaWYyNvozrXSXejMbS
-    slug: hopr-allocations---gnosis
-    inputs:
-      schedule_in:
-        - investor-node-remainder-2024-01
-  hoprOnMainnet:
-    queryID: 4GZdwVtPcQp95RF77W27GK2ezgGLB1iintG6mYZQ1w33
-    slug: hopr---mainnet
-  hoprOnGnosis:
-    queryID: 2wMRp1AW1ghxoFiM6WeRD93djHNvNGhXsuQyadmwCyqE
-    slug: hopr-on-gnosis
-  fundings:
-    queryID: EpAdSFzDLT7N5RhA3UxtqGUwkFxmMunSE2yGLb8juQjC
-    slug: subgraph-wxhopr-txs
-    inputs:
-      from: '0xd9a00176cf49dfb9ca3ef61805a2850f45cb1d05'
   rewards:
-    queryID: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
+    query_id: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
     slug: hopr-channels
-  safesBalance:
-    queryID: GP2abJCarirMJCanuk4SBmnadiobEWH9ME2MNRAHbBTp
+  safes_balance:
+    query_id: GP2abJCarirMJCanuk4SBmnadiobEWH9ME2MNRAHbBTp
     slug: hopr-nodes-dufour
-  staking:
-    queryID: F1NZayy7TXRi2szAVXvMFfJuC9uSdNYLUPAb6p6BYRmZ
-    slug: hopr-stake-all-seasons
 ...
