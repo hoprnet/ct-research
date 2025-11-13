@@ -2,10 +2,10 @@ from core.api.channelstatus import ChannelStatus
 
 
 def test_channelstatus():
-    open_status = ChannelStatus.fromString("Open")
-    close_status = ChannelStatus.fromString("Closed")
-    pending_status = ChannelStatus.fromString("PendingToClose")
-    unknown_status = ChannelStatus.fromString("Unknown")
+    open_status = ChannelStatus("Open")
+    close_status = ChannelStatus("Closed")
+    pending_status = ChannelStatus("PendingToClose")
+    unknown_status = ChannelStatus("Unknown")
 
     assert open_status.is_open
     assert not close_status.is_open
@@ -19,4 +19,4 @@ def test_channelstatus():
     assert not close_status.is_pending
     assert pending_status.is_pending
 
-    assert unknown_status is None
+    assert unknown_status == ChannelStatus.Unknown

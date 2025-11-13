@@ -3,13 +3,12 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional, Tuple
 
 import aiohttp
 from prometheus_client import Gauge
 
-from core.components.logs import configure_logging
-
+from ..components.logs import configure_logging
 from .mode import Mode
 from .url import URL
 
@@ -25,9 +24,9 @@ class ProviderError(Exception):
 
 
 class GraphQLProvider:
-    query_file: str = None
+    query_file: Optional[str] = None
     params: list[str] = []
-    default_key: list[str] = None
+    default_key: Optional[list[str]] = None
 
     def __init__(self, url: URL):
         self.url = url
@@ -44,12 +43,17 @@ class GraphQLProvider:
         if self.default_key is None:
             self.default_key = keys
 
-    def _load_query(self, path: str | Path, extra_inputs: list[str] = []) -> str:
+    def _load_query(
+        self, path: str | Path, extra_inputs: Optional[list[str]] = None
+    ) -> Tuple[str, str]:
         """
         Loads a graphql query from a file.
         :param path: Path to the file. The path must be relative to the ct-app folder.
         :return: The query as a string.
         """
+        if extra_inputs is None:
+            extra_inputs = []
+
         inputs = ["$first: Int!", "$skip: Int!", *extra_inputs]
 
         header = "query (" + ",".join(inputs) + ") {"
@@ -59,7 +63,7 @@ class GraphQLProvider:
 
         return body.split("(")[0], ("\n".join([header, body, footer]))
 
-    async def _execute(self, query: str, variable_values: dict) -> tuple[dict, dict]:
+    async def _execute(self, query: str, variable_values: dict) -> tuple[dict, Optional[dict]]:
         """
         Executes a graphql query.
         :param query: The query to execute.
@@ -73,7 +77,7 @@ class GraphQLProvider:
                 ) as response,
             ):
                 SUBGRAPH_CALLS.labels(self.url.params.slug, self.url.mode).inc()
-                return await response.json(), response.headers
+                return await response.json(), response.headers  # ty: ignore[invalid-return-type]
         except TimeoutError as err:
             logger.error("Timeout error", {"error": str(err)})
         except Exception as err:
@@ -126,7 +130,7 @@ class GraphQLProvider:
 
         return key in response.get("data", [])
 
-    async def _get(self, key: str, **kwargs) -> dict:
+    async def _get(self, key: str, **kwargs) -> list[Any]:
         """
         Gets the data from a subgraph query.
         :param key: The key to look for in the response.
@@ -145,10 +149,10 @@ class GraphQLProvider:
                     self._execute(self._sku_query, kwargs), timeout=30
                 )
             except asyncio.TimeoutError:
-                logger.exception("Timeout error while fetching data from subgraph")
+                logger.error("Timeout error while fetching data from subgraph")
                 break
             except ProviderError as err:
-                logger.exception("ProviderError error", {"error": str(err)})
+                logger.error("ProviderError error", {"error": str(err)})
                 break
 
             if response is None:
@@ -184,7 +188,7 @@ class GraphQLProvider:
         return data
 
     #### DEFAULT PUBLIC METHODS ####
-    async def get(self, key: str = None, **kwargs):
+    async def get(self, key: Optional[str] = None, **kwargs):
         """
         Gets the data from a subgraph query.
         :param key: The key to look for in the response. If None, the default key is used.
@@ -201,7 +205,7 @@ class GraphQLProvider:
             return []
 
         if inputs := getattr(self.url.params, "inputs", None):
-            kwargs.update(vars(inputs))
+            kwargs.update(inputs)
         return await self._get(key, **kwargs)
 
     async def test(self, method: str, **kwargs):
@@ -234,7 +238,7 @@ class GraphQLProvider:
         if self.url.mode == Mode.NONE:
             logger.warning(f"No subgraph available for '{self.url.params.slug}'")
 
-        logger.debug(
+        logger.info(
             "Subgraph endpoint probing done",
             {
                 "url": self.url.url,

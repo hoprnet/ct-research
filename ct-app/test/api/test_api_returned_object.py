@@ -1,12 +1,27 @@
-from core.api.response_objects import ApiResponseObject
+from api_lib.objects.response import APIfield, APIobject, JsonResponse
+
+from core.components.balance import Balance
 
 
-class FooResponse(ApiResponseObject):
-    keys = {"foo": "fooInTheApi", "bar": "barInTheApi"}
+@APIobject
+class FooResponse(JsonResponse):
+    foo: str = APIfield("fooInTheApi", "")
+    bar: float = APIfield("barInTheApi", 0.0)
+    baz: Balance = APIfield("bazInTheApi", Balance.zero("wxHOPR"))
+    qux: int = APIfield("quxInTheApi", 0)
 
 
 def test_parse_response_object():
-    data = FooResponse({"fooInTheApi": "value1", "barInTheApi": "value2"})
+    data = FooResponse(
+        {
+            "fooInTheApi": "value1",
+            "barInTheApi": "10.1",
+            "bazInTheApi": "120.1 wxHOPR",
+            "quxInTheApi": "10",
+        }
+    )
 
-    assert data.foo == "value1"
-    assert data.bar == "value2"
+    assert isinstance(data.foo, str) and data.foo == "value1"
+    assert isinstance(data.bar, float) and data.bar == 10.1
+    assert isinstance(data.baz, Balance) and data.baz == Balance("120.1 wxHOPR")
+    assert isinstance(data.qux, int) and data.qux == 10

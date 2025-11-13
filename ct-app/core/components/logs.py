@@ -5,7 +5,7 @@ import time
 import traceback
 
 
-class JSONFormatter:
+class JSONFormatter(logging.Formatter):
     def __init__(self):
         pass
 
@@ -20,23 +20,28 @@ class JSONFormatter:
             "threadId": record.threadName,
             "log_file": record.filename,
             "log_line": record.lineno,
-            "fields": {"message": record.msg % record.args},
+            "fields": {"message": str(record.msg % record.args)},
         }
 
         if isinstance(record.args, dict):
             for key, value in record.args.items():
-                result["fields"][key] = value
+                result["fields"][key] = str(value)
 
         if record.exc_info:
-            result["full_message"] = traceback.format_exception(
-                record.exc_info[0], record.exc_info[1], record.exc_info[2]
+            result["full_message"] = str(
+                traceback.format_exception(
+                    record.exc_info[0], record.exc_info[1], record.exc_info[2]
+                )
             )
+
+        if record.levelname == "WARNING":
+            result["level"] = "WARN"
 
         return json.dumps(result)
 
 
 def configure_logging():
-    handler = logging.StreamHandler(sys.stderr)
+    handler = logging.StreamHandler(stream=sys.stderr)
     handler.setFormatter(JSONFormatter())
     logging.basicConfig(level=logging.DEBUG, handlers=[handler])
     logging.getLogger("asyncio").setLevel(logging.WARNING)

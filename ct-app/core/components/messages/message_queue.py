@@ -1,4 +1,5 @@
-from janus import Queue
+from asyncio import Queue
+
 from prometheus_client import Gauge
 
 from ..singleton import Singleton
@@ -9,30 +10,20 @@ QUEUE_SIZE = Gauge("ct_queue_size", "Size of the message queue")
 
 class MessageQueue(metaclass=Singleton):
     def __init__(self):
-        self._buffer = Queue()
+        self._buffer: Queue[MessageFormat] = Queue()
 
-    def get_sync(self) -> MessageFormat:
-        return self.buffer.sync_q.get()
+    async def get(self) -> MessageFormat:
+        """Get message from queue and update gauge after operation completes."""
+        item = await self._buffer.get()
+        QUEUE_SIZE.set(self._buffer.qsize())
+        return item
 
-    def put_sync(self, item: MessageFormat):
-        self.buffer.sync_q.put(item)
-
-    async def get_async(self) -> MessageFormat:
-        return await self.buffer.async_q.get()
-
-    async def put_async(self, item: MessageFormat):
-        await self.buffer.async_q.put(item)
-
-    @property
-    def size(self):
-        return self._buffer.sync_q.qsize()
+    async def put(self, item: MessageFormat):
+        """Put message in queue and update gauge after operation completes."""
+        await self._buffer.put(item)
+        QUEUE_SIZE.set(self._buffer.qsize())
 
     @property
-    def buffer(self):
-        QUEUE_SIZE.set(self.size)
+    def buffer(self) -> Queue[MessageFormat]:
+        """Direct access to buffer (used for qsize checks in tests)."""
         return self._buffer
-
-    @classmethod
-    def clear(cls):
-        while cls().size:
-            cls().get_sync()
