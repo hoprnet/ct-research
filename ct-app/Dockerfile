@@ -31,13 +31,11 @@ COPY core/components ./core/components/
 COPY core/subgraph ./core/subgraph/
 COPY test ./test/
 
-# Create empty virtual environment
-RUN uv venv .venv
-
 # Install production dependencies only (no dev dependencies)
 RUN uv sync --frozen --no-dev
 
 # Install your project into the env
+RUN uv pip install --no-cache-dir ./core
 RUN uv pip install --no-cache-dir .
 
 # Stage 2: Runtime - Minimal production image
