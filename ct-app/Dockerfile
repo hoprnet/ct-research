@@ -31,8 +31,14 @@ COPY core/components ./core/components/
 COPY core/subgraph ./core/subgraph/
 COPY test ./test/
 
+# Create empty virtual environment
+RUN uv venv .venv
+
 # Install production dependencies only (no dev dependencies)
 RUN uv sync --frozen --no-dev
+
+# Install your project into the env
+RUN uvx pip install --no-cache-dir .
 
 # Stage 2: Runtime - Minimal production image
 FROM python:3.14-slim AS runtime
@@ -40,7 +46,7 @@ FROM python:3.14-slim AS runtime
 # Add metadata labels
 LABEL maintainer="HOPR Team"
 LABEL description="CT-App - HOPR Cover Traffic Application"
-LABEL version="3.12.0"
+LABEL version="3.14.2"
 
 # Create non-root user for security with home directory
 RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
@@ -48,11 +54,9 @@ RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 # Set working directory
 WORKDIR /code
 
-# Copy installed dependencies from builder stage
-COPY --from=builder --chown=appuser:appuser /code/.venv /code/.venv
-
-# Copy uv binary from builder stage for running the application
-COPY --from=builder /bin/uv /bin/uvx /bin/
+# Copy installed packages from venv without copying the whole venv
+COPY --from=builder /code/.venv/lib/python3.14/site-packages /usr/local/lib/python3.14/site-packages
+COPY --from=builder /code/.venv/bin/* /usr/local/bin/
 
 # Copy application code
 COPY --chown=appuser:appuser . .
@@ -62,9 +66,6 @@ RUN chmod +x ./scripts/run.sh
 
 # Switch to non-root user
 USER appuser
-
-# Add .venv/bin to PATH so Python packages are accessible
-ENV PATH="/code/.venv/bin:$PATH"
 
 # Set entrypoint so arguments are passed to the run script
 # Usage: docker run ct-app:test --env=prod --deployment=blue
