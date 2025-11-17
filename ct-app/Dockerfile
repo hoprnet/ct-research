@@ -38,7 +38,7 @@ RUN uv venv .venv
 RUN uv sync --frozen --no-dev
 
 # Install your project into the env
-RUN uvx pip install --no-cache-dir .
+RUN uv pip install --no-cache-dir .
 
 # Stage 2: Runtime - Minimal production image
 FROM python:3.14-slim AS runtime
@@ -55,7 +55,7 @@ RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 WORKDIR /code
 
 # Copy installed packages from venv without copying the whole venv
-COPY --from=builder /code/.venv/lib/python3.14/site-packages /usr/local/lib/python3.14/site-packages
+COPY --from=builder /code/.venv/lib/python3.*/site-packages /usr/local/lib/python3.*/site-packages
 COPY --from=builder /code/.venv/bin/* /usr/local/bin/
 
 # Copy application code
