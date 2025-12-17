@@ -26,7 +26,7 @@ jobs:
         uses: joerick/pr-labels-action@0543b277721e852d821c6738d449f2f4dea03d5f # v1.0.9
       - name: Updates build version
         id: version
-        uses: hoprnet/hopr-workflows/actions/set-build-version@ausias/setup-version
+        uses: hoprnet/hopr-workflows/actions/set-build-version@build-version-v1
         with:
           file: ct-app/pyproject.toml
           version_type: "${{ inputs.version_type }}"
@@ -44,7 +44,7 @@ jobs:
           fi
           echo "docker_tags=${docker_tags}" | tee -a $GITHUB_OUTPUT
       - name: Setup GCP
-        uses: hoprnet/hopr-workflows/actions/setup-gcp@ausias/setup-version
+        uses: hoprnet/hopr-workflows/actions/setup-gcp@gcp-v1
         with:
           google_credentials: ${{ secrets.GOOGLE_HOPRASSOCIATION_CREDENTIALS_REGISTRY }}
           login_artifact_registry: 'true'

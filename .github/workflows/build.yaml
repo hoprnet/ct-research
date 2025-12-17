@@ -6,6 +6,7 @@ on:
       - synchronize
       - reopened
       - ready_for_review
+      - labeled
 concurrency:
   group: ${{ github.event.pull_request.number || github.ref }}-build
   cancel-in-progress: true
@@ -18,7 +19,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
       - name: Setup Nix
-        uses: hoprnet/hopr-workflows/actions/setup-nix@ausias/setup-version
+        uses: hoprnet/hopr-workflows/actions/setup-nix@nix-v1
         with:
           cache: ct-dapp
       - name: Lint
