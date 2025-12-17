@@ -17,14 +17,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
-      - name: Use Nix Cache
-        uses: cachix/cachix-action@v16
+      - name: Setup Nix
+        uses: hoprnet/hopr-workflows/actions/setup-nix@ausias/setup-version
         with:
-          name: ct-dapp
-        env:
-          USER: runner
+          cache: ct-dapp
       - name: Lint
         working-directory: ct-app
         run: |
@@ -42,7 +38,7 @@ jobs:
     uses: ./.github/workflows/build-docker.yaml
     needs: checks
     with:
-      branch: ${{ github.event.pull_request.head.ref }}
+      source_branch: ${{ github.event.pull_request.head.ref }}
       version_type: "commit"
     secrets: inherit
 
