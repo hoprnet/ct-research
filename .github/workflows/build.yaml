@@ -6,6 +6,7 @@ on:
       - synchronize
       - reopened
       - ready_for_review
+      - labeled
 concurrency:
   group: ${{ github.event.pull_request.number || github.ref }}-build
   cancel-in-progress: true
@@ -17,14 +18,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
-      - name: Use Nix Cache
-        uses: cachix/cachix-action@v16
+      - name: Setup Nix
+        uses: hoprnet/hopr-workflows/actions/setup-nix@nix-v1
         with:
-          name: ct-dapp
-        env:
-          USER: runner
+          cache: ct-dapp
       - name: Lint
         working-directory: ct-app
         run: |
@@ -42,7 +39,7 @@ jobs:
     uses: ./.github/workflows/build-docker.yaml
     needs: checks
     with:
-      branch: ${{ github.event.pull_request.head.ref }}
+      source_branch: ${{ github.event.pull_request.head.ref }}
       version_type: "commit"
     secrets: inherit
 
