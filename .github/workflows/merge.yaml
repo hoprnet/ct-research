@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build-docker:
-    name: Build docker
+    name: Docker
     if: github.event.pull_request.merged == true
     uses: hoprnet/hopr-workflows/.github/workflows/build-docker-image.yaml@ausias/fix-actions
     with:

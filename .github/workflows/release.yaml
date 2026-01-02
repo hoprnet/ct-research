@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build-docker:
-    name: Build docker
+    name: Docker
     uses: hoprnet/hopr-workflows/.github/workflows/build-docker-image.yaml@ausias/fix-actions
     with:
       source_branch: ${{ github.ref }}
@@ -52,7 +52,6 @@ jobs:
     name: Close release
     needs:
       - build-docker-manifest
-      - build-binaries
     runs-on: self-hosted-hoprnet-small
     steps:
       - name: Checkout hoprnet repository

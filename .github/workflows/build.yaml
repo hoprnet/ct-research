@@ -16,7 +16,7 @@ env:
   CARGO_TERM_COLOR: always
 jobs:
   build-docker:
-    name: Build docker
+    name: Docker
     uses: hoprnet/hopr-workflows/.github/workflows/build-docker-image.yaml@ausias/fix-actions
     with:
       source_branch: ${{ github.event.pull_request.head.ref || github.ref }}
