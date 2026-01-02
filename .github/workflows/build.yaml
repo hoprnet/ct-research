@@ -24,7 +24,7 @@ jobs:
       architecture: x86_64-linux
       cachix_cache_name: "ct-dapp"
       build_file: "ct-app/pyproject.toml"
-      build_command: cd ct-dapp && nix run .#docker-build-and-push
+      build_command: cd ct-app && nix run .#docker-build-and-push
       docker_image_name: "cover-traffic"
     secrets:
       gcp_service_account: ${{ secrets.GCP_SA_TERRAFORM_JSON_STAGING}}
