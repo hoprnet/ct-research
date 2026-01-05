@@ -1,3 +1,6 @@
+#################################################################################
+# Pipeline to build on pull requests  #
+#################################################################################
 name: Build
 on:
   pull_request:
@@ -6,12 +9,42 @@ on:
       - synchronize
       - reopened
       - ready_for_review
-      - labeled
 concurrency:
-  group: ${{ github.event.pull_request.number || github.ref }}-build
+  group: ${{ github.ref }}-build
   cancel-in-progress: true
-
+env:
+  CARGO_TERM_COLOR: always
 jobs:
+  build-docker:
+    name: Docker
+    uses: hoprnet/hopr-workflows/.github/workflows/build-docker-image.yaml@build-docker-image-v1
+    with:
+      source_branch: ${{ github.event.pull_request.head.ref || github.ref }}
+      version_type: "commit"
+      cachix_cache_name: "ct-dapp"
+      build_file: "ct-app/pyproject.toml"
+      build_command: cd ct-app && nix run .#docker-build-and-push
+      docker_image_name: "cover-traffic"
+      deployment_namespace: "ctdapp"
+      deployment_label_selector: "hoprds.hoprnet.org/cluster=${{ vars.CTDAPP_STAGING_DEPLOYMENT_CLUSTER }}"
+    secrets:
+      gcp_service_account: ${{ secrets.GCP_SA_TERRAFORM_JSON_STAGING}}
+      cachix_auth_token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      docker_hub_username: ${{ secrets.DOCKER_HUB_USERNAME }}
+      docker_hub_token: ${{ secrets.DOCKER_HUB_TOKEN }}
+  build-docker-manifest:
+    name: Docker manifest
+    needs: build-docker
+    uses: hoprnet/hopr-workflows/.github/workflows/build-docker-manifest.yaml@build-docker-manifest-v1
+    with:
+      version_type: "commit"
+      docker_image_name: "cover-traffic"
+      docker_build_version: ${{ needs.build-docker.outputs.docker_build_version }}
+      docker_debug_version: ${{ needs.build-docker.outputs.docker_debug_version }}
+    secrets:
+      gcp_service_account: ${{ secrets.GOOGLE_HOPRASSOCIATION_CREDENTIALS_REGISTRY}}
+      docker_hub_username: ${{ secrets.DOCKER_HUB_USERNAME }}
+      docker_hub_token: ${{ secrets.DOCKER_HUB_TOKEN }}
   checks:
     name: Lint and Test
     runs-on: ubuntu-24.04
@@ -19,9 +52,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
       - name: Setup Nix
-        uses: hoprnet/hopr-workflows/actions/setup-nix@nix-v1
+        uses: hoprnet/hopr-workflows/actions/setup-nix@setup-nix-v1
         with:
-          cache: ct-dapp
+          cachix_cache_name: ct-dapp
+          cachix_auth_token: ${{ secrets.CACHIX_AUTH_TOKEN }}
       - name: Lint
         working-directory: ct-app
         run: |
@@ -34,12 +68,5 @@ jobs:
         working-directory: ct-app
         run: |
           nix develop -c make stress
-  build-docker:
-    name: Build
-    uses: ./.github/workflows/build-docker.yaml
-    needs: checks
-    with:
-      source_branch: ${{ github.event.pull_request.head.ref }}
-      version_type: "commit"
-    secrets: inherit
+
 
