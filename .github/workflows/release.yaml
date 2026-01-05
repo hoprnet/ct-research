@@ -19,6 +19,8 @@ jobs:
   build-docker:
     name: Docker
     uses: hoprnet/hopr-workflows/.github/workflows/build-docker-image.yaml@build-docker-image-v1
+    permissions:
+      contents: read
     with:
       source_branch: ${{ github.ref }}
       version_type: "release"
@@ -37,6 +39,8 @@ jobs:
     name: Docker manifest
     needs: build-docker
     uses: hoprnet/hopr-workflows/.github/workflows/build-docker-manifest.yaml@build-docker-manifest-v1
+    permissions:
+      contents: read
     with:
       version_type: "release"
       docker_image_name: "cover-traffic"
@@ -52,15 +56,20 @@ jobs:
     needs:
       - build-docker-manifest
     runs-on: self-hosted-hoprnet-small
+    permissions:
+      contents: write
     steps:
       - name: Checkout hoprnet repository
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
       - name: Release version
         uses: hoprnet/hopr-workflows/actions/release-version@release-version-v1
         with:
+          # source_branch: ${{ github.ref }}
           file: ct-app/pyproject.toml
           release_type: "${{ inputs.release_type }}"
           zulip_api_key: ${{ secrets.ZULIP_API_KEY }}
           zulip_email: ${{ secrets.ZULIP_EMAIL }}
           zulip_channel: "HOPRd"
           zulip_topic: "Releases"
+          gcp_service_account: ${{ secrets.GOOGLE_HOPRASSOCIATION_CREDENTIALS_REGISTRY}}
+          attach_binaries: "false"
