@@ -71,3 +71,4 @@ jobs:
           zulip_channel: "HOPRd"
           zulip_topic: "Releases"
           gcp_service_account: ${{ secrets.GOOGLE_HOPRASSOCIATION_CREDENTIALS_REGISTRY}}
+          attach_binaries: "false"
