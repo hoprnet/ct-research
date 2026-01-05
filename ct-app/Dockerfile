@@ -19,6 +19,8 @@ COPY core/components/pyproject.toml ./core/components/
 COPY core/subgraph/pyproject.toml ./core/subgraph/
 COPY core/rpc/pyproject.toml ./core/rpc/
 COPY test/pyproject.toml ./test/
+COPY .configs ./.configs/
+COPY scripts ./scripts/
 
 # Copy source code needed for editable installs (setuptools needs to find packages)
 COPY core/__init__.py ./core/
@@ -34,28 +36,37 @@ COPY test ./test/
 # Install production dependencies only (no dev dependencies)
 RUN uv sync --frozen --no-dev
 
+# Install uv itself in the venv (so runtime can call uv)
+RUN uv pip install uv
+
+# Install your project into the env
+RUN uv pip install --no-cache-dir ./core
+RUN uv pip install --no-cache-dir .
+
 # Stage 2: Runtime - Minimal production image
 FROM python:3.14-slim AS runtime
 
 # Add metadata labels
 LABEL maintainer="HOPR Team"
 LABEL description="CT-App - HOPR Cover Traffic Application"
-LABEL version="3.12.0"
 
-# Create non-root user for security with home directory
+# Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 
 # Set working directory
 WORKDIR /code
 
-# Copy installed dependencies from builder stage
-COPY --from=builder --chown=appuser:appuser /code/.venv /code/.venv
+# Copy the prebuilt virtual environment
+COPY --from=builder /code/.venv /code/.venv
 
-# Copy uv binary from builder stage for running the application
-COPY --from=builder /bin/uv /bin/uvx /bin/
+# Copy application source code and scripts
+COPY --from=builder --chown=appuser:appuser /code/core ./core
+COPY --from=builder --chown=appuser:appuser /code/test ./test
+COPY --from=builder --chown=appuser:appuser /code/scripts ./scripts
+COPY --from=builder --chown=appuser:appuser /code/.configs ./.configs
 
-# Copy application code
-COPY --chown=appuser:appuser . .
+# Set PATH to use Python and uv from venv
+ENV PATH="/code/.venv/bin:$PATH"
 
 # Make run script executable
 RUN chmod +x ./scripts/run.sh
@@ -63,9 +74,5 @@ RUN chmod +x ./scripts/run.sh
 # Switch to non-root user
 USER appuser
 
-# Add .venv/bin to PATH so Python packages are accessible
-ENV PATH="/code/.venv/bin:$PATH"
-
-# Set entrypoint so arguments are passed to the run script
-# Usage: docker run ct-app:test --env=prod --deployment=blue
-ENTRYPOINT ["./scripts/run.sh"]
+# Entrypoint
+ENTRYPOINT ["./scripts/run.sh", "--no-log-file"]
