@@ -17,11 +17,10 @@ env:
 jobs:
   build-docker:
     name: Docker
-    uses: hoprnet/hopr-workflows/.github/workflows/build-docker-image.yaml@ausias/fix-actions
+    uses: hoprnet/hopr-workflows/.github/workflows/build-docker-image.yaml@build-docker-image-v1
     with:
       source_branch: ${{ github.event.pull_request.head.ref || github.ref }}
       version_type: "commit"
-      architecture: x86_64-linux
       cachix_cache_name: "ct-dapp"
       build_file: "ct-app/pyproject.toml"
       build_command: cd ct-app && nix run .#docker-build-and-push
@@ -36,7 +35,7 @@ jobs:
   build-docker-manifest:
     name: Docker manifest
     needs: build-docker
-    uses: hoprnet/hopr-workflows/.github/workflows/build-docker-manifest.yaml@ausias/fix-actions
+    uses: hoprnet/hopr-workflows/.github/workflows/build-docker-manifest.yaml@build-docker-manifest-v1
     with:
       version_type: "commit"
       docker_image_name: "cover-traffic"
@@ -53,7 +52,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
       - name: Setup Nix
-        uses: hoprnet/hopr-workflows/actions/setup-nix@ausias/fix-actions
+        uses: hoprnet/hopr-workflows/actions/setup-nix@setup-nix-v1
         with:
           cachix_cache_name: ct-dapp
           cachix_auth_token: ${{ secrets.CACHIX_AUTH_TOKEN }}
