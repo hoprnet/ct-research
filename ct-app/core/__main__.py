@@ -36,6 +36,8 @@ def main(configfile: str):
             "Could not start the prometheus client",
             {"port": prometheus_server_port, "error": f"[Errno {err.args[0]}]: {err.args[1]}"},
         )
+    except Exception:
+        logger.exception("Unexpected error starting the prometheus client")
     else:
         logger.info("Prometheus client started", {"port": prometheus_server_port})
 

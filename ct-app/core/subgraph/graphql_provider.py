@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Optional, Tuple
 
 import aiohttp
+from multidict import CIMultiDictProxy
 from prometheus_client import Gauge
 
 from ..components.logs import configure_logging
@@ -24,13 +25,13 @@ class ProviderError(Exception):
 
 
 class GraphQLProvider:
-    query_file: Optional[str] = None
+    query_file: str
     params: list[str] = []
-    default_key: Optional[list[str]] = None
+    default_key: Optional[str] = None
 
     def __init__(self, url: URL):
         self.url = url
-        self.pwd = Path(sys.modules[self.__class__.__module__].__file__).parent
+        self.pwd = Path(str(sys.modules[self.__class__.__module__].__file__)).parent
         self._initialize_query(self.query_file, self.params)
 
     #### PRIVATE METHODS ####
@@ -38,10 +39,10 @@ class GraphQLProvider:
         if extra_inputs is None:
             extra_inputs = []
 
-        keys, self._sku_query = self._load_query(query_file, extra_inputs)
+        key, self._sku_query = self._load_query(query_file, extra_inputs)
 
         if self.default_key is None:
-            self.default_key = keys
+            self.default_key = key
 
     def _load_query(
         self, path: str | Path, extra_inputs: Optional[list[str]] = None
@@ -63,7 +64,9 @@ class GraphQLProvider:
 
         return body.split("(")[0], ("\n".join([header, body, footer]))
 
-    async def _execute(self, query: str, variable_values: dict) -> tuple[dict, Optional[dict]]:
+    async def _execute(
+        self, query: str, variable_values: dict
+    ) -> tuple[dict, Optional[CIMultiDictProxy]]:
         """
         Executes a graphql query.
         :param query: The query to execute.
@@ -77,7 +80,7 @@ class GraphQLProvider:
                 ) as response,
             ):
                 SUBGRAPH_CALLS.labels(self.url.params.slug, self.url.mode).inc()
-                return await response.json(), response.headers  # ty: ignore[invalid-return-type]
+                return await response.json(), response.headers
         except TimeoutError as err:
             logger.error("Timeout error", {"error": str(err)})
         except Exception as err:
@@ -151,8 +154,8 @@ class GraphQLProvider:
             except asyncio.TimeoutError:
                 logger.error("Timeout error while fetching data from subgraph")
                 break
-            except ProviderError as err:
-                logger.error("ProviderError error", {"error": str(err)})
+            except ProviderError:
+                logger.exception("ProviderError error")
                 break
 
             if response is None:
@@ -163,10 +166,10 @@ class GraphQLProvider:
 
             try:
                 content = response.get("data", dict()).get(key, [])
-            except Exception as err:
-                logger.error(
+            except Exception:
+                logger.exception(
                     "Error while fetching data from subgraph",
-                    {"error": str(err), "data": response},
+                    {"data": response},
                 )
                 break
             data.extend(content)
