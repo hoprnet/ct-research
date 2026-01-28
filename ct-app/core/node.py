@@ -203,8 +203,8 @@ class Node(
                 await NodeHelper.close_session(self.api, session, relayer)
                 logger.debug("Closed session during shutdown", {"relayer": relayer})
                 return True
-            except Exception as e:
-                logger.error("Error closing session at API", {"relayer": relayer, "error": str(e)})
+            except Exception:
+                logger.exception("Error closing session at API", {"relayer": relayer})
                 return False
 
         # Run all API close operations in parallel
@@ -217,8 +217,8 @@ class Node(
         for relayer, session in sessions_to_close:
             try:
                 session.close_socket()
-            except Exception as e:
-                logger.error("Error closing socket", {"relayer": relayer, "error": str(e)})
+            except Exception:
+                logger.exception("Error closing socket", {"relayer": relayer})
 
         # Phase 3: Clear session caches and rate limiter
         self.sessions.clear()
