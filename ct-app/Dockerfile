@@ -17,7 +17,6 @@ COPY core/pyproject.toml ./core/
 COPY core/api/pyproject.toml ./core/api/
 COPY core/components/pyproject.toml ./core/components/
 COPY core/subgraph/pyproject.toml ./core/subgraph/
-COPY core/rpc/pyproject.toml ./core/rpc/
 COPY test/pyproject.toml ./test/
 COPY .configs ./.configs/
 COPY scripts ./scripts/
@@ -27,7 +26,6 @@ COPY core/__init__.py ./core/
 COPY core/__main__.py ./core/
 COPY core/node.py ./core/
 COPY core/mixins ./core/mixins/
-COPY core/rpc ./core/rpc/
 COPY core/api ./core/api/
 COPY core/components ./core/components/
 COPY core/subgraph ./core/subgraph/

@@ -16,10 +16,6 @@ flags:
     # through subgraph queries
     peers_rewards: 300
     registered_nodes: 300
-
-    # through rpc calls
-    allocations: 300
-    eoa_balances: 300
     
     healthcheck: 15
     retrieve_peers: 60
@@ -120,29 +116,6 @@ sessions:
   session_retry_base_delay_seconds: 2.0
   session_retry_max_delay_seconds: 60.0
   message_worker_count: 10
-
-
-# =============================================================================
-# 
-# =============================================================================
-investors:
-  schedule: "investor-node-remainder-2024-01"
-  addresses:
-    - "0xebad8a12451bd17f7708a325a150f06cb0ec6e7c"
-    - "0x9263a4d34c3fe5a3e5a281c78f652ee84abc56ae"
-    - "0x3228413375817f8201c78a61ee86c5b8689343bb"
-    - "0x06c2c4db3776d500636de63e4f109386dcba6ae2"
-    - "0xcf2878a10cca65e3ec3569e0d9634d431bcbef9e"
-    - "0x329c54289ff5d6b7b7dae13592c6b1eda1543ed4"
-    - "0xa96bc337f5966c8ecba27fc4d46c75712790997c"
-    - "0xb11dd162fc6c31cb5560f2310de3283bb913b91e"
-
-# =============================================================================
-# 
-# =============================================================================
-rpc:
-  gnosis: 
-  mainnet: 
 
 # =============================================================================
 # 

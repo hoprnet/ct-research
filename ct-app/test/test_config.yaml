@@ -17,10 +17,6 @@ flags:
     # through subgraph queries
     peers_rewards: 30
     registered_nodes: 30
-
-    # through rpc calls
-    allocations: 30
-    eoa_balances: 30
     
     healthcheck: 10
     retrieve_peers: 30
@@ -111,20 +107,7 @@ sessions:
   session_retry_base_delay_seconds: 2.0
   session_retry_max_delay_seconds: 60.0
   message_worker_count: 10
-  
-# =============================================================================
-# 
-# =============================================================================
-investors:
-  schedule: 
-  addresses: []
 
-# =============================================================================
-# 
-# =============================================================================
-rpc:
-  gnosis:   
-  mainnet: 
 
 # =============================================================================
 # 

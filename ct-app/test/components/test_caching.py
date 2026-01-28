@@ -358,13 +358,11 @@ class TestMergeDataSourcesOptimization:
         """Test mergeDataSources performance with large dataset (100+ peers)."""
         from core.components import Utils
         from core.components.balance import Balance
-        from core.rpc import entries as rpc_entries
         from core.subgraph import entries as sg_entries
 
         # Create large dataset
         num_peers = 100
         num_nodes = 100
-        num_allocations = 50
 
         topology_list = {f"address_{i}": Balance("1 wxHOPR") for i in range(num_peers)}
         peers_list = [Peer(f"address_{i}") for i in range(num_peers)]
@@ -374,20 +372,8 @@ class TestMergeDataSourcesOptimization:
             )
             for i in range(num_nodes)
         ]
-        allocation_list = [
-            rpc_entries.Allocation(
-                f"owner_{i}", "schedule", Balance(f"{i * 10} wxHOPR"), Balance.zero("wxHOPR")
-            )
-            for i in range(num_allocations)
-        ]
 
-        # Link allocations to safes
-        for i, allocation in enumerate(allocation_list):
-            # Each allocation links to 2-3 safes
-            allocation.linked_safes = {f"safe_{i}", f"safe_{(i+1) % num_nodes}"}
-
-        # Run mergeDataSources
-        await Utils.mergeDataSources(topology_list, peers_list, nodes_list, allocation_list, {})
+        await Utils.mergeDataSources(topology_list, peers_list, nodes_list)
 
         # Verify results
         peers_with_safe = [p for p in peers_list if p.safe is not None]
@@ -402,7 +388,6 @@ class TestMergeDataSourcesOptimization:
         """Test that mergeDataSources uses indexed lookups correctly."""
         from core.components import Utils
         from core.components.balance import Balance
-        from core.rpc import entries as rpc_entries
         from core.subgraph import entries as sg_entries
 
         # Create test data with specific structure to verify indexing
@@ -414,20 +399,12 @@ class TestMergeDataSourcesOptimization:
                 sg_entries.Safe("safe_1", "10", "1", ["owner_1"]),
             )
         ]
-        allocation_list = [
-            rpc_entries.Allocation(
-                "owner_1", "schedule", Balance("100 wxHOPR"), Balance.zero("wxHOPR")
-            )
-        ]
-        allocation_list[0].linked_safes = {"safe_1"}
 
-        # Run mergeDataSources
-        await Utils.mergeDataSources(topology_list, peers_list, nodes_list, allocation_list, {})
+        await Utils.mergeDataSources(topology_list, peers_list, nodes_list)
 
         # Verify indexed lookup worked with case-insensitive matching
         assert peers_list[0].safe is not None
         assert peers_list[0].safe.address == "safe_1"
-        assert peers_list[0].safe.additional_balance == Balance("100 wxHOPR")
 
     @pytest.mark.asyncio
     async def test_mergeDataSources_edge_cases(self):
@@ -435,11 +412,11 @@ class TestMergeDataSourcesOptimization:
         from core.components import Utils
 
         # Test with empty lists
-        await Utils.mergeDataSources({}, [], [], [], {})
+        await Utils.mergeDataSources({}, [], [])
 
         # Test with None values
         peers_list = [Peer("address_1")]
-        await Utils.mergeDataSources({}, peers_list, [], [], {})
+        await Utils.mergeDataSources({}, peers_list, [])
 
         # Peer should not have safe set
         assert peers_list[0].safe is None

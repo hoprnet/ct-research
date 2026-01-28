@@ -8,14 +8,7 @@ from ..components.config_parser.economic_model import LegacyParams, SigmoidParam
 from ..components.decorators import keepalive
 from ..components.logs import configure_logging
 from ..components.utils import Utils
-from .protocols import (
-    HasChannels,
-    HasParams,
-    HasPeers,
-    HasRPCs,
-    HasSession,
-    HasSubgraphs,
-)
+from .protocols import HasChannels, HasParams, HasPeers, HasSession, HasSubgraphs
 
 ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
 MESSAGE_COUNT = Gauge(
@@ -26,7 +19,7 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 
-class EconomicSystemMixin(HasChannels, HasParams, HasPeers, HasRPCs, HasSession, HasSubgraphs):
+class EconomicSystemMixin(HasChannels, HasParams, HasPeers, HasSession, HasSubgraphs):
     @keepalive
     async def apply_economic_model(self):
         """
@@ -37,15 +30,10 @@ class EconomicSystemMixin(HasChannels, HasParams, HasPeers, HasRPCs, HasSession,
             logger.warning("Not enough data to apply economic model")
             return
 
-        Utils.associateEntitiesToNodes(self.allocations_data, self.registered_nodes_data)
-        Utils.associateEntitiesToNodes(self.eoa_balances_data, self.registered_nodes_data)
-
         await Utils.mergeDataSources(
             self.topology_data,
             self.peers,
             self.registered_nodes_data,
-            self.allocations_data,
-            self.eoa_balances_data,
         )
 
         Utils.allowManyNodePerSafe(self.peers)

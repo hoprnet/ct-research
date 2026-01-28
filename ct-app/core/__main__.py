@@ -24,8 +24,6 @@ def main(configfile: str):
     logger.info("Safe parameters loaded", {"params": str(params)})
 
     params.subgraph.set_attribute_from_env("api_key", "SUBGRAPH_API_KEY")
-    params.rpc.set_attribute_from_env("gnosis", "RPC_GNOSIS")
-    params.rpc.set_attribute_from_env("mainnet", "RPC_MAINNET")
 
     # start the prometheus client
     prometheus_server_port = 8081

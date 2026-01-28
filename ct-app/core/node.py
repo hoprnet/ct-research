@@ -35,7 +35,6 @@ from .components.logs import configure_logging
 from .components.peer import Peer
 from .components.session_rate_limiter import SessionRateLimiter
 from .components.utils import Utils
-from .rpc import entries as rpc_entries
 from .subgraph import entries as subgraph_entries
 
 BALANCE_MULTIPLIER = Gauge("ct_balance_multiplier", "factor to multiply the balance by")
@@ -48,7 +47,6 @@ class Node(
     mixins.ChannelMixin,
     mixins.EconomicSystemMixin,
     mixins.PeersMixin,
-    mixins.RPCMixin,
     mixins.SubgraphMixin,
     mixins.SessionMixin,
     mixins.StateMixin,
@@ -110,8 +108,6 @@ class Node(
 
         self.topology_data = dict[str, Balance]()
         self.registered_nodes_data = list[subgraph_entries.Node]()
-        self.allocations_data = list[rpc_entries.Allocation]()
-        self.eoa_balances_data = list[rpc_entries.ExternalBalance]()
         self.peers_rewards_data = dict[str, float]()
 
         self.ticket_price = None
