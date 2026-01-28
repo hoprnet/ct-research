@@ -10,7 +10,6 @@ from ..components.logs import configure_logging
 from ..components.utils import Utils
 from .protocols import (
     HasChannels,
-    HasNFT,
     HasParams,
     HasPeers,
     HasRPCs,
@@ -27,9 +26,7 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 
-class EconomicSystemMixin(
-    HasChannels, HasNFT, HasParams, HasPeers, HasRPCs, HasSession, HasSubgraphs
-):
+class EconomicSystemMixin(HasChannels, HasParams, HasPeers, HasRPCs, HasSession, HasSubgraphs):
     @keepalive
     async def apply_economic_model(self):
         """
@@ -57,8 +54,6 @@ class EconomicSystemMixin(
             if not p.is_eligible(
                 self.params.economic_model.min_safe_allowance,
                 self.params.economic_model.legacy.coefficients.lowerbound,
-                self.nft_holders_data,
-                self.params.economic_model.nft_threshold,
                 self.params.sessions.blue_destinations + self.params.sessions.green_destinations,
                 self.params.peer.excluded_peers,
             ):

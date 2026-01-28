@@ -24,10 +24,6 @@ class HasChannels(Protocol):
     topology_data: dict[str, Balance]
 
 
-class HasNFT(Protocol):
-    nft_holders_data: list[str]
-
-
 class HasParams(Protocol):
     params: Parameters
 

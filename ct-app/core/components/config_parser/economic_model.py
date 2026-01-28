@@ -161,7 +161,6 @@ class SigmoidParams(ExplicitParams):
 @dataclass(init=False)
 class EconomicModelParams(ExplicitParams):
     min_safe_allowance: Balance
-    nft_threshold: Balance
     legacy: LegacyParams
     sigmoid: SigmoidParams
 

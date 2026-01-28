@@ -50,7 +50,7 @@ class Utils:
 
             node = (
                 nodes_by_address.get(peer.node_address.lower(), None)
-                if hasattr(peer, "node_address")
+                if hasattr(peer, "node_address") and peer.node_address
                 else None
             )
 

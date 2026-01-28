@@ -47,7 +47,6 @@ logger = logging.getLogger(__name__)
 class Node(
     mixins.ChannelMixin,
     mixins.EconomicSystemMixin,
-    mixins.NftMixin,
     mixins.PeersMixin,
     mixins.RPCMixin,
     mixins.SubgraphMixin,
@@ -111,7 +110,6 @@ class Node(
 
         self.topology_data = dict[str, Balance]()
         self.registered_nodes_data = list[subgraph_entries.Node]()
-        self.nft_holders_data = list[str]()
         self.allocations_data = list[rpc_entries.Allocation]()
         self.eoa_balances_data = list[rpc_entries.ExternalBalance]()
         self.peers_rewards_data = dict[str, float]()
@@ -138,7 +136,6 @@ class Node(
     async def start(self):
         await self.retrieve_address()
         self.get_graphql_providers()
-        self.get_nft_holders()
 
         keep_alive_methods: list[str] = Utils.get_methods(mixins.__path__[0], "keepalive")
         AsyncLoop.update([getattr(self, m) for m in keep_alive_methods])

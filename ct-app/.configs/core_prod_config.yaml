@@ -45,7 +45,6 @@ flags:
 # =============================================================================
 economic_model:
   min_safe_allowance: "0 wxHOPR"
-  nft_threshold: "30000 wxHOPR"
 
   legacy:
     proportion: 1.0
@@ -55,7 +54,7 @@ economic_model:
       a: 1
       b: 1.4
       upperbound: "75000 wxHOPR"
-      lowerbound: "10000 wxHOPR"
+      lowerbound: "30000 wxHOPR"
     
     equations: 
       fx: 
@@ -137,12 +136,6 @@ investors:
     - "0x329c54289ff5d6b7b7dae13592c6b1eda1543ed4"
     - "0xa96bc337f5966c8ecba27fc4d46c75712790997c"
     - "0xb11dd162fc6c31cb5560f2310de3283bb913b91e"
-
-# =============================================================================
-# 
-# =============================================================================
-nft_holders:
-  filepath: ".configs/nft_holders.txt"
 
 # =============================================================================
 # 

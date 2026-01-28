@@ -99,8 +99,6 @@ class Peer:
         self,
         min_allowance: Balance,
         min_stake: Balance,
-        nft_holders: list[str],
-        nft_threshold: Balance,
         ct_nodes: list[str],
         exclusion_list: list[str],
     ) -> bool:
@@ -112,13 +110,6 @@ class Peer:
                 return False
 
             if self.safe.allowance < min_allowance:
-                return False
-
-            if (
-                self.safe.address not in nft_holders
-                and nft_threshold
-                and self.split_stake < nft_threshold
-            ):
                 return False
 
             if self.split_stake < min_stake:
