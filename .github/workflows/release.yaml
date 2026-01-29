@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       release_type:
-        description: "Next version type"
+        description: Version type after release
         required: true
         type: choice
         default: "patch"
@@ -21,6 +21,8 @@ jobs:
     uses: hoprnet/hopr-workflows/.github/workflows/build-docker-image.yaml@build-docker-image-v1
     permissions:
       contents: read
+      security-events: write
+      id-token: write
     with:
       source_branch: ${{ github.ref }}
       version_type: "release"
