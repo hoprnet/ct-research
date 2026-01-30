@@ -74,3 +74,4 @@ jobs:
           zulip_topic: "Releases"
           gcp_service_account: ${{ secrets.GOOGLE_HOPRASSOCIATION_CREDENTIALS_REGISTRY}}
           attach_binaries: "false"
+          github_token: ${{ secrets.GH_RUNNER_TOKEN }}
