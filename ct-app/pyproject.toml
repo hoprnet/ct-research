@@ -1,6 +1,6 @@
 [project]
 name = "ct-app"
-version = "3.14.3"
+version = "3.14.4"
 requires-python = ">=3.12"
 dependencies = ["core"]
 
