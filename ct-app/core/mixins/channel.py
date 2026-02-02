@@ -183,7 +183,9 @@ class ChannelMixin(HasAPI, HasChannels, HasParams, HasPeers):
                 to_peer_history[address] = datetime.now()
                 continue
 
-            if (datetime.now() - timestamp).total_seconds() < self.params.channel.max_age_seconds:
+            if (
+                datetime.now() - timestamp
+            ).total_seconds() < self.params.channel.max_age_seconds.value:
                 continue
 
             channels_to_close.append(channel)

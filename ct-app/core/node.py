@@ -27,7 +27,8 @@ from prometheus_client import Gauge
 
 from . import mixins
 from .api.hoprd_api import HoprdAPI
-from .api.response_objects import Channels, Session
+from .api.response_objects import Channels, OwnChannel, Session
+from .components.address import Address
 from .components.asyncloop import AsyncLoop
 from .components.balance import Balance
 from .components.config_parser import Parameters
@@ -90,20 +91,23 @@ class Node(
 
         # Session rate limiter to prevent API overload from failed attempts
         # Use default values if sessions config is not available
+        if hasattr(self.params, "sessions"):
+            base_delay = getattr(self.params.sessions, "session_retry_base_delay", 2.0)
+            max_delay = getattr(self.params.sessions, "session_retry_max_delay", 60.0)
+            if hasattr(base_delay, "value"):
+                base_delay = base_delay.value
+            if hasattr(max_delay, "value"):
+                max_delay = max_delay.value
+        else:
+            base_delay = 2.0
+            max_delay = 60.0
+
         self.session_rate_limiter = SessionRateLimiter(
-            base_delay=(
-                getattr(self.params.sessions, "session_retry_base_delay_seconds", 2.0)
-                if hasattr(self.params, "sessions")
-                else 2.0
-            ),
-            max_delay=(
-                getattr(self.params.sessions, "session_retry_max_delay_seconds", 60.0)
-                if hasattr(self.params, "sessions")
-                else 60.0
-            ),
+            base_delay=base_delay,
+            max_delay=max_delay,
         )
 
-        self.address = None  # type: ignore[assignment]
+        self.address: Optional[Address] = None
         self.channels: Optional[Channels] = None
 
         self.topology_data = dict[str, Balance]()
@@ -121,11 +125,11 @@ class Node(
         self._cached_reachable_destinations: set[str] | None = None
 
         # Channel caching (ChannelMixin)
-        self._cached_outgoing_open: list | None = None
-        self._cached_incoming_open: list | None = None
-        self._cached_outgoing_pending: list | None = None
-        self._cached_outgoing_not_closed: list | None = None
-        self._cached_address_to_open_channel: dict | None = None
+        self._cached_outgoing_open: list[OwnChannel] | None = None
+        self._cached_incoming_open: list[OwnChannel] | None = None
+        self._cached_outgoing_pending: list[OwnChannel] | None = None
+        self._cached_outgoing_not_closed: list[OwnChannel] | None = None
+        self._cached_address_to_open_channel: dict[str, OwnChannel] | None = None
 
         BALANCE_MULTIPLIER.set(1.0)
 

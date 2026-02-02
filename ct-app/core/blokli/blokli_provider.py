@@ -34,12 +34,19 @@ class BlokliProvider(Generic[TBlokliResponse]):
     query_file: str
     params: list[str] = []
     _return_type: type[TBlokliResponse] = JsonResponse  # ty: ignore[invalid-assignment]
+    _session: Optional[aiohttp.ClientSession] = None
 
     def __init__(self, url: str, token: Optional[str] = None):
         self.url = url
         self.token = token
         self.pwd = Path(str(sys.modules[self.__class__.__module__].__file__)).parent
         self._initialize_query(self.query_file, self.params)
+        self._timeout = aiohttp.ClientTimeout(total=30)
+
+    async def close(self) -> None:
+        if self._session is not None and not self._session.closed:
+            await self._session.close()
+        self._session = None
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -82,12 +89,12 @@ class BlokliProvider(Generic[TBlokliResponse]):
                 "Executing blokli query",
                 {"url": self.url, "query": query, "variables": variable_values},
             )
-            async with (
-                aiohttp.ClientSession() as session,
-                session.post(
-                    self.url, json={"query": query, "variables": variable_values}
-                ) as response,
-            ):
+            if self._session is None or self._session.closed:
+                self._session = aiohttp.ClientSession(timeout=self._timeout)
+
+            async with self._session.post(
+                self.url, json={"query": query, "variables": variable_values}
+            ) as response:
                 BLOKLI_CALLS.inc()
                 logger.debug(
                     "Blokli response received",
@@ -97,6 +104,11 @@ class BlokliProvider(Generic[TBlokliResponse]):
                         "body": await response.text(),
                     },
                 )
+                if response.status >= 400:
+                    logger.error(
+                        "Blokli request failed",
+                        {"status": response.status, "url": self.url},
+                    )
 
                 return await response.json(), response.headers
 

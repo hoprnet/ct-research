@@ -117,7 +117,10 @@ class Peer:
         if self.safe.allowance < min_allowance:
             return False
 
-        if self.split_stake < min_stake:
+        try:
+            if self.split_stake < min_stake:
+                return False
+        except ValueError:
             return False
 
         return True
@@ -132,7 +135,7 @@ class Peer:
 
         if delay := self.message_delay:
             # minimum 3 as 2 of those packets will be sent as session initialization packets
-            batch_size = self.params.peer.minimum_delay_between_batches / delay
+            batch_size = self.params.peer.minimum_delay_between_batches.value / delay
             refactored_batch_size: int = max(3, int(batch_size + 0.5))
 
             message = MessageFormat(self.address.native, batch_size=refactored_batch_size)
@@ -142,7 +145,8 @@ class Peer:
         else:
             await asyncio.sleep(
                 random.normalvariate(
-                    self.params.peer.sleep_mean_time, self.params.peer.sleep_std_time
+                    self.params.peer.sleep_mean_time.value,
+                    self.params.peer.sleep_std_time.value,
                 )
             )
 

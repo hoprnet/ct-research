@@ -6,32 +6,32 @@ environment: staging
 
 flags:
   node:
-    apply_economic_model: 15
-    ticket_parameters: 60
+    apply_economic_model: 15s
+    ticket_parameters: 1m
 
-    outgoing_channels_balances: 30
+    outgoing_channels_balances: 30s
 
-    rotate_subgraphs: 300
+    rotate_subgraphs: 5m
 
     # through subgraph queries
-    peers_rewards: 300
-    registered_nodes: 300
+    peers_rewards: 5m
+    registered_nodes: 5m
     
-    healthcheck: 15
-    retrieve_peers: 60
-    retrieve_channels: 120
-    retrieve_balances: 300
+    healthcheck: 15s
+    retrieve_peers: 1m
+    retrieve_channels: 2m
+    retrieve_balances: 5m
 
-    open_channels: 300
-    fund_channels: 300
-    close_old_channels: 300
-    close_pending_channels: 300
+    open_channels: 5m
+    fund_channels: 5m
+    close_old_channels: 5m
+    close_pending_channels: 5m
     close_incoming_channels: Off
 
-    get_total_channel_funds: 300
+    get_total_channel_funds: 5m
 
     observe_message_queue: On
-    maintain_sessions: 15
+    maintain_sessions: 15s
 
   peer:
     message_relay_request: On
@@ -84,9 +84,9 @@ economic_model:
 # 
 # =============================================================================
 peer:
-  minimum_delay_between_batches: 10
-  sleep_mean_time: 10
-  sleep_std_time: 2
+  minimum_delay_between_batches: 10s
+  sleep_mean_time: 10s
+  sleep_std_time: 2s
   excluded_peers:
   - "0xcd9d0e23cd999dfc0d1400d837f8e612dbbbdfaa"
   - "0x7220cfe91f369bfe79f883c2891e97407d7a4d48"
@@ -99,7 +99,7 @@ peer:
 channel:
   min_balance: "0.05 wxHOPR"
   funding_amount: "0.1 wxHOPR"
-  max_age_seconds: 86400
+  max_age_seconds: 1d
 
 # =============================================================================
 #
@@ -113,8 +113,8 @@ sessions:
   - "0x2eb08c7d673c4b7e8c017471e8d4de996aa82e83"
   - "0x0d3832bf4e8dd5f0ccd996fa2a27e1f864fd91bc"
   - "0xe5ad48d9005f9529da75ded5d931c72bb14b0b19"
-  session_retry_base_delay_seconds: 2.0
-  session_retry_max_delay_seconds: 60.0
+  session_retry_base_delay: 2s
+  session_retry_max_delay: 60s
   message_worker_count: 10
 
 # =============================================================================

@@ -6,32 +6,32 @@ environment: prod
 
 flags:
   node:
-    apply_economic_model: 30
-    ticket_parameters: 60
+    apply_economic_model: 30s
+    ticket_parameters: 1m
 
-    outgoing_channels_balances: 30
+    outgoing_channels_balances: 30s
 
-    rotate_subgraphs: 300
+    rotate_subgraphs: 5m
 
     # through subgraph queries
-    peers_rewards: 300
-    registered_nodes: 300
+    peers_rewards: 5m
+    registered_nodes: 5m
     
-    healthcheck: 15
-    retrieve_peers: 60
-    retrieve_channels: 120
-    retrieve_balances: 300
+    healthcheck: 15s
+    retrieve_peers: 1m
+    retrieve_channels: 2m
+    retrieve_balances: 5m
 
-    open_channels: 300
-    fund_channels: 300
-    close_old_channels: 300
-    close_pending_channels: 300
+    open_channels: 5m
+    fund_channels: 5m
+    close_old_channels: 5m
+    close_pending_channels: 5m
     close_incoming_channels: Off
 
-    get_total_channel_funds: 300
+    get_total_channel_funds: 5m
     
     observe_message_queue: On
-    maintain_sessions: 15
+    maintain_sessions: 15s
 
   peer:
     message_relay_request: On
@@ -84,9 +84,9 @@ economic_model:
 # 
 # =============================================================================
 peer:
-  minimum_delay_between_batches: 60
-  sleep_mean_time: 30
-  sleep_std_time: 2
+  minimum_delay_between_batches: 60s
+  sleep_mean_time: 30s
+  sleep_std_time: 2s
   excluded_peers: []
   
 # =============================================================================
@@ -95,7 +95,7 @@ peer:
 channel:
   min_balance: "20 wxHOPR"
   funding_amount: "30 wxHOPR"
-  max_age_seconds: 172800
+  max_age_seconds: 2d
 
 # =============================================================================
 #
@@ -113,8 +113,8 @@ sessions:
   - "0x29d61ddbc682f272fc7f0dfb203938e211471826"
   - "0x8fd1766b4215944f2eb21f03e6820bc3c75d936c"
   - "0x633382b748e34432df1dbdfdd234833454b3d768"
-  session_retry_base_delay_seconds: 2.0
-  session_retry_max_delay_seconds: 60.0
+  session_retry_base_delay: 2s
+  session_retry_max_delay: 60s
   message_worker_count: 10
 
 # =============================================================================

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Callable, Literal, Optional, TypeVar, Union, cast, overload
+from typing import Any, Callable, Literal, Optional, TypeVar, Union, overload
 
 from api_lib import ApiLib
 from api_lib.method import Method
@@ -19,6 +19,7 @@ class HoprdAPI(ApiLib):
     """
 
     _TResponse = TypeVar("_TResponse", bound=Response)
+    _TModel = TypeVar("_TModel")
 
     @overload
     async def try_req(
@@ -55,6 +56,18 @@ class HoprdAPI(ApiLib):
         return_state: Literal[False] = False,
         timeout: int = 90,
     ) -> Optional[list[_TResponse]]: ...
+
+    @overload
+    async def try_req(
+        self,
+        method: Method,
+        path: str,
+        resp_type: type[_TModel],
+        data: Optional[RequestData] = None,
+        use_api_prefix: bool = True,
+        return_state: Literal[False] = False,
+        timeout: int = 90,
+    ) -> Optional[_TModel]: ...
 
     @overload
     async def try_req(
@@ -149,10 +162,7 @@ class HoprdAPI(ApiLib):
         :return: channels: list
         """
         header = req.GetChannelsBody(full_topology, False)
-        result = await self.try_req(
-            Method.GET, f"/channels?{header.as_header_string}", resp.Channels
-        )
-        return cast(Optional[resp.Channels], result)
+        return await self.try_req(Method.GET, f"/channels?{header.as_header_string}", resp.Channels)
 
     async def metrics(self) -> Optional[resp.Metrics]:
         """
