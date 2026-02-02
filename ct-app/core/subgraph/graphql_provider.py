@@ -72,6 +72,10 @@ class GraphQLProvider:
         :param query: The query to execute.
         :param variable_values: The variables to use in the query (dict)"""
 
+        if not self.url.url:
+            logger.error("No subgraph URL usable")
+            return {}, None
+
         try:
             async with (
                 aiohttp.ClientSession() as session,

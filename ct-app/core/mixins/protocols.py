@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional, Protocol
 
 from ..api.hoprd_api import HoprdAPI
-from ..api.response_objects import Channels, Session
+from ..api.response_objects import Channels, Session, TicketPrice
 from ..components.address import Address
 from ..components.balance import Balance
 from ..components.config_parser.parameters import Parameters
@@ -25,6 +25,7 @@ class HasChannels(Protocol):
 
 class HasParams(Protocol):
     params: Parameters
+    ticket_price: Optional[TicketPrice]
 
 
 class HasPeers(Protocol):

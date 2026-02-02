@@ -365,7 +365,7 @@ class TestMergeDataSourcesOptimization:
         num_nodes = 100
 
         topology_list = {f"address_{i}": Balance("1 wxHOPR") for i in range(num_peers)}
-        peers_list = [Peer(f"address_{i}") for i in range(num_peers)]
+        peers_list = {Peer(f"address_{i}") for i in range(num_peers)}
         nodes_list = [
             sg_entries.Node(
                 f"address_{i}", sg_entries.Safe(f"safe_{i}", "10", f"{i}", [f"owner_{i}"])
@@ -392,7 +392,7 @@ class TestMergeDataSourcesOptimization:
 
         # Create test data with specific structure to verify indexing
         topology_list = {"ADDRESS_1": Balance("1 wxHOPR")}  # Mixed case
-        peers_list = [Peer("ADDRESS_1")]
+        peers_list = {Peer("ADDRESS_1")}
         nodes_list = [
             sg_entries.Node(
                 "address_1",  # Lowercase - tests case-insensitive lookup
@@ -403,8 +403,8 @@ class TestMergeDataSourcesOptimization:
         await Utils.mergeDataSources(topology_list, peers_list, nodes_list)
 
         # Verify indexed lookup worked with case-insensitive matching
-        assert peers_list[0].safe is not None
-        assert peers_list[0].safe.address == "safe_1"
+        assert next(iter(peers_list)).safe is not None
+        assert next(iter(peers_list)).safe.address == "safe_1"
 
     @pytest.mark.asyncio
     async def test_mergeDataSources_edge_cases(self):
@@ -412,11 +412,11 @@ class TestMergeDataSourcesOptimization:
         from core.components import Utils
 
         # Test with empty lists
-        await Utils.mergeDataSources({}, [], [])
+        await Utils.mergeDataSources({}, set(), [])
 
         # Test with None values
-        peers_list = [Peer("address_1")]
+        peers_list = {Peer("address_1")}
         await Utils.mergeDataSources({}, peers_list, [])
 
         # Peer should not have safe set
-        assert peers_list[0].safe is None
+        assert next(iter(peers_list)).safe is None

@@ -58,7 +58,9 @@ class ChannelMixin(HasAPI, HasChannels, HasParams, HasPeers):
         """Cached dict mapping destination address to open outgoing channel."""
         if self._cached_address_to_open_channel is None and self.channels:
             self._cached_address_to_open_channel = {
-                c.destination: c for c in self.channels.outgoing if c.status.is_open
+                c.destination: c
+                for c in self.channels.outgoing
+                if c.status.is_open and hasattr(c, "destination")
             }
         return self._cached_address_to_open_channel or {}
 

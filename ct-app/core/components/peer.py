@@ -44,7 +44,7 @@ class Peer:
         self.running: bool = False
 
     @property
-    def channel_balance(self) -> Balance:
+    def channel_balance(self) -> Optional[Balance]:
         return self._channel_balance
 
     @channel_balance.setter
@@ -61,17 +61,20 @@ class Peer:
     @property
     def safe_address_count(self) -> int:
         if self._safe_address_count is None:
-            self.safe_address_count = 1
+            self._safe_address_count = 1
 
         return self._safe_address_count
 
     @safe_address_count.setter
     def safe_address_count(self, value: int):
         self._safe_address_count = value
-        NODES_LINKED_TO_SAFE_COUNT.labels(self.address.native, self.safe.address).set(value)
+        if safe := self.safe:
+            NODES_LINKED_TO_SAFE_COUNT.labels(self.address.native, safe.address).set(value)
 
     @property
     def split_stake(self) -> Balance:
+        if not self.safe:
+            raise ValueError("Safe balance not set")
         if self.safe.balance is None:
             raise ValueError("Safe balance not set")
         if self.channel_balance is None:
@@ -102,19 +105,19 @@ class Peer:
         ct_nodes: list[str],
         exclusion_list: list[str],
     ) -> bool:
-        try:
-            if self.address.native in exclusion_list:
-                return False
+        if not self.safe:
+            return False
 
-            if self.address.native in ct_nodes:
-                return False
+        if self.address.native in exclusion_list:
+            return False
 
-            if self.safe.allowance < min_allowance:
-                return False
+        if self.address.native in ct_nodes:
+            return False
 
-            if self.split_stake < min_stake:
-                return False
-        except Exception:
+        if self.safe.allowance < min_allowance:
+            return False
+
+        if self.split_stake < min_stake:
             return False
 
         return True
@@ -122,6 +125,9 @@ class Peer:
     @keepalive
     async def message_relay_request(self):
         if self.address is None:
+            return
+
+        if self.params is None:
             return
 
         if delay := self.message_delay:

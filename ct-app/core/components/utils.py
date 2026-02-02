@@ -3,6 +3,7 @@ import logging
 import os
 from copy import deepcopy
 
+from ..components import Peer
 from ..components.balance import Balance
 from ..components.logs import configure_logging
 
@@ -15,7 +16,7 @@ class Utils:
     async def mergeDataSources(
         cls,
         outgoing_channel_balance: dict[str, Balance],
-        peers: list,
+        peers: set[Peer],
         nodes: list,
     ):
         # Pre-index nodes by address for O(1) lookup
@@ -46,7 +47,7 @@ class Utils:
                 peer.yearly_message_count = None
 
     @classmethod
-    def allowManyNodePerSafe(cls, peers: list):
+    def allowManyNodePerSafe(cls, peers: set[Peer]):
         """
         Split the stake managed by a safe address equaly between the nodes
         that the safe manages.
@@ -139,4 +140,5 @@ class Utils:
                         keepalive_methods.append(f"{node.name}")
                         break
 
+        return keepalive_methods
         return keepalive_methods

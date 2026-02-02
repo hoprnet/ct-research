@@ -194,7 +194,7 @@ class SessionMixin(HasAPI, HasChannels, HasParams, HasPeers, HasSession):
 
         # Rate limit check: can we attempt session opening?
         can_attempt, wait_time = self.session_rate_limiter.can_attempt(relayer)
-        if not can_attempt:
+        if not can_attempt and wait_time:
             logger.debug(
                 "Session opening rate-limited",
                 {"relayer": relayer, "wait_time_seconds": round(wait_time, 2)},
