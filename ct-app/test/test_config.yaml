@@ -84,9 +84,9 @@ economic_model:
 # 
 # =============================================================================
 peer:
-  minimum_delay_between_batches: 2
-  sleep_mean_time: 30
-  sleep_std_time: 2
+  minimum_delay_between_batches: 2s
+  sleep_mean_time: 30s
+  sleep_std_time: 2s
   excluded_peers: []
 
 # =============================================================================
@@ -103,8 +103,8 @@ channel:
 sessions:
   green_destinations: []
   blue_destinations: []
-  session_retry_base_delay: 2.0
-  session_retry_max_delay: 60.0
+  session_retry_base_delay: 2s
+  session_retry_max_delay: 60s
   message_worker_count: 10
 
 # =============================================================================
