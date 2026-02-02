@@ -10,7 +10,7 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["api", "components", "mixins", "rpc", "subgraph"]
+packages = ["api", "components", "mixins", "subgraph"]
 
 [tool.uv.sources]
 core-api = { workspace = true }

@@ -17,7 +17,6 @@ members = [
     "core/api",
     "core/components",
     "core/subgraph",
-    "core/rpc",
     "test"
 ]
 
@@ -108,8 +107,6 @@ module = [
     "core.components.config_parser.base_classes",
     "core.subgraph.graphql_provider",
     "test.components.test_peer",
-    "core.rpc.providers",
-    "core.rpc.query_provider",
     "core.components.messages.message_format",
     "core.components.logs",
     "core.components.config_parser.economic_model",
@@ -119,13 +116,10 @@ module = [
     "core.components.singleton",
     "core.subgraph.mode",
     "core.subgraph.entries.entry",
-    "core.rpc.entries.entry",
     "test.components.test_balance",
-    "test.rpc.test_rpc_calls",
     "test.components.test_utils",
     "core.mixins.subgraph",
     "core.mixins.session",
-    "core.mixins.rpc",
     "core.mixins.peers",
     "core.node",
 ]

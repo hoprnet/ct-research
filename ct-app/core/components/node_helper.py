@@ -219,9 +219,9 @@ class NodeHelper:
         # Import metrics (with graceful fallback for tests that don't have them)
         try:
             from ..messages.message_metrics import (
-                MESSAGES_SENT_SUCCESS,
-                MESSAGES_SENT_FAILED,
                 MESSAGE_E2E_LATENCY,
+                MESSAGES_SENT_FAILED,
+                MESSAGES_SENT_SUCCESS,
             )
 
             metrics_available = True

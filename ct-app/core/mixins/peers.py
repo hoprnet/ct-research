@@ -6,7 +6,7 @@ from prometheus_client import Gauge
 from ..components.decorators import connectguard, keepalive, master
 from ..components.logs import configure_logging
 from ..components.peer import Peer
-from .protocols import HasAPI, HasPeers
+from .protocols import HasAPI, HasParams, HasPeers
 
 PEERS_COUNT = Gauge("ct_peers_count", "Node peers")
 UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers", ["type"])
@@ -15,7 +15,7 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 
-class PeersMixin(HasAPI, HasPeers):
+class PeersMixin(HasAPI, HasParams, HasPeers):
     @master(keepalive, connectguard)
     async def retrieve_peers(self):
         """
@@ -63,3 +63,8 @@ class PeersMixin(HasAPI, HasPeers):
         PEERS_COUNT.set(len(self.peers))
         for key, value in counts.items():
             UNIQUE_PEERS.labels(key).set(value)
+
+    def invalidate_peer_cache(self) -> None:
+        """Invalidate peer address cache when peers are modified."""
+        self._cached_peer_addresses = None
+        self._cached_reachable_destinations = None
