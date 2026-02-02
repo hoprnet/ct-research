@@ -25,6 +25,7 @@ class ProviderError(Exception):
 TBlokliResponse = TypeVar(
     "TBlokliResponse",
     bound=JsonResponse,
+    covariant=True,
     default=JsonResponse,  # ty: ignore[invalid-legacy-type-variable]
 )
 

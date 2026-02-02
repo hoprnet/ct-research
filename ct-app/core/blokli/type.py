@@ -1,7 +1,10 @@
 from enum import Enum
-from typing import Callable
+from typing import Mapping
+
+from api_lib.objects import JsonResponse
 
 from . import providers
+from .blokli_provider import BlokliProvider
 
 
 class Type(Enum):
@@ -9,8 +12,9 @@ class Type(Enum):
     VERSION = "version"
 
     @property
-    def provider(self) -> Callable:
-        return {
+    def provider(self) -> type[BlokliProvider[JsonResponse]]:
+        providers_by_type: Mapping["Type", type[BlokliProvider[JsonResponse]]] = {
             Type.SAFES: providers.Safes,
             Type.VERSION: providers.Version,
-        }[self]
+        }
+        return providers_by_type[self]
