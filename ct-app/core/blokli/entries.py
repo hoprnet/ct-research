@@ -5,9 +5,11 @@ from api_lib.objects.response import APIobject, JsonResponse
 class BlokliHealth(JsonResponse):
     health: str
 
+
 @APIobject
 class BlokliSafe(JsonResponse):
     address: str
+
 
 @APIobject
 class BlokliVersion(JsonResponse):

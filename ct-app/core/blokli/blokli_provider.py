@@ -23,14 +23,16 @@ class ProviderError(Exception):
 
 
 TBlokliResponse = TypeVar(
-    "TBlokliResponse", bound=JsonResponse, default=JsonResponse # ty: ignore[invalid-legacy-type-variable]
-)  
+    "TBlokliResponse",
+    bound=JsonResponse,
+    default=JsonResponse,  # ty: ignore[invalid-legacy-type-variable]
+)
 
 
 class BlokliProvider(Generic[TBlokliResponse]):
     query_file: str
     params: list[str] = []
-    _return_type: type[TBlokliResponse] = JsonResponse # ty: ignore[invalid-assignment]
+    _return_type: type[TBlokliResponse] = JsonResponse  # ty: ignore[invalid-assignment]
 
     def __init__(self, url: str, token: Optional[str] = None):
         self.url = url
@@ -150,7 +152,7 @@ class BlokliProvider(Generic[TBlokliResponse]):
 
         logger.info("Blokli response", {"response": response})
 
-        if response  is None:
+        if response is None:
             return self._return_type({})
 
         try:
