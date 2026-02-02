@@ -141,4 +141,3 @@ class Utils:
                         break
 
         return keepalive_methods
-        return keepalive_methods
