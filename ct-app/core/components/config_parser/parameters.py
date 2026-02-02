@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from .base_classes import ExplicitParams
+from .blokli import BlokliParams
 from .channel import ChannelParams
 from .economic_model import EconomicModelParams
 from .flags import FlagParams
@@ -18,3 +19,4 @@ class Parameters(ExplicitParams):
     channel: ChannelParams
     sessions: SessionsParams
     subgraph: SubgraphParams
+    blokli: BlokliParams
