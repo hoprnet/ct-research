@@ -95,7 +95,7 @@ peer:
 channel:
   min_balance: "20 wxHOPR"
   funding_amount: "30 wxHOPR"
-  max_age_seconds: 2d
+  max_age: 2d
 
 # =============================================================================
 #
