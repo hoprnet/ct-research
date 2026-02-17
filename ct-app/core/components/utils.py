@@ -3,6 +3,7 @@ import logging
 import os
 from copy import deepcopy
 
+from ..components import Peer
 from ..components.balance import Balance
 from ..components.logs import configure_logging
 
@@ -15,10 +16,8 @@ class Utils:
     async def mergeDataSources(
         cls,
         outgoing_channel_balance: dict[str, Balance],
-        peers: list,
+        peers: set[Peer],
         nodes: list,
-        allocations: list,
-        eoa_balances: dict,
     ):
         # Pre-index nodes by address for O(1) lookup
         nodes_by_address = {}
@@ -26,31 +25,13 @@ class Utils:
             if node and hasattr(node, "address") and node.address:
                 nodes_by_address[node.address.lower()] = node
 
-        # Pre-index allocations by safe address for O(1) lookup
-        allocations_by_safe: dict[str, list] = {}
-        for allocation in allocations:
-            if hasattr(allocation, "linked_safes"):
-                for safe_addr in allocation.linked_safes:
-                    if safe_addr not in allocations_by_safe:
-                        allocations_by_safe[safe_addr] = []
-                    allocations_by_safe[safe_addr].append(allocation)
-
-        # Pre-index eoa_balances by safe address for O(1) lookup
-        eoa_balances_by_safe: dict[str, list] = {}
-        for eoa_balance in eoa_balances:
-            if hasattr(eoa_balance, "linked_safes"):
-                for safe_addr in eoa_balance.linked_safes:
-                    if safe_addr not in eoa_balances_by_safe:
-                        eoa_balances_by_safe[safe_addr] = []
-                    eoa_balances_by_safe[safe_addr].append(eoa_balance)
-
         # Now process peers with O(1) lookups
         for peer in peers:
             balance = outgoing_channel_balance.get(peer.address.native, None)
 
             node = (
                 nodes_by_address.get(peer.node_address.lower(), None)
-                if hasattr(peer, "node_address")
+                if hasattr(peer, "node_address") and peer.node_address
                 else None
             )
 
@@ -60,39 +41,13 @@ class Utils:
             peer.safe = deepcopy(node.safe)
             peer.safe.additional_balance = Balance.zero("wxHOPR")
 
-            # O(1) allocation lookup
-            safe_allocations = allocations_by_safe.get(peer.safe.address, [])
-            for allocation in safe_allocations:
-                peer.safe.additional_balance += (
-                    allocation.unclaimed_amount / allocation.num_linked_safes
-                )
-
-            # O(1) eoa_balance lookup
-            safe_eoa_balances = eoa_balances_by_safe.get(peer.safe.address, [])
-            for eoa_balance in safe_eoa_balances:
-                peer.safe.additional_balance += eoa_balance.amount / eoa_balance.num_linked_safes
-
             if balance is not None:
                 peer.channel_balance = balance
             else:
                 peer.yearly_message_count = None
 
     @classmethod
-    def associateEntitiesToNodes(cls, entities, nodes):
-        entity_addresses = [e.address for e in entities]
-        for n in nodes:
-            if not n.safe:
-                continue
-            for owner in n.safe.owners:
-                try:
-                    index = entity_addresses.index(owner)
-                except ValueError:
-                    continue
-
-                entities[index].linked_safes.add(n.safe.address)
-
-    @classmethod
-    def allowManyNodePerSafe(cls, peers: list):
+    def allowManyNodePerSafe(cls, peers: set[Peer]):
         """
         Split the stake managed by a safe address equaly between the nodes
         that the safe manages.

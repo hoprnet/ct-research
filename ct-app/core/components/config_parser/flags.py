@@ -12,8 +12,6 @@ class FlagNodeParams(ExplicitParams):
     rotate_subgraphs: Flag
     peers_rewards: Flag
     registered_nodes: Flag
-    allocations: Flag
-    eoa_balances: Flag
 
     healthcheck: Flag
     retrieve_peers: Flag

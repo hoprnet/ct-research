@@ -53,7 +53,7 @@ from ..components.decorators import connectguard, keepalive, master
 from ..components.logs import configure_logging
 from ..components.messages import MessageFormat, MessageQueue
 from ..components.node_helper import NodeHelper
-from .protocols import HasAPI, HasChannels, HasPeers, HasSession
+from .protocols import HasAPI, HasChannels, HasParams, HasPeers, HasSession
 
 if TYPE_CHECKING:
     from ..api.response_objects import Session
@@ -66,7 +66,7 @@ DEFAULT_SESSION_GRACE_PERIOD_SECONDS = 60  # Time before closing unreachable pee
 DEFAULT_LISTEN_HOST = "127.0.0.1"  # Local socket binding address
 
 
-class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
+class SessionMixin(HasAPI, HasChannels, HasParams, HasPeers, HasSession):
     @property
     def peer_addresses(self) -> set[str]:
         """
@@ -78,11 +78,6 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
         if self._cached_peer_addresses is None:
             self._cached_peer_addresses = {peer.address.native for peer in self.peers}
         return self._cached_peer_addresses
-
-    def invalidate_peer_cache(self) -> None:
-        """Invalidate peer address cache when peers are modified."""
-        self._cached_peer_addresses = None
-        self._cached_reachable_destinations = None
 
     @property
     def reachable_destinations(self) -> set[str]:
@@ -199,7 +194,7 @@ class SessionMixin(HasAPI, HasChannels, HasPeers, HasSession):
 
         # Rate limit check: can we attempt session opening?
         can_attempt, wait_time = self.session_rate_limiter.can_attempt(relayer)
-        if not can_attempt:
+        if not can_attempt and wait_time:
             logger.debug(
                 "Session opening rate-limited",
                 {"relayer": relayer, "wait_time_seconds": round(wait_time, 2)},

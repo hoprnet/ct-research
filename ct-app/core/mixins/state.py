@@ -97,6 +97,6 @@ class StateMixin(HasAPI, HasParams, HasSession):
             )
 
             self.ticket_price = ticket_price
-            TICKET_STATS.labels("price").set(ticket_price.value.value)
+            TICKET_STATS.labels("price").set(float(ticket_price.value.value))
         else:
             logger.warning("No results while retrieving ticket price")

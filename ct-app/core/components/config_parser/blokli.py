@@ -4,6 +4,6 @@ from .base_classes import ExplicitParams
 
 
 @dataclass(init=False)
-class InvestorsParams(ExplicitParams):
-    addresses: list
-    schedule: str
+class BlokliParams(ExplicitParams):
+    url: str
+    token: str

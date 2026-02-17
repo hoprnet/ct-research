@@ -27,7 +27,8 @@ from prometheus_client import Gauge
 
 from . import mixins
 from .api.hoprd_api import HoprdAPI
-from .api.response_objects import Channels, Session
+from .api.response_objects import Channels, OwnChannel, Session
+from .components.address import Address
 from .components.asyncloop import AsyncLoop
 from .components.balance import Balance
 from .components.config_parser import Parameters
@@ -35,7 +36,6 @@ from .components.logs import configure_logging
 from .components.peer import Peer
 from .components.session_rate_limiter import SessionRateLimiter
 from .components.utils import Utils
-from .rpc import entries as rpc_entries
 from .subgraph import entries as subgraph_entries
 
 BALANCE_MULTIPLIER = Gauge("ct_balance_multiplier", "factor to multiply the balance by")
@@ -47,9 +47,7 @@ logger = logging.getLogger(__name__)
 class Node(
     mixins.ChannelMixin,
     mixins.EconomicSystemMixin,
-    mixins.NftMixin,
     mixins.PeersMixin,
-    mixins.RPCMixin,
     mixins.SubgraphMixin,
     mixins.SessionMixin,
     mixins.StateMixin,
@@ -93,27 +91,27 @@ class Node(
 
         # Session rate limiter to prevent API overload from failed attempts
         # Use default values if sessions config is not available
+        if hasattr(self.params, "sessions"):
+            base_delay = getattr(self.params.sessions, "session_retry_base_delay", 2.0)
+            max_delay = getattr(self.params.sessions, "session_retry_max_delay", 60.0)
+            if hasattr(base_delay, "value"):
+                base_delay = base_delay.value
+            if hasattr(max_delay, "value"):
+                max_delay = max_delay.value
+        else:
+            base_delay = 2.0
+            max_delay = 60.0
+
         self.session_rate_limiter = SessionRateLimiter(
-            base_delay=(
-                getattr(self.params.sessions, "session_retry_base_delay_seconds", 2.0)
-                if hasattr(self.params, "sessions")
-                else 2.0
-            ),
-            max_delay=(
-                getattr(self.params.sessions, "session_retry_max_delay_seconds", 60.0)
-                if hasattr(self.params, "sessions")
-                else 60.0
-            ),
+            base_delay=base_delay,
+            max_delay=max_delay,
         )
 
-        self.address = None  # type: ignore[assignment]
+        self.address: Optional[Address] = None
         self.channels: Optional[Channels] = None
 
         self.topology_data = dict[str, Balance]()
         self.registered_nodes_data = list[subgraph_entries.Node]()
-        self.nft_holders_data = list[str]()
-        self.allocations_data = list[rpc_entries.Allocation]()
-        self.eoa_balances_data = list[rpc_entries.ExternalBalance]()
         self.peers_rewards_data = dict[str, float]()
 
         self.ticket_price = None
@@ -127,18 +125,17 @@ class Node(
         self._cached_reachable_destinations: set[str] | None = None
 
         # Channel caching (ChannelMixin)
-        self._cached_outgoing_open: list | None = None
-        self._cached_incoming_open: list | None = None
-        self._cached_outgoing_pending: list | None = None
-        self._cached_outgoing_not_closed: list | None = None
-        self._cached_address_to_open_channel: dict | None = None
+        self._cached_outgoing_open: list[OwnChannel] | None = None
+        self._cached_incoming_open: list[OwnChannel] | None = None
+        self._cached_outgoing_pending: list[OwnChannel] | None = None
+        self._cached_outgoing_not_closed: list[OwnChannel] | None = None
+        self._cached_address_to_open_channel: dict[str, OwnChannel] | None = None
 
         BALANCE_MULTIPLIER.set(1.0)
 
     async def start(self):
         await self.retrieve_address()
         self.get_graphql_providers()
-        self.get_nft_holders()
 
         keep_alive_methods: list[str] = Utils.get_methods(mixins.__path__[0], "keepalive")
         AsyncLoop.update([getattr(self, m) for m in keep_alive_methods])
@@ -203,8 +200,8 @@ class Node(
                 await NodeHelper.close_session(self.api, session, relayer)
                 logger.debug("Closed session during shutdown", {"relayer": relayer})
                 return True
-            except Exception as e:
-                logger.error("Error closing session at API", {"relayer": relayer, "error": str(e)})
+            except Exception:
+                logger.exception("Error closing session at API", {"relayer": relayer})
                 return False
 
         # Run all API close operations in parallel
@@ -217,8 +214,8 @@ class Node(
         for relayer, session in sessions_to_close:
             try:
                 session.close_socket()
-            except Exception as e:
-                logger.error("Error closing socket", {"relayer": relayer, "error": str(e)})
+            except Exception:
+                logger.exception("Error closing socket", {"relayer": relayer})
 
         # Phase 3: Clear session caches and rate limiter
         self.sessions.clear()

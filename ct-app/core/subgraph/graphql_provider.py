@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Optional, Tuple
 
 import aiohttp
+from multidict import CIMultiDictProxy
 from prometheus_client import Gauge
 
 from ..components.logs import configure_logging
@@ -24,24 +25,31 @@ class ProviderError(Exception):
 
 
 class GraphQLProvider:
-    query_file: Optional[str] = None
+    query_file: str
     params: list[str] = []
-    default_key: Optional[list[str]] = None
+    default_key: Optional[str] = None
+    _session: Optional[aiohttp.ClientSession] = None
 
     def __init__(self, url: URL):
         self.url = url
-        self.pwd = Path(sys.modules[self.__class__.__module__].__file__).parent
+        self.pwd = Path(str(sys.modules[self.__class__.__module__].__file__)).parent
         self._initialize_query(self.query_file, self.params)
+        self._timeout = aiohttp.ClientTimeout(total=30)
+
+    async def close(self) -> None:
+        if self._session is not None and not self._session.closed:
+            await self._session.close()
+        self._session = None
 
     #### PRIVATE METHODS ####
     def _initialize_query(self, query_file: str, extra_inputs: Optional[list[str]] = None):
         if extra_inputs is None:
             extra_inputs = []
 
-        keys, self._sku_query = self._load_query(query_file, extra_inputs)
+        key, self._sku_query = self._load_query(query_file, extra_inputs)
 
         if self.default_key is None:
-            self.default_key = keys
+            self.default_key = key
 
     def _load_query(
         self, path: str | Path, extra_inputs: Optional[list[str]] = None
@@ -63,21 +71,32 @@ class GraphQLProvider:
 
         return body.split("(")[0], ("\n".join([header, body, footer]))
 
-    async def _execute(self, query: str, variable_values: dict) -> tuple[dict, Optional[dict]]:
+    async def _execute(
+        self, query: str, variable_values: dict
+    ) -> tuple[dict, Optional[CIMultiDictProxy]]:
         """
         Executes a graphql query.
         :param query: The query to execute.
         :param variable_values: The variables to use in the query (dict)"""
 
+        if not self.url.url:
+            logger.error("No subgraph URL usable")
+            return {}, None
+
         try:
-            async with (
-                aiohttp.ClientSession() as session,
-                session.post(
-                    self.url.url, json={"query": query, "variables": variable_values}
-                ) as response,
-            ):
+            if self._session is None or self._session.closed:
+                self._session = aiohttp.ClientSession(timeout=self._timeout)
+
+            async with self._session.post(
+                self.url.url, json={"query": query, "variables": variable_values}
+            ) as response:
                 SUBGRAPH_CALLS.labels(self.url.params.slug, self.url.mode).inc()
-                return await response.json(), response.headers  # ty: ignore[invalid-return-type]
+                if response.status >= 400:
+                    logger.error(
+                        "Subgraph request failed",
+                        {"status": response.status, "url": self.url.url},
+                    )
+                return await response.json(), response.headers
         except TimeoutError as err:
             logger.error("Timeout error", {"error": str(err)})
         except Exception as err:
@@ -91,7 +110,7 @@ class GraphQLProvider:
         :param kwargs: The variables to use in the query (dict).
         :return: True if the query is successful, False otherwise.
         """
-        kwargs.update({"first": 1, "skip": 0})
+        variables = {**kwargs, "first": 1, "skip": 0}
 
         try:
             logger.debug(
@@ -100,10 +119,12 @@ class GraphQLProvider:
                     "url": self.url.url,
                     "mode": self.url.mode.value,
                     "key": key,
-                    **kwargs,
+                    **variables,
                 },
             )
-            response, _ = await asyncio.wait_for(self._execute(self._sku_query, kwargs), timeout=30)
+            response, _ = await asyncio.wait_for(
+                self._execute(self._sku_query, variables), timeout=30
+            )
         except asyncio.TimeoutError:
             logger.error(
                 "Query timeout occurred",
@@ -111,7 +132,7 @@ class GraphQLProvider:
                     "url": self.url.url,
                     "mode": self.url.mode.value,
                     "key": key,
-                    **kwargs,
+                    **variables,
                 },
             )
             return False
@@ -141,18 +162,20 @@ class GraphQLProvider:
         skip = 0
         data = []
 
+        headers: Optional[CIMultiDictProxy] = None
+
         while True:
-            kwargs.update({"first": page_size, "skip": skip})
+            variables = {**kwargs, "first": page_size, "skip": skip}
 
             try:
                 response, headers = await asyncio.wait_for(
-                    self._execute(self._sku_query, kwargs), timeout=30
+                    self._execute(self._sku_query, variables), timeout=30
                 )
             except asyncio.TimeoutError:
                 logger.error("Timeout error while fetching data from subgraph")
                 break
-            except ProviderError as err:
-                logger.error("ProviderError error", {"error": str(err)})
+            except ProviderError:
+                logger.exception("ProviderError error")
                 break
 
             if response is None:
@@ -163,10 +186,10 @@ class GraphQLProvider:
 
             try:
                 content = response.get("data", dict()).get(key, [])
-            except Exception as err:
-                logger.error(
+            except Exception:
+                logger.exception(
                     "Error while fetching data from subgraph",
-                    {"error": str(err), "data": response},
+                    {"data": response},
                 )
                 break
             data.extend(content)
@@ -175,16 +198,13 @@ class GraphQLProvider:
             if len(content) < page_size:
                 break
 
-        try:
-            if headers is not None:
+        if headers is not None:
+            try:
                 attestations = json.loads(headers.getall("graph-attestation")[0])
                 logger.debug("Subgraph attestations", {"attestations": attestations})
-        except UnboundLocalError:
-            # raised if the headers variable is not defined
-            pass
-        except KeyError:
-            # raised if using the centralized endpoint
-            pass
+            except KeyError:
+                # raised if using the centralized endpoint
+                pass
         return data
 
     #### DEFAULT PUBLIC METHODS ####
@@ -196,13 +216,14 @@ class GraphQLProvider:
         :return: The data from the query.
         """
 
-        if key is None and self.default_key is not None:
-            key = self.default_key
-        else:
-            logger.warning(
-                "No key provided for the query, and no default key set. Skipping query..."
-            )
-            return []
+        if key is None:
+            if self.default_key is not None:
+                key = self.default_key
+            else:
+                logger.warning(
+                    "No key provided for the query, and no default key set. Skipping query..."
+                )
+                return []
 
         if inputs := getattr(self.url.params, "inputs", None):
             kwargs.update(inputs)

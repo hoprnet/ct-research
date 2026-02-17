@@ -6,36 +6,32 @@ environment: local
 
 flags:
   node:
-    apply_economic_model: 30
-    ticket_parameters: 60
+    apply_economic_model: 30s
+    ticket_parameters: 1m
 
-    outgoing_channels_balances: 30
+    outgoing_channels_balances: 30s
 
-    rotate_subgraphs: 60
+    rotate_subgraphs: 1m
 
     # through subgraph queries
-    peers_rewards: 300
-    registered_nodes: 300
+    peers_rewards: 5m
+    registered_nodes: 5m
     
-    # through rpc calls
-    allocations: 300
-    eoa_balances: 300
-    
-    healthcheck: 15
-    retrieve_peers: 60
-    retrieve_channels: 120
-    retrieve_balances: 300
+    healthcheck: 15s
+    retrieve_peers: 1m
+    retrieve_channels: 2m
+    retrieve_balances: 5m
 
-    open_channels: 300
-    fund_channels: 300
-    close_old_channels: 300
-    close_pending_channels: 300
+    open_channels: 5m
+    fund_channels: 5m
+    close_old_channels: 5m
+    close_pending_channels: 5m
     close_incoming_channels: Off
 
-    get_total_channel_funds: 300
+    get_total_channel_funds: 5m
 
     observe_message_queue: On
-    maintain_sessions: 15
+    maintain_sessions: 15s
   peer:
     message_relay_request: On
     
@@ -44,7 +40,6 @@ flags:
 # =============================================================================
 economic_model:
   min_safe_allowance: "0 wxHOPR"
-  nft_threshold: "0 wxHOPR"
 
   legacy:
     proportion: 1.0
@@ -88,9 +83,9 @@ economic_model:
 # 
 # =============================================================================
 peer:
-  minimum_delay_between_batches: 2
-  sleep_mean_time: 10
-  sleep_std_time: 2
+  minimum_delay_between_batches: 2s
+  sleep_mean_time: 10s
+  sleep_std_time: 2s
   excluded_peers: []
 
 # =============================================================================
@@ -99,7 +94,7 @@ peer:
 channel:
   min_balance: "0.05 wxHOPR"
   funding_amount: "0.1 wxHOPR"
-  max_age_seconds: 86400
+  max_age: 1d
 
 # =============================================================================
 #
@@ -113,30 +108,17 @@ sessions:
   - "0xe4bb1970e6c9e5689c5ef68ee2545b4366c49be4"
   - "0xf90c1eb2557a443c2b27d399afac075fa752cd92"
   blue_destinations: []
-  session_retry_base_delay_seconds: 2.0
-  session_retry_max_delay_seconds: 60.0
+  session_retry_base_delay: 2s
+  session_retry_max_delay: 60s
   message_worker_count: 10
 
 # =============================================================================
-# 
+#
 # =============================================================================
-investors:
-  schedule:
-  addresses: []
-
-# =============================================================================
-# 
-# =============================================================================
-nft_holders:
-  filepath: ".configs/nft_holders.txt"
-
-# =============================================================================
-# 
-# =============================================================================
-rpc:
-  gnosis: https://gnosis-rpc.publicnode.com
-  mainnet: https://ethereum-rpc.publicnode.com
-
+blokli:
+  url: ""
+  token: ""
+  
 # =============================================================================
 # 
 # =============================================================================

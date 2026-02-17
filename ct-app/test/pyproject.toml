@@ -9,4 +9,4 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["api", "components", "rpc", "subgraph"]
+packages = ["api", "components", "subgraph"]

@@ -6,26 +6,21 @@ environment: test
 
 flags:
   node: 
-    apply_economic_model: 30
-    ticket_parameters: 30
+    apply_economic_model: 30s
+    ticket_parameters: 30s
 
-    # connected_peers: 30
-    outgoing_channels_balances: 30
+    outgoing_channels_balances: 30s
 
-    rotate_subgraphs: 30
+    rotate_subgraphs: 30s
 
     # through subgraph queries
-    peers_rewards: 30
-    registered_nodes: 30
-
-    # through rpc calls
-    allocations: 30
-    eoa_balances: 30
+    peers_rewards: 30s
+    registered_nodes: 30s
     
-    healthcheck: 10
-    retrieve_peers: 30
-    retrieve_channels: 30
-    retrieve_balances: 30
+    healthcheck: 10s
+    retrieve_peers: 30s
+    retrieve_channels: 30s
+    retrieve_balances: 30s
 
     open_channels: Off
     fund_channels: Off
@@ -36,7 +31,7 @@ flags:
     get_total_channel_funds: Off
     
     observe_message_queue: On
-    maintain_sessions: 10
+    maintain_sessions: 10s
 
   peer:
     message_relay_request: Off
@@ -46,7 +41,6 @@ flags:
 # =============================================================================
 economic_model:
   min_safe_allowance: "0 wxHOPR"
-  nft_threshold: "0 wxHOPR"
 
   legacy:
     proportion: 0.9
@@ -90,9 +84,9 @@ economic_model:
 # 
 # =============================================================================
 peer:
-  minimum_delay_between_batches: 2
-  sleep_mean_time: 30
-  sleep_std_time: 2
+  minimum_delay_between_batches: 2s
+  sleep_mean_time: 30s
+  sleep_std_time: 2s
   excluded_peers: []
 
 # =============================================================================
@@ -101,7 +95,7 @@ peer:
 channel:
   min_balance: "0.05 wxHOPR"
   funding_amount: "0.2 wxHOPR"
-  max_age_seconds: 60
+  max_age: 1m
   
 # =============================================================================
 #
@@ -109,30 +103,17 @@ channel:
 sessions:
   green_destinations: []
   blue_destinations: []
-  session_retry_base_delay_seconds: 2.0
-  session_retry_max_delay_seconds: 60.0
+  session_retry_base_delay: 2s
+  session_retry_max_delay: 60s
   message_worker_count: 10
+
+# =============================================================================
+#
+# =============================================================================
+blokli:
+  url: ""
+  token: ""
   
-# =============================================================================
-# 
-# =============================================================================
-investors:
-  schedule: 
-  addresses: []
-
-# =============================================================================
-# 
-# =============================================================================
-nft_holders:
-  filepath: ".configs/nft_holders.txt"
-
-# =============================================================================
-# 
-# =============================================================================
-rpc:
-  gnosis:   
-  mainnet: 
-
 # =============================================================================
 # 
 # =============================================================================
