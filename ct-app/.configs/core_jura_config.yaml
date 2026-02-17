@@ -1,0 +1,135 @@
+---
+# =============================================================================
+# 
+# =============================================================================
+environment: jura
+
+flags:
+  node:
+    apply_economic_model: 30s
+    ticket_parameters: 1m
+
+    outgoing_channels_balances: 30s
+
+    rotate_subgraphs: 5m
+
+    # through subgraph queries
+    peers_rewards: 5m
+    registered_nodes: 5m
+    
+    healthcheck: 15s
+    retrieve_peers: 1m
+    retrieve_channels: 2m
+    retrieve_balances: 5m
+
+    open_channels: 5m
+    fund_channels: 5m
+    close_old_channels: 5m
+    close_pending_channels: 5m
+    close_incoming_channels: Off
+
+    get_total_channel_funds: 5m
+    
+    observe_message_queue: On
+    maintain_sessions: 15s
+
+  peer:
+    message_relay_request: On
+    
+# =============================================================================
+# 
+# =============================================================================
+economic_model:
+  min_safe_allowance: "0 wxHOPR"
+
+  legacy:
+    proportion: 1.0
+    apr: 0.000001
+
+    coefficients:
+      a: 1
+      b: 1.4
+      upperbound: "75000 wxHOPR"
+      lowerbound: "30000 wxHOPR"
+    
+    equations: 
+      fx: 
+        formula: "a * x"
+        condition: "lowerbound <= x <= upperbound"
+      gx:
+        formula: "a * upperbound + (x - upperbound) ** (1 / b)"
+        condition: "x > upperbound"
+
+  sigmoid:
+    proportion: 0
+    max_apr: 0.0000001
+    network_capacity: 1000
+    total_token_supply: "450000000 wxHOPR"
+
+    offset: -0.9
+    buckets:
+      economic_security:
+        flatness: 1.8
+        skewness: 1.52
+        upperbound: 0.4
+        offset: 3.14
+
+      network_capacity:
+        flatness: 2.97
+        skewness: 0.72
+        upperbound: 1.0
+        offset: 4.08
+
+# =============================================================================
+# 
+# =============================================================================
+peer:
+  minimum_delay_between_batches: 60s
+  sleep_mean_time: 30s
+  sleep_std_time: 2s
+  excluded_peers: []
+
+# =============================================================================
+# 
+# =============================================================================
+channel:
+  min_balance: "20 wxHOPR"
+  funding_amount: "30 wxHOPR"
+  max_age: 2d
+
+# =============================================================================
+#
+# =============================================================================
+sessions:
+  green_destinations:
+  - "0xac3c2d1f751d9c763be29aabb20cf31295f3ea27"
+  - "0x154a32241dacd34c55ca65c2dfdef173d6d9e7f3"
+  blue_destinations:
+  - "0x2eb08c7d673c4b7e8c017471e8d4de996aa82e83"
+  - "0x0d3832bf4e8dd5f0ccd996fa2a27e1f864fd91bc"
+  session_retry_base_delay: 2s
+  session_retry_max_delay: 60s
+  message_worker_count: 10
+
+# =============================================================================
+#
+# =============================================================================
+blokli:
+  url: ""
+  token: ""
+  
+# =============================================================================
+# 
+# =============================================================================
+subgraph:
+  type: auto # auto | default | backup
+  user_id: 78696
+  api_key: 
+
+  rewards:
+    query_id: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
+    slug: hopr-channels
+  safes_balance:
+    query_id: GmbJTpa1o4baeStDT48TfQu4ditJmQwwXYPG1DvEiufB
+    slug: hopr-nodes-rotsee
+...
