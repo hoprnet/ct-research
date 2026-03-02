@@ -31,8 +31,8 @@
         };
       });
 
-      buildAndPush = pkgs.writeShellApplication {
-          name = "docker-build-and-push";
+      dockerBuild = pkgs.writeShellApplication {
+          name = "dockerBuild";
           runtimeInputs = [
             pkgs.docker
             pkgs.coreutils
@@ -41,26 +41,9 @@
             #!/usr/bin/env bash
             set -euo pipefail
 
-            if [ -z "''${GOOGLE_ACCESS_TOKEN:-}" ]; then
-              echo "[!] ERROR: GOOGLE_ACCESS_TOKEN is not set"
-              exit 1
-            fi
-
-            if [ -z "''${IMAGE_TARGET:-}" ]; then
-              echo "[!] ERROR: IMAGE_TARGET is not set"
-              exit 1
-            fi
-
-            echo "[+] Logging in to Google Container Registry"
-            echo "$GOOGLE_ACCESS_TOKEN" | \
-              docker login -u oauth2accesstoken --password-stdin https://europe-west3-docker.pkg.dev
-
-            echo "[+] Building: $IMAGE_TARGET"
-            docker build --platform linux/amd64 -t "$IMAGE_TARGET" -f ./Dockerfile .
-
-            echo "[+] Pushing: $IMAGE_TARGET"
-            docker push "$IMAGE_TARGET"
-            echo "[✓] Done: $IMAGE_TARGET"
+            echo "[+] Building: cover-traffic:latest"
+            docker build --platform linux/amd64 -t cover-traffic:latest -f ./Dockerfile .
+            echo "[✓] Done: cover-traffic:latest"
           '';
         };
 
@@ -83,12 +66,16 @@
         '';
       };
 
-      # Expose as flake package + app
-      packages.docker-build-and-push = buildAndPush;
-
-      apps.docker-build-and-push = {
-        type = "app";
-        program = "${buildAndPush}/bin/docker-build-and-push";
+      # Expose as flake as app
+      apps = {
+        docker-x86_64-linux = {
+          type = "app";
+          program = "${dockerBuild}/bin/dockerBuild";
+        };
+        default = {
+          type = "app";
+          program = "${dockerBuild}/bin/dockerBuild";
+        };
       };
     }
   );
