@@ -23,7 +23,7 @@ jobs:
       contents: read
       id-token: write
     with:
-      source_branch: ${{ github.ref }}
+      source_branch: ${{ github.ref_name }}
       version_type: release
       build_matrix: >-
         [
