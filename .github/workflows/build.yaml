@@ -10,7 +10,7 @@ on:
       - reopened
       - ready_for_review
 concurrency:
-  group: ${{ github.ref }}-build
+  group: ${{ github.event.pull_request.head.ref || github.ref_name }}-build
   cancel-in-progress: true
 env:
   CARGO_TERM_COLOR: always
