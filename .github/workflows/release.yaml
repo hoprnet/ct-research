@@ -1,3 +1,4 @@
+---
 name: Close release
 on:
   workflow_dispatch:
@@ -15,63 +16,55 @@ on:
 concurrency:
   group: release
   cancel-in-progress: false
+permissions:
+  contents: read
 jobs:
   build-docker:
     name: Docker
-    uses: hoprnet/hopr-workflows/.github/workflows/build-docker-image.yaml@build-docker-image-v1
+    uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@build-docker-v1
     permissions:
       contents: read
-      security-events: write
+      pull-requests: write
       id-token: write
     with:
-      source_branch: ${{ github.ref }}
-      version_type: "release"
-      cachix_cache_name: "ct-dapp"
-      build_file: "ct-app/pyproject.toml"
-      build_command: cd ct-app && nix run .#docker-build-and-push
-      docker_image_name: "cover-traffic"
-      deployment_namespace: "ctdapp"
-      deployment_label_selector: "hoprds.hoprnet.org/cluster=${{ vars.CTDAPP_STAGING_DEPLOYMENT_CLUSTER }}"
+      source_branch: ${{ github.ref_name }}
+      version_type: release
+      build_matrix: >-
+        [
+          {
+            "runner": "self-hosted-hoprnet-bigger",
+            "architecture": "x86_64-linux",
+            "build_command": "cd ct-app && nix run .#docker-x86_64-linux"
+          }
+        ]
+      cachix_cache_name: ct-dapp
+      build_file: ct-app/pyproject.toml
+      docker_image_name: cover-traffic
       fail_on_scan_vulnerabilities: ${{ vars.FAIL_ON_SCAN_VULNERABILITIES }}
     secrets:
-      gcp_service_account: ${{ secrets.GOOGLE_HOPRASSOCIATION_CREDENTIALS_REGISTRY}}
+      gcp_service_account: ${{ secrets.GCP_SA_GITHUB_RUNNER }}
       cachix_auth_token: ${{ secrets.CACHIX_AUTH_TOKEN }}
       docker_hub_username: ${{ secrets.DOCKER_HUB_USERNAME }}
       docker_hub_token: ${{ secrets.DOCKER_HUB_TOKEN }}
-  build-docker-manifest:
-    name: Docker manifest
-    needs: build-docker
-    uses: hoprnet/hopr-workflows/.github/workflows/build-docker-manifest.yaml@build-docker-manifest-v1
-    permissions:
-      contents: read
-    with:
-      version_type: "release"
-      docker_image_name: "cover-traffic"
-      docker_build_version: ${{ needs.build-docker.outputs.docker_build_version }}
-      docker_debug_version: ${{ needs.build-docker.outputs.docker_debug_version }}
-    secrets:
-      gcp_service_account: ${{ secrets.GOOGLE_HOPRASSOCIATION_CREDENTIALS_REGISTRY}}
-      docker_hub_username: ${{ secrets.DOCKER_HUB_USERNAME }}
-      docker_hub_token: ${{ secrets.DOCKER_HUB_TOKEN }}
-
   release:
     name: Close release
     needs:
-      - build-docker-manifest
+      - build-docker
     runs-on: self-hosted-hoprnet-small
     permissions:
       contents: write
     steps:
       - name: Release version
-        uses: hoprnet/hopr-workflows/actions/release-version@release-version-v1
+        uses: hoprnet/hopr-workflows/actions/release-version@0d6e82b5bfb948c58ac2f850a331443054486565 # release-version-v2
         with:
           source_branch: ${{ github.ref_name }}
           file: ct-app/pyproject.toml
-          release_type: "${{ inputs.release_type }}"
+          release_type: ${{ inputs.release_type }}
+          cachix_cache_name: ct-dapp
+          cachix_auth_token: ${{ secrets.CACHIX_AUTH_TOKEN }}
           zulip_api_key: ${{ secrets.ZULIP_API_KEY }}
           zulip_email: ${{ secrets.ZULIP_EMAIL }}
-          zulip_channel: "HOPRd"
-          zulip_topic: "Releases"
-          gcp_service_account: ${{ secrets.GOOGLE_HOPRASSOCIATION_CREDENTIALS_REGISTRY}}
-          attach_binaries: "false"
+          zulip_channel: HOPRd
+          zulip_topic: Releases
+          gcp_service_account: ${{ secrets.GCP_SA_GITHUB_RUNNER }}
           github_token: ${{ secrets.GH_RUNNER_TOKEN }}
