@@ -1,3 +1,4 @@
+---
 name: Merge
 on:
   pull_request:
@@ -7,6 +8,8 @@ on:
 concurrency:
   group: merge-${{ github.event.pull_request.base.ref }}
   cancel-in-progress: false
+permissions:
+  contents: read
 jobs:
   build-docker:
     name: Docker
@@ -14,6 +17,7 @@ jobs:
     uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@build-docker-v1
     permissions:
       contents: read
+      pull-requests: write
       id-token: write
     with:
       source_branch: ${{ github.event.pull_request.base.ref }}
@@ -33,21 +37,23 @@ jobs:
       deployment_label_selector: "hoprds.hoprnet.org/cluster=${{ vars.CTDAPP_STAGING_DEPLOYMENT_CLUSTER }}"
       fail_on_scan_vulnerabilities: ${{ vars.FAIL_ON_SCAN_VULNERABILITIES }}
     secrets:
-      gcp_service_account: ${{ secrets.GOOGLE_HOPRASSOCIATION_CREDENTIALS_REGISTRY }}
+      gcp_service_account: ${{ secrets.GCP_SA_GITHUB_RUNNER }}
       cachix_auth_token: ${{ secrets.CACHIX_AUTH_TOKEN }}
-  build-docker-manifest:
-    if: github.event.pull_request.merged == true
-    name: Docker manifest
-    needs: build-docker
-    uses: hoprnet/hopr-workflows/.github/workflows/build-docker-manifest.yaml@build-docker-manifest-v1
-    permissions:
-      contents: read
-    with:
-      version_type: "pr"
-      docker_image_name: "cover-traffic"
-      docker_build_version: ${{ needs.build-docker.outputs.docker_build_version }}
-      docker_debug_version: ${{ needs.build-docker.outputs.docker_debug_version }}
-    secrets:
-      gcp_service_account: ${{ secrets.GOOGLE_HOPRASSOCIATION_CREDENTIALS_REGISTRY}}
-      docker_hub_username: ${{ secrets.DOCKER_HUB_USERNAME }}
-      docker_hub_token: ${{ secrets.DOCKER_HUB_TOKEN }}
+  notify:
+    name: Notify failure
+    needs:
+      - build-docker
+    if: ${{ always() && failure() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify failed merge pipeline
+        uses: zulip/github-actions-zulip/send-message@e4c8f27c732ba9bd98ac6be0583096dea82feea5 # v1.0.2
+        with:
+          api-key: ${{ secrets.ZULIP_API_KEY }}
+          email: ${{ secrets.ZULIP_EMAIL }}
+          organization-url: "https://hopr.zulipchat.com"
+          type: "stream"
+          to: "HOPRd"
+          topic: "Core"
+          content: |
+            The merge pipeline has failed for pull request [#${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
