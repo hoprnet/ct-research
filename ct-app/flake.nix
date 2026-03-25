@@ -66,7 +66,7 @@
         '';
       };
 
-      # Expose as flake as app
+      # Define flake apps
       apps = {
         docker-x86_64-linux = {
           type = "app";
