@@ -253,8 +253,8 @@ class Session(JsonResponse):
         if self.socket:
             try:
                 self.socket.close()
-            except Exception as e:
-                logger.error(f"Failed to close socket on port {self.port}: {str(e)}", exc_info=True)
+            except Exception:
+                logger.exception(f"Failed to close socket on port {self.port}")
             finally:
                 # Always clear socket reference, even if close failed
                 self.socket = None

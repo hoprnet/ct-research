@@ -83,7 +83,7 @@ class MessageFormat:
             )
         return message_as_bytes.ljust(self.size, b"\0")
 
-    def update_timestamp(self, timestamp: Optional[str] = None):
+    def update_timestamp(self, timestamp: Optional[int | str] = None):
         if timestamp is not None:
             self.timestamp = int(float(timestamp))
         else:
