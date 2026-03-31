@@ -48,6 +48,10 @@
         };
 
     in rec {
+      devShells.ci = pkgs.mkShell {
+        packages = [ pkgs.zizmor ];
+      };
+
       devShell = pkgs.mkShell {
         buildInputs = with pkgs; [
           python314    # Python 3.14 to match Dockerfile

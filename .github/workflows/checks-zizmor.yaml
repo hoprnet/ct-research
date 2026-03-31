@@ -1,0 +1,35 @@
+---
+name: Zizmor
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+    paths:
+      - ".github/**"
+  merge_group:
+    types: [checks_requested]
+
+concurrency:
+  group: ${{ github.event.pull_request.head.ref || github.ref_name }}-zizmor
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  zizmor:
+    uses: hoprnet/hopr-workflows/.github/workflows/checks-zizmor.yaml@bbd22e57cf954c15f0a6051d59329857809141dd # workflow-checks-zizmor-v1
+    permissions:
+      contents: read
+      security-events: write
+    with:
+      source_branch: ${{ github.event.pull_request.head.ref || github.ref }}
+      zizmor_command: 'nix develop -L ./ct-app#ci -c bash -c "zizmor --format sarif . > results.sarif"'
+      runner: self-hosted-hoprnet-bigger
+    secrets:
+      cachix_auth_token: ${{ secrets.CACHIX_AUTH_TOKEN }}

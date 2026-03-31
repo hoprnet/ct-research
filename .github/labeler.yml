@@ -1,0 +1,13 @@
+toolchain:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "flake.*"
+          - "**/*.nix"
+          - .github/**
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/pyproject.toml"
+          - "**/uv.lock"
+          - "**/poetry.lock"
