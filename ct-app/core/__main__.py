@@ -24,8 +24,8 @@ def main(configfile: str):
     logger.info("Safe parameters loaded", {"params": str(params)})
 
     params.subgraph.set_attribute_from_env("api_key", "SUBGRAPH_API_KEY")
-    params.rpc.set_attribute_from_env("gnosis", "RPC_GNOSIS")
-    params.rpc.set_attribute_from_env("mainnet", "RPC_MAINNET")
+    params.blokli.set_attribute_from_env("url", "BLOKLI_URL")
+    params.blokli.set_attribute_from_env("token", "BLOKLI_TOKEN")
 
     # start the prometheus client
     prometheus_server_port = 8081
@@ -36,6 +36,8 @@ def main(configfile: str):
             "Could not start the prometheus client",
             {"port": prometheus_server_port, "error": f"[Errno {err.args[0]}]: {err.args[1]}"},
         )
+    except Exception:
+        logger.exception("Unexpected error starting the prometheus client")
     else:
         logger.info("Prometheus client started", {"port": prometheus_server_port})
 

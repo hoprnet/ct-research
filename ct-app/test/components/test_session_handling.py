@@ -29,7 +29,6 @@ from core.components.config_parser import Parameters
 from core.components.messages import MessageFormat
 from core.node import Node
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================

@@ -3,7 +3,6 @@ import pytest
 from core.api.response_objects import Channel
 from core.components import Peer, Utils
 from core.components.balance import Balance
-from core.rpc import entries as rpc_entries
 from core.subgraph import entries as sg_entries
 
 
@@ -78,71 +77,11 @@ async def test_mergeDataSources():
         ),
         sg_entries.Node("address_3", sg_entries.Safe("safe_address_3", None, "3", ["owner_3"])),
     ]
-    allocation_list = [
-        rpc_entries.Allocation(
-            "owner_1", "schedule", Balance("100 wxHOPR"), Balance.zero("wxHOPR")
-        ),
-        rpc_entries.Allocation(
-            "owner_2", "schedule", Balance("250 wxHOPR"), Balance.zero("wxHOPR")
-        ),
-    ]
 
-    allocation_list[0].linked_safes = ["safe_address_1", "safe_address_2"]
-    allocation_list[1].linked_safes = ["safe_address_2"]
-
-    await Utils.mergeDataSources(topology_list, peers_list, nodes_list, allocation_list, {})
+    await Utils.mergeDataSources(topology_list, peers_list, nodes_list)
 
     assert len(peers_list) == 3
     assert len([p for p in peers_list if p.safe is not None]) == 3
-    assert peers_list[0].safe.additional_balance == allocation_list[0].amount / 2
-    assert (
-        peers_list[1].safe.additional_balance
-        == allocation_list[0].amount / 2 + allocation_list[1].amount
-    )
-
-
-def test_associateEntitiesToNodes_with_allocations():
-    allocations = [
-        rpc_entries.Allocation(
-            "owner_1", "schedule", Balance("100 wxHOPR"), Balance.zero("wxHOPR")
-        ),
-        rpc_entries.Allocation(
-            "owner_2", "schedule", Balance("250 wxHOPR"), Balance.zero("wxHOPR")
-        ),
-    ]
-    nodes = [
-        sg_entries.Node("address_1", sg_entries.Safe("safe_address_1", "10", "1", ["owner_1"])),
-        sg_entries.Node(
-            "address_2",
-            sg_entries.Safe("safe_address_2", "10", "2", ["owner_1", "owner_2"]),
-        ),
-        sg_entries.Node("address_3", sg_entries.Safe("safe_address_3", None, "3", ["owner_3"])),
-    ]
-
-    Utils.associateEntitiesToNodes(allocations, nodes)
-
-    assert allocations[0].linked_safes == {"safe_address_1", "safe_address_2"}
-    assert allocations[1].linked_safes == {"safe_address_2"}
-
-
-def test_associateEntitiesToNodes_with_balances():
-    balances = [
-        rpc_entries.ExternalBalance("owner_1", Balance("100 wxHOPR")),
-        rpc_entries.ExternalBalance("owner_2", Balance("250 wxHOPR")),
-    ]
-    nodes = [
-        sg_entries.Node("address_1", sg_entries.Safe("safe_address_1", "10", "1", ["owner_1"])),
-        sg_entries.Node(
-            "address_2",
-            sg_entries.Safe("safe_address_2", "10", "2", ["owner_1", "owner_2"]),
-        ),
-        sg_entries.Node("address_3", sg_entries.Safe("safe_address_3", None, "3", ["owner_3"])),
-    ]
-
-    Utils.associateEntitiesToNodes(balances, nodes)
-
-    assert balances[0].linked_safes == {"safe_address_1", "safe_address_2"}
-    assert balances[1].linked_safes == {"safe_address_2"}
 
 
 def test_allowManyNodePerSafe():
