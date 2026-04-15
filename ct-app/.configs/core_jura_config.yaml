@@ -2,7 +2,7 @@
 # =============================================================================
 # 
 # =============================================================================
-environment: local
+environment: jura
 
 flags:
   node:
@@ -11,7 +11,7 @@ flags:
 
     outgoing_channels_balances: 30s
 
-    rotate_subgraphs: 1m
+    rotate_subgraphs: 5m
 
     # through subgraph queries
     peers_rewards: 5m
@@ -29,9 +29,10 @@ flags:
     close_incoming_channels: Off
 
     get_total_channel_funds: 5m
-
+    
     observe_message_queue: On
     maintain_sessions: 15s
+
   peer:
     message_relay_request: On
     
@@ -43,13 +44,13 @@ economic_model:
 
   legacy:
     proportion: 1.0
-    apr: 0.000002
+    apr: 0.000001
 
     coefficients:
       a: 1
       b: 1.4
-      upperbound: "15 wxHOPR"
-      lowerbound: "0.1 wxHOPR"
+      upperbound: "75000 wxHOPR"
+      lowerbound: "30000 wxHOPR"
     
     equations: 
       fx: 
@@ -62,29 +63,29 @@ economic_model:
   sigmoid:
     proportion: 0
     max_apr: 0.0000001
-    network_capacity: 100
-    total_token_supply: "5000 wxHOPR"
+    network_capacity: 1000
+    total_token_supply: "450000000 wxHOPR"
 
-    offset: 10
+    offset: -0.9
     buckets:
       economic_security:
-        flatness: 1.65
-        skewness: 1.50
-        upperbound: 0.75
-        offset: 0
+        flatness: 1.8
+        skewness: 1.52
+        upperbound: 0.4
+        offset: 3.14
 
       network_capacity:
-        flatness: 10.0
-        skewness: 2.75
+        flatness: 2.97
+        skewness: 0.72
         upperbound: 1.0
-        offset: 0
+        offset: 4.08
 
 # =============================================================================
 # 
 # =============================================================================
 peer:
-  minimum_delay_between_batches: 2s
-  sleep_mean_time: 10s
+  minimum_delay_between_batches: 60s
+  sleep_mean_time: 30s
   sleep_std_time: 2s
   excluded_peers: []
 
@@ -92,22 +93,20 @@ peer:
 # 
 # =============================================================================
 channel:
-  min_balance: "0.05 wxHOPR"
-  funding_amount: "0.1 wxHOPR"
-  max_age: 1d
+  min_balance: "20 wxHOPR"
+  funding_amount: "30 wxHOPR"
+  max_age: 2d
 
 # =============================================================================
 #
 # =============================================================================
 sessions:
   green_destinations:
-  - "0x7d1e530e9c82c21b75644a2c23402aa858ae4a69"
-  - "0x1b482420afa04aec1ef0e4a00c18451e84466c75"
-  - "0x05b17e37fd43c18741877fca80846ad8c84aa750"
-  - "0xcc70a22331998454160472f097acb43ca9b1e646"
-  - "0xe4bb1970e6c9e5689c5ef68ee2545b4366c49be4"
-  - "0xf90c1eb2557a443c2b27d399afac075fa752cd92"
-  blue_destinations: []
+  - "0xac3c2d1f751d9c763be29aabb20cf31295f3ea27"
+  - "0x154a32241dacd34c55ca65c2dfdef173d6d9e7f3"
+  blue_destinations:
+  - "0x2eb08c7d673c4b7e8c017471e8d4de996aa82e83"
+  - "0x0d3832bf4e8dd5f0ccd996fa2a27e1f864fd91bc"
   session_retry_base_delay: 2s
   session_retry_max_delay: 60s
   message_worker_count: 10
@@ -126,7 +125,7 @@ subgraph:
   type: auto # auto | default | backup
   user_id: 78696
   api_key: 
-  
+
   rewards:
     query_id: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
     slug: hopr-channels
