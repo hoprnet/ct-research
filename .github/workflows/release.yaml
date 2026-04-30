@@ -21,7 +21,7 @@ permissions:
 jobs:
   build-docker:
     name: Docker
-    uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@build-docker-v1
+    uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@build-docker-v2
     permissions:
       contents: read
       pull-requests: write
@@ -32,7 +32,7 @@ jobs:
       build_matrix: >-
         [
           {
-            "runner": "self-hosted-hoprnet-bigger",
+            "runner": "depot-ubuntu-24.04-4",
             "architecture": "x86_64-linux",
             "build_command": "cd ct-app && nix run .#docker-x86_64-linux"
           }
@@ -50,12 +50,12 @@ jobs:
     name: Close release
     needs:
       - build-docker
-    runs-on: self-hosted-hoprnet-small
+    runs-on: depot-ubuntu-24.04
     permissions:
       contents: write
     steps:
       - name: Release version
-        uses: hoprnet/hopr-workflows/actions/release-version@0d6e82b5bfb948c58ac2f850a331443054486565 # release-version-v2
+        uses: hoprnet/hopr-workflows/actions/release-version@release-version-v3
         with:
           source_branch: ${{ github.ref_name }}
           file: ct-app/pyproject.toml
