@@ -79,6 +79,7 @@ class Channel(JsonResponse):
         self.destination = try_to_lower(self.destination)
         self.source = try_to_lower(self.source)
 
+
 @APIobject
 class TicketPrice(JsonResponse):
     value: Balance = APIfield("price")
@@ -100,11 +101,13 @@ class Metrics(MetricResponse):
     hopr_tickets_incoming_statistics: dict = APImetric(["statistic"])
     hopr_packets_count: dict = APImetric(["type"])
 
+
 @APIobject
 class Channels(JsonResponse):
     all: list[Channel]
     incoming: list[Channel]
     outgoing: list[Channel]
+
 
 @APIobject
 class SessionFailure(JsonResponse):

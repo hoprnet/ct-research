@@ -9,8 +9,8 @@ endurance:
 .PHONY: fmt
 fmt:
 	@uvx --python 3.14 black core scripts test
-	@ruff check core scripts test
-	@uvx mypy
+	@uv run ruff check core scripts test
+	@uv run mypy
 	@uv run scripts/verify_config.py -f .configs/core_prod_config.yaml -f .configs/core_staging_config.yaml -f .configs/core_jura_config.yaml -f test/test_config.yaml -f .configs/core_local_config.yaml
 
 .PHONY: test
