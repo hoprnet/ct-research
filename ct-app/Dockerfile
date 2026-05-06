@@ -15,8 +15,12 @@ WORKDIR /code
 COPY pyproject.toml uv.lock .python-version ./
 COPY core/pyproject.toml ./core/
 COPY core/api/pyproject.toml ./core/api/
-COPY core/components/pyproject.toml ./core/components/
 COPY core/blokli/pyproject.toml ./core/blokli/
+COPY core/components/pyproject.toml ./core/components/
+COPY core/config_parser/pyproject.toml ./core/config_parser/
+COPY core/messages/pyproject.toml ./core/messages/
+COPY core/mixins/pyproject.toml ./core/mixins/
+COPY core/types/pyproject.toml ./core/types/
 COPY test/pyproject.toml ./test/
 COPY .configs ./.configs/
 COPY scripts ./scripts/
@@ -25,10 +29,13 @@ COPY scripts ./scripts/
 COPY core/__init__.py ./core/
 COPY core/__main__.py ./core/
 COPY core/node.py ./core/
-COPY core/mixins ./core/mixins/
 COPY core/api ./core/api/
-COPY core/components ./core/components/
 COPY core/blokli ./core/blokli/
+COPY core/components ./core/components/
+COPY core/config_parser ./core/config_parser/
+COPY core/messages ./core/messages/
+COPY core/mixins ./core/mixins/
+COPY core/types ./core/types/
 COPY test ./test/
 
 # Install production dependencies only (no dev dependencies)
