@@ -12,13 +12,13 @@ flags:
     outgoing_channels_balances: 30s
 
     rotate_subgraphs: 30s
-
-    # through subgraph queries
-    peers_rewards: 30s
-    registered_nodes: 30s
     
     healthcheck: 10s
     retrieve_peers: 30s
+    subscribe_accounts: Off
+    refresh_balances: Off
+    refresh_redeemed: Off
+    relay_messages: Off
     retrieve_channels: 30s
     retrieve_balances: 30s
 
@@ -40,8 +40,6 @@ flags:
 # 
 # =============================================================================
 economic_model:
-  min_safe_allowance: "0 wxHOPR"
-
   legacy:
     proportion: 0.9
     apr: 12.0
@@ -51,14 +49,6 @@ economic_model:
       b: 2
       upperbound: "3 wxHOPR"
       lowerbound: "0.000001 wxHOPR"
-    
-    equations: 
-      fx: 
-        formula: "a * x"
-        condition: "lowerbound <= x <= upperbound"
-      gx:
-        formula: "a * upperbound + (x - upperbound) ** (1 / b)"
-        condition: "x > upperbound"
 
   sigmoid:
     proportion: 0.1
@@ -106,6 +96,7 @@ sessions:
   session_retry_base_delay: 2s
   session_retry_max_delay: 60s
   message_worker_count: 10
+  message_queue_maxsize: 10000
 
 # =============================================================================
 #
@@ -113,19 +104,4 @@ sessions:
 blokli:
   url: ""
   token: ""
-  
-# =============================================================================
-# 
-# =============================================================================
-subgraph:
-  type: auto # auto | default | backup
-  user_id: 1000
-  api_key: 
-
-  rewards:
-    query_id: ~
-    slug: rewards_backup_url
-  safes_balance:
-    query_id: query-id-safes
-    slug: safes_backup_url
 ...

@@ -1,11 +1,11 @@
 from itertools import repeat
 from random import randint
-from test.decorators_patches import patches
 
 import pytest
 import yaml
 from pytest_mock import MockerFixture
 
+from . import decorators_patches  # noqa: F401
 from core.api.response_objects import (
     Addresses,
     Balances,
@@ -13,9 +13,9 @@ from core.api.response_objects import (
     Channels,
     ConnectedPeer,
 )
-from core.components import Peer
-from core.components.balance import Balance
-from core.components.config_parser import LegacyParams, Parameters
+from core.types.peer import Peer
+from core.types.balance import Balance
+from core.config_parser import LegacyParams, Parameters
 from core.node import Node
 
 
@@ -46,10 +46,11 @@ def economic_model() -> LegacyParams:
         {
             "proportion": 1,
             "apr": 15,
-            "coefficients": {"a": 1, "b": 1, "c": "3 wxHOPR", "l": "0 wxHOPR"},
-            "equations": {
-                "fx": {"formula": "a * x", "condition": "l <= x <= c"},
-                "gx": {"formula": "a * c + (x - c) ** (1 / b)", "condition": "x > c"},
+            "coefficients": {
+                "a": 1,
+                "b": 1,
+                "upperbound": "3 wxHOPR",
+                "lowerbound": "0 wxHOPR",
             },
         }
     )
@@ -164,7 +165,6 @@ async def node(
 
     with open("./test/test_config.yaml", "r") as file:
         params = Parameters(yaml.safe_load(file))
-    setattr(params.subgraph, "api_key", "foo_deployer_key")
 
     node.params = params
 
@@ -172,7 +172,3 @@ async def node(
     await node.healthcheck()
 
     return node
-
-
-for p in patches:
-    p.stop()

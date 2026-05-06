@@ -3,21 +3,29 @@ import logging
 
 from prometheus_client import Gauge
 
-from ..components.address import Address
+from ..types.address import Address
 from ..components.decorators import connectguard, keepalive, master
-from ..components.logs import configure_logging
-from .protocols import HasAPI, HasParams, HasSession
+from .runtime_state import NodeRuntimeState
 
 BALANCE = Gauge("ct_balance", "Node balance", ["token"])
 HEALTH = Gauge("ct_node_health", "Node health")
 TICKET_STATS = Gauge("ct_ticket_stats", "Ticket stats", ["type"])
 
 
-configure_logging()
 logger = logging.getLogger(__name__)
 
 
-class StateMixin(HasAPI, HasParams, HasSession):
+class StateMixin(NodeRuntimeState):
+    def _resolve_session_destinations(self, address_native: str) -> list[str]:
+        if address_native in self.params.sessions.green_destinations:
+            return list(self.params.sessions.green_destinations)
+
+        if address_native in self.params.sessions.blue_destinations:
+            return list(self.params.sessions.blue_destinations)
+
+        logger.warning("Node address not found in any deployment destinations. Skipping sending")
+        return []
+
     @master(keepalive, connectguard)
     async def retrieve_balances(self):
         """
@@ -56,20 +64,15 @@ class StateMixin(HasAPI, HasParams, HasSession):
 
         self.address = Address(address.native)
         self.connected = True
-
-        if self.address.native in self.params.sessions.green_destinations:
-            self.session_destinations = self.params.sessions.green_destinations
-        elif self.address.native in self.params.sessions.blue_destinations:
-            self.session_destinations = self.params.sessions.blue_destinations
-        else:
-            logger.warning(
-                "Node address not found in any deployment destinations. Skipping sending"
-            )
-
-        if self.session_destinations:
-            self.session_destinations = [
-                item for item in self.session_destinations if item != self.address.native
-            ]
+        destinations = self._resolve_session_destinations(self.address.native)
+        self.session_destinations = [item for item in destinations if item != self.address.native]
+        logger.info(
+            "Node address resolved and destinations configured",
+            {
+                "address": self.address.native,
+                "destinations_count": len(self.session_destinations),
+            },
+        )
 
     @keepalive
     async def healthcheck(self):

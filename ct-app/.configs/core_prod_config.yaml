@@ -13,12 +13,12 @@ flags:
 
     rotate_subgraphs: 5m
 
-    # through subgraph queries
-    peers_rewards: 5m
-    registered_nodes: 5m
-    
     healthcheck: 15s
     retrieve_peers: 1m
+    subscribe_accounts: On
+    refresh_balances: 5m
+    refresh_redeemed: 5m
+    relay_messages: On
     retrieve_channels: 2m
     retrieve_balances: 5m
 
@@ -40,8 +40,6 @@ flags:
 # 
 # =============================================================================
 economic_model:
-  min_safe_allowance: "0 wxHOPR"
-
   legacy:
     proportion: 1.0
     apr: 12.5
@@ -51,14 +49,6 @@ economic_model:
       b: 1.4
       upperbound: "75000 wxHOPR"
       lowerbound: "30000 wxHOPR"
-    
-    equations: 
-      fx: 
-        formula: "a * x"
-        condition: "lowerbound <= x <= upperbound"
-      gx:
-        formula: "a * upperbound + (x - upperbound) ** (1 / b)"
-        condition: "x > upperbound"
 
   sigmoid:
     proportion: 0
@@ -116,6 +106,7 @@ sessions:
   session_retry_base_delay: 2s
   session_retry_max_delay: 60s
   message_worker_count: 10
+  message_queue_maxsize: 10000
 
 # =============================================================================
 #
@@ -123,19 +114,4 @@ sessions:
 blokli:
   url: ""
   token: ""
-
-# =============================================================================
-# 
-# =============================================================================
-subgraph:
-  type: auto # auto | default | backup
-  user_id: 78696
-  api_key: 
-
-  rewards:
-    query_id: GoJ4KRuYEcELQk42hir2tjau6r1u4ibDFY6t1zH6zpKk
-    slug: hopr-channels
-  safes_balance:
-    query_id: GP2abJCarirMJCanuk4SBmnadiobEWH9ME2MNRAHbBTp
-    slug: hopr-nodes-dufour
 ...

@@ -1,7 +1,7 @@
 [project]
 name = "ct-app"
 version = "3.14.4"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = ["core"]
 
 [tool.setuptools]
@@ -15,8 +15,12 @@ test = { workspace = true }
 members = [
     "core",
     "core/api",
+    "core/blokli",
     "core/components",
-    "core/subgraph",
+    "core/config_parser",
+    "core/messages",
+    "core/mixins",
+    "core/types",
     "test"
 ]
 
@@ -97,30 +101,19 @@ exclude = "^(core/.*/__pycache__/|core/.*/\\..*|\\.venv/|build/|dist/).*"
 
 # Per-module options - external libraries
 [[tool.mypy.overrides]]
-module = ["core.api.*", "prometheus_client.*", "api_lib.*", "web3.*", "requests.*", "yaml.*"]
+module = ["yaml.*"]
 ignore_missing_imports = true
 
 # Per-module options - complex files that need refactoring
-[[tool.mypy.overrides]]
-module = [
-    "scripts.lib.state",
-    "core.components.config_parser.base_classes",
-    "core.subgraph.graphql_provider",
-    "test.components.test_peer",
-    "core.components.messages.message_format",
-    "core.components.logs",
-    "core.components.config_parser.economic_model",
-    "core.mixins.economic_system",
-    "core.mixins.channel",
-    "core.subgraph.url",
-    "core.components.singleton",
-    "core.subgraph.mode",
-    "core.subgraph.entries.entry",
-    "test.components.test_balance",
-    "test.components.test_utils",
-    "core.mixins.subgraph",
-    "core.mixins.session",
-    "core.mixins.peers",
-    "core.node",
-]
-ignore_errors = true
+# [[tool.mypy.overrides]]
+# module = [
+#     "core.config_parser.base_classes",
+#     "core.components.logs",
+#     "core.config_parser.economic_model",
+#     "core.types.message_format",
+#     "core.mixins.economic_system",
+#     "core.mixins.channel.*",
+#     "core.mixins.session.*",
+#     "core.node",
+# ]
+# ignore_errors = true

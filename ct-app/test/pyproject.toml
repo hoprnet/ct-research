@@ -9,4 +9,6 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["api", "components", "subgraph"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["test*"]

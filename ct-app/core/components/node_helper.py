@@ -1,34 +1,46 @@
+import asyncio
 import logging
+import time
 from typing import Optional
 
 from prometheus_client import Gauge
 
 from ..api.hoprd_api import HoprdAPI
 from ..api.response_objects import Channel, Session, SessionFailure
-from ..components.messages.message_format import MessageFormat
-from .balance import Balance
-from .logs import configure_logging
+from ..types.message_format import MessageFormat
+from ..messages.message_metrics import (
+    MESSAGE_E2E_LATENCY,
+    MESSAGES_SENT_FAILED,
+    MESSAGES_SENT_SUCCESS,
+)
+from ..types.balance import Balance
 
 CHANNELS_OPS = Gauge("ct_channel_operation", "Channel operation", ["op", "success"])
 SESSION_OPS = Gauge("ct_session_operation", "Session operation", ["relayer", "op", "success"])
 
-
-configure_logging()
 logger = logging.getLogger(__name__)
 
 
 class NodeHelper:
+    @staticmethod
+    def _success_label(value) -> str:
+        return "yes" if value else "no"
+
+    @classmethod
+    def _log_channel_operation(cls, action: str, success, params: dict, metric_op: str) -> None:
+        if success:
+            logger.info(action, params)
+        else:
+            logger.warning(action, params)
+        CHANNELS_OPS.labels(metric_op, cls._success_label(success)).inc()
+
     @classmethod
     async def open_channel(cls, api: HoprdAPI, address: str, amount: Balance):
         log_params = {"to": address, "amount": amount.as_str}
         logger.debug("Opening channel", log_params)
         channel = await api.open_channel(address, amount)
-
-        if channel is not None:
-            logger.info("Opened channel", log_params)
-        else:
-            logger.warning(f"Failed to open channel to {address}", log_params)
-        CHANNELS_OPS.labels("opened", "yes" if channel else "no").inc()
+        action = "Opened channel" if channel else f"Failed to open channel to {address}"
+        cls._log_channel_operation(action, channel, log_params, "opened")
 
     @classmethod
     async def close_channel(cls, api: HoprdAPI, channel: Channel, type: str):
@@ -36,12 +48,12 @@ class NodeHelper:
         logger.debug(f"Closing {type} channel", logs_params)
 
         ok = await api.close_channel(channel.id)
-
-        if ok:
-            logger.info(f"Closed {type} channel", logs_params)
-        else:
-            logger.warning(f"Failed to close {type}", logs_params)
-        CHANNELS_OPS.labels(type, "yes" if ok else "no").inc()
+        cls._log_channel_operation(
+            f"Closed {type} channel" if ok else f"Failed to close {type}",
+            ok,
+            logs_params,
+            type,
+        )
 
     @classmethod
     async def fund_channel(cls, api: HoprdAPI, channel: Channel, amount: Balance):
@@ -49,12 +61,8 @@ class NodeHelper:
         logger.debug("Funding channel", logs_params)
 
         ok = await api.fund_channel(channel.id, amount)
-
-        if ok:
-            logger.info("Fund channel", logs_params)
-        else:
-            logger.warning("Failed to fund channel", logs_params)
-        CHANNELS_OPS.labels("fund", "yes" if ok else "no").inc()
+        action = "Fund channel" if ok else "Failed to fund channel"
+        cls._log_channel_operation(action, ok, logs_params, "fund")
 
     @classmethod
     async def open_session(
@@ -166,7 +174,7 @@ class NodeHelper:
             logger.warning("Failed to close the session", logs_params)
 
         if relayer:
-            SESSION_OPS.labels(relayer, "closed", "yes" if ok else "no").inc()
+            SESSION_OPS.labels(relayer, "closed", cls._success_label(ok)).inc()
 
         return ok
 
@@ -213,21 +221,6 @@ class NodeHelper:
         Note:
             Exceptions are logged by AsyncLoop but don't crash the main process.
         """
-        import asyncio
-        import time
-
-        # Import metrics (with graceful fallback for tests that don't have them)
-        try:
-            from ..messages.message_metrics import (
-                MESSAGE_E2E_LATENCY,
-                MESSAGES_SENT_FAILED,
-                MESSAGES_SENT_SUCCESS,
-            )
-
-            metrics_available = True
-        except ImportError:
-            metrics_available = False
-
         failure_reason = None
 
         try:
@@ -239,10 +232,9 @@ class NodeHelper:
             await session.receive(message.packet_size, message.batch_size * message.packet_size)
 
             # Success - record metrics
-            if metrics_available:
-                MESSAGES_SENT_SUCCESS.inc()
-                e2e_latency = time.time() - message.queued_at
-                MESSAGE_E2E_LATENCY.observe(e2e_latency)
+            MESSAGES_SENT_SUCCESS.inc()
+            e2e_latency = time.time() - message.queued_at
+            MESSAGE_E2E_LATENCY.observe(e2e_latency)
 
         except asyncio.TimeoutError:
             failure_reason = "timeout"
@@ -263,5 +255,5 @@ class NodeHelper:
             raise
         finally:
             # Track failures
-            if failure_reason and metrics_available:
+            if failure_reason:
                 MESSAGES_SENT_FAILED.labels(reason=failure_reason).inc()

@@ -1,0 +1,9 @@
+[project]
+name = "core-messages"
+version = "1.0.0"
+requires-python = ">=3.14"
+dependencies = []
+
+[tool.setuptools]
+packages = ["core.messages"]
+package-dir = {"core.messages" = "."}

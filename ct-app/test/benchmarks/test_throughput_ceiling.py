@@ -8,11 +8,13 @@ sustainable throughput before backpressure occurs.
 import asyncio
 import time
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 from pytest_mock import MockerFixture
 
-from core.components.messages import MessageFormat, MessageQueue
+from core.types.message_format import MessageFormat
+from core.types.message_queue import MessageQueue
 from core.node import Node
 
 from .metrics_collector import MetricsCollector
@@ -22,8 +24,8 @@ from .metrics_collector import MetricsCollector
 @pytest.mark.asyncio
 async def test_throughput_ceiling(
     benchmark_node: Node,
-    mock_sessions_factory,
     mock_peers_factory,
+    setup_benchmark_network,
     mocker: MockerFixture,
 ):
     """
@@ -39,35 +41,7 @@ async def test_throughput_ceiling(
 
     # Setup node
     peers = mock_peers_factory(PEER_COUNT)
-    benchmark_node.peers = peers
-    benchmark_node.session_destinations = [f"peer_{i}" for i in range(PEER_COUNT)]
-
-    # Setup channels
-    from core.api.response_objects import Channels, Channel
-
-    channels = Channels({})
-    channels.all = []
-    channels.incoming = []
-    channels.outgoing = [
-        Channel(
-            {
-                "id": f"channel_{i}",
-                "source": "bench_node",
-                "destination": f"peer_{i}",
-                "status": "Open",
-                "balance": "10 wxHOPR",
-            }
-        )
-        for i in range(PEER_COUNT)
-    ]
-    benchmark_node.channels = channels
-
-    # Create sessions
-    for i in range(PEER_COUNT):
-        relayer = f"peer_{i}"
-        session = mock_sessions_factory(relayer)
-        benchmark_node.sessions[relayer] = session
-        session.create_socket()
+    setup_benchmark_network(benchmark_node, peers)
 
     mocker.patch.object(
         benchmark_node.api,
@@ -75,6 +49,13 @@ async def test_throughput_ceiling(
         return_value=[s for s in benchmark_node.sessions.values()],
     )
     mocker.patch.object(benchmark_node.api, "close_session", return_value=True)
+    mocker.patch.object(
+        benchmark_node,
+        "_get_or_create_session",
+        new=AsyncMock(
+            side_effect=lambda relayer, destination: benchmark_node.sessions.get(relayer)
+        ),
+    )
 
     print(f"\n{'='*60}")
     print("Throughput Ceiling Benchmark")

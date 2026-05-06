@@ -12,11 +12,13 @@ import yaml
 from pytest_mock import MockerFixture
 
 from core.api.response_objects import Addresses, Balances, Session
-from core.components import Peer
-from core.components.balance import Balance
-from core.components.config_parser import Parameters
-from core.components.messages import MessageFormat, MessageQueue
-from core.components.singleton import Singleton
+from core.api.response_objects import Channel, Channels
+from core.types.peer import Peer
+from core.types.balance import Balance
+from core.config_parser import Parameters
+from core.types.message_format import MessageFormat
+from core.types.message_queue import MessageQueue
+from core.types.singleton import Singleton
 from core.node import Node
 
 from .metrics_collector import MetricsCollector
@@ -76,7 +78,6 @@ async def benchmark_node(mocker: MockerFixture) -> Node:
     # Configure for benchmarking
     setattr(params.flags.node, "observe_message_queue", MagicMock(value=1))
     setattr(params.flags.node, "maintain_sessions", MagicMock(value=1))
-    setattr(params.subgraph, "api_key", "bench_key")
 
     node.params = params
     await node.retrieve_address()
@@ -85,7 +86,7 @@ async def benchmark_node(mocker: MockerFixture) -> Node:
     node.sessions = {}
     node.session_close_grace_period = {}
     node.session_destinations = []
-    node.peers = set()
+    node.peers = {}
 
     return node
 
@@ -114,16 +115,47 @@ def mock_sessions_factory():
 
 @pytest.fixture
 def mock_peers_factory():
-    """Factory to create sets of mock peers."""
+    """Factory to create dictionaries of mock peers."""
 
-    def _create_peers(count: int) -> set[Peer]:
-        peers = set()
+    def _create_peers(count: int) -> dict[str, Peer]:
+        peers = {}
         for i in range(count):
             peer = Peer(f"peer_{i}")
-            peers.add(peer)
+            peers[peer.address.native] = peer
         return peers
 
     return _create_peers
+
+
+@pytest.fixture
+def setup_benchmark_network(mock_sessions_factory):
+    def _setup(node: Node, peers: dict[str, Peer]) -> None:
+        node.peers = peers
+        node.session_destinations = list(peers.keys())
+
+        channels = Channels({})
+        channels.all = []
+        channels.incoming = []
+        channels.outgoing = [
+            Channel(
+                {
+                    "id": f"channel_{i}",
+                    "source": "bench_node",
+                    "destination": address,
+                    "status": "Open",
+                    "balance": "10 wxHOPR",
+                }
+            )
+            for i, address in enumerate(peers.keys())
+        ]
+        node.channels = channels
+
+        for relayer in peers.keys():
+            session = mock_sessions_factory(relayer)
+            node.sessions[relayer] = session
+            session.create_socket()
+
+    return _setup
 
 
 @pytest.fixture

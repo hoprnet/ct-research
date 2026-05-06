@@ -5,11 +5,10 @@ from api_lib import ApiLib
 from api_lib.method import Method
 from api_lib.objects import RequestData, Response
 
-from ..components.balance import Balance
+from ..types.balance import Balance
 from . import request_objects as req
 from . import response_objects as resp
 
-logging.getLogger("api-lib").setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
@@ -219,12 +218,12 @@ class HoprdAPI(ApiLib):
 
         return await self.try_req(Method.GET, "/network/price", resp.TicketPrice)
 
-    async def list_udp_sessions(self) -> list[resp.Session]:
+    async def list_udp_sessions(self) -> Optional[list[resp.Session]]:
         """
         Lists existing Session listeners over UDP
         :return: list[Session]
         """
-        return (await self.try_req(Method.GET, "/session/udp", list[resp.Session])) or []
+        return await self.try_req(Method.GET, "/session/udp", list[resp.Session])
 
     async def post_udp_session(
         self,

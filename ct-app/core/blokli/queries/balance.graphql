@@ -1,0 +1,6 @@
+hoprBalance(address: $address) {
+    ... on HoprBalance {
+        address
+        balance
+    } 
+}

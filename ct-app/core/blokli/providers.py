@@ -1,14 +1,20 @@
 from .blokli_provider import BlokliProvider
-from .entries import BlokliHealth, BlokliSafe, BlokliVersion
+from .entries import (
+    BlokliAccount,
+    BlokliHoprBalance,
+    BlokliRedemptionStats,
+)
 
 
-class Version(BlokliProvider[BlokliVersion]):
-    query_file: str = "queries/version.graphql"
+class HoprBalance(BlokliProvider[BlokliHoprBalance]):
+    query_file: str = "queries/balance.graphql"
+    params = ["$address: String!"]
 
 
-class Health(BlokliProvider[BlokliHealth]):
-    query_file: str = "queries/health.graphql"
+class AccountSubscription(BlokliProvider[BlokliAccount]):
+    query_file: str = "queries/accounts.graphql"
 
 
-class Safes(BlokliProvider[BlokliSafe]):
-    query_file: str = "queries/safes.graphql"
+class Redemptions(BlokliProvider[BlokliRedemptionStats]):
+    query_file: str = "queries/redemptions.graphql"
+    params = ["$safe_address: String", "$node_address: String"]

@@ -1,0 +1,9 @@
+[project]
+name = "core-mixins"
+version = "1.0.0"
+requires-python = ">=3.14"
+dependencies = []
+
+[tool.setuptools]
+packages = ["core.mixins"]
+package-dir = {"core.mixins" = "."}

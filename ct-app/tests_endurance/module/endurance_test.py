@@ -29,7 +29,6 @@ class EnduranceTest(object):
         self.execution_time = None
         self.metric_list: list[Metric] = []
 
-        logger.setLevel(getattr(logging, EnvironmentUtils.envvar("LOG_LEVEL", default="INFO")))
         logger.disabled = not EnvironmentUtils.envvar("LOG_ENABLED", type=bool, default=True)
 
     async def progress_bar(self):

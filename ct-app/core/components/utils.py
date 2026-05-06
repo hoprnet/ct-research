@@ -1,73 +1,9 @@
-import ast
-import logging
 import os
-from copy import deepcopy
 
-from ..components import Peer
-from ..components.balance import Balance
-from ..components.logs import configure_logging
-
-configure_logging()
-logger = logging.getLogger(__name__)
+from ..types.balance import Balance
 
 
 class Utils:
-    @classmethod
-    async def mergeDataSources(
-        cls,
-        outgoing_channel_balance: dict[str, Balance],
-        peers: set[Peer],
-        nodes: list,
-    ):
-        # Pre-index nodes by address for O(1) lookup
-        nodes_by_address = {}
-        for node in nodes:
-            if node and hasattr(node, "address") and node.address:
-                nodes_by_address[node.address.lower()] = node
-
-        # Now process peers with O(1) lookups
-        for peer in peers:
-            balance = outgoing_channel_balance.get(peer.address.native, None)
-
-            node = (
-                nodes_by_address.get(peer.node_address.lower(), None)
-                if hasattr(peer, "node_address") and peer.node_address
-                else None
-            )
-
-            if node is None or not hasattr(node, "safe"):
-                continue
-
-            peer.safe = deepcopy(node.safe)
-            peer.safe.additional_balance = Balance.zero("wxHOPR")
-
-            if balance is not None:
-                peer.channel_balance = balance
-            else:
-                peer.yearly_message_count = None
-
-    @classmethod
-    def allowManyNodePerSafe(cls, peers: set[Peer]):
-        """
-        Split the stake managed by a safe address equaly between the nodes
-        that the safe manages.
-        :param peer: list of peers
-        :returns: nothing.
-        """
-        safe_counts = {peer.safe.address: 0 for peer in peers if peer.safe}
-
-        # Calculate the number of safe_addresses related to a node address
-        for peer in peers:
-            if not peer.safe:
-                continue
-            safe_counts[peer.safe.address] += 1
-
-        # Update the input_dict with the calculated splitted_stake
-        for peer in peers:
-            if not peer.safe:
-                continue
-            peer.safe_address_count = safe_counts[peer.safe.address]
-
     @classmethod
     async def balanceInChannels(cls, channels: list) -> dict[str, Balance]:
         """
@@ -91,53 +27,15 @@ class Utils:
 
         return results
 
+
+class EnvironmentUtils:
     @classmethod
-    def get_methods(cls, folder: str, target: str):
-        keepalive_methods = []
+    def envvar(cls, name: str, type=str, default=None):
+        value = os.getenv(name)
+        if value is None:
+            return default
 
-        for root, _, files in os.walk(folder):
-            for file in files:
-                if not file.endswith(".py"):
-                    continue
-                file_path = os.path.join(root, file)
-                try:
-                    with open(file_path, "r") as f:
-                        source_code = f.read()
-                    tree = ast.parse(source_code)
-                except FileNotFoundError as e:
-                    logger.error(f"Could not find file {file_path}: {str(e)}")
-                    continue
-                except SyntaxError as e:
-                    logger.error(f"Could not parse {file_path}: {str(e)}")
-                    continue
+        if type is bool:
+            return value.strip().lower() in {"1", "true", "yes", "on"}
 
-                for node in ast.walk(tree):
-                    if not isinstance(node, ast.FunctionDef) and not isinstance(
-                        node, ast.AsyncFunctionDef
-                    ):
-                        continue
-
-                    for decorator in node.decorator_list:
-                        try:
-                            if isinstance(decorator, ast.Call):
-                                args_name = [
-                                    arg.id for arg in decorator.args if isinstance(arg, ast.Name)
-                                ]
-
-                                if not hasattr(decorator.func, "id") or (
-                                    decorator.func.id != target and target not in args_name
-                                ):
-                                    continue
-
-                            elif isinstance(decorator, ast.Name):
-                                if not hasattr(decorator, "id") or decorator.id != target:
-                                    continue
-                            else:
-                                continue
-                        except AttributeError:
-                            continue
-
-                        keepalive_methods.append(f"{node.name}")
-                        break
-
-        return keepalive_methods
+        return type(value)

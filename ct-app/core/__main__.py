@@ -5,25 +5,37 @@ import click
 import yaml
 from prometheus_client import start_http_server
 
-from .components import AsyncLoop
-from .components.config_parser import Parameters
+from .types.asyncloop import AsyncLoop
+from .config_parser import Parameters
 from .components.logs import configure_logging
 from .node import Node
 
-configure_logging()
 logger = logging.getLogger(__name__)
+
+
+def validate_runtime_config(host: str, token: str, params) -> None:
+    if not host.strip():
+        raise ValueError("HOPRD_API_HOST must not be empty")
+
+    if not token.strip():
+        raise ValueError("HOPRD_API_TOKEN must be set")
+
+    blokli_url = getattr(params.blokli, "url", "")
+    if not isinstance(blokli_url, str) or not blokli_url.strip():
+        raise ValueError("BLOKLI_URL or blokli.url must be set")
 
 
 @click.command()
 @click.option("--configfile", help="The .yaml configuration file to use")
 def main(configfile: str):
+    configure_logging()
+
     with open(configfile, "r") as file:
         config = yaml.safe_load(file)
 
     params = Parameters(config)
-    logger.info("Safe parameters loaded", {"params": str(params)})
+    logger.info("Configuration loaded", {"params": str(params)})
 
-    params.subgraph.set_attribute_from_env("api_key", "SUBGRAPH_API_KEY")
     params.blokli.set_attribute_from_env("url", "BLOKLI_URL")
     params.blokli.set_attribute_from_env("token", "BLOKLI_TOKEN")
 
@@ -43,7 +55,8 @@ def main(configfile: str):
 
     # create the core and nodes instances
     host: str = str(os.environ.get("HOPRD_API_HOST", "http://127.0.0.1:3001"))
-    token: str = str(os.environ.get("HOPRD_API_TOKEN"))
+    token: str = str(os.environ.get("HOPRD_API_TOKEN", ""))
+    validate_runtime_config(host, token, params)
 
     logger.info("Node configuration", {"host": host, "token_set": bool(token)})
     node = Node(host, token, params)

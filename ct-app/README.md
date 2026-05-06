@@ -1,8 +1,65 @@
 # ct-app
 
-This folder contains the ct-app.
+`ct-app` distributes wxHOPR through 1-hop messages in the Dufour network. In practice it
+replaces the staking rewards users used to earn in the current staking season.
 
-The goal of the ct-app is to distribute wxHOPR token through 1 HOP messages in the Dufour network. The ct-app is responsible for replacing staking rewards users earn in the current staking season beyond its discontinuation.
+## Runtime
+
+Install dependencies in a virtual environment:
+
+```bash
+pip install -r requirements.txt
+```
+
+Run the app with:
+
+```sh
+python -m core --configfile ./.configs/core_staging_config.yaml
+```
+
+### Environment
+
+Parameter | Required | Notes
+--|--|--
+`HOPRD_API_HOST` | no | Defaults to `http://127.0.0.1:3001`
+`HOPRD_API_TOKEN` | yes | Required startup secret
+`BLOKLI_URL` | yes unless `blokli.url` is set in the config | Intended primary provider endpoint
+`BLOKLI_TOKEN` | yes unless `blokli.token` is set in the config | Intended primary provider secret
+`LOG_LEVEL` | no | Global or per-library log level overrides
+
+`LOG_LEVEL` examples:
+
+- `LOG_LEVEL=debug`
+- `LOG_LEVEL=info,core.api=debug,mixins=warning`
+
+### Config
+
+The repo-owned config files live under `.configs/`. The parser shape is also reflected in
+`test/test_config.yaml`.
+
+For the legacy economic model, the supported behavior is fixed by the app and configured only
+through:
+
+- `economic_model.legacy.proportion`
+- `economic_model.legacy.apr`
+- `economic_model.legacy.coefficients.a`
+- `economic_model.legacy.coefficients.b`
+- `economic_model.legacy.coefficients.lowerbound`
+- `economic_model.legacy.coefficients.upperbound`
+
+There is no free-form formula language in the config anymore.
+
+
+### Metrics
+
+The metrics inventory is generated from the source code:
+
+```bash
+python scripts/generate_metrics_doc.py
+```
+
+The generated output is checked by the local pre-commit hook in `.pre-commit-config.yaml` and
+written to [METRICS.md](./METRICS.md).
 
 ## Development Requirements
 
@@ -70,37 +127,6 @@ Successfully installed black-23.3.0 ...
 ```
 
 **Notice**: this last step requires that the local development cluster is running.
-
-## How to run the ct-app
-
-### Requirements
-
-To execute any of the modules you need to:
-
-1. Setup a virtual environment
-
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-
-### Execute the app
-
-To execute the module, create a bash script to specify a bunch of environment variables. The required parameters are the following:
-
-Parameter | Recommanded value (staging)
---|--
-`SUBGRAPH_API_KEY` | (check Bitwarden)
-`NODE_ADDRESS_X` (multiple, min. 2) | (check Bitwarden)
-`NODE_KEY_X` | (check Bitwarden)
-
-This program logs to STDOUT. The log level is set to INFO by default.
-
-Then simply run 
-```sh
-python -m core --configfile ./scripts/core_staging_config.yaml
-```
 
 ## Contact
 

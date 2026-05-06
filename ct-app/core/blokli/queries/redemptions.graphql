@@ -1,0 +1,9 @@
+redeemedStats(safeAddress: $safe_address, nodeAddress: $node_address) { 
+    ... on RedeemedStats { 
+        safeAddress 
+        nodeAddress 
+        redeemedAmount 
+        redemptionCount 
+    }
+}
+

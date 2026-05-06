@@ -16,7 +16,7 @@ COPY pyproject.toml uv.lock .python-version ./
 COPY core/pyproject.toml ./core/
 COPY core/api/pyproject.toml ./core/api/
 COPY core/components/pyproject.toml ./core/components/
-COPY core/subgraph/pyproject.toml ./core/subgraph/
+COPY core/blokli/pyproject.toml ./core/blokli/
 COPY test/pyproject.toml ./test/
 COPY .configs ./.configs/
 COPY scripts ./scripts/
@@ -28,7 +28,7 @@ COPY core/node.py ./core/
 COPY core/mixins ./core/mixins/
 COPY core/api ./core/api/
 COPY core/components ./core/components/
-COPY core/subgraph ./core/subgraph/
+COPY core/blokli ./core/blokli/
 COPY test ./test/
 
 # Install production dependencies only (no dev dependencies)

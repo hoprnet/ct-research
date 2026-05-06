@@ -1,0 +1,9 @@
+accountUpdated {
+    accountUpdated {
+        chainKey
+        keyid
+        multiAddresses
+        packetKey
+        safeAddress
+    }
+}

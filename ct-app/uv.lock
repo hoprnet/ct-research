@@ -6,8 +6,12 @@ requires-python = ">=3.14"
 members = [
     "core",
     "core-api",
+    "core-blokli",
     "core-components",
-    "core-subgraph",
+    "core-config-parser",
+    "core-messages",
+    "core-mixins",
+    "core-types",
     "ct-app",
     "test",
 ]
@@ -149,16 +153,24 @@ source = { editable = "core" }
 dependencies = [
     { name = "click" },
     { name = "core-api" },
+    { name = "core-blokli" },
     { name = "core-components" },
-    { name = "core-subgraph" },
+    { name = "core-config-parser" },
+    { name = "core-messages" },
+    { name = "core-mixins" },
+    { name = "core-types" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.1.8" },
     { name = "core-api", editable = "core/api" },
+    { name = "core-blokli", editable = "core/blokli" },
     { name = "core-components", editable = "core/components" },
-    { name = "core-subgraph", editable = "core/subgraph" },
+    { name = "core-config-parser", editable = "core/config_parser" },
+    { name = "core-messages", editable = "core/messages" },
+    { name = "core-mixins", editable = "core/mixins" },
+    { name = "core-types", editable = "core/types" },
 ]
 
 [[package]]
@@ -173,20 +185,9 @@ dependencies = [
 requires-dist = [{ name = "api-lib", specifier = ">=0.0.4" }]
 
 [[package]]
-name = "core-components"
-version = "1.1.0"
-source = { editable = "core/components" }
-dependencies = [
-    { name = "prometheus-client" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "prometheus-client", specifier = ">=0.22.0" }]
-
-[[package]]
-name = "core-subgraph"
-version = "1.0.1"
-source = { editable = "core/subgraph" }
+name = "core-blokli"
+version = "1.0.0"
+source = { editable = "core/blokli" }
 dependencies = [
     { name = "aiohttp" },
     { name = "multidict" },
@@ -201,6 +202,37 @@ requires-dist = [
     { name = "prometheus-client", specifier = ">=0.22.0" },
     { name = "pyyaml", specifier = ">=6.0.1" },
 ]
+
+[[package]]
+name = "core-components"
+version = "1.1.0"
+source = { editable = "core/components" }
+dependencies = [
+    { name = "prometheus-client" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "prometheus-client", specifier = ">=0.22.0" }]
+
+[[package]]
+name = "core-config-parser"
+version = "1.0.0"
+source = { editable = "core/config_parser" }
+
+[[package]]
+name = "core-messages"
+version = "1.0.0"
+source = { editable = "core/messages" }
+
+[[package]]
+name = "core-mixins"
+version = "1.0.0"
+source = { editable = "core/mixins" }
+
+[[package]]
+name = "core-types"
+version = "1.0.0"
+source = { editable = "core/types" }
 
 [[package]]
 name = "coverage"
