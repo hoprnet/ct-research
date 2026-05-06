@@ -1,6 +1,6 @@
 [project]
 name = "ct-app"
-version = "3.14.4"
+version = "3.14.5"
 requires-python = ">=3.14"
 dependencies = ["core"]
 
@@ -103,17 +103,3 @@ exclude = "^(core/.*/__pycache__/|core/.*/\\..*|\\.venv/|build/|dist/).*"
 [[tool.mypy.overrides]]
 module = ["yaml.*"]
 ignore_missing_imports = true
-
-# Per-module options - complex files that need refactoring
-# [[tool.mypy.overrides]]
-# module = [
-#     "core.config_parser.base_classes",
-#     "core.components.logs",
-#     "core.config_parser.economic_model",
-#     "core.types.message_format",
-#     "core.mixins.economic_system",
-#     "core.mixins.channel.*",
-#     "core.mixins.session.*",
-#     "core.node",
-# ]
-# ignore_errors = true
