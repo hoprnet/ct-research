@@ -2,7 +2,7 @@
 name = "ct-app"
 version = "3.14.5"
 requires-python = ">=3.14"
-dependencies = ["core"]
+dependencies = ["core", "pyyaml>=6.0.1"]
 
 [tool.setuptools]
 packages = ["core", "test"]
@@ -31,12 +31,14 @@ dev = [
     "test",
     "pytest-cov>=6.2.1",
     "mypy>=1.18.2",
+    "types-pyyaml>=6.0.12.20250516",
 ]
 lint = [
     "black==25.1.0",
 ]
 typecheck = [
     "mypy>=1.18.2",
+    "types-pyyaml>=6.0.12.20250516",
 ]
 
 [tool.black]
@@ -100,6 +102,3 @@ files = ["core/", "test/", "scripts/"]
 exclude = "^(core/.*/__pycache__/|core/.*/\\..*|\\.venv/|build/|dist/).*"
 
 # Per-module options - external libraries
-[[tool.mypy.overrides]]
-module = ["yaml.*"]
-ignore_missing_imports = true
