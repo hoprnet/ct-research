@@ -1,15 +1,16 @@
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 
 from .base_classes import ExplicitParams
 from .blokli import BlokliParams
 from .channel import ChannelParams
 from .economic_model import EconomicModelParams
 from .flags import FlagParams
+from .host import HostParams
 from .peer import PeerParams
 from .sessions import SessionsParams
 
 
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class Parameters(ExplicitParams):
     environment: str
     flags: FlagParams
@@ -17,7 +18,8 @@ class Parameters(ExplicitParams):
     peer: PeerParams
     channel: ChannelParams
     sessions: SessionsParams
-    blokli: BlokliParams
+    blokli: BlokliParams = field(metadata={"hidden": True})
+    host: HostParams = field(metadata={"hidden": True})
 
     @staticmethod
     def _merge_dicts(base: dict, patch: dict) -> dict:

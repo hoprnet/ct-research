@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from .base_classes import Duration, ExplicitParams
 
 
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class SessionsParams(ExplicitParams):
     green_destinations: list
     blue_destinations: list

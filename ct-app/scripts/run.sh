@@ -18,6 +18,7 @@
 #
 # Environment Variables (required in .env file for non-local environments):
 #   HOST_FORMAT      - URL format string for remote hosts
+#   BLOKLI_URL       - Blokli GraphQL endpoint URL
 #   PROD_TOKEN       - API token for production environment
 #   STAGING_TOKEN    - API token for staging environment
 #
@@ -103,6 +104,7 @@ Options:
 
 Environment Variables (required in .env file for non-local environments):
   HOST_FORMAT      - URL format string for remote hosts
+  BLOKLI_URL       - Blokli GraphQL endpoint URL
   PROD_TOKEN       - API token for production environment
   JURA_TOKEN       - API token for Jura environment
   STAGING_TOKEN    - API token for staging environment
@@ -175,6 +177,7 @@ if [[ "$env" == "local" ]]; then
     HOPRD_API_HOST=$(get_local_node_address)
     export HOPRD_API_HOST
     export HOPRD_API_TOKEN="e2e-API-token^^"
+    export BLOKLI_URL="${BLOKLI_URL:-http://localhost:8080}"
 
 else
     # Setup HOPRD API configuration if HOST_FORMAT is provided
@@ -210,6 +213,12 @@ else
             fi
             export HOPRD_API_TOKEN="$JURA_TOKEN"
         fi
+    fi
+
+    if [[ -z "${BLOKLI_URL:-}" ]]; then
+        echo "Error: BLOKLI_URL environment variable is required" >&2
+        echo "Please check your .env file." >&2
+        exit 1
     fi
 fi
 

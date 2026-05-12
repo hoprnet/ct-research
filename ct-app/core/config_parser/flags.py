@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from .base_classes import ExplicitParams, Flag
 
 
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class FlagNodeParams(ExplicitParams):
     outgoing_channels_balances: Flag
 
@@ -18,12 +18,12 @@ class FlagNodeParams(ExplicitParams):
     maintain_sessions: Flag
 
 
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class FlagPeerParams(ExplicitParams):
     message_relay_request: Flag
 
 
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class FlagParams(ExplicitParams):
     node: FlagNodeParams
     peer: FlagPeerParams

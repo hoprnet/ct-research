@@ -11,7 +11,7 @@ from .base_classes import ExplicitParams
 logger = logging.getLogger(__name__)
 
 
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class LegacyCoefficientsParams(ExplicitParams):
     a: Decimal
     b: Decimal
@@ -19,7 +19,7 @@ class LegacyCoefficientsParams(ExplicitParams):
     upperbound: Balance
 
 
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class LegacyParams(ExplicitParams):
     proportion: Decimal
     apr: Decimal
@@ -56,7 +56,7 @@ class LegacyParams(ExplicitParams):
         return float(rewards / ticket_price.value * self.proportion)
 
 
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class BucketParams(ExplicitParams):
     flatness: Decimal
     skewness: Decimal
@@ -82,7 +82,7 @@ class BucketParams(ExplicitParams):
         return max(apr, Decimal(0))
 
 
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class BucketsParams(ExplicitParams):
     economic_security: BucketParams
     network_capacity: BucketParams
@@ -98,7 +98,7 @@ class BucketsParams(ExplicitParams):
         return [vars(self)[k] for k in self.order if k in vars(self) and vars(self)[k]]
 
 
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class SigmoidParams(ExplicitParams):
     proportion: Decimal
     max_apr: Decimal
@@ -144,7 +144,7 @@ class SigmoidParams(ExplicitParams):
         return float(rewards / ticket_price.value * self.proportion)
 
 
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class EconomicModelParams(ExplicitParams):
     legacy: LegacyParams
     sigmoid: SigmoidParams

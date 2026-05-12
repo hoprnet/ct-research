@@ -36,7 +36,7 @@ def mock_sessions():
 
 @pytest.fixture
 async def session_node(mocker: MockerFixture) -> Node:
-    node = Node("http://localhost:3001", "test_token")
+    node = Node("http://localhost:3001", "test_token", Parameters())
 
     mocker.patch.object(node.api, "address", return_value=Addresses({"native": "node_address"}))
     mocker.patch.object(

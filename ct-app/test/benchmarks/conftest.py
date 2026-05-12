@@ -50,7 +50,7 @@ def target_rate(request) -> int:
 @pytest.fixture
 async def benchmark_node(mocker: MockerFixture) -> Node:
     """Create a Node instance configured for benchmarking."""
-    node = Node("http://localhost:3001", "benchmark_token")
+    node = Node("http://localhost:3001", "benchmark_token", Parameters())
 
     # Mock API methods
     mocker.patch.object(node.api, "address", return_value=Addresses({"native": "bench_node"}))

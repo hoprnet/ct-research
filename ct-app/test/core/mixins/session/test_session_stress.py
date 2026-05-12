@@ -58,7 +58,7 @@ def mock_sessions():
 @pytest.fixture
 async def stress_node(mocker: MockerFixture) -> Node:
     """Create a Node instance configured for stress testing."""
-    node = Node("http://localhost:3001", "test_token")
+    node = Node("http://localhost:3001", "test_token", Parameters())
 
     # Mock API methods
     mocker.patch.object(node.api, "address", return_value=Addresses({"native": "node_address"}))

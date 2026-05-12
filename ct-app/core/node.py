@@ -59,7 +59,7 @@ class Node(
     SessionMixin,
     StateMixin,
 ):
-    def __init__(self, url: str, key: str, params: Optional[Parameters] = None):
+    def __init__(self, url: str, key: str, params: Parameters):
         """
         Create a new Node with the specified url and key.
 
@@ -98,7 +98,7 @@ class Node(
         self._pending_session_creations = dict[str, asyncio.Task[Optional[Session]]]()
 
         # Initialize params first so we can use session configuration
-        self.params = params or Parameters()
+        self.params = params
 
         NodeRuntimeFactory.configure_runtime(self, self.params)
 

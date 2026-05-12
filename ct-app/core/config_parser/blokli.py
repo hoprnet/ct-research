@@ -1,9 +1,9 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .base_classes import ExplicitParams
 
 
-@dataclass(init=False)
+@dataclass(init=False, repr=False)
 class BlokliParams(ExplicitParams):
-    url: str
-    token: str
+    url: str = field(metadata={"env": "BLOKLI_URL"})
+    token: str = field(metadata={"env": "BLOKLI_TOKEN"})

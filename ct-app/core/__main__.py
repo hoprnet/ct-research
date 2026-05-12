@@ -1,5 +1,4 @@
 import logging
-import os
 
 import click
 import yaml
@@ -11,18 +10,6 @@ from .components.logs import configure_logging
 from .node import Node
 
 logger = logging.getLogger(__name__)
-
-
-def validate_runtime_config(host: str, token: str, params) -> None:
-    if not host.strip():
-        raise ValueError("HOPRD_API_HOST must not be empty")
-
-    if not token.strip():
-        raise ValueError("HOPRD_API_TOKEN must be set")
-
-    blokli_url = getattr(params.blokli, "url", "")
-    if not isinstance(blokli_url, str) or not blokli_url.strip():
-        raise ValueError("BLOKLI_URL or blokli.url must be set")
 
 
 @click.command()
@@ -50,13 +37,8 @@ def main(configfile: str):
     else:
         logger.info("Prometheus client started", {"port": prometheus_server_port})
 
-    # create the core and nodes instances
-    host: str = str(os.environ.get("HOPRD_API_HOST", "http://127.0.0.1:3001"))
-    token: str = str(os.environ.get("HOPRD_API_TOKEN", ""))
-    validate_runtime_config(host, token, params)
-
-    logger.info("Node configuration", {"host": host, "token_set": bool(token)})
-    node = Node(host, token, params)
+    # create node instance
+    node = Node(params.host.url, params.host.token, params)
     AsyncLoop.run(node.start, node.stop)
 
 

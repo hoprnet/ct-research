@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 
 import pytest
@@ -133,3 +133,49 @@ def test_set_attribute_from_env_uses_environment_value(monkeypatch):
 
     assert params.set_attribute_from_env("token", "ENV_TOKEN") is True
     assert params.token == "from-env"
+
+
+def test_hidden_fields_are_not_required_in_verification():
+    @dataclass(init=False)
+    class HiddenSection(ExplicitParams):
+        token: str
+
+    @dataclass(init=False)
+    class HiddenParameters(ExplicitParams):
+        visible: int
+        hidden: HiddenSection = field(metadata={"hidden": True})
+
+    config = {"visible": 1}
+
+    assert HiddenParameters.verify(config) is True
+    parsed = HiddenParameters(config)
+    assert parsed.visible == 1
+    assert parsed.hidden.token == ""
+
+
+def test_env_metadata_overrides_config_value(monkeypatch):
+    @dataclass(init=False)
+    class EnvMetadataParameters(ExplicitParams):
+        token: str = field(metadata={"env": "ENV_TOKEN"})
+
+    monkeypatch.setenv("ENV_TOKEN", "from-env")
+    params = EnvMetadataParameters({"token": "from-config"})
+    assert params.token == "from-env"
+
+
+def test_repr_redacts_hidden_fields():
+    @dataclass(init=False, repr=False)
+    class HiddenSection(ExplicitParams):
+        token: str
+
+    @dataclass(init=False, repr=False)
+    class ReprParameters(ExplicitParams):
+        visible: str
+        hidden: HiddenSection = field(metadata={"hidden": True})
+
+    params = ReprParameters({"visible": "ok", "hidden": {"token": "secret"}})
+    rendered = repr(params)
+
+    assert "visible=ok" in rendered
+    assert "hidden=<redacted>" in rendered
+    assert "secret" not in rendered

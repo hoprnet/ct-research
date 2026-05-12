@@ -72,6 +72,17 @@ class Duration:
 
 class ExplicitParams:
     @staticmethod
+    def _field_is_hidden(field) -> bool:
+        return bool(field.metadata.get("hidden", False))
+
+    @staticmethod
+    def _field_env_var(field) -> str | None:
+        value = field.metadata.get("env")
+        if isinstance(value, str) and value:
+            return value
+        return None
+
+    @staticmethod
     def _dataclass_fields(target: Any):
         return fields(target)  # type: ignore[arg-type]
 
@@ -131,6 +142,8 @@ class ExplicitParams:
 
     @classmethod
     def _field_is_required(cls, field) -> bool:
+        if cls._field_is_hidden(field):
+            return False
         return cls._optional_inner_type(field.type) is not dict
 
     @classmethod
@@ -140,6 +153,8 @@ class ExplicitParams:
 
     @classmethod
     def _verify_field_value(cls, data: dict, field) -> None:
+        if cls._field_is_hidden(field) and field.name not in data:
+            return
         field_type = cls._optional_inner_type(field.type)
         if cls._is_dataclass_type(field_type):
             field_type.verify(data.get(field.name, {}))
@@ -175,9 +190,18 @@ class ExplicitParams:
             data = {}
 
         for f in self._dataclass_fields(type(self)):
-            if f.name not in data:
+            if f.name in data:
+                value = data[f.name]
+            elif self._field_is_hidden(f):
+                value = self._default_value_for_type(f.type)
+            else:
                 continue
-            value = data[f.name]
+
+            env_var = self._field_env_var(f)
+            if env_var is not None:
+                env_value = os.getenv(env_var)
+                if env_value is not None:
+                    value = env_value
 
             field_type = f.type
             setattr(self, f.name, self._coerce_value(value, field_type))
@@ -236,5 +260,15 @@ class ExplicitParams:
         return result
 
     def __repr__(self):
-        key_pair_string: str = ", ".join([f"{key}={value}" for key, value in vars(self).items()])
+        hidden_fields = {
+            field.name
+            for field in self._dataclass_fields(type(self))
+            if self._field_is_hidden(field)
+        }
+        key_pair_string: str = ", ".join(
+            [
+                f"{key}={'<redacted>' if key in hidden_fields else value}"
+                for key, value in vars(self).items()
+            ]
+        )
         return f"{self.__class__.__name__}({key_pair_string})"
