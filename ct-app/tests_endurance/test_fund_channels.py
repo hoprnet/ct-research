@@ -21,7 +21,7 @@ class FundChannels(EnduranceTest):
         # get channel
         channels = await self.api.channels()
         open_channels = [
-            c for c in channels if c.status.is_open and c.source == self.address.native
+            c for c in channels.outgoing if c.status.is_open and c.source == self.address.native
         ]
 
         if len(open_channels) == 0:
@@ -30,23 +30,30 @@ class FundChannels(EnduranceTest):
         self.channel = random.choice(open_channels)
         self.inital_balance = self.channel.balance
 
-        logger.info(f"\taddress: {self.channel.address}")
-        logger.info(f"\tchannel: {self.channel.id}")
+        logger.info(f"\tdestination: {self.channel.destination}")
         logger.info(f"\tbalance: {self.inital_balance}")
 
     async def task(self):
         success = await self.api.fund_channel(
-            self.channel.id, EnvironmentUtils.envvar("FUND_AMOUNT")
+            self.channel.destination, EnvironmentUtils.envvar("FUND_AMOUNT")
         )
         self.results.append(success)
 
     async def on_end(self):
-        async def balance_changed(id: str, balance: str):
+        async def balance_changed(destination: str, balance: str):
             while True:
                 channels = await self.api.channels()
-                channel = channels[
-                    [c.id for c in channels if c.source == self.address.native].index(id)
-                ]
+                channel = next(
+                    (
+                        c
+                        for c in channels.outgoing
+                        if c.source == self.address.native and c.destination == destination
+                    ),
+                    None,
+                )
+                if channel is None:
+                    await asyncio.sleep(0.1)
+                    continue
                 if channel.balance != balance:
                     break
 
@@ -58,7 +65,7 @@ class FundChannels(EnduranceTest):
         logger.info(f"Waiting up to {timeout}s for the balance to change")
         try:
             self.final_balance = await asyncio.wait_for(
-                balance_changed(self.channel.id, self.inital_balance), timeout=timeout
+                balance_changed(self.channel.destination, self.inital_balance), timeout=timeout
             )
         except asyncio.TimeoutError:
             logger.error(f"Balance not changed after {timeout}s")

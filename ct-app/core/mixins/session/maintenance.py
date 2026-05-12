@@ -141,12 +141,16 @@ class SessionMaintenanceMixin(SessionCommonMixin):
                 relayer: str,
                 session: "Session",
             ) -> tuple[str, "Session", bool]:
+                self.session_lifecycle_coordinator.mark("maintenance_close_requested")
                 close_ok = await NodeHelper.close_session(self.api, session, relayer)
                 if not close_ok:
+                    self.session_lifecycle_coordinator.mark("maintenance_close_failed")
                     logger.warning(
                         "Failed to close session at API level, preserving local session state",
                         {"relayer": relayer, "port": session.port},
                     )
+                else:
+                    self.session_lifecycle_coordinator.mark("maintenance_closed")
                 return relayer, session, close_ok
 
             close_results = await asyncio.gather(

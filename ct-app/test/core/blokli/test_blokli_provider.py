@@ -1,12 +1,12 @@
 from core.blokli.entries import BlokliRedemptionStats
-from core.blokli.providers import Redemptions
+from core.blokli.providers import Redemptions, TicketParametersSubscription
 
 
-def test_subscription_query_is_built_with_subscription_operation():
-    provider = Redemptions("http://blokli.local")
+def test_subscription_query_uses_explicit_subscription_document_when_provided():
+    provider = TicketParametersSubscription("http://blokli.local")
 
     assert provider._sku_subscription.startswith("subscription")
-    assert "redeemedStats" in provider._sku_subscription
+    assert "ticketParametersUpdated" in provider._sku_subscription
 
 
 def test_parse_sse_event_data_returns_payload_dict():
@@ -63,3 +63,8 @@ def test_request_headers_include_authorization_when_token_present():
     headers = provider._request_headers()
 
     assert headers["Authorization"] == "Bearer secret"
+
+
+def test_provider_normalizes_root_url_to_graphql_path():
+    assert Redemptions("http://blokli.local").url == "http://blokli.local/graphql"
+    assert Redemptions("http://blokli.local/graphql").url == "http://blokli.local/graphql"

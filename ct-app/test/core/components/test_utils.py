@@ -10,7 +10,6 @@ def channel_topology():
         Channel(
             {
                 "balance": "1 wxHOPR",
-                "channelId": "channel_1",
                 "destination": "dst_1",
                 "source": "src_1",
                 "status": "Open",
@@ -19,7 +18,6 @@ def channel_topology():
         Channel(
             {
                 "balance": "2 wxHOPR",
-                "channelId": "channel_2",
                 "destination": "dst_2",
                 "source": "src_1",
                 "status": "Open",
@@ -28,7 +26,6 @@ def channel_topology():
         Channel(
             {
                 "balance": "3 wxHOPR",
-                "channelId": "channel_3",
                 "destination": "dst_3",
                 "source": "src_1",
                 "status": "Closed",
@@ -37,7 +34,6 @@ def channel_topology():
         Channel(
             {
                 "balance": "4 wxHOPR",
-                "channelId": "channel_4",
                 "destination": "dst_1",
                 "source": "src_2",
                 "status": "Open",
@@ -46,7 +42,6 @@ def channel_topology():
         Channel(
             {
                 "balance": "1 wxHOPR",
-                "channelId": "channel_5",
                 "destination": "dst_2",
                 "source": "src_2",
                 "status": "Open",

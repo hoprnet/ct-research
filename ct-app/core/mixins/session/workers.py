@@ -91,8 +91,10 @@ class SessionWorkerMixin(SessionCommonMixin):
         if wait_for_in_flight:
             await self._wait_for_session_tasks(session)
 
+        self.session_lifecycle_coordinator.mark("retire_requested")
         close_ok = await NodeHelper.close_session(self.api, session, relayer)
         if not close_ok:
+            self.session_lifecycle_coordinator.mark("retire_failed")
             logger.warning(
                 "Failed to close session while retiring local cache entry",
                 {"relayer": relayer, "port": session.port, "reason": reason},
@@ -105,6 +107,7 @@ class SessionWorkerMixin(SessionCommonMixin):
 
         session.close_socket()
         self.session_close_grace_period.pop(relayer, None)
+        self.session_lifecycle_coordinator.mark("retired")
         return True
 
     async def _get_or_create_session(
@@ -149,6 +152,7 @@ class SessionWorkerMixin(SessionCommonMixin):
             return await pending_session
 
         async def open_session() -> "Session" | None:
+            self.session_lifecycle_coordinator.mark("open_requested")
             can_attempt, wait_time = self.session_rate_limiter.can_attempt(relayer)
             if not can_attempt and wait_time:
                 logger.debug(
@@ -156,6 +160,7 @@ class SessionWorkerMixin(SessionCommonMixin):
                     {"relayer": relayer, "wait_time_seconds": round(wait_time, 2)},
                 )
                 SESSION_OPEN_EVENTS.labels(result="rate_limited").inc()
+                self.session_lifecycle_coordinator.mark("open_rate_limited")
                 return None
 
             self.session_rate_limiter.record_attempt(relayer)
@@ -170,10 +175,12 @@ class SessionWorkerMixin(SessionCommonMixin):
                 self.session_rate_limiter.record_failure(relayer)
                 logger.debug("Failed to open session")
                 SESSION_OPEN_EVENTS.labels(result="failed").inc()
+                self.session_lifecycle_coordinator.mark("open_failed")
                 return None
 
             self.session_rate_limiter.record_success(relayer)
             SESSION_OPEN_EVENTS.labels(result="opened").inc()
+            self.session_lifecycle_coordinator.mark("opened")
 
             session.create_socket()
             logger.debug("Created socket", {"ip": session.ip, "port": session.port})
@@ -184,6 +191,7 @@ class SessionWorkerMixin(SessionCommonMixin):
 
             session.close_socket()
             logger.debug("Session created by another coroutine, using existing")
+            self.session_lifecycle_coordinator.mark("open_race_reused")
             return self.sessions[relayer]
 
         task = asyncio.create_task(open_session())
@@ -256,6 +264,9 @@ class SessionWorkerMixin(SessionCommonMixin):
             try:
                 message: MessageFormat = await asyncio.wait_for(MessageQueue().get(), timeout=1.0)
                 await self._process_message(message, worker_id)
+            except asyncio.CancelledError:
+                logger.debug("Message worker cancelled", {"worker_id": worker_id})
+                raise
             except asyncio.TimeoutError:
                 WORKER_LOOP_EVENTS.labels(event="timeout").inc()
                 logger.debug("Message worker %s timed out waiting for work", worker_id)

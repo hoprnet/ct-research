@@ -22,6 +22,11 @@ class GetChannelsBody(RequestData):
 
 
 @dataclass
+class CloseChannelBody(RequestData):
+    direction: str
+
+
+@dataclass
 class GetPeersBody(RequestData):
     quality: float
 

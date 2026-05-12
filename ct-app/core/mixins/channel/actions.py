@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from datetime import datetime
 from typing import Optional
 
@@ -6,7 +7,6 @@ from prometheus_client import Gauge
 
 from ...types.asyncloop import AsyncLoop
 from ...types.balance import Balance
-from ...components.decorators import connectguard, keepalive, master
 from ...components.node_helper import NodeHelper
 from ...components.utils import Utils
 from .cache import ChannelCacheMixin
@@ -19,10 +19,13 @@ logger = logging.getLogger(__name__)
 
 
 class ChannelActionMixin(ChannelCacheMixin):
-    def _schedule_channel_operation(self, callback, *args) -> None:
-        AsyncLoop.add(callback, *args, publish_to_task_set=False)
+    def _schedule_channel_operation(self, source: str, callback, *args) -> None:
+        async def _execute() -> None:
+            await callback(*args)
+            self.channel_lifecycle_coordinator.request(source)
 
-    @master(keepalive, connectguard)
+        AsyncLoop.add(_execute, publish_to_task_set=False)
+
     async def get_total_channel_funds(self) -> Optional[Balance]:
         if self.address is None or self.channels is None:
             return None
@@ -37,8 +40,11 @@ class ChannelActionMixin(ChannelCacheMixin):
         CHANNEL_FUNDS.set(float(balance.value))
         return balance
 
-    @master(keepalive, connectguard)
     async def retrieve_channels(self):
+        if not self.connected:
+            logger.debug("Skipping channel retrieval while node is disconnected")
+            return
+
         channels = await self.api.channels()
 
         if channels is None:
@@ -64,13 +70,13 @@ class ChannelActionMixin(ChannelCacheMixin):
 
         self.outgoing_channel_balances = await Utils.balanceInChannels(channels.all)
         self.network_state.outgoing_channel_balances = dict(self.outgoing_channel_balances)
+        self.network_update_coordinator.request("channel_topology_refresh")
         logger.info(
             "Fetched all topology links",
             {"count": len(self.outgoing_channel_balances)},
         )
         TOPOLOGY_SIZE.set(len(self.outgoing_channel_balances))
 
-    @master(keepalive, connectguard)
     async def fund_channels(self):
         if self.channels is None:
             return
@@ -89,13 +95,13 @@ class ChannelActionMixin(ChannelCacheMixin):
         for channel in low_balances:
             if channel.destination in peer_addresses:
                 self._schedule_channel_operation(
+                    "fund_channel",
                     NodeHelper.fund_channel,
                     self.api,
-                    channel,
+                    channel.destination,
                     self.params.channel.funding_amount,
                 )
 
-    @master(keepalive, connectguard)
     async def close_old_channels(self):
         if self.channels is None:
             return
@@ -122,36 +128,52 @@ class ChannelActionMixin(ChannelCacheMixin):
 
         for channel in channels_to_close:
             self._schedule_channel_operation(
+                "close_old_channel",
                 NodeHelper.close_channel,
                 self.api,
-                channel,
+                channel.destination,
                 "old_closed",
             )
 
-    @master(keepalive, connectguard)
+    def _cancel_channel_reclose(self, address: str) -> None:
+        task = self._pending_channel_reclose_tasks.pop(address, None)
+        if task is not None:
+            task.cancel()
+
+    def _ensure_pending_reclose(self, address: str) -> None:
+        task = self._pending_channel_reclose_tasks.get(address)
+        if task is not None and not task.done():
+            return
+
+        async def _reclose() -> None:
+            await asyncio.sleep(300)
+            await NodeHelper.close_channel(self.api, address, "pending_closed_retry")
+            self.channel_lifecycle_coordinator.request("pending_close_retry")
+
+        self._pending_channel_reclose_tasks[address] = AsyncLoop.add(
+            _reclose,
+            publish_to_task_set=False,
+        )
+
     async def close_pending_channels(self):
         if self.channels is None:
             return
 
-        if self.outgoing_pending_channels:
+        pending_addresses = {channel.destination for channel in self.outgoing_pending_channels}
+
+        if pending_addresses:
             logger.debug(
-                "Starting closure of pending channels",
-                {"count": len(self.outgoing_pending_channels)},
-            )
-            logger.info(
-                "Scheduling pending channel closures",
-                {"count": len(self.outgoing_pending_channels)},
+                "Scheduling delayed re-close for pending channels",
+                {"count": len(pending_addresses), "delay_seconds": 300},
             )
 
-        for channel in self.outgoing_pending_channels:
-            self._schedule_channel_operation(
-                NodeHelper.close_channel,
-                self.api,
-                channel,
-                "pending_closed",
-            )
+        for address in list(self._pending_channel_reclose_tasks):
+            if address not in pending_addresses:
+                self._cancel_channel_reclose(address)
 
-    @master(keepalive, connectguard)
+        for address in pending_addresses:
+            self._ensure_pending_reclose(address)
+
     async def close_incoming_channels(self):
         if self.channels is None:
             return
@@ -167,13 +189,13 @@ class ChannelActionMixin(ChannelCacheMixin):
             )
         for channel in self.incoming_open_channels:
             self._schedule_channel_operation(
+                "close_incoming_channel",
                 NodeHelper.close_channel,
                 self.api,
-                channel,
+                channel.destination,
                 "incoming_closed",
             )
 
-    @master(keepalive, connectguard)
     async def open_channels(self):
         if self.channels is None:
             return
@@ -199,8 +221,27 @@ class ChannelActionMixin(ChannelCacheMixin):
 
         for address in addresses_without_channels:
             self._schedule_channel_operation(
+                "open_channel",
                 NodeHelper.open_channel,
                 self.api,
                 address,
                 self.params.channel.funding_amount,
             )
+
+    async def reconcile_channels_once(self) -> None:
+        await self.retrieve_channels()
+        if self.channels is None:
+            return
+
+        await self.open_channels()
+        await self.fund_channels()
+        await self.close_old_channels()
+        await self.close_pending_channels()
+
+    async def close_channel_reclose_tasks(self) -> None:
+        tasks = list(self._pending_channel_reclose_tasks.values())
+        self._pending_channel_reclose_tasks.clear()
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)

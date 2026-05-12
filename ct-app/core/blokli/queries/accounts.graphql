@@ -1,4 +1,4 @@
-accountUpdated {
+subscription {
     accountUpdated {
         chainKey
         keyid

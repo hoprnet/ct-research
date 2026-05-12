@@ -49,7 +49,8 @@ class PeerDiscoveryMixin(PeerAllocationMixin):
                 self.peers[address] = peer
                 counts["new"] += 1
 
-        self.reconcile_peer_allocations()
+        self.network_update_coordinator.request("peer_discovery_refresh")
+        self.channel_lifecycle_coordinator.request("peer_discovery_refresh")
 
         if counts["new"] > 0 or counts["unreachable"] > 0:
             self.invalidate_peer_cache()

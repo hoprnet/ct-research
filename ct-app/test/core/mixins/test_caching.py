@@ -150,7 +150,6 @@ class TestChannelCaching:
             Channel(
                 {
                     "balance": "1 wxHOPR",
-                    "id": "channel_pending",
                     "destination": "dest_1",
                     "source": "address_0",
                     "status": "PendingToClose",

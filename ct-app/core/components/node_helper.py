@@ -6,7 +6,7 @@ from typing import Optional
 from prometheus_client import Gauge
 
 from ..api.hoprd_api import HoprdAPI
-from ..api.response_objects import Channel, Session, SessionFailure
+from ..api.response_objects import Session, SessionFailure
 from ..types.message_format import MessageFormat
 from ..messages.message_metrics import (
     MESSAGE_E2E_LATENCY,
@@ -38,16 +38,17 @@ class NodeHelper:
     async def open_channel(cls, api: HoprdAPI, address: str, amount: Balance):
         log_params = {"to": address, "amount": amount.as_str}
         logger.debug("Opening channel", log_params)
+
         channel = await api.open_channel(address, amount)
         action = "Opened channel" if channel else f"Failed to open channel to {address}"
         cls._log_channel_operation(action, channel, log_params, "opened")
 
     @classmethod
-    async def close_channel(cls, api: HoprdAPI, channel: Channel, type: str):
-        logs_params = {"channel": channel.id}
+    async def close_channel(cls, api: HoprdAPI, address: str, type: str):
+        logs_params = {"to": address}
         logger.debug(f"Closing {type} channel", logs_params)
 
-        ok = await api.close_channel(channel.id)
+        ok = await api.close_channel(address)
         cls._log_channel_operation(
             f"Closed {type} channel" if ok else f"Failed to close {type}",
             ok,
@@ -56,11 +57,11 @@ class NodeHelper:
         )
 
     @classmethod
-    async def fund_channel(cls, api: HoprdAPI, channel: Channel, amount: Balance):
-        logs_params = {"channel": channel.id, "amount": amount.as_str}
+    async def fund_channel(cls, api: HoprdAPI, address: str, amount: Balance):
+        logs_params = {"to": address, "amount": amount.as_str}
         logger.debug("Funding channel", logs_params)
 
-        ok = await api.fund_channel(channel.id, amount)
+        ok = await api.fund_channel(address, amount)
         action = "Fund channel" if ok else "Failed to fund channel"
         cls._log_channel_operation(action, ok, logs_params, "fund")
 

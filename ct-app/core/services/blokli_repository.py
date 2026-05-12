@@ -6,7 +6,13 @@ from ..blokli.adapters import (
     to_node_safe_link_from_account,
     to_safe_balance_snapshot,
 )
-from ..blokli.providers import AccountSubscription, HoprBalance, Redemptions
+from ..blokli.entries import BlokliTicketParameters
+from ..blokli.providers import (
+    AccountSubscription,
+    HoprBalance,
+    Redemptions,
+    TicketParametersSubscription,
+)
 from ..types.network_models import NodeSafeLink, SafeBalanceSnapshot
 
 logger = logging.getLogger(__name__)
@@ -14,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 class NetworkRepository(Protocol):
     def stream_node_safe_links(self) -> AsyncIterator[NodeSafeLink]: ...
+    def stream_ticket_parameters(self) -> AsyncIterator[BlokliTicketParameters]: ...
 
     async def get_safe_balances(self, safe_addresses: list[str]) -> list[SafeBalanceSnapshot]: ...
 
@@ -29,11 +36,33 @@ class GraphqlNetworkRepository:
         async def _stream() -> AsyncIterator[NodeSafeLink]:
             async with AccountSubscription(self.url, self.token) as client:
                 async for account in client.subscribe():
+                    logger.info(
+                        "Account subscription event",
+                        {
+                            "node_address": account.node_address,
+                            "safe_address": account.safe_address,
+                        },
+                    )
                     link = to_node_safe_link_from_account(account)
                     if link is None:
                         logger.debug("Dropping account update without safe link")
                         continue
                     yield link
+
+        return _stream()
+
+    def stream_ticket_parameters(self) -> AsyncIterator[BlokliTicketParameters]:
+        async def _stream() -> AsyncIterator[BlokliTicketParameters]:
+            async with TicketParametersSubscription(self.url, self.token) as client:
+                async for params in client.subscribe():
+                    logger.info(
+                        "Ticket parameters subscription event",
+                        {
+                            "ticket_price": params.ticket_price.as_str,
+                            "min_ticket_winning_probability": params.min_ticket_winning_probability,
+                        },
+                    )
+                    yield params
 
         return _stream()
 

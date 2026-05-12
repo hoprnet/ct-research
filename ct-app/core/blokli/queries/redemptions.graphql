@@ -1,9 +1,10 @@
-redeemedStats(safeAddress: $safe_address, nodeAddress: $node_address) { 
-    ... on RedeemedStats { 
-        safeAddress 
-        nodeAddress 
-        redeemedAmount 
-        redemptionCount 
+query ($safe_address: String, $node_address: String) {
+    redeemedStats(safeAddress: $safe_address, nodeAddress: $node_address) {
+        ... on RedeemedStats {
+            safeAddress
+            nodeAddress
+            redeemedAmount
+            redemptionCount
+        }
     }
 }
-

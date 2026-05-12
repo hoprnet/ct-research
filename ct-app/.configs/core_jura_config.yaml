@@ -6,29 +6,15 @@ environment: jura
 
 flags:
   node:
-    apply_economic_model: 30s
-    ticket_parameters: 1m
-
     outgoing_channels_balances: 30s
-
-    rotate_subgraphs: 5m
     
     healthcheck: 15s
     retrieve_peers: 1m
-    subscribe_accounts: On
     refresh_balances: 5m
     refresh_redeemed: 5m
-    relay_messages: On
-    retrieve_channels: 2m
     retrieve_balances: 5m
 
-    open_channels: 5m
-    fund_channels: 5m
-    close_old_channels: 5m
-    close_pending_channels: 5m
-    close_incoming_channels: Off
-
-    get_total_channel_funds: 5m
+    relay_messages: On
     
     observe_message_queue: On
     maintain_sessions: 15s
@@ -107,5 +93,5 @@ sessions:
 # =============================================================================
 blokli:
   url: ""
-  token: ""
+  token: None
 ...

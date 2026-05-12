@@ -14,7 +14,6 @@ from core.api.response_objects import (
     ConnectedPeer,
 )
 from core.types.peer import Peer
-from core.types.balance import Balance
 from core.config_parser import LegacyParams, Parameters
 from core.node import Node
 
@@ -110,7 +109,6 @@ async def nodes(
         )
 
         mocker.patch.object(node.api, "healthyz", return_value=True)
-        mocker.patch.object(node.api, "ticket_price", return_value=Balance("0.0001 wxHOPR"))
 
     return nodes
 
@@ -129,7 +127,6 @@ def channels(peers: set[Peer]) -> Channels:
                 Channel(
                     {
                         "balance": "1 wxHOPR",
-                        "id": f"channel_{index}",
                         "destination": dest.address.native,
                         "source": src.address.native,
                         "status": "Open",

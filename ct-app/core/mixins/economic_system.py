@@ -6,7 +6,6 @@ from prometheus_client import Gauge
 
 from ..types.balance import Balance
 from ..config_parser.economic_model import LegacyParams, SigmoidParams
-from ..components.decorators import keepalive
 from .runtime_state import NodeRuntimeState
 
 ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
@@ -18,14 +17,13 @@ logger = logging.getLogger(__name__)
 
 
 class EconomicSystemMixin(NodeRuntimeState):
-    @keepalive
-    async def apply_economic_model(self):
-        """
-        Applies the economic model to the eligible peers (after multiple filtering layers).
-        """
-
+    async def _apply_economic_model_once(self):
         if not self.peers:
-            logger.warning("Not enough data to apply economic model")
+            logger.warning("Skipping economic model: reachable peers are not available yet")
+            return
+
+        if self.ticket_price is None:
+            logger.warning("Skipping economic model: ticket price is not available yet")
             return
 
         for p in self.peers.values():
@@ -87,3 +85,6 @@ class EconomicSystemMixin(NodeRuntimeState):
             {"count": eligible_count, "expected_rate": expected_rate},
         )
         ELIGIBLE_PEERS.set(eligible_count)
+
+    def trigger_economic_model_refresh(self) -> None:
+        self.economic_model_refresh_coordinator.request()

@@ -21,6 +21,7 @@ Thread Safety:
 import asyncio
 import logging
 from datetime import datetime
+from collections.abc import Sequence
 from typing import Optional
 
 from api_lib.headers.authorization import Bearer
@@ -28,7 +29,7 @@ from prometheus_client import Gauge
 
 from .mixins import ChannelMixin, EconomicSystemMixin, PeersMixin, SessionMixin, StateMixin
 from .api.hoprd_api import HoprdAPI
-from .api.response_objects import Channel, Channels, Session
+from .api.response_objects import Channel, Channels, Session, TicketPrice
 from .types.address import Address
 from .types.asyncloop import AsyncLoop
 from .types.balance import Balance
@@ -39,6 +40,12 @@ from .types.network_state import NetworkState
 from .types.session_rate_limiter import SessionRateLimiter
 from .components.decorators import get_keepalive_methods
 from .services.node_runtime_factory import NodeRuntimeFactory
+from .services.economic_model_refresh_coordinator import EconomicModelRefreshCoordinator
+from .services.channel_lifecycle_coordinator import ChannelLifecycleCoordinator
+from .services.network_update_coordinator import NetworkUpdateCoordinator
+from .services.send_plan_coordinator import SendPlanCoordinator
+from .services.session_lifecycle_coordinator import SessionLifecycleCoordinator
+from .services.shutdown_coordinator import ShutdownCoordinator
 
 BALANCE_MULTIPLIER = Gauge("ct_balance_multiplier", "factor to multiply the balance by")
 
@@ -109,7 +116,37 @@ class Node(
         self.channels: Optional[Channels] = None
 
         self.outgoing_channel_balances = dict[str, Balance]()
-        self.ticket_price = None
+        self.ticket_price: Optional[TicketPrice] = None
+        self.min_ticket_winning_probability: Optional[float] = None
+        self.economic_model_refresh_coordinator = EconomicModelRefreshCoordinator(
+            self._apply_economic_model_once
+        )
+        self.channel_lifecycle_coordinator = ChannelLifecycleCoordinator(
+            self.reconcile_channels_once
+        )
+        self.network_update_coordinator = NetworkUpdateCoordinator(
+            self.reconcile_peer_allocations,
+            self.trigger_economic_model_refresh,
+        )
+        self.send_plan_coordinator = SendPlanCoordinator()
+        self.session_lifecycle_coordinator = SessionLifecycleCoordinator()
+        self.shutdown_coordinator = ShutdownCoordinator()
+        self.shutdown_coordinator.register_async(
+            "economic_model_refresh_coordinator",
+            self.economic_model_refresh_coordinator.close,
+        )
+        self.shutdown_coordinator.register_async(
+            "network_update_coordinator",
+            self.network_update_coordinator.close,
+        )
+        self.shutdown_coordinator.register_async(
+            "channel_lifecycle_coordinator",
+            self.channel_lifecycle_coordinator.close,
+        )
+        self.shutdown_coordinator.register_async(
+            "channel_reclose_tasks",
+            self.close_channel_reclose_tasks,
+        )
 
         self.connected = False
         self.running = True
@@ -125,6 +162,7 @@ class Node(
         self._cached_outgoing_pending: list[Channel] | None = None
         self._cached_outgoing_not_closed: list[Channel] | None = None
         self._cached_address_to_open_channel: dict[str, Channel] | None = None
+        self._pending_channel_reclose_tasks = dict[str, asyncio.Task[None]]()
 
         BALANCE_MULTIPLIER.set(1.0)
 
@@ -133,12 +171,20 @@ class Node(
         return self._session_destinations
 
     @session_destinations.setter
-    def session_destinations(self, destinations: list[str]) -> None:
+    def session_destinations(self, destinations: Sequence[str]) -> None:
         self._session_destinations = list(destinations)
         self._cached_reachable_destinations = None
 
     async def start(self):
         await self.retrieve_address()
+
+        logger.info(
+            "Scheduling subscription methods",
+            {"methods": ["subscribe_accounts", "ticket_parameters"]},
+        )
+        AsyncLoop.add(self.subscribe_accounts)
+        AsyncLoop.add(self.ticket_parameters)
+        self.channel_lifecycle_coordinator.request("startup")
 
         keepalive_methods = get_keepalive_methods(self)
         logger.info(
@@ -191,6 +237,7 @@ class Node(
             >>> await node.stop()  # Gracefully closes all sessions
         """
         self.running = False
+        await self.shutdown_coordinator.run()
         await self.wait_for_in_flight_messages()
 
         # Close all active sessions

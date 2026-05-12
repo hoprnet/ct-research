@@ -36,9 +36,6 @@ def main(configfile: str):
     params = Parameters(config)
     logger.info("Configuration loaded", {"params": str(params)})
 
-    params.blokli.set_attribute_from_env("url", "BLOKLI_URL")
-    params.blokli.set_attribute_from_env("token", "BLOKLI_TOKEN")
-
     # start the prometheus client
     prometheus_server_port = 8081
     try:

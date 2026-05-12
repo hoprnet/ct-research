@@ -1,7 +1,10 @@
+import asyncio
+from types import SimpleNamespace
+
 import pytest
 from unittest.mock import AsyncMock
 
-from core.api.response_objects import Addresses, Channels, TicketPrice
+from core.api.response_objects import Addresses, Channels
 from core.node import Node
 from core.types.balance import Balance
 from core.types.peer import Peer
@@ -64,16 +67,27 @@ async def test_retrieve_address_retries_until_api_returns_value(
 
 @pytest.mark.asyncio
 async def test_ticket_parameters_updates_cached_ticket_price(node: Node, mocker):
-    mocker.patch.object(
-        node.api,
-        "ticket_price",
-        return_value=TicketPrice({"price": "0.0001 wxHOPR"}),
-    )
+    async def stream_ticket_parameters():
+        yield SimpleNamespace(
+            ticket_price=Balance("0.0001 wxHOPR"),
+            min_ticket_winning_probability=0.5,
+        )
+        raise asyncio.CancelledError
 
-    await node.ticket_parameters()
+    mocker.patch.object(
+        node.blokli_repository,
+        "stream_ticket_parameters",
+        side_effect=stream_ticket_parameters,
+    )
+    network_update_request = mocker.patch.object(node.network_update_coordinator, "request")
+
+    with pytest.raises(asyncio.CancelledError):
+        await node.ticket_parameters()
 
     assert node.ticket_price is not None
     assert node.ticket_price.value == Balance("0.0001 wxHOPR")
+    assert node.min_ticket_winning_probability == 0.5
+    network_update_request.assert_called_once_with("ticket_parameters_subscription")
 
 
 @pytest.mark.asyncio

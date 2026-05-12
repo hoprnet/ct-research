@@ -8,7 +8,6 @@ from pytest_mock import MockerFixture
 
 from core.api.response_objects import Addresses, Balances, Session
 from core.types.peer import Peer
-from core.types.balance import Balance
 from core.config_parser import Parameters
 from core.types.message_queue import MessageQueue
 from core.types.singleton import Singleton
@@ -53,7 +52,6 @@ async def session_node(mocker: MockerFixture) -> Node:
         ),
     )
     mocker.patch.object(node.api, "healthyz", return_value=True)
-    mocker.patch.object(node.api, "ticket_price", return_value=Balance("0.0001 wxHOPR"))
 
     cfg = Path(__file__).resolve().parents[3] / "test_config.yaml"
     with cfg.open("r") as file:

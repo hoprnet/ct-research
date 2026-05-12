@@ -22,7 +22,6 @@ from pytest_mock import MockerFixture
 
 from core.api.response_objects import Addresses, Balances, Session
 from core.types.peer import Peer
-from core.types.balance import Balance
 from core.config_parser import Parameters
 from core.types.message_format import MessageFormat
 from core.components.node_helper import NodeHelper
@@ -76,7 +75,6 @@ async def stress_node(mocker: MockerFixture) -> Node:
         ),
     )
     mocker.patch.object(node.api, "healthyz", return_value=True)
-    mocker.patch.object(node.api, "ticket_price", return_value=Balance("0.0001 wxHOPR"))
 
     # Load minimal test config
     cfg = Path(__file__).resolve().parents[3] / "test_config.yaml"

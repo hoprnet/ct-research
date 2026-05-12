@@ -14,7 +14,6 @@ from pytest_mock import MockerFixture
 from core.api.response_objects import Addresses, Balances, Session
 from core.api.response_objects import Channel, Channels
 from core.types.peer import Peer
-from core.types.balance import Balance
 from core.config_parser import Parameters
 from core.types.message_format import MessageFormat
 from core.types.message_queue import MessageQueue
@@ -68,7 +67,6 @@ async def benchmark_node(mocker: MockerFixture) -> Node:
         ),
     )
     mocker.patch.object(node.api, "healthyz", return_value=True)
-    mocker.patch.object(node.api, "ticket_price", return_value=Balance("0.0001 wxHOPR"))
 
     # Load test config
     cfg = Path(__file__).resolve().parents[1] / "test_config.yaml"
@@ -139,14 +137,13 @@ def setup_benchmark_network(mock_sessions_factory):
         channels.outgoing = [
             Channel(
                 {
-                    "id": f"channel_{i}",
                     "source": "bench_node",
                     "destination": address,
                     "status": "Open",
                     "balance": "10 wxHOPR",
                 }
             )
-            for i, address in enumerate(peers.keys())
+            for address in peers.keys()
         ]
         node.channels = channels
 

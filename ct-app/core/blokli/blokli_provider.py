@@ -5,6 +5,7 @@ import re
 import sys
 from pathlib import Path
 from typing import Any, AsyncIterator, Generic, Optional, Self, TypeVar, cast, get_args, get_origin
+from urllib.parse import urlsplit, urlunsplit
 
 import aiohttp
 from api_lib.objects import JsonResponse
@@ -36,11 +37,18 @@ class BlokliProvider(Generic[TBlokliResponse]):
     _session: Optional[aiohttp.ClientSession] = None
 
     def __init__(self, url: str, token: Optional[str] = None):
-        self.url = url
+        self.url = self._normalize_graphql_url(url)
         self.token = token
         self.pwd = Path(str(sys.modules[self.__class__.__module__].__file__)).parent
         self._initialize_query(self.query_file, self.params)
         self._timeout = aiohttp.ClientTimeout(total=30)
+
+    def _normalize_graphql_url(self, url: str) -> str:
+        parsed = urlsplit(url)
+        path = parsed.path.rstrip("/")
+        if path:
+            return url
+        return urlunsplit((parsed.scheme, parsed.netloc, "/graphql", parsed.query, parsed.fragment))
 
     async def __aexit__(self, exc_type, exc, tb):
         if self._session is not None and not self._session.closed:

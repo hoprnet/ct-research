@@ -5,6 +5,7 @@ from prometheus_client import Gauge
 
 from ..types.address import Address
 from ..components.decorators import connectguard, keepalive, master
+from ..api.response_objects import TicketPrice
 from .runtime_state import NodeRuntimeState
 
 BALANCE = Gauge("ct_balance", "Node balance", ["token"])
@@ -85,21 +86,25 @@ class StateMixin(NodeRuntimeState):
             logger.warning("Node is not reachable")
         HEALTH.set(int(self.connected))
 
-    @keepalive
     async def ticket_parameters(self):
         """
-        Gets the ticket price from the api.
+        Subscribes to Blokli ticket parameter updates.
         They are used in the economic model to calculate the number of messages to send to a peer.
         """
-        ticket_price = await self.api.ticket_price()
-
-        if ticket_price is not None:
+        async for params in self.blokli_repository.stream_ticket_parameters():
+            ticket_price = TicketPrice({"price": params.ticket_price.as_str})
             logger.info(
-                "Fetched ticket price",
-                {"value": ticket_price.value.as_str},
+                "Updated ticket parameters from Blokli subscription",
+                {
+                    "ticket_price": ticket_price.value.as_str,
+                    "min_ticket_winning_probability": params.min_ticket_winning_probability,
+                },
             )
 
             self.ticket_price = ticket_price
+            self.min_ticket_winning_probability = params.min_ticket_winning_probability
             TICKET_STATS.labels("price").set(float(ticket_price.value.value))
-        else:
-            logger.warning("No results while retrieving ticket price")
+            TICKET_STATS.labels("min_ticket_winning_probability").set(
+                params.min_ticket_winning_probability
+            )
+            self.network_update_coordinator.request("ticket_parameters_subscription")

@@ -22,3 +22,11 @@ class BlokliRedemptionStats(JsonResponse):
 class BlokliAccount(JsonResponse):
     node_address: str = APIfield(path="accountUpdated/chainKey")
     safe_address: Optional[str] = APIfield(path="accountUpdated/safeAddress")
+
+
+@APIobject
+class BlokliTicketParameters(JsonResponse):
+    min_ticket_winning_probability: float = APIfield(
+        path="ticketParametersUpdated/minTicketWinningProbability"
+    )
+    ticket_price: Balance = APIfield(path="ticketParametersUpdated/ticketPrice")

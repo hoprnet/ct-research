@@ -6,29 +6,14 @@ environment: local
 
 flags:
   node:
-    apply_economic_model: 30s
-    ticket_parameters: 1m
-
     outgoing_channels_balances: 30s
-
-    rotate_subgraphs: 1m
     
     healthcheck: 15s
     retrieve_peers: 1m
-    subscribe_accounts: On
-    refresh_balances: 5m
-    refresh_redeemed: 5m
+    refresh_balances: 30s
+    refresh_redeemed: 2m
     relay_messages: On
-    retrieve_channels: 2m
-    retrieve_balances: 5m
-
-    open_channels: 5m
-    fund_channels: 5m
-    close_old_channels: 5m
-    close_pending_channels: 5m
-    close_incoming_channels: Off
-
-    get_total_channel_funds: 5m
+    retrieve_balances: 1m
 
     observe_message_queue: On
     maintain_sessions: 15s
@@ -42,12 +27,12 @@ flags:
 economic_model:
   legacy:
     proportion: 1.0
-    apr: 0.000002
+    apr: 1
 
     coefficients:
       a: 1
       b: 1.4
-      upperbound: "15 wxHOPR"
+      upperbound: "1000 wxHOPR"
       lowerbound: "0.1 wxHOPR"
 
   sigmoid:
@@ -91,13 +76,9 @@ channel:
 #
 # =============================================================================
 sessions:
-  green_destinations:
-  - "0x7d1e530e9c82c21b75644a2c23402aa858ae4a69"
-  - "0x1b482420afa04aec1ef0e4a00c18451e84466c75"
-  - "0x05b17e37fd43c18741877fca80846ad8c84aa750"
-  - "0xcc70a22331998454160472f097acb43ca9b1e646"
-  - "0xe4bb1970e6c9e5689c5ef68ee2545b4366c49be4"
-  - "0xf90c1eb2557a443c2b27d399afac075fa752cd92"
+  green_destinations: 
+    - "0x24bb711c1612f57d03b4504c78241b3bd597e9fc"
+    - "0x3bee5bde885c6b046ada28d3e8c180d20a99195a"
   blue_destinations: []
   session_retry_base_delay: 2s
   session_retry_max_delay: 60s
@@ -108,6 +89,6 @@ sessions:
 #
 # =============================================================================
 blokli:
-  url: ""
+  url: "http://localhost:8080"
   token: None
 ...

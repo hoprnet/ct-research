@@ -1,6 +1,6 @@
 .PHONY: run
 run:
-	@./scripts/run.sh --env=staging --deployment=green
+	@./scripts/run.sh --env=local --deployment=green
 
 .PHONY: endurance
 endurance:

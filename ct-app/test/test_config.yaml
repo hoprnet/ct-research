@@ -6,29 +6,14 @@ environment: test
 
 flags:
   node: 
-    apply_economic_model: 30s
-    ticket_parameters: 30s
-
     outgoing_channels_balances: 30s
-
-    rotate_subgraphs: 30s
     
     healthcheck: 10s
     retrieve_peers: 30s
-    subscribe_accounts: Off
     refresh_balances: Off
     refresh_redeemed: Off
     relay_messages: Off
-    retrieve_channels: 30s
     retrieve_balances: 30s
-
-    open_channels: Off
-    fund_channels: Off
-    close_old_channels: Off
-    close_pending_channels: Off
-    close_incoming_channels: Off
-
-    get_total_channel_funds: Off
     
     observe_message_queue: On
     maintain_sessions: 10s

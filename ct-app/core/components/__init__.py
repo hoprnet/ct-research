@@ -1,8 +1,7 @@
 from . import decorators
-from .utils import EnvironmentUtils, Utils
+from .utils import Utils
 
 __all__ = [
     "Utils",
-    "EnvironmentUtils",
     "decorators",
 ]

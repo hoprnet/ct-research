@@ -2,6 +2,7 @@ import asyncio
 import logging
 from collections.abc import Callable
 
+from ..blokli.blokli_provider import ProviderError
 from ..services.network_state_service import NetworkStateService
 from ..services.blokli_repository import NetworkRepository
 from ..types.peer import Peer
@@ -20,17 +21,22 @@ class NetworkSyncOrchestrator:
 
     async def stream_link_updates(self, on_update: Callable[[], None] | None = None) -> None:
         logger.info("Starting account subscription stream for node-safe links")
-        async for link in self.repository.stream_node_safe_links():
-            updates = [
-                self.state_service.make_link_update(link.node_address, link.safe_address),
-            ]
-            self.state_service.apply_link_updates(updates)
-            logger.debug(
-                "Applied node-safe link update",
-                {"node_address": link.node_address, "safe_address": link.safe_address},
-            )
-            if on_update is not None:
-                on_update()
+        while True:
+            try:
+                async for link in self.repository.stream_node_safe_links():
+                    updates = [
+                        self.state_service.make_link_update(link.node_address, link.safe_address),
+                    ]
+                    self.state_service.apply_link_updates(updates)
+                    logger.debug(
+                        "Applied node-safe link update",
+                        {"node_address": link.node_address, "safe_address": link.safe_address},
+                    )
+                    if on_update is not None:
+                        on_update()
+            except ProviderError as error:
+                logger.warning("Account subscription failed; retrying", {"error": str(error)})
+                await asyncio.sleep(5)
 
     async def refresh_balances(self) -> None:
         await self.state_service.refresh_balances()

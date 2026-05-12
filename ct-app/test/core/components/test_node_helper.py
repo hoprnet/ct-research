@@ -25,23 +25,23 @@ async def test_open_channel_calls_api_with_requested_amount():
 async def test_close_channel_returns_api_status():
     api = MagicMock()
     api.close_channel = AsyncMock(return_value=True)
-    channel = MagicMock(id="channel-1")
+    address = "peer-1"
 
-    await NodeHelper.close_channel(api, channel, "old_closed")
+    await NodeHelper.close_channel(api, address, "old_closed")
 
-    api.close_channel.assert_awaited_once_with("channel-1")
+    api.close_channel.assert_awaited_once_with(address)
 
 
 @pytest.mark.asyncio
 async def test_fund_channel_calls_api_with_requested_amount():
     api = MagicMock()
     api.fund_channel = AsyncMock(return_value=True)
-    channel = MagicMock(id="channel-1")
+    address = "peer-1"
     amount = Balance("2 wxHOPR")
 
-    await NodeHelper.fund_channel(api, channel, amount)
+    await NodeHelper.fund_channel(api, address, amount)
 
-    api.fund_channel.assert_awaited_once_with("channel-1", amount)
+    api.fund_channel.assert_awaited_once_with(address, amount)
 
 
 @pytest.mark.asyncio

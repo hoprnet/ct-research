@@ -3,10 +3,8 @@ from typing import Any
 
 from api_lib.objects.response import (
     APIfield,
-    APImetric,
     APIobject,
     JsonResponse,
-    MetricResponse,
 )
 
 from ..types.balance import Balance
@@ -17,13 +15,10 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "Addresses",
     "Balances",
-    "Infos",
     "ConnectedPeer",
     "Channel",
     "TicketPrice",
-    "Configuration",
     "OpenedChannel",
-    "Metrics",
     "Channels",
     "Session",
     "SessionFailure",
@@ -50,17 +45,8 @@ class Balances(JsonResponse):
 
 
 @APIobject
-class Infos(JsonResponse):
-    hopr_node_safe: str = APIfield("hoprNodeSafe")
-
-    def post_init(self):
-        self.hopr_node_safe = try_to_lower(self.hopr_node_safe)
-
-
-@APIobject
 class ConnectedPeer(JsonResponse):
     address: str
-    multiaddr: str
 
     def post_init(self):
         self.address = try_to_lower(self.address)
@@ -72,7 +58,6 @@ class Channel(JsonResponse):
     destination: str
     source: str
     status: ChannelStatus
-    id: str = APIfield("channelId")
 
     # TODO: maybe remove the conversion
     def post_init(self):
@@ -86,20 +71,8 @@ class TicketPrice(JsonResponse):
 
 
 @APIobject
-class Configuration(JsonResponse):
-    price: Balance = APIfield("hopr/protocol/outgoing_ticket_price")
-
-
-@APIobject
 class OpenedChannel(JsonResponse):
     channel_id: str = APIfield("channelId")
-    receipt: str = APIfield("transactionReceipt", "")
-
-
-@APIobject
-class Metrics(MetricResponse):
-    hopr_tickets_incoming_statistics: dict = APImetric(["statistic"])
-    hopr_packets_count: dict = APImetric(["type"])
 
 
 @APIobject

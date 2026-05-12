@@ -23,7 +23,7 @@ Parameter | Required | Notes
 --|--|--
 `HOPRD_API_HOST` | no | Defaults to `http://127.0.0.1:3001`
 `HOPRD_API_TOKEN` | yes | Required startup secret
-`BLOKLI_URL` | yes unless `blokli.url` is set in the config | Intended primary provider endpoint
+`BLOKLI_URL` | yes unless `blokli.url` is set in the config | Intended primary provider endpoint; use the GraphQL base URL (for example `http://localhost:8080` or `http://localhost:8080/graphql`)
 `BLOKLI_TOKEN` | yes unless `blokli.token` is set in the config | Intended primary provider secret
 `LOG_LEVEL` | no | Global or per-library log level overrides
 

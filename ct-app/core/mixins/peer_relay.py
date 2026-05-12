@@ -21,15 +21,13 @@ class PeerRelayMixin(NodeRuntimeState):
         sleep_mean = self.params.peer.sleep_mean_time.value
         sleep_std = self.params.peer.sleep_std_time.value
 
-        for peer in self.peers.values():
-            if peer.yearly_message_count is None:
-                continue
-
-            delay = peer.message_delay
-            if delay is None:
-                await asyncio.sleep(peer.next_idle_sleep(sleep_mean, sleep_std))
-                continue
-
-            message = peer.build_relay_request(delay, min_delay)
-            await queue.put(message)
-            await asyncio.sleep(delay * message.batch_size)
+        steps = self.send_plan_coordinator.build_steps(
+            self.peers.values(),
+            min_delay,
+            sleep_mean,
+            sleep_std,
+        )
+        for step in steps:
+            if step.message is not None:
+                await queue.put(step.message)
+            await asyncio.sleep(step.sleep_seconds)

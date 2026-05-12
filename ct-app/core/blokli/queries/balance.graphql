@@ -1,6 +1,8 @@
-hoprBalance(address: $address) {
-    ... on HoprBalance {
-        address
-        balance
-    } 
+query ($address: String!) {
+    hoprBalance(address: $address) {
+        ... on HoprBalance {
+            address
+            balance
+        }
+    }
 }

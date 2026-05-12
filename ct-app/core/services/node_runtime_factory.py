@@ -9,6 +9,10 @@ from ..types.network_state import NetworkState
 from ..services.network_state_service import NetworkStateService
 from ..services.network_sync_orchestrator import NetworkSyncOrchestrator
 from ..types.message_queue import MessageQueue
+from ..services.network_update_coordinator import NetworkUpdateCoordinator
+from ..services.send_plan_coordinator import SendPlanCoordinator
+from ..services.session_lifecycle_coordinator import SessionLifecycleCoordinator
+from ..services.shutdown_coordinator import ShutdownCoordinator
 
 
 class RuntimeNode(Protocol):
@@ -16,6 +20,10 @@ class RuntimeNode(Protocol):
     blokli_repository: NetworkRepository
     network_state_service: NetworkStateService
     network_sync_orchestrator: NetworkSyncOrchestrator
+    network_update_coordinator: NetworkUpdateCoordinator
+    send_plan_coordinator: SendPlanCoordinator
+    session_lifecycle_coordinator: SessionLifecycleCoordinator
+    shutdown_coordinator: ShutdownCoordinator
 
 
 class NodeRuntimeFactory:

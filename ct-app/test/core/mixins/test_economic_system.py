@@ -70,6 +70,7 @@ class DummyEconomicNode(EconomicSystemMixin):
     _in_flight_message_tasks: set[Any]
     _in_flight_tasks_by_session_port: dict[int, set[Any]]
     ticket_price: Any
+    economic_model_refresh_coordinator: Any
     params: Any
 
     def reconcile_peer_allocations(self) -> None:
@@ -82,7 +83,7 @@ async def test_apply_economic_model_requires_complete_data(mocker):
     node.peers = {}
     logger_warning = mocker.patch("core.mixins.economic_system.logger.warning")
 
-    await node.apply_economic_model()
+    await node._apply_economic_model_once()
 
     logger_warning.assert_called_once()
 
@@ -112,10 +113,20 @@ async def test_apply_economic_model_updates_only_eligible_peers(mocker):
     )
     gauge_set = mocker.patch("core.mixins.economic_system.ELIGIBLE_PEERS.set", new=Mock())
 
-    await node.apply_economic_model()
+    await node._apply_economic_model_once()
 
     gauge_set.assert_called_once_with(1)
     assert eligible_peer.yearly_message_count == 40.0
     assert excluded_peer.yearly_message_count is None
     assert model.legacy.calls[0][2] == Balance("2 wxHOPR")
     assert model.sigmoid.calls[0][2] == [0.5, 0.5]
+
+
+def test_trigger_economic_model_refresh_requests_coordinator(mocker):
+    node = DummyEconomicNode()
+    coordinator = mocker.Mock()
+    node.economic_model_refresh_coordinator = coordinator
+
+    node.trigger_economic_model_refresh()
+
+    coordinator.request.assert_called_once_with()
