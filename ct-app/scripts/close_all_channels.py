@@ -35,7 +35,7 @@ async def main(deployment: str = "green", environment: str = "staging"):
     tasks = set()
     for api in apis:
         for channel in (await api.channels(full_topology=False)).outgoing:
-            tasks.add(asyncio.create_task(api.close_channel(channel.id)))
+            tasks.add(asyncio.create_task(api.close_channel(channel.destination)))
 
     if not tasks:
         print(State.SUCCESS, "No channels to close")

@@ -1,6 +1,6 @@
 .PHONY: run
 run:
-	@./scripts/run.sh --env=staging --deployment=green
+	@./scripts/run.sh --env=local --deployment=green
 
 .PHONY: endurance
 endurance:
@@ -8,10 +8,10 @@ endurance:
 
 .PHONY: fmt
 fmt:
-	@uvx black core scripts test
-	@ruff check core scripts test
-	@uvx mypy
-	@uv run scripts/verify_config.py -f .configs/core_prod_config.yaml -f .configs/core_staging_config.yaml -f test/test_config.yaml -f .configs/core_local_config.yaml
+	@uvx --python 3.14 black core scripts test
+	@uv run ruff check core scripts test
+	@uv run mypy
+	@uv run scripts/verify_config.py -f .configs/core_prod_config.yaml -f .configs/core_staging_config.yaml -f .configs/core_jura_config.yaml -f test/test_config.yaml -f .configs/core_local_config.yaml
 
 .PHONY: test
 test:
@@ -38,5 +38,5 @@ benchmark-130:
 
 .PHONY: benchmark-ramping
 benchmark-ramping:
-	@echo "Running ramping load test to find limits..."
+	@echo "Running ramping load test to find limits... (10min)"
 	@uv run pytest test/benchmarks/test_ramping_load.py -v

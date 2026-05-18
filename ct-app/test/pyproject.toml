@@ -3,10 +3,14 @@ name = "test"
 version = "3.11.2"
 requires-python = ">=3.14"
 dependencies = [
+    "prometheus_client>=0.22.0",
+    "pyyaml>=6.0.1",
     "pytest>=8.3.5",
     "pytest-asyncio>=1.0.0",
     "pytest-mock>=3.14.1",
 ]
 
 [tool.setuptools]
-packages = ["api", "components", "rpc", "subgraph"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["test*"]

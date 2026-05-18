@@ -1,14 +1,14 @@
 import logging
-from typing import Optional, Union
+from typing import Any, Callable, Literal, Optional, TypeVar, Union, overload
 
 from api_lib import ApiLib
 from api_lib.method import Method
+from api_lib.objects import RequestData, Response
 
-from ..components.balance import Balance
+from ..types.balance import Balance
 from . import request_objects as req
 from . import response_objects as resp
 
-logging.getLogger("api-lib").setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
@@ -16,6 +16,103 @@ class HoprdAPI(ApiLib):
     """
     HOPRd API helper to handle exceptions and logging.
     """
+
+    _TResponse = TypeVar("_TResponse", bound=Response)
+    _TModel = TypeVar("_TModel")
+
+    @overload
+    async def try_req(
+        self,
+        method: Method,
+        path: str,
+        resp_type: None = None,
+        data: Optional[RequestData] = None,
+        use_api_prefix: bool = True,
+        return_state: Literal[False] = False,
+        timeout: int = 90,
+    ) -> Optional[dict[str, Any]]: ...
+
+    @overload
+    async def try_req(
+        self,
+        method: Method,
+        path: str,
+        resp_type: type[_TResponse],
+        data: Optional[RequestData] = None,
+        use_api_prefix: bool = True,
+        return_state: Literal[False] = False,
+        timeout: int = 90,
+    ) -> Optional[_TResponse]: ...
+
+    @overload
+    async def try_req(
+        self,
+        method: Method,
+        path: str,
+        resp_type: type[list[_TResponse]],
+        data: Optional[RequestData] = None,
+        use_api_prefix: bool = True,
+        return_state: Literal[False] = False,
+        timeout: int = 90,
+    ) -> Optional[list[_TResponse]]: ...
+
+    @overload
+    async def try_req(
+        self,
+        method: Method,
+        path: str,
+        resp_type: type[_TModel],
+        data: Optional[RequestData] = None,
+        use_api_prefix: bool = True,
+        return_state: Literal[False] = False,
+        timeout: int = 90,
+    ) -> Optional[_TModel]: ...
+
+    @overload
+    async def try_req(
+        self,
+        method: Method,
+        path: str,
+        resp_type: Optional[Callable] = None,
+        data: Optional[RequestData] = None,
+        use_api_prefix: bool = True,
+        *,
+        return_state: Literal[True] = True,
+        timeout: int = 90,
+    ) -> Optional[bool]: ...
+
+    @overload
+    async def try_req(
+        self,
+        method: Method,
+        path: str,
+        resp_type: Optional[Callable] = None,
+        data: Optional[RequestData] = None,
+        use_api_prefix: bool = True,
+        return_state: bool = False,
+        timeout: int = 90,
+    ) -> Optional[Union[Response, dict]]: ...
+
+    async def try_req(
+        self,
+        method: Method,
+        path: str,
+        resp_type: Optional[Callable] = None,
+        data: Optional[RequestData] = None,
+        use_api_prefix: bool = True,
+        return_state: bool = False,
+        timeout: int = 90,
+    ) -> Optional[Union[Response, dict]]:
+        # Delegate to ApiLib while preserving typed overloads for call sites.
+        return await super().try_req(
+            method,
+            path,
+            resp_type=resp_type,
+            data=data,
+            use_api_prefix=use_api_prefix,
+            return_state=return_state,
+            timeout=timeout,
+        )
 
     async def balances(self) -> Optional[resp.Balances]:
         """
@@ -31,30 +128,39 @@ class HoprdAPI(ApiLib):
         Opens a channel with the given peer_address and amount.
         :param: peer_address: str
         :param: amount: Balance
-        :return: channel id: str | undefined
+        :return: channel: OpenedChannel | undefined
         """
         data = req.OpenChannelBody(amount.as_str, peer_address)
         return await self.try_req(Method.POST, "/channels", resp.OpenedChannel, data)
 
-    async def fund_channel(self, channel_id: str, amount: Balance) -> bool:
+    async def fund_channel(self, peer_address: str, amount: Balance) -> bool:
         """
         Funds a given channel.
-        :param: channel_id: str
+        :param: peer_address: str
         :param: amount: Balance
         :return: bool
         """
         data = req.FundChannelBody(amount.as_str)
-        return await self.try_req(
-            Method.POST, f"/channels/{channel_id}/fund", data=data, return_state=True
+        return bool(
+            await self.try_req(
+                Method.POST, f"/channels/{peer_address}/fund", data=data, return_state=True
+            )
         )
 
-    async def close_channel(self, channel_id: str) -> bool:
+    async def close_channel(self, peer_address: str) -> bool:
         """
         Closes a given channel.
-        :param: channel_id: str
+        :param: peer_address: str
         :return: bool
         """
-        return await self.try_req(Method.DELETE, f"/channels/{channel_id}", return_state=True)
+        data = req.CloseChannelBody(direction="outgoing")
+        return bool(
+            await self.try_req(
+                Method.DELETE,
+                f"/channels/{peer_address}{data.as_query_parameters}",
+                return_state=True,
+            )
+        )
 
     async def channels(self, full_topology: bool = True) -> Optional[resp.Channels]:
         """
@@ -64,28 +170,16 @@ class HoprdAPI(ApiLib):
         header = req.GetChannelsBody(full_topology, False)
         return await self.try_req(Method.GET, f"/channels?{header.as_header_string}", resp.Channels)
 
-    async def metrics(self) -> Optional[resp.Metrics]:
-        """
-        Returns the metrics of the node.
-        :return: metrics: list
-        """
-        return await self.try_req(Method.GET, "/metrics", resp.Metrics, use_api_prefix=False)
-
     async def peers(
         self,
-        quality: float = 0.5,
-        status: str = "connected",
     ) -> list[resp.ConnectedPeer]:
         """
         Returns a list of peers.
-        :param: quality: int = 0..1
         :param: status: str = "connected"
         :return: peers: list
         """
-        params = req.GetPeersBody(quality)
-
-        if r := await self.try_req(Method.GET, f"/node/peers?{params.as_header_string}"):
-            return [resp.ConnectedPeer(peer) for peer in r.get(status, [])]
+        if data := await self.try_req(Method.GET, "/network/connected", list[resp.ConnectedPeer]):
+            return data
         else:
             return []
 
@@ -96,30 +190,14 @@ class HoprdAPI(ApiLib):
         """
         return await self.try_req(Method.GET, "/account/addresses", resp.Addresses)
 
-    async def node_info(self) -> Optional[resp.Infos]:
+    async def configuration(self) -> Optional[dict[str, Any]]:
         """
-        Gets informations about the HOPRd node.
-        :return: Infos
+        Returns the runtime configuration of the node.
+        :return: configuration: dict | undefined
         """
-        return await self.try_req(Method.GET, "/node/info", resp.Infos)
+        return await self.try_req(Method.GET, "/node/configuration")
 
-    async def ticket_price(self) -> Optional[resp.TicketPrice]:
-        """
-        Gets the ticket price set in the configuration file.
-        :return: TicketPrice
-        """
-
-        if config := await self.try_req(Method.GET, "/node/configuration", resp.Configuration):
-            price = resp.TicketPrice(config.as_dict)
-        else:
-            price = None
-
-        if price and price.value not in ["None", None]:
-            return price
-
-        return await self.try_req(Method.GET, "/network/price", resp.TicketPrice)
-
-    async def list_udp_sessions(self) -> list[resp.Session]:
+    async def list_udp_sessions(self) -> Optional[list[resp.Session]]:
         """
         Lists existing Session listeners over UDP
         :return: list[Session]
@@ -148,30 +226,21 @@ class HoprdAPI(ApiLib):
             destination,
             target_body.as_dict,
             listen_host,
-            path_body.as_dict,
-            path_body.as_dict,
+            path_body.as_dict["relayers"],
+            path_body.as_dict["relayers"],
             "0 KB",
-        )
-
-        full_url = f"{self.host}{self.prefix}/session/udp"
-        logger.debug(
-            "Attempting to open session",
-            {
-                "destination": destination,
-                "relayer": relayer,
-                "full_url": full_url,
-                "host": self.host,
-                "prefix": self.prefix,
-            },
         )
 
         try:
             r = await self.try_req(
                 Method.POST,
-                "/session/udp",
+                "/session/udp/explicit-path",
                 resp.Session,
                 data=data,
                 timeout=4,
+            )
+            logger.debug(
+                "API response for session creation", {"response": r.as_dict if r else None}
             )
             if r:
                 return r
@@ -182,7 +251,6 @@ class HoprdAPI(ApiLib):
                     {
                         "destination": destination,
                         "relayer": relayer,
-                        "full_url": full_url,
                     },
                 )
                 return resp.SessionFailure(
@@ -211,7 +279,9 @@ class HoprdAPI(ApiLib):
         Closes an existing Session listener for the given IP protocol, IP and port.
         :param: session: Session
         """
-        return await self.try_req(Method.DELETE, session.as_path, return_state=True, timeout=1)
+        return bool(
+            await self.try_req(Method.DELETE, session.as_path, return_state=True, timeout=1)
+        )
 
     async def healthyz(self, timeout: int = 20) -> bool:
         """

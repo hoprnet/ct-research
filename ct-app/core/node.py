@@ -6,7 +6,7 @@ including:
 - Session management with grace periods and parallel cleanup
 - Peer discovery and channel management
 - Balance and economic model tracking
-- Network topology and subgraph data
+- Network topology and blokli data
 
 Session Management:
     Sessions are WebSocket connections to other nodes for message relay. The node implements
@@ -18,43 +18,48 @@ Thread Safety:
     loop. Dictionary snapshots are used to avoid modification during iteration.
 """
 
+import asyncio
 import logging
 from datetime import datetime
+from collections.abc import Sequence
 from typing import Optional
 
 from api_lib.headers.authorization import Bearer
 from prometheus_client import Gauge
 
-from . import mixins
+from .mixins import ChannelMixin, EconomicSystemMixin, PeersMixin, SessionMixin, StateMixin
 from .api.hoprd_api import HoprdAPI
-from .api.response_objects import Channels, Session
-from .components.asyncloop import AsyncLoop
-from .components.balance import Balance
-from .components.config_parser import Parameters
-from .components.logs import configure_logging
-from .components.peer import Peer
-from .components.session_rate_limiter import SessionRateLimiter
-from .components.utils import Utils
-from .rpc import entries as rpc_entries
-from .subgraph import entries as subgraph_entries
+from .api.response_objects import Channel, Channels, Session, TicketPrice
+from .types.address import Address
+from .types.asyncloop import AsyncLoop
+from .types.balance import Balance
+from .config_parser import Parameters
+from .components.node_helper import NodeHelper
+from .types.peer import Peer
+from .types.network_state import NetworkState
+from .types.session_rate_limiter import SessionRateLimiter
+from .components.decorators import get_keepalive_methods
+from .services.node_runtime_factory import NodeRuntimeFactory
+from .services.economic_model_refresh_coordinator import EconomicModelRefreshCoordinator
+from .services.channel_lifecycle_coordinator import ChannelLifecycleCoordinator
+from .services.network_update_coordinator import NetworkUpdateCoordinator
+from .services.send_plan_coordinator import SendPlanCoordinator
+from .services.session_lifecycle_coordinator import SessionLifecycleCoordinator
+from .services.shutdown_coordinator import ShutdownCoordinator
 
 BALANCE_MULTIPLIER = Gauge("ct_balance_multiplier", "factor to multiply the balance by")
 
-configure_logging()
 logger = logging.getLogger(__name__)
 
 
 class Node(
-    mixins.ChannelMixin,
-    mixins.EconomicSystemMixin,
-    mixins.NftMixin,
-    mixins.PeersMixin,
-    mixins.RPCMixin,
-    mixins.SubgraphMixin,
-    mixins.SessionMixin,
-    mixins.StateMixin,
+    ChannelMixin,
+    EconomicSystemMixin,
+    PeersMixin,
+    SessionMixin,
+    StateMixin,
 ):
-    def __init__(self, url: str, key: str, params: Optional[Parameters] = None):
+    def __init__(self, url: str, key: str, params: Parameters):
         """
         Create a new Node with the specified url and key.
 
@@ -81,42 +86,70 @@ class Node(
         self.api = HoprdAPI(url, Bearer(key), "/api/v4")
         self.url = url
 
-        self.peers = set[Peer]()
+        self.peers = dict[str, Peer]()
         self.peer_history = dict[str, datetime]()
-        self.session_destinations = list[str]()
+        self.network_state = NetworkState()
+        self._session_destinations = list[str]()
         self.sessions = dict[str, Session]()
         # relayer -> timestamp when grace period started
         self.session_close_grace_period = dict[str, float]()
+        self._in_flight_message_tasks = set[asyncio.Task]()
+        self._in_flight_tasks_by_session_port = dict[int, set[asyncio.Task]]()
+        self._pending_session_creations = dict[str, asyncio.Task[Optional[Session]]]()
+        self._session_retry_wait_seconds = dict[str, float]()
+        self._pending_requeue_tasks = set[asyncio.Task[None]]()
+        self._session_retry_log_state = dict[tuple[str, str], tuple[float, int]]()
 
         # Initialize params first so we can use session configuration
-        self.params = params or Parameters()
+        self.params = params
+
+        NodeRuntimeFactory.configure_runtime(self, self.params)
 
         # Session rate limiter to prevent API overload from failed attempts
         # Use default values if sessions config is not available
+        base_delay = self.params.sessions.session_retry_base_delay.value
+        max_delay = self.params.sessions.session_retry_max_delay.value
+
         self.session_rate_limiter = SessionRateLimiter(
-            base_delay=(
-                getattr(self.params.sessions, "session_retry_base_delay_seconds", 2.0)
-                if hasattr(self.params, "sessions")
-                else 2.0
-            ),
-            max_delay=(
-                getattr(self.params.sessions, "session_retry_max_delay_seconds", 60.0)
-                if hasattr(self.params, "sessions")
-                else 60.0
-            ),
+            base_delay=base_delay,
+            max_delay=max_delay,
         )
 
-        self.address = None  # type: ignore[assignment]
+        self.address: Optional[Address] = None
         self.channels: Optional[Channels] = None
 
-        self.topology_data = dict[str, Balance]()
-        self.registered_nodes_data = list[subgraph_entries.Node]()
-        self.nft_holders_data = list[str]()
-        self.allocations_data = list[rpc_entries.Allocation]()
-        self.eoa_balances_data = list[rpc_entries.ExternalBalance]()
-        self.peers_rewards_data = dict[str, float]()
-
-        self.ticket_price = None
+        self.outgoing_channel_balances = dict[str, Balance]()
+        self.ticket_price: Optional[TicketPrice] = None
+        self.min_ticket_winning_probability: Optional[float] = None
+        self.economic_model_refresh_coordinator = EconomicModelRefreshCoordinator(
+            self._apply_economic_model_once
+        )
+        self.channel_lifecycle_coordinator = ChannelLifecycleCoordinator(
+            self.reconcile_channels_once
+        )
+        self.network_update_coordinator = NetworkUpdateCoordinator(
+            self.reconcile_peer_allocations,
+            self.trigger_economic_model_refresh,
+        )
+        self.send_plan_coordinator = SendPlanCoordinator()
+        self.session_lifecycle_coordinator = SessionLifecycleCoordinator()
+        self.shutdown_coordinator = ShutdownCoordinator()
+        self.shutdown_coordinator.register_async(
+            "economic_model_refresh_coordinator",
+            self.economic_model_refresh_coordinator.close,
+        )
+        self.shutdown_coordinator.register_async(
+            "network_update_coordinator",
+            self.network_update_coordinator.close,
+        )
+        self.shutdown_coordinator.register_async(
+            "channel_lifecycle_coordinator",
+            self.channel_lifecycle_coordinator.close,
+        )
+        self.shutdown_coordinator.register_async(
+            "channel_reclose_tasks",
+            self.close_channel_reclose_tasks,
+        )
 
         self.connected = False
         self.running = True
@@ -127,21 +160,55 @@ class Node(
         self._cached_reachable_destinations: set[str] | None = None
 
         # Channel caching (ChannelMixin)
-        self._cached_outgoing_open: list | None = None
-        self._cached_incoming_open: list | None = None
-        self._cached_outgoing_pending: list | None = None
-        self._cached_outgoing_not_closed: list | None = None
-        self._cached_address_to_open_channel: dict | None = None
+        self._cached_outgoing_open: list[Channel] | None = None
+        self._cached_incoming_open: list[Channel] | None = None
+        self._cached_outgoing_pending: list[Channel] | None = None
+        self._cached_outgoing_not_closed: list[Channel] | None = None
+        self._cached_address_to_open_channel: dict[str, Channel] | None = None
+        self._pending_channel_reclose_tasks = dict[str, asyncio.Task[None]]()
 
         BALANCE_MULTIPLIER.set(1.0)
 
+    @property
+    def session_destinations(self) -> list[str]:
+        return self._session_destinations
+
+    @session_destinations.setter
+    def session_destinations(self, destinations: Sequence[str]) -> None:
+        self._session_destinations = list(destinations)
+        self._cached_reachable_destinations = None
+
     async def start(self):
         await self.retrieve_address()
-        self.get_graphql_providers()
-        self.get_nft_holders()
 
-        keep_alive_methods: list[str] = Utils.get_methods(mixins.__path__[0], "keepalive")
-        AsyncLoop.update([getattr(self, m) for m in keep_alive_methods])
+        static_ticket_price, static_winning_probability = (
+            await self.load_static_ticket_parameters_from_node_configuration()
+        )
+        should_subscribe_ticket_parameters = not (
+            static_ticket_price and static_winning_probability
+        )
+        scheduled_subscription_methods = ["subscribe_accounts"]
+        if should_subscribe_ticket_parameters:
+            scheduled_subscription_methods.append("ticket_parameters")
+
+        logger.info(
+            "Scheduling subscription methods",
+            {"methods": scheduled_subscription_methods},
+        )
+        AsyncLoop.add(self.subscribe_accounts)
+        if should_subscribe_ticket_parameters:
+            AsyncLoop.add(self.ticket_parameters)
+        self.channel_lifecycle_coordinator.request("startup")
+
+        keepalive_methods = get_keepalive_methods(self)
+        logger.info(
+            "Scheduling keepalive methods",
+            {
+                "count": len(keepalive_methods),
+                "methods": [method.__name__ for method in keepalive_methods],
+            },
+        )
+        AsyncLoop.update(keepalive_methods)
 
         await AsyncLoop.gather()
 
@@ -183,11 +250,13 @@ class Node(
             >>> # ... node operations ...
             >>> await node.stop()  # Gracefully closes all sessions
         """
-        import asyncio
-
-        from .components.node_helper import NodeHelper
-
         self.running = False
+        await self.shutdown_coordinator.run()
+        await self.wait_for_in_flight_messages()
+        for task in list(self._pending_requeue_tasks):
+            task.cancel()
+        if self._pending_requeue_tasks:
+            await asyncio.gather(*self._pending_requeue_tasks, return_exceptions=True)
 
         # Close all active sessions
         # Create snapshot to avoid modification during iteration
@@ -200,29 +269,68 @@ class Node(
         # Phase 1: Close all sessions at API level in parallel
         async def close_session_safely(relayer: str, session):
             try:
-                await NodeHelper.close_session(self.api, session, relayer)
-                logger.debug("Closed session during shutdown", {"relayer": relayer})
-                return True
-            except Exception as e:
-                logger.error("Error closing session at API", {"relayer": relayer, "error": str(e)})
-                return False
+                close_ok = await NodeHelper.close_session(self.api, session, relayer)
+                if close_ok:
+                    logger.debug("Closed session during shutdown", {"relayer": relayer})
+                else:
+                    logger.warning(
+                        "Failed to close session during shutdown, preserving local state",
+                        {"relayer": relayer, "port": session.port},
+                    )
+                return relayer, session, close_ok
+            except Exception:
+                logger.exception(
+                    "Error closing session during shutdown, preserving local state",
+                    {"relayer": relayer},
+                )
+                return relayer, session, False
 
         # Run all API close operations in parallel
         close_tasks = [
             close_session_safely(relayer, session) for relayer, session in sessions_to_close
         ]
-        await asyncio.gather(*close_tasks, return_exceptions=True)
+        close_results = await asyncio.gather(*close_tasks, return_exceptions=True)
 
-        # Phase 2: Close all sockets (fast, synchronous operations)
-        for relayer, session in sessions_to_close:
+        successful_closes: list[tuple[str, Session]] = []
+        for result in close_results:
+            if isinstance(result, BaseException):
+                logger.exception(
+                    "Unexpected shutdown close failure result, preserving local state",
+                    exc_info=result,
+                )
+                continue
+            relayer, session, close_ok = result
+            if close_ok:
+                successful_closes.append((relayer, session))
+
+        # Phase 2: Close sockets and clear cache only for successfully closed sessions
+        for relayer, session in successful_closes:
             try:
                 session.close_socket()
-            except Exception as e:
-                logger.error("Error closing socket", {"relayer": relayer, "error": str(e)})
+            except Exception:
+                logger.exception("Error closing socket", {"relayer": relayer})
 
-        # Phase 3: Clear session caches and rate limiter
-        self.sessions.clear()
-        self.session_close_grace_period.clear()
+        for relayer, session in successful_closes:
+            current_session = self.sessions.get(relayer)
+            if current_session and current_session.port == session.port:
+                self.sessions.pop(relayer, None)
+                self.session_close_grace_period.pop(relayer, None)
+
+        # Phase 3: Clear transient trackers
         self.session_rate_limiter.reset()
-
-        logger.info("Node stopped, all sessions closed", {"session_count": len(sessions_to_close)})
+        self._session_retry_wait_seconds.clear()
+        self._session_retry_log_state.clear()
+        self._pending_session_creations.clear()
+        self._pending_requeue_tasks.clear()
+        self._in_flight_tasks_by_session_port.clear()
+        self._in_flight_message_tasks.clear()
+        if self.sessions:
+            logger.warning(
+                "Node stopped with unresolved sessions",
+                {"session_count": len(self.sessions)},
+            )
+        else:
+            logger.info(
+                "Node stopped, all sessions closed",
+                {"session_count": len(successful_closes)},
+            )

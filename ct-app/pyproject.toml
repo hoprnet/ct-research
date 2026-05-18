@@ -1,8 +1,8 @@
 [project]
 name = "ct-app"
 version = "3.14.5"
-requires-python = ">=3.12"
-dependencies = ["core"]
+requires-python = ">=3.14"
+dependencies = ["core", "pyyaml>=6.0.1"]
 
 [tool.setuptools]
 packages = ["core", "test"]
@@ -15,9 +15,12 @@ test = { workspace = true }
 members = [
     "core",
     "core/api",
+    "core/blokli",
     "core/components",
-    "core/subgraph",
-    "core/rpc",
+    "core/config_parser",
+    "core/messages",
+    "core/mixins",
+    "core/types",
     "test"
 ]
 
@@ -28,12 +31,14 @@ dev = [
     "test",
     "pytest-cov>=6.2.1",
     "mypy>=1.18.2",
+    "types-pyyaml>=6.0.12.20250516",
 ]
 lint = [
     "black==25.1.0",
 ]
 typecheck = [
     "mypy>=1.18.2",
+    "types-pyyaml>=6.0.12.20250516",
 ]
 
 [tool.black]
@@ -97,36 +102,3 @@ files = ["core/", "test/", "scripts/"]
 exclude = "^(core/.*/__pycache__/|core/.*/\\..*|\\.venv/|build/|dist/).*"
 
 # Per-module options - external libraries
-[[tool.mypy.overrides]]
-module = ["core.api.*", "prometheus_client.*", "api_lib.*", "web3.*", "requests.*", "yaml.*"]
-ignore_missing_imports = true
-
-# Per-module options - complex files that need refactoring
-[[tool.mypy.overrides]]
-module = [
-    "scripts.lib.state",
-    "core.components.config_parser.base_classes",
-    "core.subgraph.graphql_provider",
-    "test.components.test_peer",
-    "core.rpc.providers",
-    "core.rpc.query_provider",
-    "core.components.messages.message_format",
-    "core.components.logs",
-    "core.components.config_parser.economic_model",
-    "core.mixins.economic_system",
-    "core.mixins.channel",
-    "core.subgraph.url",
-    "core.components.singleton",
-    "core.subgraph.mode",
-    "core.subgraph.entries.entry",
-    "core.rpc.entries.entry",
-    "test.components.test_balance",
-    "test.rpc.test_rpc_calls",
-    "test.components.test_utils",
-    "core.mixins.subgraph",
-    "core.mixins.session",
-    "core.mixins.rpc",
-    "core.mixins.peers",
-    "core.node",
-]
-ignore_errors = true

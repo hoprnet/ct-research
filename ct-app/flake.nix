@@ -10,26 +10,45 @@
   outputs = { nixpkgs, flake-utils, ... }: flake-utils.lib.eachDefaultSystem (system:
     let
       pkgs = import nixpkgs { inherit system; };
+      uvVersion = "0.11.7";
+      uvAssets = {
+        aarch64-darwin = {
+          asset = "uv-aarch64-apple-darwin.tar.gz";
+          hash = "sha256-+2SzvIXf9bueaEbukQaxcfjLHvlb/xPNsN7MJgD9vdA=";
+        };
+        x86_64-darwin = {
+          asset = "uv-x86_64-apple-darwin.tar.gz";
+          hash = "sha256-0Q16T8AvdLs01VY83vNJcNzsayjClsjcC13EB9EEfQk=";
+        };
+        aarch64-linux = {
+          asset = "uv-aarch64-unknown-linux-gnu.tar.gz";
+          hash = "sha256-K3jBQeGuYfiv3FJYmT5C3hoC7buJq9G6JUWmMBLcNMo=";
+        };
+        x86_64-linux = {
+          asset = "uv-x86_64-unknown-linux-gnu.tar.gz";
+          hash = "sha256-3ve53WdAGbAefFhEoK0uIsZ0ZTWwB5oAITzxbAUgX7A=";
+        };
+      };
+      uvAsset = uvAssets.${system};
+      uvRoot = builtins.replaceStrings [ ".tar.gz" ] [ "" ] uvAsset.asset;
 
-      # Override uv to use version 0.9.5 (supports Python 3.14) to match Dockerfile
-      # This properly builds uv for NixOS with correct library paths
-      uv-latest = pkgs.uv.overrideAttrs (oldAttrs: rec {
-        version = "0.9.5";
+      uv-latest = pkgs.stdenvNoCC.mkDerivation {
+        pname = "uv";
+        version = uvVersion;
 
-        src = pkgs.fetchFromGitHub {
-          owner = "astral-sh";
-          repo = "uv";
-          rev = version;
-          hash = "sha256-Js62zaO44/gXCCwji4LmlyO62zI96CFhnfnYqgI2p+U=";
+        src = pkgs.fetchzip {
+          url = "https://github.com/astral-sh/uv/releases/download/${uvVersion}/${uvAsset.asset}";
+          hash = uvAsset.hash;
+          stripRoot = false;
         };
 
-        # Let Nix re-fetch cargo dependencies for the new version
-        cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
-          inherit src;
-          name = "uv-${version}-vendor";
-          hash = "sha256-TadS0YrZV5psCcGiu21w55nQhlzU+gXZPmFCAONLbXE=";
-        };
-      });
+        installPhase = ''
+          runHook preInstall
+          install -Dm755 ${uvRoot}/uv $out/bin/uv
+          install -Dm755 ${uvRoot}/uvx $out/bin/uvx
+          runHook postInstall
+        '';
+      };
 
       dockerBuild = pkgs.writeShellApplication {
           name = "dockerBuild";
@@ -55,7 +74,7 @@
       devShell = pkgs.mkShell {
         buildInputs = with pkgs; [
           python314    # Python 3.14 to match Dockerfile
-          uv-latest    # uv 0.9.5 to match Dockerfile
+          uv-latest    # uv 0.11.7 pinned from upstream release binaries
           ruff         # Python linter and formatter
         ];
 

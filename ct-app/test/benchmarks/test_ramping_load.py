@@ -8,11 +8,13 @@ queue depth starts growing (backpressure).
 import asyncio
 import time
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 from pytest_mock import MockerFixture
 
-from core.components.messages import MessageFormat, MessageQueue
+from core.types.message_format import MessageFormat
+from core.types.message_queue import MessageQueue
 from core.node import Node
 
 from .metrics_collector import MetricsCollector
@@ -22,8 +24,8 @@ from .metrics_collector import MetricsCollector
 @pytest.mark.asyncio
 async def test_ramping_load_find_limit(
     benchmark_node: Node,
-    mock_sessions_factory,
     mock_peers_factory,
+    setup_benchmark_network,
     mocker: MockerFixture,
 ):
     """
@@ -41,19 +43,20 @@ async def test_ramping_load_find_limit(
 
     # Setup
     peers = mock_peers_factory(PEER_COUNT)
-    benchmark_node.peers = peers
-    benchmark_node.session_destinations = [f"peer_{i}" for i in range(PEER_COUNT)]
-
-    for i in range(PEER_COUNT):
-        relayer = f"peer_{i}"
-        session = mock_sessions_factory(relayer)
-        benchmark_node.sessions[relayer] = session
-        session.create_socket()
+    setup_benchmark_network(benchmark_node, peers)
 
     mocker.patch.object(
         benchmark_node.api,
         "list_udp_sessions",
         return_value=[s for s in benchmark_node.sessions.values()],
+    )
+    mocker.patch.object(benchmark_node.api, "close_session", return_value=True)
+    mocker.patch.object(
+        benchmark_node,
+        "_get_or_create_session",
+        new=AsyncMock(
+            side_effect=lambda relayer, destination: benchmark_node.sessions.get(relayer)
+        ),
     )
 
     collector = MetricsCollector(interval=1.0)
@@ -63,36 +66,52 @@ async def test_ramping_load_find_limit(
     current_rate = START_RATE
     breaking_point = None
     queue = MessageQueue()
+    workers_task = None
+
+    async def run_workers():
+        if hasattr(benchmark_node.observe_message_queue, "__wrapped__"):
+            observe_fn = benchmark_node.observe_message_queue.__wrapped__
+            await observe_fn(benchmark_node)
+        else:
+            await benchmark_node.observe_message_queue()
 
     print(f"\n{'='*60}")
     print("Ramping Load Benchmark")
     print(f"{'='*60}")
 
-    while current_rate <= MAX_RATE:
-        print(f"Testing {current_rate} msg/sec for {STEP_DURATION}s...")
+    workers_task = asyncio.create_task(run_workers())
 
-        # Run at current rate for STEP_DURATION
-        interval = 1.0 / current_rate
-        end_time = time.time() + STEP_DURATION
-        messages_sent = 0
+    try:
+        while current_rate <= MAX_RATE:
+            print(f"Testing {current_rate} msg/sec for {STEP_DURATION}s...")
 
-        while time.time() < end_time:
-            relayer = f"peer_{messages_sent % PEER_COUNT}"
-            message = MessageFormat(relayer, batch_size=3)
-            await queue.put(message)
-            messages_sent += 1
-            await asyncio.sleep(interval)
+            interval = 1.0 / current_rate
+            end_time = time.time() + STEP_DURATION
+            messages_sent = 0
 
-        # Check queue depth
-        queue_size = queue.buffer.qsize()
-        print(f"  -> Queue depth: {queue_size}")
+            while time.time() < end_time:
+                relayer = f"peer_{messages_sent % PEER_COUNT}"
+                message = MessageFormat(relayer, batch_size=3)
+                await queue.put(message)
+                messages_sent += 1
+                await asyncio.sleep(interval)
 
-        if queue_size > QUEUE_THRESHOLD:
-            breaking_point = current_rate
-            print(f"  -> BACKPRESSURE DETECTED at {current_rate} msg/sec")
-            break
+            queue_size = queue.buffer.qsize()
+            print(f"  -> Queue depth: {queue_size}")
 
-        current_rate += RATE_INCREMENT
+            if queue_size > QUEUE_THRESHOLD:
+                breaking_point = current_rate
+                print(f"  -> BACKPRESSURE DETECTED at {current_rate} msg/sec")
+                break
+
+            current_rate += RATE_INCREMENT
+    finally:
+        benchmark_node.running = False
+        if workers_task is not None:
+            try:
+                await asyncio.wait_for(workers_task, timeout=5.0)
+            except asyncio.TimeoutError:
+                workers_task.cancel()
 
     await collector.stop()
     _ = collector.get_metrics()  # Collected for potential future analysis

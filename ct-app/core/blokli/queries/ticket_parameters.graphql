@@ -1,0 +1,6 @@
+subscription {
+    ticketParametersUpdated {
+        minTicketWinningProbability
+        ticketPrice
+    }
+}

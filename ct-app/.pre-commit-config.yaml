@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: generate-metrics-doc
+        name: Check METRICS.md
+        entry: python scripts/generate_metrics_doc.py --check
+        language: system
+        pass_filenames: false

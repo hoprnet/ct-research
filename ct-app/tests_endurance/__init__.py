@@ -24,8 +24,9 @@ module_files = [
 for module_file in module_files:
     module = importlib.import_module(f".{module_file}", package=__name__)
     class_name = filename_to_classname(module_file)
+    executor = getattr(module, class_name, None)
+    if executor is None:
+        continue
 
-    # Import the class to the current module's namespace
-    globals()[class_name] = getattr(module, class_name)
-
+    globals()[class_name] = executor
     __all__.append(class_name)

@@ -6,37 +6,17 @@ environment: test
 
 flags:
   node: 
-    apply_economic_model: 30
-    ticket_parameters: 30
-
-    # connected_peers: 30
-    outgoing_channels_balances: 30
-
-    rotate_subgraphs: 30
-
-    # through subgraph queries
-    peers_rewards: 30
-    registered_nodes: 30
-
-    # through rpc calls
-    allocations: 30
-    eoa_balances: 30
+    outgoing_channels_balances: 30s
     
-    healthcheck: 10
-    retrieve_peers: 30
-    retrieve_channels: 30
-    retrieve_balances: 30
-
-    open_channels: Off
-    fund_channels: Off
-    close_old_channels: Off
-    close_pending_channels: Off
-    close_incoming_channels: Off
-
-    get_total_channel_funds: Off
+    healthcheck: 10s
+    retrieve_peers: 30s
+    refresh_balances: Off
+    refresh_redeemed: Off
+    relay_messages: Off
+    retrieve_balances: 30s
     
     observe_message_queue: On
-    maintain_sessions: 10
+    maintain_sessions: 10s
 
   peer:
     message_relay_request: Off
@@ -45,9 +25,6 @@ flags:
 # 
 # =============================================================================
 economic_model:
-  min_safe_allowance: "0 wxHOPR"
-  nft_threshold: "0 wxHOPR"
-
   legacy:
     proportion: 0.9
     apr: 12.0
@@ -57,14 +34,6 @@ economic_model:
       b: 2
       upperbound: "3 wxHOPR"
       lowerbound: "0.000001 wxHOPR"
-    
-    equations: 
-      fx: 
-        formula: "a * x"
-        condition: "lowerbound <= x <= upperbound"
-      gx:
-        formula: "a * upperbound + (x - upperbound) ** (1 / b)"
-        condition: "x > upperbound"
 
   sigmoid:
     proportion: 0.1
@@ -90,9 +59,9 @@ economic_model:
 # 
 # =============================================================================
 peer:
-  minimum_delay_between_batches: 2
-  sleep_mean_time: 30
-  sleep_std_time: 2
+  minimum_delay_between_batches: 2s
+  sleep_mean_time: 30s
+  sleep_std_time: 2s
   excluded_peers: []
 
 # =============================================================================
@@ -101,7 +70,7 @@ peer:
 channel:
   min_balance: "0.05 wxHOPR"
   funding_amount: "0.2 wxHOPR"
-  max_age_seconds: 60
+  max_age: 1m
   
 # =============================================================================
 #
@@ -109,42 +78,12 @@ channel:
 sessions:
   green_destinations: []
   blue_destinations: []
-  session_retry_base_delay_seconds: 2.0
-  session_retry_max_delay_seconds: 60.0
+  session_retry_base_delay: 2s
+  session_retry_max_delay: 60s
   message_worker_count: 10
-  
-# =============================================================================
-# 
-# =============================================================================
-investors:
-  schedule: 
-  addresses: []
+  message_queue_maxsize: 10000
 
 # =============================================================================
-# 
+#
 # =============================================================================
-nft_holders:
-  filepath: ".configs/nft_holders.txt"
-
-# =============================================================================
-# 
-# =============================================================================
-rpc:
-  gnosis:   
-  mainnet: 
-
-# =============================================================================
-# 
-# =============================================================================
-subgraph:
-  type: auto # auto | default | backup
-  user_id: 1000
-  api_key: 
-
-  rewards:
-    query_id: ~
-    slug: rewards_backup_url
-  safes_balance:
-    query_id: query-id-safes
-    slug: safes_backup_url
 ...

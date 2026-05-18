@@ -1,0 +1,9 @@
+subscription {
+    accountUpdated {
+        chainKey
+        keyid
+        multiAddresses
+        packetKey
+        safeAddress
+    }
+}
