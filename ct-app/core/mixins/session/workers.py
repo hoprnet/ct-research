@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 
 from ...api.response_objects import Session
 from ...types.asyncloop import AsyncLoop
@@ -26,9 +27,44 @@ from .common import (
 )
 
 logger = logging.getLogger(__name__)
+SESSION_RETRY_LOG_INTERVAL_SECONDS = 5.0
+SESSION_REQUEUE_MAX_DELAY_SECONDS = 30.0
 
 
 class SessionWorkerMixin(SessionCommonMixin):
+    def _track_pending_requeue_task(self, task: asyncio.Task[None]) -> None:
+        self._pending_requeue_tasks.add(task)
+
+        def _discard(completed_task: asyncio.Task[None]) -> None:
+            self._pending_requeue_tasks.discard(completed_task)
+
+        task.add_done_callback(_discard)
+
+    def _log_session_retry_event(
+        self,
+        event: str,
+        relayer: str,
+        payload: dict[str, object],
+    ) -> None:
+        now = time.monotonic()
+        key = (event, relayer)
+        previous = self._session_retry_log_state.get(key)
+        if previous is None:
+            self._session_retry_log_state[key] = (now, 0)
+            logger.debug(event, payload)
+            return
+
+        last_logged_at, suppressed = previous
+        if now - last_logged_at >= SESSION_RETRY_LOG_INTERVAL_SECONDS:
+            updated_payload = dict(payload)
+            if suppressed > 0:
+                updated_payload["suppressed"] = suppressed
+            self._session_retry_log_state[key] = (now, 0)
+            logger.debug(event, updated_payload)
+            return
+
+        self._session_retry_log_state[key] = (last_logged_at, suppressed + 1)
+
     def _track_in_flight_message_task(self, session: "Session", task: asyncio.Task) -> None:
         self._in_flight_message_tasks.add(task)
         port_tasks = self._in_flight_tasks_by_session_port.setdefault(session.port, set())
@@ -117,35 +153,8 @@ class SessionWorkerMixin(SessionCommonMixin):
     ) -> "Session" | None:
         session = self.sessions.get(relayer)
         if session:
-            if self._session_matches_destination(session, destination):
-                SESSION_OPEN_EVENTS.labels(result="reused_existing").inc()
-                return session
-
-            logger.info(
-                "Replacing cached session with different destination",
-                {
-                    "relayer": relayer,
-                    "cached_target": session.target,
-                    "requested_destination": destination,
-                    "port": session.port,
-                },
-            )
-            retired = await self._retire_session(
-                relayer,
-                session,
-                reason="destination_mismatch",
-            )
-            if not retired:
-                logger.warning(
-                    "Preserving current session because replacement retirement failed",
-                    {
-                        "relayer": relayer,
-                        "cached_target": session.target,
-                        "requested_destination": destination,
-                        "port": session.port,
-                    },
-                )
-                return None
+            SESSION_OPEN_EVENTS.labels(result="reused_existing").inc()
+            return session
 
         pending_session = self._pending_session_creations.get(relayer)
         if pending_session is not None:
@@ -155,13 +164,16 @@ class SessionWorkerMixin(SessionCommonMixin):
             self.session_lifecycle_coordinator.mark("open_requested")
             can_attempt, wait_time = self.session_rate_limiter.can_attempt(relayer)
             if not can_attempt and wait_time:
-                logger.debug(
+                self._session_retry_wait_seconds[relayer] = wait_time
+                self._log_session_retry_event(
                     "Session opening rate-limited",
+                    relayer,
                     {"relayer": relayer, "wait_time_seconds": round(wait_time, 2)},
                 )
                 SESSION_OPEN_EVENTS.labels(result="rate_limited").inc()
                 self.session_lifecycle_coordinator.mark("open_rate_limited")
                 return None
+            self._session_retry_wait_seconds.pop(relayer, None)
 
             self.session_rate_limiter.record_attempt(relayer)
 
@@ -179,6 +191,7 @@ class SessionWorkerMixin(SessionCommonMixin):
                 return None
 
             self.session_rate_limiter.record_success(relayer)
+            self._session_retry_wait_seconds.pop(relayer, None)
             SESSION_OPEN_EVENTS.labels(result="opened").inc()
             self.session_lifecycle_coordinator.mark("opened")
 
@@ -229,9 +242,25 @@ class SessionWorkerMixin(SessionCommonMixin):
         logger.debug("Session disappeared before sending")
         return False
 
-    async def _requeue_message(self, message: MessageFormat, reason: str) -> bool:
+    async def _requeue_message(
+        self, message: MessageFormat, reason: str, delay_seconds: float = 0.0
+    ) -> bool:
         MESSAGE_REQUEUES.labels(reason=reason).inc()
-        logger.debug("Requeueing message for retry", {"relayer": message.relayer, "reason": reason})
+        log_payload: dict[str, object] = {"relayer": message.relayer, "reason": reason}
+        if delay_seconds > 0:
+            log_payload["retry_in_seconds"] = round(delay_seconds, 2)
+            self._log_session_retry_event(
+                "Requeueing message for retry", message.relayer, log_payload
+            )
+
+            async def delayed_requeue() -> None:
+                await asyncio.sleep(delay_seconds)
+                await MessageQueue().put(message)
+
+            self._track_pending_requeue_task(asyncio.create_task(delayed_requeue()))
+            return False
+
+        logger.debug("Requeueing message for retry", log_payload)
         await MessageQueue().put(message)
         return False
 
@@ -247,7 +276,13 @@ class SessionWorkerMixin(SessionCommonMixin):
 
         session = await self._get_or_create_session(message.relayer, destination)
         if not session:
-            return await self._requeue_message(message, "session_unavailable")
+            wait_time = self._session_retry_wait_seconds.get(message.relayer, 0.0)
+            retry_delay = min(max(wait_time, 0.0), SESSION_REQUEUE_MAX_DELAY_SECONDS)
+            return await self._requeue_message(
+                message,
+                "session_unavailable",
+                delay_seconds=retry_delay,
+            )
 
         if not self._schedule_message_batch(message, message.relayer):
             return await self._requeue_message(message, "session_disappeared")
@@ -262,7 +297,7 @@ class SessionWorkerMixin(SessionCommonMixin):
 
         while self.running:
             try:
-                message: MessageFormat = await asyncio.wait_for(MessageQueue().get(), timeout=1.0)
+                message: MessageFormat = await asyncio.wait_for(MessageQueue().get(), timeout=30.0)
                 await self._process_message(message, worker_id)
             except asyncio.CancelledError:
                 logger.debug("Message worker cancelled", {"worker_id": worker_id})

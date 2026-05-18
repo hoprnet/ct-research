@@ -46,6 +46,9 @@ class NodeRuntimeState:
     _pending_session_creations: dict[str, asyncio.Task[Optional[Session]]]
     _in_flight_message_tasks: set[asyncio.Task]
     _in_flight_tasks_by_session_port: dict[int, set[asyncio.Task]]
+    _session_retry_wait_seconds: dict[str, float]
+    _pending_requeue_tasks: set[asyncio.Task[None]]
+    _session_retry_log_state: dict[tuple[str, str], tuple[float, int]]
     economic_model_refresh_coordinator: EconomicModelRefreshCoordinator
     running: bool
     connected: bool

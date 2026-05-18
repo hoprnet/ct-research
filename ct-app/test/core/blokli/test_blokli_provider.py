@@ -1,3 +1,5 @@
+import pytest
+
 from core.blokli.entries import BlokliRedemptionStats
 from core.blokli.providers import Redemptions, TicketParametersSubscription
 
@@ -12,15 +14,13 @@ def test_subscription_query_uses_explicit_subscription_document_when_provided():
 def test_parse_sse_event_data_returns_payload_dict():
     provider = Redemptions("http://blokli.local")
     payload = (
-        '{"data":{"redeemedStats":{"nodeAddress":"0xnode","safeAddress":"0xsafe",'
-        '"redeemedAmount":"3 wxHOPR","redemptionCount":2}}}'
+        '{"data":{"ticketRedemptionStats":{' '"redeemedAmount":"3 wxHOPR","redemptionCount":2}}}'
     )
 
     parsed = provider._parse_sse_event_data(["event: next", f"data: {payload}"])
 
     assert parsed is not None
-    assert parsed["redeemedStats"]["nodeAddress"] == "0xnode"
-    assert parsed["redeemedStats"]["safeAddress"] == "0xsafe"
+    assert parsed["ticketRedemptionStats"]["redeemedAmount"] == "3 wxHOPR"
 
 
 def test_parse_sse_event_data_returns_none_for_invalid_json():
@@ -34,9 +34,7 @@ def test_parse_sse_event_data_returns_none_for_invalid_json():
 def test_subscription_payload_is_converted_to_typed_response():
     provider = Redemptions("http://blokli.local")
     response = {
-        "redeemedStats": {
-            "nodeAddress": "0xnode",
-            "safeAddress": "0xsafe",
+        "ticketRedemptionStats": {
             "redeemedAmount": "5 wxHOPR",
             "redemptionCount": 1,
         }
@@ -45,8 +43,8 @@ def test_subscription_payload_is_converted_to_typed_response():
     converted = provider._convert_response(response)
 
     assert isinstance(converted, BlokliRedemptionStats)
-    assert converted.node_address == "0xnode"
-    assert converted.safe_address == "0xsafe"
+    assert converted.redeemed_amount is not None
+    assert converted.redeemed_amount.as_str == "5 wxHOPR"
 
 
 def test_request_headers_do_not_include_authorization_when_token_empty():
@@ -68,3 +66,24 @@ def test_request_headers_include_authorization_when_token_present():
 def test_provider_normalizes_root_url_to_graphql_path():
     assert Redemptions("http://blokli.local").url == "http://blokli.local/graphql"
     assert Redemptions("http://blokli.local/graphql").url == "http://blokli.local/graphql"
+
+
+@pytest.mark.asyncio
+async def test_subscription_session_uses_no_timeout():
+    provider = TicketParametersSubscription("http://blokli.local")
+
+    session = await provider._ensure_subscription_session()
+
+    assert session.timeout.total is None
+    await session.close()
+
+
+@pytest.mark.asyncio
+async def test_subscription_session_reuses_open_session():
+    provider = TicketParametersSubscription("http://blokli.local")
+
+    session_one = await provider._ensure_subscription_session()
+    session_two = await provider._ensure_subscription_session()
+
+    assert session_one is session_two
+    await session_one.close()

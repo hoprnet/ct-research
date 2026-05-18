@@ -107,14 +107,15 @@ class NodeHelper:
         }
         logger.debug("Opening session", logs_params)
 
-        session = await api.post_udp_session(destination, relayer, listen_host)
+        session = await api.post_udp_session(destination, relayer=relayer, listen_host=listen_host)
         match session:
             case Session():
-                logger.info("Opened session", {**logs_params, **session.as_dict})
+                session.requested_destination = destination
+                logger.info("Opened session", session.as_dict)
                 SESSION_OPS.labels(relayer, "opened", "yes").inc()
                 return session
             case SessionFailure():
-                logger.warning("Failed to open a session", {**logs_params, **session.as_dict})
+                logger.warning("Failed to open a session", session.as_dict)
                 SESSION_OPS.labels(relayer, "opened", "no").inc()
                 return None
 

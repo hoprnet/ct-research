@@ -27,10 +27,10 @@ flags:
 economic_model:
   legacy:
     proportion: 1.0
-    apr: 1
+    apr: 0.00001
 
     coefficients:
-      a: 1
+      a: 0.001
       b: 1.4
       upperbound: "1000 wxHOPR"
       lowerbound: "0.1 wxHOPR"

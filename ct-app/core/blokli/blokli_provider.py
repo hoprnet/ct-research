@@ -132,6 +132,13 @@ class BlokliProvider(Generic[TBlokliResponse]):
             headers["Accept"] = "text/event-stream"
         return headers
 
+    async def _ensure_subscription_session(self) -> aiohttp.ClientSession:
+        if self._session is not None and not self._session.closed:
+            return self._session
+
+        self._session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=None))
+        return self._session
+
     def _load_query(
         self,
         path: str | Path,
@@ -325,49 +332,74 @@ class BlokliProvider(Generic[TBlokliResponse]):
             "Opening blokli SSE subscription",
             {"url": self.url, "query": self._sku_subscription, "variables": kwargs},
         )
+        reconnect_delay_seconds = 1.0
+        max_reconnect_delay_seconds = 30.0
 
-        if self._session is None or self._session.closed:
-            self._session = aiohttp.ClientSession(timeout=self._timeout)
-
-        async with self._session.post(
-            self.url,
-            json={"query": self._sku_subscription, "variables": kwargs},
-            headers=self._request_headers(sse=True),
-        ) as response:
-            if response.status >= 400:
-                logger.error(
-                    "Blokli subscription request failed",
-                    {"status": response.status, "url": self.url},
-                )
-                raise ProviderError(f"Subscription failed with status {response.status}")
-
-            event_lines: list[str] = []
-            while not response.content.at_eof():
-                raw_line = await response.content.readline()
-                if raw_line == b"":
-                    break
-
-                line = raw_line.decode("utf-8").rstrip("\r\n")
-
-                if line == "":
-                    if not event_lines:
-                        continue
-
-                    parsed = self._parse_sse_event_data(event_lines)
-                    event_lines = []
-                    if parsed is None:
-                        continue
-                    try:
-                        yield self._convert_response(parsed)
-                    except Exception:
-                        logger.exception(
-                            "Error while converting subscription payload",
-                            {"response": parsed, "return_type": self._return_type},
+        while True:
+            try:
+                session = await self._ensure_subscription_session()
+                async with session.post(
+                    self.url,
+                    json={"query": self._sku_subscription, "variables": kwargs},
+                    headers=self._request_headers(sse=True),
+                ) as response:
+                    if response.status >= 400:
+                        logger.error(
+                            "Blokli subscription request failed",
+                            {"status": response.status, "url": self.url},
                         )
-                        raise ProviderError("Error while converting subscription payload")
-                    continue
+                        raise ProviderError(f"Subscription failed with status {response.status}")
 
-                if line.startswith(":"):
-                    continue
+                    reconnect_delay_seconds = 1.0
+                    event_lines: list[str] = []
+                    while not response.content.at_eof():
+                        raw_line = await response.content.readline()
+                        if raw_line == b"":
+                            break
 
-                event_lines.append(line)
+                        line = raw_line.decode("utf-8").rstrip("\r\n")
+
+                        if line == "":
+                            if not event_lines:
+                                continue
+
+                            parsed = self._parse_sse_event_data(event_lines)
+                            event_lines = []
+                            if parsed is None:
+                                continue
+                            try:
+                                yield self._convert_response(parsed)
+                            except Exception:
+                                logger.exception(
+                                    "Error while converting subscription payload",
+                                    {"response": parsed, "return_type": self._return_type},
+                                )
+                                raise ProviderError("Error while converting subscription payload")
+                            continue
+
+                        if line.startswith(":"):
+                            continue
+
+                        event_lines.append(line)
+
+                    logger.warning(
+                        "Blokli subscription stream closed, reconnecting",
+                        {"url": self.url, "retry_in_seconds": reconnect_delay_seconds},
+                    )
+            except asyncio.CancelledError:
+                raise
+            except (asyncio.TimeoutError, aiohttp.ClientError, ProviderError) as error:
+                logger.warning(
+                    "Blokli subscription interrupted, reconnecting",
+                    {
+                        "url": self.url,
+                        "error": str(error),
+                        "retry_in_seconds": reconnect_delay_seconds,
+                    },
+                )
+
+            await asyncio.sleep(reconnect_delay_seconds)
+            reconnect_delay_seconds = min(
+                reconnect_delay_seconds * 2,
+                max_reconnect_delay_seconds,
+            )

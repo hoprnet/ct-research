@@ -98,7 +98,7 @@ async def test_message_is_requeued_when_no_destination_is_available(
 
 
 @pytest.mark.asyncio
-async def test_session_is_replaced_when_destination_changes(
+async def test_session_is_reused_even_when_destination_changes(
     session_node: Node, mock_sessions, mocker: MockerFixture
 ):
     relayer = "peer_4"
@@ -107,41 +107,24 @@ async def test_session_is_replaced_when_destination_changes(
     old_session.create_socket()
     session_node.sessions[relayer] = old_session
 
-    replacement_session = Session(
-        {
-            "ip": "127.0.0.1",
-            "port": 9102,
-            "protocol": "udp",
-            "target": "destination_b",
-            "hoprMtu": 1002,
-            "surbLen": 395,
-        }
-    )
-
-    close_calls: list[int] = []
-
-    async def track_close(session: Session):
-        close_calls.append(session.port)
-        return True
-
-    mocker.patch.object(
+    post_udp_session = mocker.patch.object(
         session_node.api,
         "post_udp_session",
-        new=AsyncMock(return_value=replacement_session),
+        new=AsyncMock(),
     )
-    mocker.patch.object(session_node.api, "close_session", new=AsyncMock(side_effect=track_close))
+    close_session = mocker.patch.object(session_node.api, "close_session", new=AsyncMock())
 
     session = await session_node._get_or_create_session(relayer, "destination_b")
 
-    assert session is replacement_session
-    assert session_node.sessions[relayer] is replacement_session
-    assert old_session.socket is None
-    assert replacement_session.socket is not None
-    assert close_calls == [old_session.port]
+    assert session is old_session
+    assert session_node.sessions[relayer] is old_session
+    assert old_session.socket is not None
+    post_udp_session.assert_not_called()
+    close_session.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_destination_mismatch_preserves_existing_session_when_retire_fails(
+async def test_destination_change_does_not_attempt_retire_or_reopen(
     session_node: Node, mock_sessions, mocker: MockerFixture
 ):
     relayer = "peer_4"
@@ -152,14 +135,17 @@ async def test_destination_mismatch_preserves_existing_session_when_retire_fails
 
     post_udp_session = AsyncMock()
     mocker.patch.object(session_node.api, "post_udp_session", new=post_udp_session)
-    mocker.patch.object(session_node.api, "close_session", new=AsyncMock(return_value=False))
+    close_session = mocker.patch.object(
+        session_node.api, "close_session", new=AsyncMock(return_value=False)
+    )
 
     session = await session_node._get_or_create_session(relayer, "destination_b")
 
-    assert session is None
+    assert session is old_session
     assert session_node.sessions[relayer] is old_session
     assert old_session.socket is not None
     post_udp_session.assert_not_called()
+    close_session.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -265,6 +251,31 @@ async def test_process_message_requeues_when_batch_scheduling_fails(
     scheduled = await session_node._process_message(message, worker_id=0)
 
     assert not scheduled
+    assert MessageQueue().buffer.qsize() == 1
+    queued_message = await MessageQueue().get()
+    assert queued_message is message
+
+
+@pytest.mark.asyncio
+async def test_process_message_requeues_after_rate_limit_delay(
+    session_node: Node, mocker: MockerFixture
+):
+    relayer = "peer_rate_limited"
+    exit_peer = "peer_exit"
+    session_node.channels = MagicMock()
+    session_node._cached_address_to_open_channel = {relayer: MagicMock()}
+    session_node.peers = {relayer: Peer(relayer), exit_peer: Peer(exit_peer)}
+    session_node.session_destinations = [relayer, exit_peer]
+    session_node._session_retry_wait_seconds[relayer] = 0.05
+
+    message = MessageFormat(relayer, "sender", 500, 1)
+    mocker.patch.object(session_node, "_get_or_create_session", new=AsyncMock(return_value=None))
+
+    scheduled = await session_node._process_message(message, worker_id=0)
+
+    assert not scheduled
+    assert MessageQueue().buffer.qsize() == 0
+    await asyncio.sleep(0.07)
     assert MessageQueue().buffer.qsize() == 1
     queued_message = await MessageQueue().get()
     assert queued_message is message

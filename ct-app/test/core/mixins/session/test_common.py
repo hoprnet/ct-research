@@ -25,6 +25,24 @@ def test_session_matches_destination_is_case_insensitive(session_node: Node):
     assert not session_node._session_matches_destination(session, "peer_b")
 
 
+def test_session_matches_destination_prefers_requested_destination(session_node: Node):
+    session = Session(
+        {
+            "ip": "127.0.0.1",
+            "port": 9100,
+            "protocol": "udp",
+            "target": "#0",
+            "hoprMtu": 1002,
+            "surbLen": 395,
+        }
+    )
+    session.requested_destination = "0x3BEE5BDE885C6B046ADA28D3E8C180D20A99195A"
+
+    assert session_node._session_matches_destination(
+        session, "0x3bee5bde885c6b046ada28d3e8c180d20a99195a"
+    )
+
+
 def test_select_session_destination_returns_none_without_channel(session_node: Node):
     message = MessageFormat("peer_1", "sender", 500, 1)
 

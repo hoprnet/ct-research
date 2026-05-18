@@ -13,9 +13,7 @@ class BlokliHoprBalance(JsonResponse):
 
 @APIobject
 class BlokliRedemptionStats(JsonResponse):
-    node_address: Optional[str] = APIfield(path="redeemedStats/nodeAddress")
-    safe_address: Optional[str] = APIfield(path="redeemedStats/safeAddress")
-    redeemed_amount: Optional[Balance] = APIfield(path="redeemedStats/redeemedAmount")
+    redeemed_amount: Optional[Balance] = APIfield(path="ticketRedemptionStats/redeemedAmount")
 
 
 @APIobject

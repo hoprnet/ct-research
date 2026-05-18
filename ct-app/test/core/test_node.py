@@ -91,6 +91,57 @@ async def test_ticket_parameters_updates_cached_ticket_price(node: Node, mocker)
 
 
 @pytest.mark.asyncio
+async def test_start_skips_ticket_parameters_subscription_when_both_static_values_are_set(
+    node: Node, mocker
+):
+    mocker.patch.object(node, "retrieve_address", new=AsyncMock())
+    mocker.patch.object(
+        node,
+        "load_static_ticket_parameters_from_node_configuration",
+        new=AsyncMock(return_value=(True, True)),
+    )
+    mocker.patch.object(node.channel_lifecycle_coordinator, "request")
+    add_mock = mocker.patch("core.node.AsyncLoop.add")
+    gather_mock = mocker.patch("core.node.AsyncLoop.gather", new=AsyncMock())
+    update_mock = mocker.patch("core.node.AsyncLoop.update")
+    keepalive_mock = mocker.patch("core.node.get_keepalive_methods", return_value=[])
+
+    await node.start()
+
+    add_mock.assert_any_call(node.subscribe_accounts)
+    assert add_mock.call_count == 1
+    update_mock.assert_called_once_with([])
+    keepalive_mock.assert_called_once_with(node)
+    gather_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_start_keeps_ticket_parameters_subscription_when_only_one_static_value_is_set(
+    node: Node, mocker
+):
+    mocker.patch.object(node, "retrieve_address", new=AsyncMock())
+    mocker.patch.object(
+        node,
+        "load_static_ticket_parameters_from_node_configuration",
+        new=AsyncMock(return_value=(True, False)),
+    )
+    mocker.patch.object(node.channel_lifecycle_coordinator, "request")
+    add_mock = mocker.patch("core.node.AsyncLoop.add")
+    gather_mock = mocker.patch("core.node.AsyncLoop.gather", new=AsyncMock())
+    update_mock = mocker.patch("core.node.AsyncLoop.update")
+    keepalive_mock = mocker.patch("core.node.get_keepalive_methods", return_value=[])
+
+    await node.start()
+
+    add_mock.assert_any_call(node.subscribe_accounts)
+    add_mock.assert_any_call(node.ticket_parameters)
+    assert add_mock.call_count == 2
+    update_mock.assert_called_once_with([])
+    keepalive_mock.assert_called_once_with(node)
+    gather_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_node_healthcheck(node: Node):
     await node.healthcheck()
     assert node.connected

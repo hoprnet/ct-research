@@ -18,7 +18,7 @@ class AccountSubscription(BlokliProvider[BlokliAccount]):
 
 class Redemptions(BlokliProvider[BlokliRedemptionStats]):
     query_file: str = "queries/redemptions.graphql"
-    params = ["$safe_address: String", "$node_address: String"]
+    params = ["$filter: RedeemedStatsFilter!"]
 
 
 class TicketParametersSubscription(BlokliProvider[BlokliTicketParameters]):

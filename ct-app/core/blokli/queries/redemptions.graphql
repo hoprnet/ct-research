@@ -1,8 +1,6 @@
-query ($safe_address: String, $node_address: String) {
-    redeemedStats(safeAddress: $safe_address, nodeAddress: $node_address) {
+query ($filter: RedeemedStatsFilter!) {
+    ticketRedemptionStats(filter: $filter) {
         ... on RedeemedStats {
-            safeAddress
-            nodeAddress
             redeemedAmount
             redemptionCount
         }

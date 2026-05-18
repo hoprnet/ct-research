@@ -96,6 +96,9 @@ class Node(
         self._in_flight_message_tasks = set[asyncio.Task]()
         self._in_flight_tasks_by_session_port = dict[int, set[asyncio.Task]]()
         self._pending_session_creations = dict[str, asyncio.Task[Optional[Session]]]()
+        self._session_retry_wait_seconds = dict[str, float]()
+        self._pending_requeue_tasks = set[asyncio.Task[None]]()
+        self._session_retry_log_state = dict[tuple[str, str], tuple[float, int]]()
 
         # Initialize params first so we can use session configuration
         self.params = params
@@ -178,12 +181,23 @@ class Node(
     async def start(self):
         await self.retrieve_address()
 
+        static_ticket_price, static_winning_probability = (
+            await self.load_static_ticket_parameters_from_node_configuration()
+        )
+        should_subscribe_ticket_parameters = not (
+            static_ticket_price and static_winning_probability
+        )
+        scheduled_subscription_methods = ["subscribe_accounts"]
+        if should_subscribe_ticket_parameters:
+            scheduled_subscription_methods.append("ticket_parameters")
+
         logger.info(
             "Scheduling subscription methods",
-            {"methods": ["subscribe_accounts", "ticket_parameters"]},
+            {"methods": scheduled_subscription_methods},
         )
         AsyncLoop.add(self.subscribe_accounts)
-        AsyncLoop.add(self.ticket_parameters)
+        if should_subscribe_ticket_parameters:
+            AsyncLoop.add(self.ticket_parameters)
         self.channel_lifecycle_coordinator.request("startup")
 
         keepalive_methods = get_keepalive_methods(self)
@@ -239,6 +253,10 @@ class Node(
         self.running = False
         await self.shutdown_coordinator.run()
         await self.wait_for_in_flight_messages()
+        for task in list(self._pending_requeue_tasks):
+            task.cancel()
+        if self._pending_requeue_tasks:
+            await asyncio.gather(*self._pending_requeue_tasks, return_exceptions=True)
 
         # Close all active sessions
         # Create snapshot to avoid modification during iteration
@@ -300,6 +318,10 @@ class Node(
 
         # Phase 3: Clear transient trackers
         self.session_rate_limiter.reset()
+        self._session_retry_wait_seconds.clear()
+        self._session_retry_log_state.clear()
+        self._pending_session_creations.clear()
+        self._pending_requeue_tasks.clear()
         self._in_flight_tasks_by_session_port.clear()
         self._in_flight_message_tasks.clear()
         if self.sessions:

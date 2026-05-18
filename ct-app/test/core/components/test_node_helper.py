@@ -62,7 +62,10 @@ async def test_open_session_returns_session_on_success():
     opened = await NodeHelper.open_session(api, "0xdestination", "0xrelayer", "127.0.0.1")
 
     assert opened is session
-    api.post_udp_session.assert_awaited_once_with("0xdestination", "0xrelayer", "127.0.0.1")
+    assert opened.requested_destination == "0xdestination"
+    api.post_udp_session.assert_awaited_once_with(
+        "0xdestination", relayer="0xrelayer", listen_host="127.0.0.1"
+    )
 
 
 @pytest.mark.asyncio

@@ -36,7 +36,7 @@ class GraphqlNetworkRepository:
         async def _stream() -> AsyncIterator[NodeSafeLink]:
             async with AccountSubscription(self.url, self.token) as client:
                 async for account in client.subscribe():
-                    logger.info(
+                    logger.debug(
                         "Account subscription event",
                         {
                             "node_address": account.node_address,
@@ -55,7 +55,7 @@ class GraphqlNetworkRepository:
         async def _stream() -> AsyncIterator[BlokliTicketParameters]:
             async with TicketParametersSubscription(self.url, self.token) as client:
                 async for params in client.subscribe():
-                    logger.info(
+                    logger.debug(
                         "Ticket parameters subscription event",
                         {
                             "ticket_price": params.ticket_price.as_str,
@@ -92,4 +92,6 @@ class GraphqlNetworkRepository:
 
     async def get_redeemed_amount(self, safe_address: str, node_address: str):
         async with Redemptions(self.url, self.token) as client:
-            return await client.get(safe_address=safe_address, node_address=node_address)
+            return await client.get(
+                filter={"safeAddress": safe_address, "nodeAddress": node_address}
+            )

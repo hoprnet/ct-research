@@ -190,6 +190,13 @@ class HoprdAPI(ApiLib):
         """
         return await self.try_req(Method.GET, "/account/addresses", resp.Addresses)
 
+    async def configuration(self) -> Optional[dict[str, Any]]:
+        """
+        Returns the runtime configuration of the node.
+        :return: configuration: dict | undefined
+        """
+        return await self.try_req(Method.GET, "/node/configuration")
+
     async def list_udp_sessions(self) -> Optional[list[resp.Session]]:
         """
         Lists existing Session listeners over UDP
@@ -219,30 +226,21 @@ class HoprdAPI(ApiLib):
             destination,
             target_body.as_dict,
             listen_host,
-            path_body.as_dict,
-            path_body.as_dict,
+            path_body.as_dict["relayers"],
+            path_body.as_dict["relayers"],
             "0 KB",
-        )
-
-        full_url = f"{self.host}{self.prefix}/session/udp"
-        logger.debug(
-            "Attempting to open session",
-            {
-                "destination": destination,
-                "relayer": relayer,
-                "full_url": full_url,
-                "host": self.host,
-                "prefix": self.prefix,
-            },
         )
 
         try:
             r = await self.try_req(
                 Method.POST,
-                "/session/udp",
+                "/session/udp/explicit-path",
                 resp.Session,
                 data=data,
                 timeout=4,
+            )
+            logger.debug(
+                "API response for session creation", {"response": r.as_dict if r else None}
             )
             if r:
                 return r
@@ -253,7 +251,6 @@ class HoprdAPI(ApiLib):
                     {
                         "destination": destination,
                         "relayer": relayer,
-                        "full_url": full_url,
                     },
                 )
                 return resp.SessionFailure(

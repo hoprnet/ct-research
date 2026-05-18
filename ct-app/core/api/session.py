@@ -45,6 +45,7 @@ class Session(JsonResponse):
     port: int
     protocol: str
     target: str
+    requested_destination: str = ""
     mtu: int = APIfield("hoprMtu")
     surb_size: int = APIfield("surbLen")
     socket: Optional[socket_lib.socket] = None

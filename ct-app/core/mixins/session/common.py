@@ -82,6 +82,7 @@ class SessionCommonMixin(NodeRuntimeState):
         return random.choice(candidates)
 
     def _session_matches_destination(self, session: "Session", destination: str) -> bool:
-        return self._normalize_destination(session.target) == self._normalize_destination(
+        session_destination = session.requested_destination or session.target
+        return self._normalize_destination(session_destination) == self._normalize_destination(
             destination
         )
