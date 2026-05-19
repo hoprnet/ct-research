@@ -9,21 +9,24 @@ from core.services.economic_model_refresh_coordinator import EconomicModelRefres
 async def test_request_coalesces_multiple_signals_into_sequential_refreshes():
     run_count = 0
     gate = asyncio.Event()
+    second_run = asyncio.Event()
 
     async def refresh_callback():
         nonlocal run_count
         run_count += 1
         if run_count == 1:
             await gate.wait()
+        if run_count == 2:
+            second_run.set()
 
     coordinator = EconomicModelRefreshCoordinator(refresh_callback)
+    coordinator._debounce_seconds = 0.01
 
     coordinator.request()
-    await asyncio.sleep(0)
+    await asyncio.sleep(0.02)
     coordinator.request()
     gate.set()
-    await asyncio.sleep(0)
-    await asyncio.sleep(0)
+    await asyncio.wait_for(second_run.wait(), timeout=0.2)
 
     assert run_count == 2
 

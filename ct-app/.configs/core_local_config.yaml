@@ -18,9 +18,6 @@ flags:
     observe_message_queue: On
     maintain_sessions: 15s
     
-  peer:
-    message_relay_request: On
-    
 # =============================================================================
 # 
 # =============================================================================
@@ -77,8 +74,8 @@ channel:
 # =============================================================================
 sessions:
   green_destinations: 
-    - "0x24bb711c1612f57d03b4504c78241b3bd597e9fc"
-    - "0x3bee5bde885c6b046ada28d3e8c180d20a99195a"
+    - "0x0c098fa2e3a515502a8b050e9984c7a517f9175e"
+    - "0x602d7d24bc4b0b60d2405b91dcafa71167c16d77"
   blue_destinations: []
   session_retry_base_delay: 2s
   session_retry_max_delay: 60s

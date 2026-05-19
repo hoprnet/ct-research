@@ -17,9 +17,6 @@ flags:
 
     observe_message_queue: On
     maintain_sessions: 15s
-
-  peer:
-    message_relay_request: Off
     
 # =============================================================================
 # 

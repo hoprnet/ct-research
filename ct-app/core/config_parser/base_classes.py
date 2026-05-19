@@ -138,6 +138,12 @@ class ExplicitParams:
         coerced = cls._coerce_special_scalar(value, field_type)
         if coerced is not None:
             return coerced
+        if field_type is Decimal:
+            if isinstance(value, Decimal):
+                return value
+            if isinstance(value, float):
+                return Decimal(str(value))
+            return Decimal(value)
         return field_type(value)
 
     @classmethod

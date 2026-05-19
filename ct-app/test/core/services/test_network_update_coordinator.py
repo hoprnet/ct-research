@@ -8,20 +8,22 @@ from core.services.network_update_coordinator import NetworkUpdateCoordinator
 @pytest.mark.asyncio
 async def test_requests_are_coalesced_and_execute_callbacks_in_order():
     calls: list[str] = []
+    finished = asyncio.Event()
 
     def reconcile_callback():
         calls.append("reconcile")
 
     def economic_refresh_callback():
         calls.append("refresh")
+        finished.set()
 
     coordinator = NetworkUpdateCoordinator(reconcile_callback, economic_refresh_callback)
+    coordinator._debounce_seconds = 0.01
 
     coordinator.request("a")
     coordinator.request("b")
 
-    await asyncio.sleep(0)
-    await asyncio.sleep(0)
+    await asyncio.wait_for(finished.wait(), timeout=0.2)
 
     assert calls == ["reconcile", "refresh"]
 

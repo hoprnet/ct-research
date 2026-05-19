@@ -19,11 +19,5 @@ class FlagNodeParams(ExplicitParams):
 
 
 @dataclass(init=False, repr=False)
-class FlagPeerParams(ExplicitParams):
-    message_relay_request: Flag
-
-
-@dataclass(init=False, repr=False)
 class FlagParams(ExplicitParams):
     node: FlagNodeParams
-    peer: FlagPeerParams
