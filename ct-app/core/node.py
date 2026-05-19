@@ -99,7 +99,6 @@ class Node(
         self._session_retry_wait_seconds = dict[str, float]()
         self._pending_requeue_tasks = set[asyncio.Task[None]]()
         self._session_retry_log_state = dict[tuple[str, str], tuple[float, int]]()
-        self._next_relay_at = dict[str, float]()
 
         # Initialize params first so we can use session configuration
         self.params = params

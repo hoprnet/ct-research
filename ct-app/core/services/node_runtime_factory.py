@@ -13,6 +13,7 @@ from ..services.network_update_coordinator import NetworkUpdateCoordinator
 from ..services.send_plan_coordinator import SendPlanCoordinator
 from ..services.session_lifecycle_coordinator import SessionLifecycleCoordinator
 from ..services.shutdown_coordinator import ShutdownCoordinator
+from ..services.relay_pacer import RelayPacer
 
 
 class RuntimeNode(Protocol):
@@ -22,6 +23,7 @@ class RuntimeNode(Protocol):
     network_sync_orchestrator: NetworkSyncOrchestrator
     network_update_coordinator: NetworkUpdateCoordinator
     send_plan_coordinator: SendPlanCoordinator
+    relay_pacer: RelayPacer
     session_lifecycle_coordinator: SessionLifecycleCoordinator
     shutdown_coordinator: ShutdownCoordinator
 
@@ -41,3 +43,4 @@ class NodeRuntimeFactory:
         node.blokli_repository = repository
         node.network_state_service = state_service
         node.network_sync_orchestrator = orchestrator
+        node.relay_pacer = RelayPacer()

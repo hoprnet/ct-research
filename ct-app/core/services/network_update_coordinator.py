@@ -1,7 +1,7 @@
 from collections.abc import Callable
-from enum import Enum
 
 from prometheus_client import Counter, Gauge
+from ..constants.labels import NetworkUpdateSource
 from .base_drain_coordinator import BaseDrainCoordinator
 
 NETWORK_UPDATE_REQUESTS = Counter(
@@ -17,16 +17,6 @@ NETWORK_UPDATE_PENDING = Gauge(
     "ct_network_update_pending",
     "Whether a network update refresh is pending",
 )
-
-
-class NetworkUpdateSource(str, Enum):
-    ACCOUNT_LINK_SUBSCRIPTION = "account_link_subscription"
-    SAFE_BALANCE_REFRESH = "safe_balance_refresh"
-    REDEEMED_REFRESH = "redeemed_refresh"
-    PEER_DISCOVERY_REFRESH = "peer_discovery_refresh"
-    CHANNEL_TOPOLOGY_REFRESH = "channel_topology_refresh"
-    TICKET_PARAMETERS_CONFIGURATION = "ticket_parameters_configuration"
-    TICKET_PARAMETERS_SUBSCRIPTION = "ticket_parameters_subscription"
 
 
 class NetworkUpdateCoordinator(BaseDrainCoordinator):

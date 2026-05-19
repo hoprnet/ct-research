@@ -9,7 +9,7 @@ from ...api.response_objects import Session
 from ...messages.message_metrics import SESSION_COUNT
 from ...components.decorators import connectguard, keepalive, master
 from ...components.node_helper import NodeHelper
-from ...services.session_lifecycle_coordinator import SessionLifecycleEvent
+from ...constants.labels import SessionLifecycleEvent
 from .common import DEFAULT_SESSION_GRACE_PERIOD_SECONDS, SessionCommonMixin
 
 logger = logging.getLogger(__name__)

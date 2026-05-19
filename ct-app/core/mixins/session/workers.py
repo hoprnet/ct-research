@@ -21,7 +21,7 @@ from ...messages.message_metrics import (
     WORKER_MESSAGES,
 )
 from ...components.node_helper import NodeHelper
-from ...services.session_lifecycle_coordinator import SessionLifecycleEvent
+from ...constants.labels import SessionLifecycleEvent, SessionOpenResult
 from .common import (
     DEFAULT_IN_FLIGHT_WAIT_SECONDS,
     DEFAULT_LISTEN_HOST,
@@ -38,13 +38,6 @@ class MessageRequeueReason(str, Enum):
     NO_DESTINATION = "no_destination"
     SESSION_UNAVAILABLE = "session_unavailable"
     SESSION_DISAPPEARED = "session_disappeared"
-
-
-class SessionOpenResult(str, Enum):
-    REUSED_EXISTING = "reused_existing"
-    RATE_LIMITED = "rate_limited"
-    FAILED = "failed"
-    OPENED = "opened"
 
 
 class SessionWorkerMixin(SessionCommonMixin):

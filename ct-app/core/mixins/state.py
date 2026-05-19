@@ -7,7 +7,7 @@ from prometheus_client import Gauge
 from ..types.address import Address
 from ..components.decorators import connectguard, keepalive, master
 from ..api.response_objects import TicketPrice
-from ..services.network_update_coordinator import NetworkUpdateSource
+from ..constants.labels import NetworkUpdateSource, TicketStatType
 from .runtime_state import NodeRuntimeState
 
 BALANCE = Gauge("ct_balance", "Node balance", ["token"])
@@ -49,7 +49,7 @@ class StateMixin(NodeRuntimeState):
             try:
                 ticket_price = TicketPrice({"price": str(ticket_price_value)})
                 self.ticket_price = ticket_price
-                TICKET_STATS.labels("price").set(float(ticket_price.value.value))
+                TICKET_STATS.labels(TicketStatType.PRICE.value).set(float(ticket_price.value.value))
                 static_ticket_price = True
             except Exception as error:
                 logger.warning(
@@ -65,7 +65,9 @@ class StateMixin(NodeRuntimeState):
             try:
                 probability = float(winning_probability_value)
                 self.min_ticket_winning_probability = probability
-                TICKET_STATS.labels("min_ticket_winning_probability").set(probability)
+                TICKET_STATS.labels(TicketStatType.MIN_TICKET_WINNING_PROBABILITY.value).set(
+                    probability
+                )
                 static_winning_probability = True
             except (TypeError, ValueError) as error:
                 logger.warning(
@@ -165,11 +167,11 @@ class StateMixin(NodeRuntimeState):
             if self.ticket_price is None:
                 ticket_price = TicketPrice({"price": params.ticket_price.as_str})
                 self.ticket_price = ticket_price
-                TICKET_STATS.labels("price").set(float(ticket_price.value.value))
+                TICKET_STATS.labels(TicketStatType.PRICE.value).set(float(ticket_price.value.value))
 
             if self.min_ticket_winning_probability is None:
                 self.min_ticket_winning_probability = params.min_ticket_winning_probability
-                TICKET_STATS.labels("min_ticket_winning_probability").set(
+                TICKET_STATS.labels(TicketStatType.MIN_TICKET_WINNING_PROBABILITY.value).set(
                     params.min_ticket_winning_probability
                 )
 

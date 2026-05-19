@@ -16,6 +16,7 @@ from ..services.session_lifecycle_coordinator import SessionLifecycleCoordinator
 from ..services.shutdown_coordinator import ShutdownCoordinator
 from ..services.network_state_service import NetworkStateService
 from ..services.network_sync_orchestrator import NetworkSyncOrchestrator
+from ..services.relay_pacer import RelayPacer
 from ..types.address import Address
 from ..types.balance import Balance
 from ..types.network_state import NetworkState
@@ -49,7 +50,6 @@ class NodeRuntimeState:
     _session_retry_wait_seconds: dict[str, float]
     _pending_requeue_tasks: set[asyncio.Task[None]]
     _session_retry_log_state: dict[tuple[str, str], tuple[float, int]]
-    _next_relay_at: dict[str, float]
     economic_model_refresh_coordinator: EconomicModelRefreshCoordinator
     running: bool
     connected: bool
@@ -60,6 +60,7 @@ class NodeRuntimeState:
     network_update_coordinator: NetworkUpdateCoordinator
     channel_lifecycle_coordinator: ChannelLifecycleCoordinator
     send_plan_coordinator: SendPlanCoordinator
+    relay_pacer: RelayPacer
     session_lifecycle_coordinator: SessionLifecycleCoordinator
     shutdown_coordinator: ShutdownCoordinator
 

@@ -4,6 +4,7 @@ from typing import Any, cast
 import pytest
 
 from core.mixins.peer_relay import PeerRelayMixin
+from core.services.relay_pacer import RelayPacer
 from core.types.message_format import MessageFormat
 from core.types.message_queue import MessageQueue
 
@@ -49,7 +50,7 @@ async def test_relay_messages_uses_per_peer_pacing(mocker):
             "peer_slow": FakePeer("peer_slow", delay=2.0),
         },
     )
-    node._next_relay_at = {}
+    node.relay_pacer = RelayPacer()
     node.params = cast(
         Any,
         SimpleNamespace(
@@ -80,7 +81,8 @@ async def test_relay_messages_cleans_stale_relayer_state(mocker):
     _drain_queue()
     node = DummyRelayNode()
     node.peers = cast(dict[str, Any], {"peer_a": FakePeer("peer_a", delay=1.0)})
-    node._next_relay_at = {"peer_removed": 200.0}
+    node.relay_pacer = RelayPacer()
+    node.relay_pacer._last_sent_at["peer_removed"] = 200.0
     node.params = cast(
         Any,
         SimpleNamespace(
@@ -92,5 +94,5 @@ async def test_relay_messages_cleans_stale_relayer_state(mocker):
 
     await node._relay_messages_once()
 
-    assert "peer_removed" not in node._next_relay_at
-    assert "peer_a" in node._next_relay_at
+    assert "peer_removed" not in node.relay_pacer._last_sent_at
+    assert "peer_a" in node.relay_pacer._last_sent_at

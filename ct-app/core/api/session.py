@@ -8,6 +8,7 @@ from typing import Optional, Union
 from api_lib.objects.response import APIfield, APIobject, JsonResponse
 from prometheus_client import Gauge, Histogram
 
+from ..constants.labels import MessageStatType
 from ..types.message_format import MessageFormat
 
 MESSAGES_RTT = Histogram(
@@ -33,7 +34,7 @@ def _count_invalid_message_fragments(parts: list[str]) -> int:
             continue
 
         rtt = (int(time.time() * 1000) - message.timestamp) / 1000
-        MESSAGES_STATS.labels("received", message.relayer).inc()
+        MESSAGES_STATS.labels(MessageStatType.RECEIVED.value, message.relayer).inc()
         MESSAGES_RTT.labels(message.relayer).observe(rtt)
 
     return invalid_fragments
@@ -100,7 +101,7 @@ class Session(JsonResponse):
             return 0
 
         if isinstance(message, MessageFormat):
-            MESSAGES_STATS.labels("sent", message.relayer).inc()
+            MESSAGES_STATS.labels(MessageStatType.SENT.value, message.relayer).inc()
 
         return data
 

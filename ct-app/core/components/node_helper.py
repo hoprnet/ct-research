@@ -1,13 +1,13 @@
 import asyncio
 import logging
 import time
-from enum import Enum
 from typing import Optional
 
 from prometheus_client import Gauge
 
 from ..api.hoprd_api import HoprdAPI
 from ..api.response_objects import Session, SessionFailure
+from ..constants.labels import MessageSendFailureReason
 from ..types.message_format import MessageFormat
 from ..messages.message_metrics import (
     MESSAGE_E2E_LATENCY,
@@ -20,13 +20,6 @@ CHANNELS_OPS = Gauge("ct_channel_operation", "Channel operation", ["op", "succes
 SESSION_OPS = Gauge("ct_session_operation", "Session operation", ["relayer", "op", "success"])
 
 logger = logging.getLogger(__name__)
-
-
-class MessageSendFailureReason(str, Enum):
-    TIMEOUT = "timeout"
-    SESSION_CLOSED = "session_closed"
-    SOCKET_ERROR = "socket_error"
-    UNKNOWN = "unknown"
 
 
 class NodeHelper:
