@@ -55,6 +55,11 @@ FROM python:3.14-slim AS runtime
 LABEL maintainer="HOPR Team"
 LABEL description="CT-App - HOPR Cover Traffic Application"
 
+# Apply latest Debian security updates in the runtime image.
+RUN apt-get update \
+    && apt-get dist-upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 
