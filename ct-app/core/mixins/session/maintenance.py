@@ -3,14 +3,21 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from enum import Enum
 
 from ...api.response_objects import Session
 from ...messages.message_metrics import SESSION_COUNT
 from ...components.decorators import connectguard, keepalive, master
 from ...components.node_helper import NodeHelper
+from ...services.session_lifecycle_coordinator import SessionLifecycleEvent
 from .common import DEFAULT_SESSION_GRACE_PERIOD_SECONDS, SessionCommonMixin
 
 logger = logging.getLogger(__name__)
+
+
+class SessionRemovalReason(str, Enum):
+    API_INACTIVE = "api_inactive"
+    GRACE_PERIOD_EXPIRED = "grace_period_expired"
 
 
 class SessionMaintenanceMixin(SessionCommonMixin):
@@ -30,13 +37,13 @@ class SessionMaintenanceMixin(SessionCommonMixin):
         reachable_addresses: set[str],
         active_ports: set[int] | None,
         now: float,
-    ) -> tuple[bool, str | None]:
+    ) -> tuple[bool, SessionRemovalReason | None]:
         if active_ports is not None and session.port not in active_ports:
             logger.debug(
                 "Session no longer active at API level, marking for removal",
                 {"relayer": relayer, "port": session.port},
             )
-            return True, "api_inactive"
+            return True, SessionRemovalReason.API_INACTIVE
 
         if relayer not in reachable_addresses:
             if relayer not in grace_periods:
@@ -55,7 +62,7 @@ class SessionMaintenanceMixin(SessionCommonMixin):
                     "Grace period expired, marking session for removal",
                     {"relayer": relayer, "port": session.port},
                 )
-                return True, "grace_period_expired"
+                return True, SessionRemovalReason.GRACE_PERIOD_EXPIRED
         elif relayer in grace_periods:
             grace_duration = now - grace_periods[relayer]
             logger.debug(
@@ -110,16 +117,10 @@ class SessionMaintenanceMixin(SessionCommonMixin):
         grace_periods_snapshot = self.session_close_grace_period.copy()
         now = time.monotonic()
         sessions_to_close: list[tuple[str, Session]] = []
+        sessions_to_evict: list[tuple[str, Session]] = []
 
         for relayer, session in sessions_snapshot:
-            if self._session_has_in_flight_tasks(session):
-                logger.debug(
-                    "Skipping session cleanup while messages are in flight",
-                    {"relayer": relayer, "port": session.port},
-                )
-                continue
-
-            should_remove, _reason = self._should_remove_session(
+            should_remove, reason = self._should_remove_session(
                 relayer,
                 session,
                 grace_periods_snapshot,
@@ -127,8 +128,29 @@ class SessionMaintenanceMixin(SessionCommonMixin):
                 active_ports,
                 now,
             )
+            if not should_remove:
+                continue
+
+            if reason == SessionRemovalReason.API_INACTIVE:
+                sessions_to_evict.append((relayer, session))
+                continue
+
+            if self._session_has_in_flight_tasks(session):
+                logger.debug(
+                    "Skipping session cleanup while messages are in flight",
+                    {"relayer": relayer, "port": session.port},
+                )
+                continue
+
             if should_remove:
                 sessions_to_close.append((relayer, session))
+
+        if sessions_to_evict:
+            logger.info(
+                "Evicting locally cached sessions missing from API session list",
+                {"count": len(sessions_to_evict)},
+            )
+            self._remove_closed_sessions(sessions_to_evict)
 
         successfully_closed_sessions: list[tuple[str, "Session"]] = []
         if sessions_to_close:
@@ -141,16 +163,22 @@ class SessionMaintenanceMixin(SessionCommonMixin):
                 relayer: str,
                 session: "Session",
             ) -> tuple[str, "Session", bool]:
-                self.session_lifecycle_coordinator.mark("maintenance_close_requested")
+                self.session_lifecycle_coordinator.mark(
+                    SessionLifecycleEvent.MAINTENANCE_CLOSE_REQUESTED
+                )
                 close_ok = await NodeHelper.close_session(self.api, session, relayer)
                 if not close_ok:
-                    self.session_lifecycle_coordinator.mark("maintenance_close_failed")
+                    self.session_lifecycle_coordinator.mark(
+                        SessionLifecycleEvent.MAINTENANCE_CLOSE_FAILED
+                    )
                     logger.warning(
                         "Failed to close session at API level, preserving local session state",
                         {"relayer": relayer, "port": session.port},
                     )
                 else:
-                    self.session_lifecycle_coordinator.mark("maintenance_closed")
+                    self.session_lifecycle_coordinator.mark(
+                        SessionLifecycleEvent.MAINTENANCE_CLOSED
+                    )
                 return relayer, session, close_ok
 
             close_results = await asyncio.gather(

@@ -6,10 +6,15 @@ logger = logging.getLogger(__name__)
 
 
 class BaseDrainCoordinator(ABC):
-    def __init__(self, error_message: str | None = None):
+    def __init__(
+        self,
+        error_message: str | None = None,
+        debounce_seconds: float = 0.0,
+    ):
         self._pending = False
         self._drain_task: asyncio.Task[None] | None = None
         self._error_message = error_message
+        self._debounce_seconds = debounce_seconds
 
     def request(self, source: str | None = None) -> None:
         self._on_request(source)
@@ -20,6 +25,8 @@ class BaseDrainCoordinator(ABC):
 
     async def _drain(self) -> None:
         while self._pending:
+            if self._debounce_seconds > 0:
+                await asyncio.sleep(self._debounce_seconds)
             self._pending = False
             try:
                 await self.run_once()

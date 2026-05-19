@@ -5,6 +5,7 @@ from prometheus_client import Gauge
 
 from ..api.hoprd_api import HoprdAPI
 from ..components.decorators import connectguard, keepalive, master
+from ..services.network_update_coordinator import NetworkUpdateSource
 from ..types.peer import Peer
 from .peers_allocation import PeerAllocationMixin
 
@@ -49,7 +50,7 @@ class PeerDiscoveryMixin(PeerAllocationMixin):
                 self.peers[address] = peer
                 counts["new"] += 1
 
-        self.network_update_coordinator.request("peer_discovery_refresh")
+        self.network_update_coordinator.request(NetworkUpdateSource.PEER_DISCOVERY_REFRESH)
         self.channel_lifecycle_coordinator.request("peer_discovery_refresh")
 
         if counts["new"] > 0 or counts["unreachable"] > 0:

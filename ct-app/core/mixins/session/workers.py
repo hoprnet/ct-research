@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from enum import Enum
 
 from ...api.response_objects import Session
 from ...types.asyncloop import AsyncLoop
@@ -20,6 +21,7 @@ from ...messages.message_metrics import (
     WORKER_MESSAGES,
 )
 from ...components.node_helper import NodeHelper
+from ...services.session_lifecycle_coordinator import SessionLifecycleEvent
 from .common import (
     DEFAULT_IN_FLIGHT_WAIT_SECONDS,
     DEFAULT_LISTEN_HOST,
@@ -29,6 +31,20 @@ from .common import (
 logger = logging.getLogger(__name__)
 SESSION_RETRY_LOG_INTERVAL_SECONDS = 5.0
 SESSION_REQUEUE_MAX_DELAY_SECONDS = 30.0
+
+
+class MessageRequeueReason(str, Enum):
+    NO_OPEN_CHANNEL = "no_open_channel"
+    NO_DESTINATION = "no_destination"
+    SESSION_UNAVAILABLE = "session_unavailable"
+    SESSION_DISAPPEARED = "session_disappeared"
+
+
+class SessionOpenResult(str, Enum):
+    REUSED_EXISTING = "reused_existing"
+    RATE_LIMITED = "rate_limited"
+    FAILED = "failed"
+    OPENED = "opened"
 
 
 class SessionWorkerMixin(SessionCommonMixin):
@@ -127,10 +143,10 @@ class SessionWorkerMixin(SessionCommonMixin):
         if wait_for_in_flight:
             await self._wait_for_session_tasks(session)
 
-        self.session_lifecycle_coordinator.mark("retire_requested")
+        self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.RETIRE_REQUESTED)
         close_ok = await NodeHelper.close_session(self.api, session, relayer)
         if not close_ok:
-            self.session_lifecycle_coordinator.mark("retire_failed")
+            self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.RETIRE_FAILED)
             logger.warning(
                 "Failed to close session while retiring local cache entry",
                 {"relayer": relayer, "port": session.port, "reason": reason},
@@ -143,7 +159,7 @@ class SessionWorkerMixin(SessionCommonMixin):
 
         session.close_socket()
         self.session_close_grace_period.pop(relayer, None)
-        self.session_lifecycle_coordinator.mark("retired")
+        self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.RETIRED)
         return True
 
     async def _get_or_create_session(
@@ -153,7 +169,7 @@ class SessionWorkerMixin(SessionCommonMixin):
     ) -> "Session" | None:
         session = self.sessions.get(relayer)
         if session:
-            SESSION_OPEN_EVENTS.labels(result="reused_existing").inc()
+            SESSION_OPEN_EVENTS.labels(result=SessionOpenResult.REUSED_EXISTING.value).inc()
             return session
 
         pending_session = self._pending_session_creations.get(relayer)
@@ -161,7 +177,7 @@ class SessionWorkerMixin(SessionCommonMixin):
             return await pending_session
 
         async def open_session() -> "Session" | None:
-            self.session_lifecycle_coordinator.mark("open_requested")
+            self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.OPEN_REQUESTED)
             can_attempt, wait_time = self.session_rate_limiter.can_attempt(relayer)
             if not can_attempt and wait_time:
                 self._session_retry_wait_seconds[relayer] = wait_time
@@ -170,8 +186,8 @@ class SessionWorkerMixin(SessionCommonMixin):
                     relayer,
                     {"relayer": relayer, "wait_time_seconds": round(wait_time, 2)},
                 )
-                SESSION_OPEN_EVENTS.labels(result="rate_limited").inc()
-                self.session_lifecycle_coordinator.mark("open_rate_limited")
+                SESSION_OPEN_EVENTS.labels(result=SessionOpenResult.RATE_LIMITED.value).inc()
+                self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.OPEN_RATE_LIMITED)
                 return None
             self._session_retry_wait_seconds.pop(relayer, None)
 
@@ -186,14 +202,14 @@ class SessionWorkerMixin(SessionCommonMixin):
             if not session:
                 self.session_rate_limiter.record_failure(relayer)
                 logger.debug("Failed to open session")
-                SESSION_OPEN_EVENTS.labels(result="failed").inc()
-                self.session_lifecycle_coordinator.mark("open_failed")
+                SESSION_OPEN_EVENTS.labels(result=SessionOpenResult.FAILED.value).inc()
+                self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.OPEN_FAILED)
                 return None
 
             self.session_rate_limiter.record_success(relayer)
             self._session_retry_wait_seconds.pop(relayer, None)
-            SESSION_OPEN_EVENTS.labels(result="opened").inc()
-            self.session_lifecycle_coordinator.mark("opened")
+            SESSION_OPEN_EVENTS.labels(result=SessionOpenResult.OPENED.value).inc()
+            self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.OPENED)
 
             session.create_socket()
             logger.debug("Created socket", {"ip": session.ip, "port": session.port})
@@ -204,7 +220,7 @@ class SessionWorkerMixin(SessionCommonMixin):
 
             session.close_socket()
             logger.debug("Session created by another coroutine, using existing")
-            self.session_lifecycle_coordinator.mark("open_race_reused")
+            self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.OPEN_RACE_REUSED)
             return self.sessions[relayer]
 
         task = asyncio.create_task(open_session())
@@ -243,10 +259,13 @@ class SessionWorkerMixin(SessionCommonMixin):
         return False
 
     async def _requeue_message(
-        self, message: MessageFormat, reason: str, delay_seconds: float = 0.0
+        self,
+        message: MessageFormat,
+        reason: MessageRequeueReason,
+        delay_seconds: float = 0.0,
     ) -> bool:
-        MESSAGE_REQUEUES.labels(reason=reason).inc()
-        log_payload: dict[str, object] = {"relayer": message.relayer, "reason": reason}
+        MESSAGE_REQUEUES.labels(reason=reason.value).inc()
+        log_payload: dict[str, object] = {"relayer": message.relayer, "reason": reason.value}
         if delay_seconds > 0:
             log_payload["retry_in_seconds"] = round(delay_seconds, 2)
             self._log_session_retry_event(
@@ -266,13 +285,13 @@ class SessionWorkerMixin(SessionCommonMixin):
 
     async def _process_message(self, message: MessageFormat, worker_id: int) -> bool:
         if not self.channels or message.relayer not in self.address_to_open_channel:
-            return await self._requeue_message(message, "no_open_channel")
+            return await self._requeue_message(message, MessageRequeueReason.NO_OPEN_CHANNEL)
 
         destination = self._select_session_destination(
             message, list(self.address_to_open_channel.keys())
         )
         if not destination:
-            return await self._requeue_message(message, "no_destination")
+            return await self._requeue_message(message, MessageRequeueReason.NO_DESTINATION)
 
         session = await self._get_or_create_session(message.relayer, destination)
         if not session:
@@ -280,12 +299,12 @@ class SessionWorkerMixin(SessionCommonMixin):
             retry_delay = min(max(wait_time, 0.0), SESSION_REQUEUE_MAX_DELAY_SECONDS)
             return await self._requeue_message(
                 message,
-                "session_unavailable",
+                MessageRequeueReason.SESSION_UNAVAILABLE,
                 delay_seconds=retry_delay,
             )
 
         if not self._schedule_message_batch(message, message.relayer):
-            return await self._requeue_message(message, "session_disappeared")
+            return await self._requeue_message(message, MessageRequeueReason.SESSION_DISAPPEARED)
 
         MESSAGES_PROCESSED.inc()
         WORKER_MESSAGES.labels(worker_id=worker_id).inc()

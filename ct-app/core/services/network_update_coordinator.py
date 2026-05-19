@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from enum import Enum
 
 from prometheus_client import Counter, Gauge
 from .base_drain_coordinator import BaseDrainCoordinator
@@ -18,13 +19,23 @@ NETWORK_UPDATE_PENDING = Gauge(
 )
 
 
+class NetworkUpdateSource(str, Enum):
+    ACCOUNT_LINK_SUBSCRIPTION = "account_link_subscription"
+    SAFE_BALANCE_REFRESH = "safe_balance_refresh"
+    REDEEMED_REFRESH = "redeemed_refresh"
+    PEER_DISCOVERY_REFRESH = "peer_discovery_refresh"
+    CHANNEL_TOPOLOGY_REFRESH = "channel_topology_refresh"
+    TICKET_PARAMETERS_CONFIGURATION = "ticket_parameters_configuration"
+    TICKET_PARAMETERS_SUBSCRIPTION = "ticket_parameters_subscription"
+
+
 class NetworkUpdateCoordinator(BaseDrainCoordinator):
     def __init__(
         self,
         reconcile_callback: Callable[[], None],
         economic_refresh_callback: Callable[[], None],
     ):
-        super().__init__()
+        super().__init__(debounce_seconds=0.2)
         self.reconcile_callback = reconcile_callback
         self.economic_refresh_callback = economic_refresh_callback
 
@@ -34,7 +45,8 @@ class NetworkUpdateCoordinator(BaseDrainCoordinator):
     def _on_request(self, source: str | None) -> None:
         if source is None:
             return
-        NETWORK_UPDATE_REQUESTS.labels(source=source).inc()
+        label = source.value if isinstance(source, NetworkUpdateSource) else source
+        NETWORK_UPDATE_REQUESTS.labels(source=label).inc()
         NETWORK_UPDATE_PENDING.set(1)
 
     def _on_idle(self) -> None:

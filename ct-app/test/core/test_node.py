@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock
 
 from core.api.response_objects import Addresses, Channels
 from core.node import Node
+from core.services.network_update_coordinator import NetworkUpdateSource
 from core.types.balance import Balance
 from core.types.peer import Peer
 
@@ -87,7 +88,9 @@ async def test_ticket_parameters_updates_cached_ticket_price(node: Node, mocker)
     assert node.ticket_price is not None
     assert node.ticket_price.value == Balance("0.0001 wxHOPR")
     assert node.min_ticket_winning_probability == 0.5
-    network_update_request.assert_called_once_with("ticket_parameters_subscription")
+    network_update_request.assert_called_once_with(
+        NetworkUpdateSource.TICKET_PARAMETERS_SUBSCRIPTION
+    )
 
 
 @pytest.mark.asyncio

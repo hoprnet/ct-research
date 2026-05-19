@@ -1,4 +1,4 @@
-import asyncio
+import time
 
 from ..components.decorators import keepalive
 from ..config_parser.parameters import Parameters
@@ -11,23 +11,37 @@ class PeerRelayMixin(NodeRuntimeState):
     peers: dict[str, Peer]
     params: Parameters
 
-    @keepalive
-    async def relay_messages(self):
+    async def _relay_messages_once(self):
         if not self.peers:
             return
 
         queue = MessageQueue()
         min_delay = self.params.peer.minimum_delay_between_batches.value
-        sleep_mean = self.params.peer.sleep_mean_time.value
-        sleep_std = self.params.peer.sleep_std_time.value
+        now = time.monotonic()
 
-        steps = self.send_plan_coordinator.build_steps(
-            self.peers.values(),
-            min_delay,
-            sleep_mean,
-            sleep_std,
-        )
-        for step in steps:
-            if step.message is not None:
-                await queue.put(step.message)
-            await asyncio.sleep(step.sleep_seconds)
+        current_relayers = set(self.peers.keys())
+        for stale_relayer in list(self._next_relay_at.keys()):
+            if stale_relayer not in current_relayers:
+                self._next_relay_at.pop(stale_relayer, None)
+
+        for peer in self.peers.values():
+            if peer.yearly_message_count is None:
+                self._next_relay_at.pop(peer.address.native, None)
+                continue
+
+            delay = peer.message_delay
+            if delay is None:
+                continue
+
+            message = peer.build_relay_request(delay, min_delay)
+            send_interval = delay * message.batch_size
+            next_send_at = self._next_relay_at.get(peer.address.native, now)
+            if now < next_send_at:
+                continue
+
+            await queue.put(message)
+            self._next_relay_at[peer.address.native] = now + send_interval
+
+    @keepalive
+    async def relay_messages(self):
+        await self._relay_messages_once()

@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 class ChannelLifecycleCoordinator(BaseDrainCoordinator):
     def __init__(self, reconcile_callback: Callable[[], Awaitable[None]]):
-        super().__init__(error_message="Channel lifecycle reconcile failed")
+        super().__init__(error_message="Channel lifecycle reconcile failed", debounce_seconds=0.2)
         self.reconcile_callback = reconcile_callback
 
     def request(self, source: str | None = None) -> None:

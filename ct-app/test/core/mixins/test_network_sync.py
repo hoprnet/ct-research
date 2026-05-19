@@ -1,4 +1,5 @@
 from core.mixins.network_sync import NetworkSyncMixin
+from core.services.network_update_coordinator import NetworkUpdateSource
 
 
 class DummyNetworkSyncNode(NetworkSyncMixin):
@@ -14,5 +15,5 @@ def test_on_link_update_requests_network_update_refresh(mocker):
 
     node._on_link_update()
 
-    network_request_mock.assert_called_once_with("account_link_subscription")
+    network_request_mock.assert_called_once_with(NetworkUpdateSource.ACCOUNT_LINK_SUBSCRIPTION)
     lifecycle_request_mock.assert_called_once_with("account_link_subscription")

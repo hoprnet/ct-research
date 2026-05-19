@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+from enum import Enum
 from typing import Optional
 
 from prometheus_client import Gauge
@@ -19,6 +20,13 @@ CHANNELS_OPS = Gauge("ct_channel_operation", "Channel operation", ["op", "succes
 SESSION_OPS = Gauge("ct_session_operation", "Session operation", ["relayer", "op", "success"])
 
 logger = logging.getLogger(__name__)
+
+
+class MessageSendFailureReason(str, Enum):
+    TIMEOUT = "timeout"
+    SESSION_CLOSED = "session_closed"
+    SOCKET_ERROR = "socket_error"
+    UNKNOWN = "unknown"
 
 
 class NodeHelper:
@@ -223,7 +231,7 @@ class NodeHelper:
         Note:
             Exceptions are logged by AsyncLoop but don't crash the main process.
         """
-        failure_reason = None
+        failure_reason: MessageSendFailureReason | None = None
 
         try:
             # Send batch
@@ -239,23 +247,23 @@ class NodeHelper:
             MESSAGE_E2E_LATENCY.observe(e2e_latency)
 
         except asyncio.TimeoutError:
-            failure_reason = "timeout"
+            failure_reason = MessageSendFailureReason.TIMEOUT
             raise
         except AttributeError as e:
             # Session socket is None (session closed)
             if "socket is None" in str(e).lower():
-                failure_reason = "session_closed"
+                failure_reason = MessageSendFailureReason.SESSION_CLOSED
             else:
-                failure_reason = "unknown"
+                failure_reason = MessageSendFailureReason.UNKNOWN
             raise
         except OSError:
             # Socket errors (rare for UDP but can happen)
-            failure_reason = "socket_error"
+            failure_reason = MessageSendFailureReason.SOCKET_ERROR
             raise
         except Exception:
-            failure_reason = "unknown"
+            failure_reason = MessageSendFailureReason.UNKNOWN
             raise
         finally:
             # Track failures
             if failure_reason:
-                MESSAGES_SENT_FAILED.labels(reason=failure_reason).inc()
+                MESSAGES_SENT_FAILED.labels(reason=failure_reason.value).inc()

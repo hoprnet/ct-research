@@ -9,6 +9,7 @@ from ...types.asyncloop import AsyncLoop
 from ...types.balance import Balance
 from ...components.node_helper import NodeHelper
 from ...components.utils import Utils
+from ...services.network_update_coordinator import NetworkUpdateSource
 from .cache import ChannelCacheMixin
 
 CHANNELS = Gauge("ct_channels", "Node channels", ["direction"])
@@ -70,7 +71,7 @@ class ChannelActionMixin(ChannelCacheMixin):
 
         self.outgoing_channel_balances = await Utils.balanceInChannels(channels.all)
         self.network_state.outgoing_channel_balances = dict(self.outgoing_channel_balances)
-        self.network_update_coordinator.request("channel_topology_refresh")
+        self.network_update_coordinator.request(NetworkUpdateSource.CHANNEL_TOPOLOGY_REFRESH)
         logger.info(
             "Fetched all topology links",
             {"count": len(self.outgoing_channel_balances)},

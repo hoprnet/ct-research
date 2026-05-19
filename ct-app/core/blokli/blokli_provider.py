@@ -25,7 +25,7 @@ TBlokliResponse = TypeVar(
     "TBlokliResponse",
     bound=JsonResponse | list[Any],
     covariant=True,
-    default=JsonResponse,  # ty: ignore[invalid-legacy-type-variable]
+    default=JsonResponse,
 )
 
 
@@ -393,6 +393,7 @@ class BlokliProvider(Generic[TBlokliResponse]):
                     "Blokli subscription interrupted, reconnecting",
                     {
                         "url": self.url,
+                        "error_type": type(error).__name__,
                         "error": str(error),
                         "retry_in_seconds": reconnect_delay_seconds,
                     },

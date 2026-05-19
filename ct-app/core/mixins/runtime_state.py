@@ -49,6 +49,7 @@ class NodeRuntimeState:
     _session_retry_wait_seconds: dict[str, float]
     _pending_requeue_tasks: set[asyncio.Task[None]]
     _session_retry_log_state: dict[tuple[str, str], tuple[float, int]]
+    _next_relay_at: dict[str, float]
     economic_model_refresh_coordinator: EconomicModelRefreshCoordinator
     running: bool
     connected: bool

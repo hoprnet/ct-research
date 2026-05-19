@@ -81,6 +81,7 @@ class DummyEconomicNode(EconomicSystemMixin):
 async def test_apply_economic_model_requires_complete_data(mocker):
     node = DummyEconomicNode()
     node.peers = {}
+    node.network_state = SimpleNamespace(node_to_safe={}, safe_balances={})
     logger_warning = mocker.patch("core.mixins.economic_system.logger.warning")
 
     await node._apply_economic_model_once()
@@ -102,6 +103,13 @@ async def test_apply_economic_model_updates_only_eligible_peers(mocker):
     )
     node.ticket_price = cast(Any, SimpleNamespace(value=Balance("0.0001 wxHOPR")))
     node.session_destinations = ["a", "b"]
+    node.network_state = SimpleNamespace(
+        node_to_safe={
+            eligible_peer.address.native: "safe_1",
+            excluded_peer.address.native: "safe_2",
+        },
+        safe_balances={"safe_1": Balance("10 wxHOPR"), "safe_2": Balance("10 wxHOPR")},
+    )
     model = FakeEconomicModel(legacy_result=90.0, sigmoid_result=30.0)
     node.params = cast(
         Any,
@@ -120,6 +128,57 @@ async def test_apply_economic_model_updates_only_eligible_peers(mocker):
     assert excluded_peer.yearly_message_count is None
     assert model.legacy.calls[0][2] == Balance("2 wxHOPR")
     assert model.sigmoid.calls[0][2] == [0.5, 0.5]
+
+
+@pytest.mark.asyncio
+async def test_apply_economic_model_skips_without_link_or_balance_data(mocker):
+    node = DummyEconomicNode()
+    peer = FakePeer("eligible-peer", True)
+    node.peers = {peer.address.native: peer}
+    node.ticket_price = cast(Any, SimpleNamespace(value=Balance("0.0001 wxHOPR")))
+    node.session_destinations = ["a", "b"]
+    node.params = cast(
+        Any,
+        SimpleNamespace(
+            economic_model=FakeEconomicModel(legacy_result=90.0, sigmoid_result=30.0),
+            sessions=SimpleNamespace(blue_destinations=["a"], green_destinations=["b"]),
+            peer=SimpleNamespace(excluded_peers=[]),
+        ),
+    )
+    node.network_state = SimpleNamespace(node_to_safe={}, safe_balances={})
+    logger_warning = mocker.patch("core.mixins.economic_system.logger.warning")
+
+    await node._apply_economic_model_once()
+
+    logger_warning.assert_called_once_with(
+        "Skipping economic model: node-safe links are not available yet"
+    )
+
+
+@pytest.mark.asyncio
+async def test_apply_economic_model_recovers_from_stale_ineligible_marker():
+    node = DummyEconomicNode()
+    peer = FakePeer("eligible-peer", True)
+    peer.yearly_message_count = None
+    node.peers = {peer.address.native: peer}
+    node.ticket_price = cast(Any, SimpleNamespace(value=Balance("0.0001 wxHOPR")))
+    node.session_destinations = ["a", "b"]
+    node.network_state = SimpleNamespace(
+        node_to_safe={peer.address.native: "safe_1"},
+        safe_balances={"safe_1": Balance("10 wxHOPR")},
+    )
+    node.params = cast(
+        Any,
+        SimpleNamespace(
+            economic_model=FakeEconomicModel(legacy_result=90.0, sigmoid_result=30.0),
+            sessions=SimpleNamespace(blue_destinations=["a"], green_destinations=["b"]),
+            peer=SimpleNamespace(excluded_peers=[]),
+        ),
+    )
+
+    await node._apply_economic_model_once()
+
+    assert peer.yearly_message_count == 40.0
 
 
 def test_trigger_economic_model_refresh_requests_coordinator(mocker):

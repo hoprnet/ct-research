@@ -7,6 +7,7 @@ from prometheus_client import Gauge
 from ..types.address import Address
 from ..components.decorators import connectguard, keepalive, master
 from ..api.response_objects import TicketPrice
+from ..services.network_update_coordinator import NetworkUpdateSource
 from .runtime_state import NodeRuntimeState
 
 BALANCE = Gauge("ct_balance", "Node balance", ["token"])
@@ -73,7 +74,9 @@ class StateMixin(NodeRuntimeState):
                 )
 
         if static_ticket_price or static_winning_probability:
-            self.network_update_coordinator.request("ticket_parameters_configuration")
+            self.network_update_coordinator.request(
+                NetworkUpdateSource.TICKET_PARAMETERS_CONFIGURATION
+            )
             logger.info(
                 "Loaded static ticket parameters from node configuration",
                 {
@@ -177,4 +180,6 @@ class StateMixin(NodeRuntimeState):
                     "min_ticket_winning_probability": self.min_ticket_winning_probability,
                 },
             )
-            self.network_update_coordinator.request("ticket_parameters_subscription")
+            self.network_update_coordinator.request(
+                NetworkUpdateSource.TICKET_PARAMETERS_SUBSCRIPTION
+            )
