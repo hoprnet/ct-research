@@ -3,6 +3,6 @@ repos:
     hooks:
       - id: generate-metrics-doc
         name: Check METRICS.md
-        entry: python scripts/generate_metrics_doc.py --check
+        entry: bash -lc 'cd ct-app && uv run python scripts/generate_metrics_doc.py --check'
         language: system
         pass_filenames: false
