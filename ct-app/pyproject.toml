@@ -5,11 +5,10 @@ requires-python = ">=3.14"
 dependencies = ["core", "pyyaml>=6.0.1"]
 
 [tool.setuptools]
-packages = ["core", "test"]
+packages = ["core"]
 
 [tool.uv.sources]
 core = { workspace = true }
-test = { workspace = true }
 
 [tool.uv.workspace]
 members = [
@@ -20,15 +19,16 @@ members = [
     "core/config_parser",
     "core/messages",
     "core/mixins",
-    "core/types",
-    "test"
+    "core/types"
 ]
 
 [dependency-groups]
 dev = [
     "ruff>=0.11.4",
     "dotenv>=0.9.9",
-    "test",
+    "pytest>=8.3.5",
+    "pytest-asyncio>=1.0.0",
+    "pytest-mock>=3.14.1",
     "pytest-cov>=6.2.1",
     "mypy>=1.18.2",
     "types-pyyaml>=6.0.12.20250516",

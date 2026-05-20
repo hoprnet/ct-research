@@ -17,7 +17,6 @@ members = [
     "core-mixins",
     "core-types",
     "ct-app",
-    "test",
 ]
 
 [[package]]
@@ -314,9 +313,11 @@ dependencies = [
 dev = [
     { name = "dotenv" },
     { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
     { name = "pytest-cov" },
+    { name = "pytest-mock" },
     { name = "ruff" },
-    { name = "test" },
     { name = "types-pyyaml" },
 ]
 lint = [
@@ -337,9 +338,11 @@ requires-dist = [
 dev = [
     { name = "dotenv", specifier = ">=0.9.9" },
     { name = "mypy", specifier = ">=1.18.2" },
+    { name = "pytest", specifier = ">=8.3.5" },
+    { name = "pytest-asyncio", specifier = ">=1.0.0" },
     { name = "pytest-cov", specifier = ">=6.2.1" },
+    { name = "pytest-mock", specifier = ">=3.14.1" },
     { name = "ruff", specifier = ">=0.11.4" },
-    { name = "test", editable = "test" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20250516" },
 ]
 lint = [{ name = "black", specifier = "==25.1.0" }]
@@ -740,27 +743,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/ea/f9/0ae446942c846b8266059ad8a30702a35afae55f5cdc54c5adf8d7afdc27/ruff-0.15.12-py3-none-win32.whl", hash = "sha256:d0185894e038d7043ba8fd6aee7499ece6462dc0ea9f1e260c7451807c714c20", size = 10657277, upload-time = "2026-04-24T18:17:18.591Z" },
     { url = "https://files.pythonhosted.org/packages/33/f1/9614e03e1cdcbf9437570b5400ced8a720b5db22b28d8e0f1bda429f660d/ruff-0.15.12-py3-none-win_amd64.whl", hash = "sha256:c87a162d61ab3adca47c03f7f717c68672edec7d1b5499e652331780fe74950d", size = 11837758, upload-time = "2026-04-24T18:17:00.113Z" },
     { url = "https://files.pythonhosted.org/packages/c0/98/6beb4b351e472e5f4c4613f7c35a5290b8be2497e183825310c4c3a3984b/ruff-0.15.12-py3-none-win_arm64.whl", hash = "sha256:a538f7a82d061cee7be55542aca1d86d1393d55d81d4fcc314370f4340930d4f", size = 11120821, upload-time = "2026-04-24T18:16:57.979Z" },
-]
-
-[[package]]
-name = "test"
-version = "3.11.2"
-source = { editable = "test" }
-dependencies = [
-    { name = "prometheus-client" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-mock" },
-    { name = "pyyaml" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "prometheus-client", specifier = ">=0.22.0" },
-    { name = "pytest", specifier = ">=8.3.5" },
-    { name = "pytest-asyncio", specifier = ">=1.0.0" },
-    { name = "pytest-mock", specifier = ">=3.14.1" },
-    { name = "pyyaml", specifier = ">=6.0.1" },
 ]
 
 [[package]]

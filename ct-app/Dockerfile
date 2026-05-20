@@ -21,7 +21,6 @@ COPY core/config_parser/pyproject.toml ./core/config_parser/
 COPY core/messages/pyproject.toml ./core/messages/
 COPY core/mixins/pyproject.toml ./core/mixins/
 COPY core/types/pyproject.toml ./core/types/
-COPY test/pyproject.toml ./test/
 COPY .configs ./.configs/
 COPY scripts ./scripts/
 
@@ -36,7 +35,6 @@ COPY core/config_parser ./core/config_parser/
 COPY core/messages ./core/messages/
 COPY core/mixins ./core/mixins/
 COPY core/types ./core/types/
-COPY test ./test/
 
 # Install production dependencies only (no dev dependencies)
 RUN uv sync --frozen --no-dev
@@ -71,7 +69,6 @@ COPY --from=builder /code/.venv /code/.venv
 
 # Copy application source code and scripts
 COPY --from=builder --chown=appuser:appuser /code/core ./core
-COPY --from=builder --chown=appuser:appuser /code/test ./test
 COPY --from=builder --chown=appuser:appuser /code/scripts ./scripts
 COPY --from=builder --chown=appuser:appuser /code/.configs ./.configs
 
