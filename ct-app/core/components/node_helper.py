@@ -3,7 +3,7 @@ import logging
 import time
 from typing import Optional
 
-from prometheus_client import Gauge
+from prometheus_client import Counter
 
 from ..api.hoprd_api import HoprdAPI
 from ..api.response_objects import Session, SessionFailure
@@ -16,8 +16,8 @@ from ..messages.message_metrics import (
 )
 from ..types.balance import Balance
 
-CHANNELS_OPS = Gauge("ct_channel_operation", "Channel operation", ["op", "success"])
-SESSION_OPS = Gauge("ct_session_operation", "Session operation", ["relayer", "op", "success"])
+CHANNELS_OPS = Counter("ct_channel_operation", "Channel operation", ["op", "success"])
+SESSION_OPS = Counter("ct_session_operation", "Session operation", ["relayer", "op", "success"])
 
 logger = logging.getLogger(__name__)
 

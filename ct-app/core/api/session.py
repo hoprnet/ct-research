@@ -6,7 +6,7 @@ from dataclasses import fields
 from typing import Optional, Union
 
 from api_lib.objects.response import APIfield, APIobject, JsonResponse
-from prometheus_client import Gauge, Histogram
+from prometheus_client import Counter, Histogram
 
 from ..constants.labels import MessageStatType
 from ..types.message_format import MessageFormat
@@ -17,8 +17,8 @@ MESSAGES_RTT = Histogram(
     ["relayer"],
     buckets=[0.5, 0.75, 1, 2, 3, 4, 5],
 )
-MESSAGES_STATS = Gauge("ct_messages_stats", "", ["type", "relayer"])
-MESSAGE_SENDING_REQUEST = Gauge("ct_message_sending_request", "", ["relayer"])
+MESSAGES_STATS = Counter("ct_messages_stats", "", ["type", "relayer"])
+MESSAGE_SENDING_REQUEST = Counter("ct_message_sending_request", "", ["relayer"])
 
 logger = logging.getLogger(__name__)
 DEFAULT_RECEIVE_TIMEOUT_SECONDS = 2.0

@@ -10,20 +10,20 @@ Generated from `core/` metric definitions by `scripts/generate_metrics_doc.py`.
 | `ct_batch_schedule_failures_total` | `Counter` | `-` | Total batch send scheduling failures in the message workers | `core/messages/message_metrics.py` |
 | `ct_blokli_calls` | `Counter` | `type, target, result` | Total Blokli API calls | `core/blokli/blokli_provider.py` |
 | `ct_channel_funds` | `Gauge` | `-` | Total funds in out. channels | `core/mixins/channel/actions.py` |
-| `ct_channel_operation` | `Gauge` | `op, success` | Channel operation | `core/components/node_helper.py` |
+| `ct_channel_operation` | `Counter` | `op, success` | Channel operation | `core/components/node_helper.py` |
 | `ct_channels` | `Gauge` | `direction` | Node channels | `core/mixins/channel/actions.py` |
 | `ct_eligible_peers` | `Gauge` | `-` | # of eligible peers for rewards | `core/mixins/economic_system.py` |
 | `ct_message_count` | `Gauge` | `address, model` | messages one should receive / year | `core/mixins/economic_system.py` |
 | `ct_message_e2e_latency_seconds` | `Histogram` | `-` | End-to-end message latency from queue entry to send completion | `core/messages/message_metrics.py` |
 | `ct_message_latency_seconds` | `Histogram` | `phase` | Message processing latency | `core/messages/message_metrics.py` |
 | `ct_message_requeue_total` | `Counter` | `reason` | Total messages requeued for retry | `core/messages/message_metrics.py` |
-| `ct_message_sending_request` | `Gauge` | `relayer` |  | `core/api/session.py` |
+| `ct_message_sending_request` | `Counter` | `relayer` |  | `core/api/session.py` |
 | `ct_messages_delays` | `Histogram` | `relayer` | Messages delays | `core/api/session.py` |
 | `ct_messages_processed_total` | `Counter` | `-` | Total messages processed | `core/messages/message_metrics.py` |
 | `ct_messages_scheduled_total` | `Counter` | `-` | Total messages scheduled for sending (enqueued to AsyncLoop) | `core/messages/message_metrics.py` |
 | `ct_messages_sent_failed_total` | `Counter` | `reason` | Total messages that failed to send | `core/messages/message_metrics.py` |
 | `ct_messages_sent_success_total` | `Counter` | `-` | Total messages successfully sent (batch send completed) | `core/messages/message_metrics.py` |
-| `ct_messages_stats` | `Gauge` | `type, relayer` |  | `core/api/session.py` |
+| `ct_messages_stats` | `Counter` | `type, relayer` |  | `core/api/session.py` |
 | `ct_network_update_drains_total` | `Counter` | `-` | Network update drain executions | `core/services/network_update_coordinator.py` |
 | `ct_network_update_pending` | `Gauge` | `-` | Whether a network update refresh is pending | `core/services/network_update_coordinator.py` |
 | `ct_network_update_requests_total` | `Counter` | `source` | Network update refresh requests | `core/services/network_update_coordinator.py` |
@@ -39,7 +39,7 @@ Generated from `core/` metric definitions by `scripts/generate_metrics_doc.py`.
 | `ct_session_count` | `Gauge` | `-` | Number of active sessions | `core/messages/message_metrics.py` |
 | `ct_session_lifecycle_transitions_total` | `Counter` | `event` | Session lifecycle transitions | `core/services/session_lifecycle_coordinator.py` |
 | `ct_session_open_events_total` | `Counter` | `result` | Session open lifecycle events recorded by the message workers | `core/messages/message_metrics.py` |
-| `ct_session_operation` | `Gauge` | `relayer, op, success` | Session operation | `core/components/node_helper.py` |
+| `ct_session_operation` | `Counter` | `relayer, op, success` | Session operation | `core/components/node_helper.py` |
 | `ct_ticket_stats` | `Gauge` | `type` | Ticket stats | `core/mixins/state.py` |
 | `ct_topology_size` | `Gauge` | `-` | Size of the topology | `core/mixins/channel/actions.py` |
 | `ct_unique_peers` | `Gauge` | `type` | Unique peers | `core/mixins/peers_discovery.py` |
