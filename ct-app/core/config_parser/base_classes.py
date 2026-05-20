@@ -32,6 +32,12 @@ class Flag:
         except TypeError as exc:
             raise TypeError(f"Flag value must be a duration or On/Off, got {type(value)}") from exc
 
+    def __repr__(self) -> str:
+        return f"Flag(value={self.value!r})"
+
+    def __str__(self) -> str:
+        return str(self.value)
+
 
 class Duration:
     def __init__(self, value: object):

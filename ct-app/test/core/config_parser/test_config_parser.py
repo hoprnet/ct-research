@@ -179,3 +179,19 @@ def test_repr_redacts_hidden_fields():
     assert "visible=ok" in rendered
     assert "hidden=<redacted>" in rendered
     assert "secret" not in rendered
+
+
+def test_parameters_repr_renders_flag_values_without_object_addresses():
+    from core.config_parser.parameters import Parameters as AppParameters
+
+    with open("test/test_config.yaml", "r", encoding="utf-8") as file:
+        params = AppParameters(yaml.safe_load(file))
+
+    rendered = repr(params)
+
+    assert "flags=FlagParams(" in rendered
+    assert "outgoing_channels_balances=30.0" in rendered
+    assert "healthcheck=10.0" in rendered
+    assert "refresh_balances=False" in rendered
+    assert "observe_message_queue=True" in rendered
+    assert "core.config_parser.base_classes.Flag object at" not in rendered
