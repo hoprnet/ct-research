@@ -10,9 +10,13 @@ from urllib.parse import urlsplit, urlunsplit
 import aiohttp
 from api_lib.objects import JsonResponse
 from multidict import CIMultiDictProxy
-from prometheus_client import Gauge
+from prometheus_client import Counter
 
-BLOKLI_CALLS = Gauge("ct_blokli_calls", "# of blokli calls")
+BLOKLI_CALLS = Counter(
+    "ct_blokli_calls",
+    "Total Blokli API calls",
+    ["type", "target", "result"],
+)
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +44,7 @@ class BlokliProvider(Generic[TBlokliResponse]):
         self.url = self._normalize_graphql_url(url)
         self.token = token
         self.pwd = Path(str(sys.modules[self.__class__.__module__].__file__)).parent
+        self._operation_name = Path(self.query_file).stem
         self._initialize_query(self.query_file, self.params)
         self._timeout = aiohttp.ClientTimeout(total=30)
 
@@ -202,7 +207,12 @@ class BlokliProvider(Generic[TBlokliResponse]):
                 json={"query": query, "variables": variable_values},
                 headers=self._request_headers(),
             ) as response:
-                BLOKLI_CALLS.inc()
+                outcome = "success" if response.status < 400 else "http_error"
+                BLOKLI_CALLS.labels(
+                    "query",
+                    self._operation_name,
+                    outcome,
+                ).inc()
                 logger.debug(
                     "Blokli response received",
                     {
@@ -219,8 +229,18 @@ class BlokliProvider(Generic[TBlokliResponse]):
                 return await response.json(), response.headers
 
         except TimeoutError as err:
+            BLOKLI_CALLS.labels(
+                "query",
+                self._operation_name,
+                "timeout",
+            ).inc()
             logger.error("Timeout error", {"error": str(err)})
         except Exception as err:
+            BLOKLI_CALLS.labels(
+                "query",
+                self._operation_name,
+                "exception",
+            ).inc()
             logger.error("Unknown error", {"error": str(err)})
         return {}, None
 
@@ -343,6 +363,12 @@ class BlokliProvider(Generic[TBlokliResponse]):
                     json={"query": self._sku_subscription, "variables": kwargs},
                     headers=self._request_headers(sse=True),
                 ) as response:
+                    outcome = "success" if response.status < 400 else "http_error"
+                    BLOKLI_CALLS.labels(
+                        "subscription",
+                        self._operation_name,
+                        outcome,
+                    ).inc()
                     if response.status >= 400:
                         logger.error(
                             "Blokli subscription request failed",
@@ -389,6 +415,11 @@ class BlokliProvider(Generic[TBlokliResponse]):
             except asyncio.CancelledError:
                 raise
             except (asyncio.TimeoutError, aiohttp.ClientError, ProviderError) as error:
+                BLOKLI_CALLS.labels(
+                    "subscription",
+                    self._operation_name,
+                    type(error).__name__.lower(),
+                ).inc()
                 logger.warning(
                     "Blokli subscription interrupted, reconnecting",
                     {

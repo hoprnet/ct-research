@@ -8,7 +8,7 @@ Generated from `core/` metric definitions by `scripts/generate_metrics_doc.py`.
 | `ct_balance` | `Gauge` | `token` | Node balance | `core/mixins/state.py` |
 | `ct_balance_multiplier` | `Gauge` | `-` | factor to multiply the balance by | `core/node.py` |
 | `ct_batch_schedule_failures_total` | `Counter` | `-` | Total batch send scheduling failures in the message workers | `core/messages/message_metrics.py` |
-| `ct_blokli_calls` | `Gauge` | `-` | # of blokli calls | `core/blokli/blokli_provider.py` |
+| `ct_blokli_calls` | `Counter` | `type, target, result` | Total Blokli API calls | `core/blokli/blokli_provider.py` |
 | `ct_channel_funds` | `Gauge` | `-` | Total funds in out. channels | `core/mixins/channel/actions.py` |
 | `ct_channel_operation` | `Gauge` | `op, success` | Channel operation | `core/components/node_helper.py` |
 | `ct_channels` | `Gauge` | `direction` | Node channels | `core/mixins/channel/actions.py` |
