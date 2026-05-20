@@ -17,6 +17,13 @@ logger = logging.getLogger(__name__)
 
 
 class EconomicSystemMixin(NodeRuntimeState):
+    @staticmethod
+    def _configured_destinations(params: Any) -> list[str]:
+        sessions = getattr(params, "sessions", None)
+        blue_destinations = list(getattr(sessions, "blue_destinations", []) or [])
+        green_destinations = list(getattr(sessions, "green_destinations", []) or [])
+        return blue_destinations + green_destinations
+
     def _economic_inputs_ready(self) -> bool:
         node_to_safe = getattr(self.network_state, "node_to_safe", {})
         safe_balances = getattr(self.network_state, "safe_balances", {})
@@ -49,10 +56,11 @@ class EconomicSystemMixin(NodeRuntimeState):
             return
 
         eligible_peers = []
+        configured_destinations = self._configured_destinations(self.params)
         for p in self.peers.values():
             is_eligible = p.is_eligible(
                 self.params.economic_model.legacy.coefficients.lowerbound,
-                self.params.sessions.blue_destinations + self.params.sessions.green_destinations,
+                configured_destinations,
                 self.params.peer.excluded_peers,
             )
             if not is_eligible:

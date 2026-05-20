@@ -181,6 +181,31 @@ async def test_apply_economic_model_recovers_from_stale_ineligible_marker():
     assert peer.yearly_message_count == 40.0
 
 
+@pytest.mark.asyncio
+async def test_apply_economic_model_handles_none_session_destination_lists():
+    node = DummyEconomicNode()
+    peer = FakePeer("eligible-peer", True)
+    node.peers = {peer.address.native: peer}
+    node.ticket_price = cast(Any, SimpleNamespace(value=Balance("0.0001 wxHOPR")))
+    node.session_destinations = ["a", "b"]
+    node.network_state = SimpleNamespace(
+        node_to_safe={peer.address.native: "safe_1"},
+        safe_balances={"safe_1": Balance("10 wxHOPR")},
+    )
+    node.params = cast(
+        Any,
+        SimpleNamespace(
+            economic_model=FakeEconomicModel(legacy_result=90.0, sigmoid_result=30.0),
+            sessions=SimpleNamespace(blue_destinations=None, green_destinations=["b"]),
+            peer=SimpleNamespace(excluded_peers=[]),
+        ),
+    )
+
+    await node._apply_economic_model_once()
+
+    assert peer.yearly_message_count == 40.0
+
+
 def test_trigger_economic_model_refresh_requests_coordinator(mocker):
     node = DummyEconomicNode()
     coordinator = mocker.Mock()
