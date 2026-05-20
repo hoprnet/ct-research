@@ -32,8 +32,10 @@ COPY core/api ./core/api/
 COPY core/blokli ./core/blokli/
 COPY core/components ./core/components/
 COPY core/config_parser ./core/config_parser/
+COPY core/constants ./core/constants/
 COPY core/messages ./core/messages/
 COPY core/mixins ./core/mixins/
+COPY core/services ./core/services/
 COPY core/types ./core/types/
 
 # Install production dependencies only (no dev dependencies)
