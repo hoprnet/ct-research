@@ -59,7 +59,7 @@ peer:
   minimum_delay_between_batches: 10s
   sleep_mean_time: 10s
   sleep_std_time: 2s
-  excluded_peers: # TODO
+  excluded_peers: []
 
 # =============================================================================
 # 
@@ -73,8 +73,10 @@ channel:
 #
 # =============================================================================
 sessions:
-  green_destinations: # TODO
-  blue_destinations: # TODO
+  green_destinations: 
+  - "0xc0efe53308b4d90d1de82ff44bb9067c4d6bed02"
+  - "0xac1dd1393c9b45b6c566ebf3886c02fa4e213d18"
+  blue_destinations: []
   session_retry_base_delay: 2s
   session_retry_max_delay: 60s
   message_worker_count: 10
