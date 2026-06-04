@@ -14,6 +14,7 @@ Generated from `core/` metric definitions by `scripts/generate_metrics_doc.py`.
 | `ct_channels` | `Gauge` | `direction` | Node channels | `core/mixins/channel/actions.py` |
 | `ct_eligible_peers` | `Gauge` | `-` | # of eligible peers for rewards | `core/mixins/economic_system.py` |
 | `ct_message_count` | `Gauge` | `address, model` | messages one should receive / year | `core/mixins/economic_system.py` |
+| `ct_message_drop_total` | `Counter` | `reason` | Total messages dropped instead of being retried | `core/messages/message_metrics.py` |
 | `ct_message_e2e_latency_seconds` | `Histogram` | `-` | End-to-end message latency from queue entry to send completion | `core/messages/message_metrics.py` |
 | `ct_message_latency_seconds` | `Histogram` | `phase` | Message processing latency | `core/messages/message_metrics.py` |
 | `ct_message_requeue_total` | `Counter` | `reason` | Total messages requeued for retry | `core/messages/message_metrics.py` |

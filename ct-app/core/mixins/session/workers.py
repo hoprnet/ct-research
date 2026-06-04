@@ -13,6 +13,7 @@ from ...types.message_queue import MessageQueue
 from ...messages.message_metrics import (
     ACTIVE_WORKERS,
     BATCH_SCHEDULE_FAILURES,
+    MESSAGE_DROPS,
     MESSAGE_REQUEUES,
     MESSAGES_PROCESSED,
     MESSAGES_SCHEDULED,
@@ -276,15 +277,27 @@ class SessionWorkerMixin(SessionCommonMixin):
         await MessageQueue().put(message)
         return False
 
+    def _drop_message(
+        self,
+        message: MessageFormat,
+        reason: MessageRequeueReason,
+    ) -> bool:
+        MESSAGE_DROPS.labels(reason=reason.value).inc()
+        logger.info(
+            "Dropping unsendable message",
+            {"relayer": message.relayer, "reason": reason.value},
+        )
+        return False
+
     async def _process_message(self, message: MessageFormat, worker_id: int) -> bool:
         if not self.channels or message.relayer not in self.address_to_open_channel:
-            return await self._requeue_message(message, MessageRequeueReason.NO_OPEN_CHANNEL)
+            return self._drop_message(message, MessageRequeueReason.NO_OPEN_CHANNEL)
 
         destination = self._select_session_destination(
             message, list(self.address_to_open_channel.keys())
         )
         if not destination:
-            return await self._requeue_message(message, MessageRequeueReason.NO_DESTINATION)
+            return self._drop_message(message, MessageRequeueReason.NO_DESTINATION)
 
         session = await self._get_or_create_session(message.relayer, destination)
         if not session:
@@ -297,7 +310,7 @@ class SessionWorkerMixin(SessionCommonMixin):
             )
 
         if not self._schedule_message_batch(message, message.relayer):
-            return await self._requeue_message(message, MessageRequeueReason.SESSION_DISAPPEARED)
+            return self._drop_message(message, MessageRequeueReason.SESSION_DISAPPEARED)
 
         MESSAGES_PROCESSED.inc()
         WORKER_MESSAGES.labels(worker_id=worker_id).inc()

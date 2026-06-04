@@ -75,6 +75,12 @@ MESSAGE_REQUEUES = Counter(
     ["reason"],
 )
 
+MESSAGE_DROPS = Counter(
+    "ct_message_drop_total",
+    "Total messages dropped instead of being retried",
+    ["reason"],
+)
+
 SESSION_OPEN_EVENTS = Counter(
     "ct_session_open_events_total",
     "Session open lifecycle events recorded by the message workers",

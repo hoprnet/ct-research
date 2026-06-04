@@ -60,13 +60,15 @@ async def test_relay_messages_uses_per_peer_pacing(mocker):
 
     monotonic = mocker.patch("core.mixins.peer_relay.time.monotonic", return_value=100.0)
 
-    await node._relay_messages_once()
+    first_sleep = await node._relay_messages_once()
     queue = MessageQueue().buffer
     assert queue.qsize() == 2
+    assert first_sleep is None
 
     monotonic.return_value = 103.5
-    await node._relay_messages_once()
+    second_sleep = await node._relay_messages_once()
     assert queue.qsize() == 3
+    assert second_sleep is None
 
     relayers = []
     while not queue.empty():
@@ -92,7 +94,31 @@ async def test_relay_messages_cleans_stale_relayer_state(mocker):
 
     mocker.patch("core.mixins.peer_relay.time.monotonic", return_value=100.0)
 
-    await node._relay_messages_once()
+    sleep_seconds = await node._relay_messages_once()
 
     assert "peer_removed" not in node.relay_pacer._last_sent_at
     assert "peer_a" in node.relay_pacer._last_sent_at
+    assert sleep_seconds is None
+
+
+@pytest.mark.asyncio
+async def test_relay_messages_idles_when_no_messages_are_due(mocker):
+    _drain_queue()
+    node = DummyRelayNode()
+    node.peers = cast(dict[str, Any], {"peer_a": FakePeer("peer_a", delay=2.0)})
+    node.relay_pacer = RelayPacer()
+    node.params = cast(
+        Any,
+        SimpleNamespace(
+            peer=SimpleNamespace(minimum_delay_between_batches=SimpleNamespace(value=2.0))
+        ),
+    )
+
+    monotonic = mocker.patch("core.mixins.peer_relay.time.monotonic", return_value=100.0)
+    await node._relay_messages_once()
+
+    monotonic.return_value = 101.0
+    sleep_seconds = await node._relay_messages_once()
+
+    assert sleep_seconds == pytest.approx(5.0)
+    assert MessageQueue().buffer.qsize() == 1

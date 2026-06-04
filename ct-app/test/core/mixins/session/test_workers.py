@@ -11,6 +11,7 @@ from core.types.message_format import MessageFormat
 from core.types.message_queue import MessageQueue
 from core.messages.message_metrics import (
     BATCH_SCHEDULE_FAILURES,
+    MESSAGE_DROPS,
     MESSAGE_REQUEUES,
     SESSION_OPEN_EVENTS,
     WORKER_LOOP_EVENTS,
@@ -84,6 +85,7 @@ async def test_message_is_requeued_when_no_destination_is_available(
     session_node.session_destinations = [relayer]
 
     message = MessageFormat(relayer, "sender", 500, 1)
+    before = _counter_value(MESSAGE_DROPS, reason="no_destination")
     create_session = mocker.patch.object(
         session_node, "_get_or_create_session", new=AsyncMock(return_value=None)
     )
@@ -92,9 +94,20 @@ async def test_message_is_requeued_when_no_destination_is_available(
 
     assert not scheduled
     create_session.assert_not_called()
-    assert MessageQueue().buffer.qsize() == 1
-    queued_message = await MessageQueue().get()
-    assert queued_message is message
+    assert MessageQueue().buffer.qsize() == 0
+    assert _counter_value(MESSAGE_DROPS, reason="no_destination") == before + 1
+
+
+@pytest.mark.asyncio
+async def test_message_is_dropped_when_no_open_channel_is_available(session_node: Node):
+    message = MessageFormat("peer_missing", "sender", 500, 1)
+    before = _counter_value(MESSAGE_DROPS, reason="no_open_channel")
+
+    scheduled = await session_node._process_message(message, worker_id=0)
+
+    assert not scheduled
+    assert MessageQueue().buffer.qsize() == 0
+    assert _counter_value(MESSAGE_DROPS, reason="no_open_channel") == before + 1
 
 
 @pytest.mark.asyncio
@@ -244,6 +257,7 @@ async def test_process_message_requeues_when_batch_scheduling_fails(
     session_node.session_destinations = [relayer, "exit_peer"]
 
     message = MessageFormat(relayer, "sender", 500, 1)
+    before = _counter_value(MESSAGE_DROPS, reason="session_disappeared")
 
     mocker.patch.object(session_node, "_get_or_create_session", new=AsyncMock(return_value=session))
     mocker.patch.object(session_node, "_schedule_message_batch", return_value=False)
@@ -251,9 +265,8 @@ async def test_process_message_requeues_when_batch_scheduling_fails(
     scheduled = await session_node._process_message(message, worker_id=0)
 
     assert not scheduled
-    assert MessageQueue().buffer.qsize() == 1
-    queued_message = await MessageQueue().get()
-    assert queued_message is message
+    assert MessageQueue().buffer.qsize() == 0
+    assert _counter_value(MESSAGE_DROPS, reason="session_disappeared") == before + 1
 
 
 @pytest.mark.asyncio
