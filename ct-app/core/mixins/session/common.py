@@ -10,7 +10,7 @@ from ..runtime_state import NodeRuntimeState
 logger = logging.getLogger(__name__)
 
 DEFAULT_SESSION_GRACE_PERIOD_SECONDS = 60
-DEFAULT_LISTEN_HOST = "127.0.0.1"
+DEFAULT_LISTEN_HOST = "127.0.0.1:0"
 DEFAULT_IN_FLIGHT_WAIT_SECONDS = 3.0
 
 
