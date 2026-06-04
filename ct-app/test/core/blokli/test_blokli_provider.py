@@ -1,3 +1,4 @@
+import aiohttp
 import pytest
 
 from core.blokli.entries import BlokliRedemptionStats
@@ -87,3 +88,31 @@ async def test_subscription_session_reuses_open_session():
 
     assert session_one is session_two
     await session_one.close()
+
+
+@pytest.mark.asyncio
+async def test_subscription_session_does_not_reuse_query_session():
+    provider = TicketParametersSubscription("http://blokli.local")
+
+    provider._query_session = aiohttp.ClientSession(timeout=provider._timeout)
+
+    session = await provider._ensure_subscription_session()
+
+    assert session is not provider._query_session
+    assert session.timeout.total is None
+    await provider._query_session.close()
+    await session.close()
+
+
+@pytest.mark.asyncio
+async def test_context_manager_keeps_sessions_lazy_until_operation():
+    provider = TicketParametersSubscription("http://blokli.local")
+
+    async with provider as client:
+        assert client._query_session is None
+        assert client._subscription_session is None
+
+        session = await client._ensure_subscription_session()
+
+        assert client._query_session is None
+        assert client._subscription_session == session

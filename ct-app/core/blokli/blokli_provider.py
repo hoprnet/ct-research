@@ -38,7 +38,8 @@ class BlokliProvider(Generic[TBlokliResponse]):
     params: list[str] = []
     _return_type: type[JsonResponse] | type[list[Any]] = JsonResponse
     _return_list_item_type: Optional[type[JsonResponse]] = None
-    _session: Optional[aiohttp.ClientSession] = None
+    _query_session: Optional[aiohttp.ClientSession] = None
+    _subscription_session: Optional[aiohttp.ClientSession] = None
 
     def __init__(self, url: str, token: Optional[str] = None):
         self.url = self._normalize_graphql_url(url)
@@ -56,12 +57,14 @@ class BlokliProvider(Generic[TBlokliResponse]):
         return urlunsplit((parsed.scheme, parsed.netloc, "/graphql", parsed.query, parsed.fragment))
 
     async def __aexit__(self, exc_type, exc, tb):
-        if self._session is not None and not self._session.closed:
-            await self._session.close()
-        self._session = None
+        if self._query_session is not None and not self._query_session.closed:
+            await self._query_session.close()
+        if self._subscription_session is not None and not self._subscription_session.closed:
+            await self._subscription_session.close()
+        self._query_session = None
+        self._subscription_session = None
 
     async def __aenter__(self) -> Self:
-        self._session = aiohttp.ClientSession()
         return self
 
     def __init_subclass__(cls, **kwargs):
@@ -138,11 +141,18 @@ class BlokliProvider(Generic[TBlokliResponse]):
         return headers
 
     async def _ensure_subscription_session(self) -> aiohttp.ClientSession:
-        if self._session is not None and not self._session.closed:
-            return self._session
+        if self._subscription_session is not None and not self._subscription_session.closed:
+            return self._subscription_session
 
-        self._session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=None))
-        return self._session
+        self._subscription_session = aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(
+                total=None,
+                connect=None,
+                sock_connect=None,
+                sock_read=None,
+            )
+        )
+        return self._subscription_session
 
     def _load_query(
         self,
@@ -199,10 +209,10 @@ class BlokliProvider(Generic[TBlokliResponse]):
                     "variables": variable_values,
                 },
             )
-            if self._session is None or self._session.closed:
-                self._session = aiohttp.ClientSession(timeout=self._timeout)
+            if self._query_session is None or self._query_session.closed:
+                self._query_session = aiohttp.ClientSession(timeout=self._timeout)
 
-            async with self._session.post(
+            async with self._query_session.post(
                 self.url,
                 json={"query": query, "variables": variable_values},
                 headers=self._request_headers(),
