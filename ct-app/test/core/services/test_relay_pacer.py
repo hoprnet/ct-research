@@ -32,15 +32,17 @@ def test_due_messages_respects_per_peer_next_send_at():
         "peer_slow": FakePeer("peer_slow", delay=2.0),
     }
 
-    first = pacer.due_messages(
+    first, first_next_due = pacer.due_messages(
         cast(dict[str, Any], peers), minimum_delay_between_batches=2.0, now=100.0
     )
-    second = pacer.due_messages(
+    second, second_next_due = pacer.due_messages(
         cast(dict[str, Any], peers), minimum_delay_between_batches=2.0, now=103.5
     )
 
     assert sorted(message.relayer for message in first) == ["peer_fast", "peer_slow"]
     assert [message.relayer for message in second] == ["peer_fast"]
+    assert first_next_due is None
+    assert second_next_due == 2.5
 
 
 def test_due_messages_prunes_stale_relayers():
@@ -59,13 +61,15 @@ def test_due_messages_applies_updated_rate_for_existing_peer():
     peer = FakePeer("peer_a", delay=2.0)
     peers = {"peer_a": peer}
 
-    first = pacer.due_messages(
+    first, first_next_due = pacer.due_messages(
         cast(dict[str, Any], peers), minimum_delay_between_batches=2.0, now=100.0
     )
     assert [message.relayer for message in first] == ["peer_a"]
+    assert first_next_due is None
 
     peer._delay = 1.0
-    second = pacer.due_messages(
+    second, second_next_due = pacer.due_messages(
         cast(dict[str, Any], peers), minimum_delay_between_batches=2.0, now=103.5
     )
     assert [message.relayer for message in second] == ["peer_a"]
+    assert second_next_due is None
