@@ -33,7 +33,7 @@
     {
       "description": "Expedite nix security updates — bypass weekly schedule",
       "matchManagers": ["nix"],
-      "matchCategories": ["security"],
+      "matchJsonata": ["$exists(vulnerabilityFixVersion)"],
       "schedule": ["at any time"],
       "automerge": true,
       "labels": ["security"],
@@ -49,7 +49,7 @@
     {
       "description": "Expedite Python security updates — bypass weekly schedule",
       "matchManagers": ["pep621"],
-      "matchCategories": ["security"],
+      "matchJsonata": ["$exists(vulnerabilityFixVersion)"],
       "schedule": ["at any time"],
       "automerge": true,
       "labels": ["security"],
