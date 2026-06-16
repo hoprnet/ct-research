@@ -88,7 +88,7 @@ jobs:
 
   build-docker:
     name: Docker
-    uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@build-docker-v2
+    uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@fa71078959cf9f892185e8df16551720693a2cd1
     permissions:
       contents: read
       pull-requests: write
@@ -111,7 +111,6 @@ jobs:
       deployment_label_selector: "hoprds.hoprnet.org/cluster=${{ vars.CTDAPP_STAGING_DEPLOYMENT_CLUSTER }}"
       fail_on_scan_vulnerabilities: ${{ vars.FAIL_ON_SCAN_VULNERABILITIES }}
     secrets:
-      gcp_service_account: ${{ secrets.GCP_SA_GITHUB_RUNNER }}
       cachix_auth_token: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
   checks:
