@@ -72,7 +72,15 @@
               enable = true;
               name = "pinact";
               description = "Check GitHub Action refs are SHA-pinned and resolvable";
-              entry = "${pkgs.pinact}/bin/pinact run --check";
+              entry = "${pkgs.writeShellScript "pinact-check" ''
+                token="''${GITHUB_TOKEN:-$(${pkgs.gh}/bin/gh auth token 2>/dev/null || true)}"
+                if [ -z "$token" ]; then
+                  echo "pinact: skipping — no GITHUB_TOKEN and gh not authenticated" >&2
+                  exit 0
+                fi
+                export GITHUB_TOKEN="$token"
+                exec ${pkgs.pinact}/bin/pinact run --check
+              ''}";
               files = "\\.ya?ml$";
               language = "system";
               pass_filenames = false;
