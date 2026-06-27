@@ -88,7 +88,7 @@ jobs:
 
   build-docker:
     name: Docker
-    uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@fa71078959cf9f892185e8df16551720693a2cd1 # 0.9.3
+    uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@5b0f0e6c7e3a02e30a33b9f5150fb5b118676e58 # 0.11.0
     permissions:
       contents: read
       pull-requests: write
@@ -121,7 +121,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Nix
-        uses: hoprnet/hopr-workflows/actions/setup-nix@setup-nix-v1
+        uses: hoprnet/hopr-workflows/actions/setup-nix@5477bd53d62ac15c4804b31fbd55966b29a43997 # setup-nix-v2
         with:
           cachix_cache_name: ct-dapp
           cachix_auth_token: ${{ secrets.CACHIX_AUTH_TOKEN }}
