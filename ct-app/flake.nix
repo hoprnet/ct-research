@@ -111,7 +111,9 @@
             echo ""
             uv sync
             ${pre-commit-check.shellHook}
-            export GITHUB_TOKEN="$(gh auth token 2>/dev/null || true)"
+            if [ -z "''${GITHUB_TOKEN:-}" ]; then
+              export GITHUB_TOKEN="$(${pkgs.gh}/bin/gh auth token 2>/dev/null || true)"
+            fi
           '';
         };
 
