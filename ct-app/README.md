@@ -64,7 +64,7 @@ written to [METRICS.md](./METRICS.md).
 ## Development
 
 Requirements:
-- Python 3.14+
+- Python 3.14.6+
 - `uv`
 
 Setup:

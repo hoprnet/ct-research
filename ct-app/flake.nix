@@ -10,23 +10,23 @@
   outputs = { nixpkgs, flake-utils, ... }: flake-utils.lib.eachDefaultSystem (system:
     let
       pkgs = import nixpkgs { inherit system; };
-      uvVersion = "0.11.7";
+      uvVersion = "0.11.25";
       uvAssets = {
         aarch64-darwin = {
           asset = "uv-aarch64-apple-darwin.tar.gz";
-          hash = "sha256-+2SzvIXf9bueaEbukQaxcfjLHvlb/xPNsN7MJgD9vdA=";
+          hash = "sha256-YHrKKV2h9msGBt7/JLihVL1z7Lh8PQ0e2obHoyPw9zU=";
         };
         x86_64-darwin = {
           asset = "uv-x86_64-apple-darwin.tar.gz";
-          hash = "sha256-0Q16T8AvdLs01VY83vNJcNzsayjClsjcC13EB9EEfQk=";
+          hash = "sha256-8wasGmE8FverjODNqg20v+8n3FInDWfry+VWxoQyD60=";
         };
         aarch64-linux = {
           asset = "uv-aarch64-unknown-linux-gnu.tar.gz";
-          hash = "sha256-K3jBQeGuYfiv3FJYmT5C3hoC7buJq9G6JUWmMBLcNMo=";
+          hash = "sha256-CdHUtB7rPv7IkmZjgEl6KHFXf5wgkrxWYb4VAOjzjKI=";
         };
         x86_64-linux = {
           asset = "uv-x86_64-unknown-linux-gnu.tar.gz";
-          hash = "sha256-3ve53WdAGbAefFhEoK0uIsZ0ZTWwB5oAITzxbAUgX7A=";
+          hash = "sha256-NNjGcC9uoe/H8UGs3PaF9f01j6UNP93kS212q9wLkL8=";
         };
       };
       uvAsset = uvAssets.${system};
@@ -73,19 +73,20 @@
 
       devShell = pkgs.mkShell {
         buildInputs = with pkgs; [
-          python314    # Python 3.14 to match Dockerfile
-          uv-latest    # uv 0.11.7 pinned from upstream release binaries
+          python314    # Bootstrap interpreter for uv-managed project Python
+          uv-latest    # uv 0.11.25 pinned from upstream release binaries
           ruff         # Python linter and formatter
         ];
 
         shellHook = ''
           echo "Development environment loaded:"
-          echo "  Python: $(python3 --version)"
+          echo "  Bootstrap Python: $(python3 --version)"
           echo "  uv: $(uv --version)"
           echo "  uvx: $(uvx --version)"
           echo "  ruff: $(ruff --version)"
           echo ""
           uv sync
+          echo "  Project Python: $(uv run python --version)"
         '';
       };
 

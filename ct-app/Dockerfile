@@ -2,10 +2,10 @@
 # Uses slim base image and layer caching for faster builds and smaller image size
 
 # Stage 1: Builder - Install dependencies
-FROM python:3.14-slim AS builder
+FROM python:3.14.6-slim AS builder
 
-# Install uv package manager (0.9.x+ supports Python 3.14)
-COPY --from=ghcr.io/astral-sh/uv:0.9 /uv /uvx /bin/
+# Install uv package manager
+COPY --from=ghcr.io/astral-sh/uv:0.11.25 /uv /uvx /bin/
 
 # Set working directory
 WORKDIR /code
@@ -49,7 +49,7 @@ RUN uv pip install --no-cache-dir ./core
 RUN uv pip install --no-cache-dir .
 
 # Stage 2: Runtime - Minimal production image
-FROM python:3.14-slim AS runtime
+FROM python:3.14.6-slim AS runtime
 
 # Add metadata labels
 LABEL maintainer="HOPR Team"
