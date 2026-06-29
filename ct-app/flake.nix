@@ -133,7 +133,7 @@
 
           shellHook = ''
             echo "Development environment loaded:"
-            echo "  Bootstrap Python: $(python3 --version)"
+            echo "  Python: $(python3 --version)"
             echo "  uv: $(uv --version)"
             echo "  uvx: $(uvx --version)"
             echo "  ruff: $(ruff --version)"
