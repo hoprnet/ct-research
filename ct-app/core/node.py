@@ -184,6 +184,11 @@ class Node(
         static_ticket_price, static_winning_probability = (
             await self.load_static_ticket_parameters_from_node_configuration()
         )
+        if static_ticket_price != static_winning_probability:
+            raise ValueError(
+                "Ticket price and winning probability must both be hardcoded in node "
+                "configuration, or neither — mixed configuration is not supported."
+            )
         should_subscribe_ticket_parameters = not (
             static_ticket_price and static_winning_probability
         )

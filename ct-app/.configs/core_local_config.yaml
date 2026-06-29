@@ -24,7 +24,7 @@ flags:
 economic_model:
   legacy:
     proportion: 1.0
-    apr: 0.00001
+    apr: 0.00025
 
     coefficients:
       a: 0.001
@@ -74,8 +74,8 @@ channel:
 # =============================================================================
 sessions:
   green_destinations: 
-    - "0x0c098fa2e3a515502a8b050e9984c7a517f9175e"
-    - "0x602d7d24bc4b0b60d2405b91dcafa71167c16d77"
+    - "0x7b5b01b199c7c5080b247e5eb12e66a5d842ccb2"
+    - "0xc87a9057730d4ec347da9b0662c2b1eb3d3983f2"
   blue_destinations: []
   session_retry_base_delay: 2s
   session_retry_max_delay: 60s

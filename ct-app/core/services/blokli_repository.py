@@ -74,16 +74,19 @@ class GraphqlNetworkRepository:
             async def fetch_one(safe_address: str) -> SafeBalanceSnapshot | None:
                 async with semaphore:
                     response = await client.get(address=safe_address)
-                snapshot = to_safe_balance_snapshot(response)
-                return snapshot
+                return to_safe_balance_snapshot(response)
 
-            snapshots = await asyncio.gather(
-                *(fetch_one(safe_address) for safe_address in safe_addresses)
+            results = await asyncio.gather(
+                *(fetch_one(safe_address) for safe_address in safe_addresses),
+                return_exceptions=True,
             )
-            for snapshot in snapshots:
-                if snapshot is None:
+            for result in results:
+                if isinstance(result, BaseException):
+                    logger.warning("Failed to fetch safe balance", {"error": str(result)})
                     continue
-                balances.append(snapshot)
+                if result is None:
+                    continue
+                balances.append(result)
         logger.debug(
             "Fetched safe balances",
             {"requested": len(safe_addresses), "received": len(balances)},

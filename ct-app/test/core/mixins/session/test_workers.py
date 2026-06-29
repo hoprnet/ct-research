@@ -4,11 +4,9 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from pytest_mock import MockerFixture
 
+import core.mixins.session.workers as workers_mod
 from core.api.response_objects import Session
-from core.types.asyncloop import AsyncLoop
-from core.types.peer import Peer
-from core.types.message_format import MessageFormat
-from core.types.message_queue import MessageQueue
+from core.components.node_helper import NodeHelper
 from core.messages.message_metrics import (
     BATCH_SCHEDULE_FAILURES,
     MESSAGE_DROPS,
@@ -16,8 +14,11 @@ from core.messages.message_metrics import (
     SESSION_OPEN_EVENTS,
     WORKER_LOOP_EVENTS,
 )
-from core.components.node_helper import NodeHelper
 from core.node import Node
+from core.types.asyncloop import AsyncLoop
+from core.types.message_format import MessageFormat
+from core.types.message_queue import MessageQueue
+from core.types.peer import Peer
 
 
 def _counter_value(metric, **labels) -> float:
@@ -62,11 +63,14 @@ async def test_message_is_requeued_when_session_creation_fails(
     before = _counter_value(MESSAGE_REQUEUES, reason="session_unavailable")
 
     mocker.patch.object(session_node, "_get_or_create_session", new=AsyncMock(return_value=None))
+    mocker.patch.object(workers_mod, "SESSION_REQUEUE_MIN_DELAY_SECONDS", 0.05)
 
     with caplog.at_level("DEBUG"):
         scheduled = await session_node._process_message(message, worker_id=0)
 
     assert not scheduled
+    assert MessageQueue().buffer.qsize() == 0
+    await asyncio.sleep(0.07)
     assert MessageQueue().buffer.qsize() == 1
     queued_message = await MessageQueue().get()
     assert queued_message is message
@@ -283,6 +287,7 @@ async def test_process_message_requeues_after_rate_limit_delay(
 
     message = MessageFormat(relayer, "sender", 500, 1)
     mocker.patch.object(session_node, "_get_or_create_session", new=AsyncMock(return_value=None))
+    mocker.patch.object(workers_mod, "SESSION_REQUEUE_MIN_DELAY_SECONDS", 0.01)
 
     scheduled = await session_node._process_message(message, worker_id=0)
 

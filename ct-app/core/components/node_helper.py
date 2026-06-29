@@ -8,13 +8,13 @@ from prometheus_client import Counter
 from ..api.hoprd_api import HoprdAPI
 from ..api.response_objects import Session, SessionFailure
 from ..constants.labels import MessageSendFailureReason
-from ..types.message_format import MessageFormat
 from ..messages.message_metrics import (
     MESSAGE_E2E_LATENCY,
     MESSAGES_SENT_FAILED,
     MESSAGES_SENT_SUCCESS,
 )
 from ..types.balance import Balance
+from ..types.message_format import MessageFormat
 
 CHANNELS_OPS = Counter("ct_channel_operation", "Channel operation", ["op", "success"])
 SESSION_OPS = Counter("ct_session_operation", "Session operation", ["relayer", "op", "success"])
@@ -49,7 +49,8 @@ class NodeHelper:
         logs_params = {"to": address}
         logger.debug(f"Closing {type} channel", logs_params)
 
-        ok = await api.close_channel(address)
+        direction = "incoming" if "incoming" in type.lower() else "outgoing"
+        ok = await api.close_channel(address, direction)
         cls._log_channel_operation(
             f"Closed {type} channel" if ok else f"Failed to close {type}",
             ok,

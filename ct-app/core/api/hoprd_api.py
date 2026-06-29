@@ -147,13 +147,14 @@ class HoprdAPI(ApiLib):
             )
         )
 
-    async def close_channel(self, peer_address: str) -> bool:
+    async def close_channel(self, peer_address: str, direction: str = "outgoing") -> bool:
         """
         Closes a given channel.
         :param: peer_address: str
+        :param: direction: str = "outgoing"
         :return: bool
         """
-        data = req.CloseChannelBody(direction="outgoing")
+        data = req.CloseChannelBody(direction=direction)
         return bool(
             await self.try_req(
                 Method.DELETE,

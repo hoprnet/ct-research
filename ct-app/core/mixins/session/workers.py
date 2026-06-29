@@ -6,10 +6,9 @@ import time
 from enum import Enum
 
 from ...api.response_objects import Session
-from ...types.asyncloop import AsyncLoop
 from ...components.decorators import connectguard, keepalive, master
-from ...types.message_format import MessageFormat
-from ...types.message_queue import MessageQueue
+from ...components.node_helper import NodeHelper
+from ...constants.labels import SessionLifecycleEvent, SessionOpenResult
 from ...messages.message_metrics import (
     ACTIVE_WORKERS,
     BATCH_SCHEDULE_FAILURES,
@@ -21,8 +20,9 @@ from ...messages.message_metrics import (
     WORKER_LOOP_EVENTS,
     WORKER_MESSAGES,
 )
-from ...components.node_helper import NodeHelper
-from ...constants.labels import SessionLifecycleEvent, SessionOpenResult
+from ...types.asyncloop import AsyncLoop
+from ...types.message_format import MessageFormat
+from ...types.message_queue import MessageQueue
 from .common import (
     DEFAULT_IN_FLIGHT_WAIT_SECONDS,
     DEFAULT_LISTEN_HOST,
@@ -32,6 +32,8 @@ from .common import (
 logger = logging.getLogger(__name__)
 SESSION_RETRY_LOG_INTERVAL_SECONDS = 5.0
 SESSION_REQUEUE_MAX_DELAY_SECONDS = 30.0
+SESSION_REQUEUE_MIN_DELAY_SECONDS = 2.0
+_SESSION_RETRY_LOG_STATE_MAX_SIZE = 500
 
 
 class MessageRequeueReason(str, Enum):
@@ -60,6 +62,16 @@ class SessionWorkerMixin(SessionCommonMixin):
         key = (event, relayer)
         previous = self._session_retry_log_state.get(key)
         if previous is None:
+            if len(self._session_retry_log_state) >= _SESSION_RETRY_LOG_STATE_MAX_SIZE:
+                stale = [
+                    k
+                    for k, (t, _) in self._session_retry_log_state.items()
+                    if now - t >= SESSION_RETRY_LOG_INTERVAL_SECONDS
+                ]
+                for k in stale:
+                    del self._session_retry_log_state[k]
+                if len(self._session_retry_log_state) >= _SESSION_RETRY_LOG_STATE_MAX_SIZE:
+                    self._session_retry_log_state.clear()
             self._session_retry_log_state[key] = (now, 0)
             logger.debug(event, payload)
             return
@@ -195,6 +207,12 @@ class SessionWorkerMixin(SessionCommonMixin):
             )
             if not session:
                 self.session_rate_limiter.record_failure(relayer)
+                # Immediately capture the wait time so the first requeue after a failure
+                # gets a proper delay — without this, _session_retry_wait_seconds is empty
+                # and messages cycle through at full speed until can_attempt() fires again.
+                _, next_wait = self.session_rate_limiter.can_attempt(relayer)
+                if next_wait is not None:
+                    self._session_retry_wait_seconds[relayer] = next_wait
                 logger.debug("Failed to open session")
                 SESSION_OPEN_EVENTS.labels(result=SessionOpenResult.FAILED.value).inc()
                 self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.OPEN_FAILED)
@@ -299,10 +317,17 @@ class SessionWorkerMixin(SessionCommonMixin):
         if not destination:
             return self._drop_message(message, MessageRequeueReason.NO_DESTINATION)
 
-        session = await self._get_or_create_session(message.relayer, destination)
+        session: Session | None = await self._get_or_create_session(message.relayer, destination)
         if not session:
-            wait_time = self._session_retry_wait_seconds.get(message.relayer, 0.0)
-            retry_delay = min(max(wait_time, 0.0), SESSION_REQUEUE_MAX_DELAY_SECONDS)
+            wait_time = self._session_retry_wait_seconds.get(message.relayer)
+            if wait_time is None:
+                retry_delay = SESSION_REQUEUE_MIN_DELAY_SECONDS
+            else:
+                retry_delay = min(
+                    max(wait_time, SESSION_REQUEUE_MIN_DELAY_SECONDS),
+                    SESSION_REQUEUE_MAX_DELAY_SECONDS,
+                )
+
             return await self._requeue_message(
                 message,
                 MessageRequeueReason.SESSION_UNAVAILABLE,

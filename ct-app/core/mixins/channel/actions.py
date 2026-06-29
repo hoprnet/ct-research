@@ -193,7 +193,7 @@ class ChannelActionMixin(ChannelCacheMixin):
                 "close_incoming_channel",
                 NodeHelper.close_channel,
                 self.api,
-                channel.destination,
+                channel.source,
                 "incoming_closed",
             )
 

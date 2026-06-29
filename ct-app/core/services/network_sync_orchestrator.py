@@ -2,9 +2,8 @@ import asyncio
 import logging
 from collections.abc import Callable
 
-from ..blokli.blokli_provider import ProviderError
-from ..services.network_state_service import NetworkStateService
 from ..services.blokli_repository import NetworkRepository
+from ..services.network_state_service import NetworkStateService
 from ..types.peer import Peer
 
 logger = logging.getLogger(__name__)
@@ -34,7 +33,9 @@ class NetworkSyncOrchestrator:
                     )
                     if on_update is not None:
                         on_update()
-            except ProviderError as error:
+            except asyncio.CancelledError:
+                raise
+            except Exception as error:
                 logger.warning("Account subscription failed; retrying", {"error": str(error)})
                 await asyncio.sleep(5)
 

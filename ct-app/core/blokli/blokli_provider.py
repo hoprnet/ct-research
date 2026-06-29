@@ -262,12 +262,7 @@ class BlokliProvider(Generic[TBlokliResponse]):
         """
 
         try:
-            response, headers = await asyncio.wait_for(
-                self._execute(self._sku_query, kwargs), timeout=30
-            )
-        except asyncio.TimeoutError:
-            logger.error("Timeout error while fetching data from blokli")
-            return {}
+            response, headers = await self._execute(self._sku_query, kwargs)
         except ProviderError:
             logger.exception("ProviderError error")
             return {}
@@ -424,7 +419,7 @@ class BlokliProvider(Generic[TBlokliResponse]):
                     )
             except asyncio.CancelledError:
                 raise
-            except (asyncio.TimeoutError, aiohttp.ClientError, ProviderError) as error:
+            except Exception as error:
                 BLOKLI_CALLS.labels(
                     "subscription",
                     self._operation_name,

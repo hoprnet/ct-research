@@ -200,7 +200,8 @@ async def test_close_incoming_channels_schedules_all_incoming_open(node: Node, m
     for callback, _args, _kwargs in scheduled:
         await callback()
     assert close_mock.await_count == 2
-    close_mock.assert_any_await(node.api, node.address.native, "incoming_closed")
+    close_mock.assert_any_await(node.api, "peer_a", "incoming_closed")
+    close_mock.assert_any_await(node.api, "peer_b", "incoming_closed")
     assert lifecycle_request.call_count == 2
 
 

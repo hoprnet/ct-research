@@ -142,8 +142,7 @@ class SessionMaintenanceMixin(SessionCommonMixin):
                 )
                 continue
 
-            if should_remove:
-                sessions_to_close.append((relayer, session))
+            sessions_to_close.append((relayer, session))
 
         if sessions_to_evict:
             logger.info(

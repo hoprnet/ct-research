@@ -119,20 +119,46 @@ async def test_start_skips_ticket_parameters_subscription_when_both_static_value
 
 
 @pytest.mark.asyncio
-async def test_start_keeps_ticket_parameters_subscription_when_only_one_static_value_is_set(
-    node: Node, mocker
-):
+async def test_start_raises_when_only_one_static_ticket_value_is_set(node: Node, mocker):
     mocker.patch.object(node, "retrieve_address", new=AsyncMock())
     mocker.patch.object(
         node,
         "load_static_ticket_parameters_from_node_configuration",
         new=AsyncMock(return_value=(True, False)),
     )
+
+    with pytest.raises(ValueError, match="both be hardcoded"):
+        await node.start()
+
+
+@pytest.mark.asyncio
+async def test_start_raises_when_only_winning_probability_is_static(node: Node, mocker):
+    mocker.patch.object(node, "retrieve_address", new=AsyncMock())
+    mocker.patch.object(
+        node,
+        "load_static_ticket_parameters_from_node_configuration",
+        new=AsyncMock(return_value=(False, True)),
+    )
+
+    with pytest.raises(ValueError, match="both be hardcoded"):
+        await node.start()
+
+
+@pytest.mark.asyncio
+async def test_start_subscribes_to_ticket_parameters_when_neither_static_value_is_set(
+    node: Node, mocker
+):
+    mocker.patch.object(node, "retrieve_address", new=AsyncMock())
+    mocker.patch.object(
+        node,
+        "load_static_ticket_parameters_from_node_configuration",
+        new=AsyncMock(return_value=(False, False)),
+    )
     mocker.patch.object(node.channel_lifecycle_coordinator, "request")
     add_mock = mocker.patch("core.node.AsyncLoop.add")
     gather_mock = mocker.patch("core.node.AsyncLoop.gather", new=AsyncMock())
     update_mock = mocker.patch("core.node.AsyncLoop.update")
-    keepalive_mock = mocker.patch("core.node.get_keepalive_methods", return_value=[])
+    mocker.patch("core.node.get_keepalive_methods", return_value=[])
 
     await node.start()
 
@@ -140,7 +166,6 @@ async def test_start_keeps_ticket_parameters_subscription_when_only_one_static_v
     add_mock.assert_any_call(node.ticket_parameters)
     assert add_mock.call_count == 2
     update_mock.assert_called_once_with([])
-    keepalive_mock.assert_called_once_with(node)
     gather_mock.assert_awaited_once()
 
 

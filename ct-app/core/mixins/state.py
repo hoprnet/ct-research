@@ -163,25 +163,34 @@ class StateMixin(NodeRuntimeState):
         Subscribes to Blokli ticket parameter updates.
         They are used in the economic model to calculate the number of messages to send to a peer.
         """
-        async for params in self.blokli_repository.stream_ticket_parameters():
-            if self.ticket_price is None:
-                ticket_price = TicketPrice({"price": params.ticket_price.as_str})
-                self.ticket_price = ticket_price
-                TICKET_STATS.labels(TicketStatType.PRICE.value).set(float(ticket_price.value.value))
-
-            if self.min_ticket_winning_probability is None:
-                self.min_ticket_winning_probability = params.min_ticket_winning_probability
-                TICKET_STATS.labels(TicketStatType.MIN_TICKET_WINNING_PROBABILITY.value).set(
-                    params.min_ticket_winning_probability
+        while True:
+            try:
+                async for params in self.blokli_repository.stream_ticket_parameters():
+                    await self._apply_ticket_parameters(params)
+            except asyncio.CancelledError:
+                raise
+            except Exception as error:
+                logger.warning(
+                    "Ticket parameters subscription failed; retrying",
+                    {"error": str(error)},
                 )
+                await asyncio.sleep(5)
 
-            logger.info(
-                "Updated ticket parameters from Blokli subscription",
-                {
-                    "ticket_price": self.ticket_price.value.as_str if self.ticket_price else None,
-                    "min_ticket_winning_probability": self.min_ticket_winning_probability,
-                },
-            )
-            self.network_update_coordinator.request(
-                NetworkUpdateSource.TICKET_PARAMETERS_SUBSCRIPTION
-            )
+    async def _apply_ticket_parameters(self, params) -> None:
+        ticket_price = TicketPrice({"price": params.ticket_price.as_str})
+        self.ticket_price = ticket_price
+        TICKET_STATS.labels(TicketStatType.PRICE.value).set(float(ticket_price.value.value))
+
+        self.min_ticket_winning_probability = params.min_ticket_winning_probability
+        TICKET_STATS.labels(TicketStatType.MIN_TICKET_WINNING_PROBABILITY.value).set(
+            params.min_ticket_winning_probability
+        )
+
+        logger.info(
+            "Updated ticket parameters from Blokli subscription",
+            {
+                "ticket_price": self.ticket_price.value.as_str if self.ticket_price else None,
+                "min_ticket_winning_probability": self.min_ticket_winning_probability,
+            },
+        )
+        self.network_update_coordinator.request(NetworkUpdateSource.TICKET_PARAMETERS_SUBSCRIPTION)
