@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from core.api.response_objects import Session, SessionFailure
+from core.components.node_helper import NodeHelper
 from core.types.balance import Balance
 from core.types.message_format import MessageFormat
-from core.components.node_helper import NodeHelper
 
 
 @pytest.mark.asyncio
@@ -29,7 +29,7 @@ async def test_close_channel_returns_api_status():
 
     await NodeHelper.close_channel(api, address, "old_closed")
 
-    api.close_channel.assert_awaited_once_with(address)
+    api.close_channel.assert_awaited_once_with(address, "outgoing")
 
 
 @pytest.mark.asyncio
