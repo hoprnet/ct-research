@@ -1,8 +1,0 @@
-repos:
-  - repo: local
-    hooks:
-      - id: generate-metrics-doc
-        name: Check METRICS.md
-        entry: bash -lc 'cd ct-app && uv run python scripts/generate_metrics_doc.py --check'
-        language: system
-        pass_filenames: false
