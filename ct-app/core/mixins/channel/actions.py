@@ -27,6 +27,32 @@ class ChannelActionMixin(ChannelCacheMixin):
 
         AsyncLoop.add(_execute, publish_to_task_set=False)
 
+    def _funding_cooldown_active(self, address: str, now: datetime) -> bool:
+        cooldown_started_at = self.channel_funding_cooldowns.get(address)
+        if cooldown_started_at is None:
+            return False
+
+        if (now - cooldown_started_at).total_seconds() < self.params.channel.funding_cooldown.value:
+            return True
+
+        self.channel_funding_cooldowns.pop(address, None)
+        return False
+
+    def _schedule_channel_funding(self, address: str, now: datetime) -> None:
+        self.channel_funding_cooldowns[address] = now
+
+        async def _execute() -> None:
+            funded = await NodeHelper.fund_channel(
+                self.api,
+                address,
+                self.params.channel.funding_amount,
+            )
+            if not funded:
+                self.channel_funding_cooldowns.pop(address, None)
+            self.channel_lifecycle_coordinator.request("fund_channel")
+
+        AsyncLoop.add(_execute, publish_to_task_set=False)
+
     async def get_total_channel_funds(self) -> Optional[Balance]:
         if self.address is None or self.channels is None:
             return None
@@ -93,15 +119,13 @@ class ChannelActionMixin(ChannelCacheMixin):
             logger.info("Scheduling channel funding operations", {"count": len(low_balances)})
 
         peer_addresses = set(self.peers.keys())
+        now = datetime.now()
         for channel in low_balances:
-            if channel.destination in peer_addresses:
-                self._schedule_channel_operation(
-                    "fund_channel",
-                    NodeHelper.fund_channel,
-                    self.api,
-                    channel.destination,
-                    self.params.channel.funding_amount,
-                )
+            if channel.destination not in peer_addresses:
+                continue
+            if self._funding_cooldown_active(channel.destination, now):
+                continue
+            self._schedule_channel_funding(channel.destination, now)
 
     async def close_old_channels(self):
         if self.channels is None:

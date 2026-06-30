@@ -38,6 +38,7 @@ class NodeRuntimeState:
 
     peers: dict[str, Peer]
     peer_history: dict[str, datetime]
+    channel_funding_cooldowns: dict[str, datetime]
     network_state: NetworkState
 
     sessions: dict[str, Session]

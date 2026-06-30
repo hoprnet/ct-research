@@ -88,6 +88,7 @@ class Node(
 
         self.peers = dict[str, Peer]()
         self.peer_history = dict[str, datetime]()
+        self.channel_funding_cooldowns = dict[str, datetime]()
         self.network_state = NetworkState()
         self._session_destinations = list[str]()
         self.sessions = dict[str, Session]()

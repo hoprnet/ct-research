@@ -8,4 +8,5 @@ from .base_classes import Duration, ExplicitParams
 class ChannelParams(ExplicitParams):
     min_balance: Balance
     funding_amount: Balance
+    funding_cooldown: Duration
     max_age: Duration

@@ -49,6 +49,13 @@ through:
 
 There is no free-form formula language in the config anymore.
 
+Relevant channel controls under `channel`:
+
+- `min_balance`
+- `funding_amount`
+- `funding_cooldown`
+- `max_age`
+
 
 ### Metrics
 

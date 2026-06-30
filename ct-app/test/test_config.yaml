@@ -67,6 +67,7 @@ peer:
 channel:
   min_balance: "0.05 wxHOPR"
   funding_amount: "0.2 wxHOPR"
+  funding_cooldown: 180s
   max_age: 1m
   
 # =============================================================================

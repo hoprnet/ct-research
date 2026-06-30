@@ -113,6 +113,59 @@ async def test_fund_channels_schedules_only_low_balance_known_peer_channels(node
         node.params.channel.funding_amount,
     )
     lifecycle_request.assert_called_once_with("fund_channel")
+    assert "peer_low" in node.channel_funding_cooldowns
+
+
+@pytest.mark.asyncio
+async def test_fund_channels_skips_peers_in_funding_cooldown(node: Node, mocker):
+    node.peers = {"peer_low": Peer("peer_low")}
+    node.channels = Channels({})
+    node.channels.outgoing = [
+        build_channel(node.address.native, "peer_low", balance="0.01 wxHOPR"),
+    ]
+    node.channels.incoming = []
+    node.invalidate_channel_cache()
+    node.channel_funding_cooldowns["peer_low"] = datetime.now()
+
+    fund_mock = mocker.patch.object(NodeHelper, "fund_channel", new=AsyncMock())
+    add_mock = mocker.patch("core.mixins.channel.actions.AsyncLoop.add")
+
+    await node.fund_channels()
+
+    add_mock.assert_not_called()
+    fund_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_fund_channels_clears_cooldown_when_funding_fails(node: Node, mocker):
+    node.peers = {"peer_low": Peer("peer_low")}
+    node.channels = Channels({})
+    node.channels.outgoing = [
+        build_channel(node.address.native, "peer_low", balance="0.01 wxHOPR"),
+    ]
+    node.channels.incoming = []
+    node.invalidate_channel_cache()
+
+    scheduled: list[tuple] = []
+    fund_mock = mocker.patch.object(NodeHelper, "fund_channel", new=AsyncMock(return_value=False))
+    lifecycle_request = mocker.patch.object(node.channel_lifecycle_coordinator, "request")
+    mocker.patch(
+        "core.mixins.channel.actions.AsyncLoop.add",
+        side_effect=lambda callback, *args, **kwargs: scheduled.append((callback, args, kwargs)),
+    )
+
+    await node.fund_channels()
+
+    assert "peer_low" in node.channel_funding_cooldowns
+    callback, _args, _kwargs = scheduled[0]
+    await callback()
+    fund_mock.assert_awaited_once_with(
+        node.api,
+        "peer_low",
+        node.params.channel.funding_amount,
+    )
+    assert "peer_low" not in node.channel_funding_cooldowns
+    lifecycle_request.assert_called_once_with("fund_channel")
 
 
 @pytest.mark.asyncio

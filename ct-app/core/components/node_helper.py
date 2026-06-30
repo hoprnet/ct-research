@@ -66,6 +66,7 @@ class NodeHelper:
         ok = await api.fund_channel(address, amount)
         action = "Fund channel" if ok else "Failed to fund channel"
         cls._log_channel_operation(action, ok, logs_params, "fund")
+        return ok
 
     @classmethod
     async def open_session(
