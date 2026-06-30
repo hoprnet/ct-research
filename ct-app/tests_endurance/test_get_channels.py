@@ -3,11 +3,9 @@ from typing import Tuple
 
 from core.api import HoprdAPI
 from core.components import EnvironmentUtils
-from core.components.logs import configure_logging
 
 from . import EnduranceTest, Metric
 
-configure_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -23,9 +21,6 @@ class GetChannels(EnduranceTest):
         success = await self.api.channels() is not None
 
         self.results.append(success)
-
-    async def on_end(self):
-        pass
 
     def success_flag(self) -> Tuple[bool, str]:
         return sum(self.results) / len(self.results) >= 0.9, ""

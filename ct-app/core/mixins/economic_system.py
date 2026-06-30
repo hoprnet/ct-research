@@ -1,99 +1,97 @@
 import logging
 from decimal import Decimal
+from typing import Any
 
 from prometheus_client import Gauge
 
-from ..components.balance import Balance
-from ..components.config_parser.economic_model import LegacyParams, SigmoidParams
-from ..components.decorators import keepalive
-from ..components.logs import configure_logging
-from ..components.utils import Utils
-from .protocols import (
-    HasChannels,
-    HasNFT,
-    HasParams,
-    HasPeers,
-    HasRPCs,
-    HasSession,
-    HasSubgraphs,
-)
+from ..types.balance import Balance
+from ..config_parser.economic_model import LegacyParams, SigmoidParams
+from .runtime_state import NodeRuntimeState
 
 ELIGIBLE_PEERS = Gauge("ct_eligible_peers", "# of eligible peers for rewards")
 MESSAGE_COUNT = Gauge(
     "ct_message_count", "messages one should receive / year", ["address", "model"]
 )
 
-configure_logging()
 logger = logging.getLogger(__name__)
 
 
-class EconomicSystemMixin(
-    HasChannels, HasNFT, HasParams, HasPeers, HasRPCs, HasSession, HasSubgraphs
-):
-    @keepalive
-    async def apply_economic_model(self):
-        """
-        Applies the economic model to the eligible peers (after multiple filtering layers).
-        """
+class EconomicSystemMixin(NodeRuntimeState):
+    @staticmethod
+    def _configured_destinations(params: Any) -> list[str]:
+        sessions = getattr(params, "sessions", None)
+        blue_destinations = list(getattr(sessions, "blue_destinations", []) or [])
+        green_destinations = list(getattr(sessions, "green_destinations", []) or [])
+        return blue_destinations + green_destinations
 
-        if not all([len(self.topology_data), len(self.registered_nodes_data), len(self.peers)]):
-            logger.warning("Not enough data to apply economic model")
+    def _economic_inputs_ready(self) -> bool:
+        node_to_safe = getattr(self.network_state, "node_to_safe", {})
+        safe_balances = getattr(self.network_state, "safe_balances", {})
+        mapped_safes = {
+            node_to_safe.get(peer.address.native)
+            for peer in self.peers.values()
+            if node_to_safe.get(peer.address.native) is not None
+        }
+
+        if not mapped_safes:
+            logger.warning("Skipping economic model: node-safe links are not available yet")
+            return False
+
+        if not any(safe in safe_balances for safe in mapped_safes):
+            logger.warning("Skipping economic model: safe balances are not available yet")
+            return False
+
+        return True
+
+    async def _apply_economic_model_once(self):
+        if not self.peers:
+            logger.warning("Skipping economic model: reachable peers are not available yet")
             return
 
-        Utils.associateEntitiesToNodes(self.allocations_data, self.registered_nodes_data)
-        Utils.associateEntitiesToNodes(self.eoa_balances_data, self.registered_nodes_data)
+        if self.ticket_price is None:
+            logger.warning("Skipping economic model: ticket price is not available yet")
+            return
 
-        await Utils.mergeDataSources(
-            self.topology_data,
-            self.peers,
-            self.registered_nodes_data,
-            self.allocations_data,
-            self.eoa_balances_data,
-        )
+        if not self._economic_inputs_ready():
+            return
 
-        Utils.allowManyNodePerSafe(self.peers)
-
-        for p in self.peers:
-            if not p.is_eligible(
-                self.params.economic_model.min_safe_allowance,
+        eligible_peers = []
+        configured_destinations = self._configured_destinations(self.params)
+        for p in self.peers.values():
+            is_eligible = p.is_eligible(
                 self.params.economic_model.legacy.coefficients.lowerbound,
-                self.nft_holders_data,
-                self.params.economic_model.nft_threshold,
-                self.params.sessions.blue_destinations + self.params.sessions.green_destinations,
+                configured_destinations,
                 self.params.peer.excluded_peers,
-            ):
+            )
+            if not is_eligible:
                 p.yearly_message_count = None
+                continue
+            eligible_peers.append(p)
 
         economic_security = (
             sum(
-                [p.split_stake for p in self.peers if p.yearly_message_count is not None],
+                [p.effective_stake for p in eligible_peers],
                 Balance.zero("wxHOPR"),
             )
             / self.params.economic_model.sigmoid.total_token_supply
         )
         network_capacity = Decimal(
-            len([p for p in self.peers if p.yearly_message_count is not None])
-            / self.params.economic_model.sigmoid.network_capacity
+            len(eligible_peers) / self.params.economic_model.sigmoid.network_capacity
         )
 
-        message_count = {model: 0 for model in self.params.economic_model.models}
-        model_input = {model: None for model in self.params.economic_model.models}
+        message_count: dict[type, float] = {model: 0 for model in self.params.economic_model.models}
+        model_input: dict[type, Any] = {model: None for model in self.params.economic_model.models}
 
         model_input[SigmoidParams] = [economic_security, network_capacity]
 
-        for peer in self.peers:
-            if peer.yearly_message_count is None:
-                continue
-
-            model_input[LegacyParams] = self.peers_rewards_data.get(
-                peer.address.native, Balance.zero("wxHOPR")
-            )
+        for peer in eligible_peers:
+            model_input[LegacyParams] = peer.redeemed_amount or Balance.zero("wxHOPR")
 
             for model, name in self.params.economic_model.models.items():
                 message_count[model] = getattr(
                     self.params.economic_model, name
                 ).yearly_message_count(
-                    peer.split_stake,
+                    peer.effective_stake,
                     self.ticket_price,
                     model_input[model],
                 ) / (
@@ -104,12 +102,15 @@ class EconomicSystemMixin(
 
             peer.yearly_message_count = sum(message_count.values())
 
-        eligible_count = sum([p.yearly_message_count is not None for p in self.peers])
+        eligible_count = sum([p.yearly_message_count is not None for p in self.peers.values()])
         expected_rate = sum(
-            [1 / p.message_delay for p in self.peers if p.message_delay is not None]
+            [1 / p.message_delay for p in self.peers.values() if p.message_delay is not None]
         )
         logger.info(
             "Generated the eligible nodes set",
             {"count": eligible_count, "expected_rate": expected_rate},
         )
         ELIGIBLE_PEERS.set(eligible_count)
+
+    def trigger_economic_model_refresh(self) -> None:
+        self.economic_model_refresh_coordinator.request()

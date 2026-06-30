@@ -1,0 +1,8 @@
+query ($filter: RedeemedStatsFilter!) {
+    ticketRedemptionStats(filter: $filter) {
+        ... on RedeemedStats {
+            redeemedAmount
+            redemptionCount
+        }
+    }
+}

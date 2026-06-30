@@ -1,0 +1,387 @@
+from __future__ import annotations
+
+import asyncio
+import logging
+import time
+from enum import Enum
+
+from ...api.response_objects import Session
+from ...components.decorators import connectguard, keepalive, master
+from ...components.node_helper import NodeHelper
+from ...constants.labels import SessionLifecycleEvent, SessionOpenResult
+from ...messages.message_metrics import (
+    ACTIVE_WORKERS,
+    BATCH_SCHEDULE_FAILURES,
+    MESSAGE_DROPS,
+    MESSAGE_REQUEUES,
+    MESSAGES_PROCESSED,
+    MESSAGES_SCHEDULED,
+    SESSION_OPEN_EVENTS,
+    WORKER_LOOP_EVENTS,
+    WORKER_MESSAGES,
+)
+from ...types.asyncloop import AsyncLoop
+from ...types.message_format import MessageFormat
+from ...types.message_queue import MessageQueue
+from .common import (
+    DEFAULT_IN_FLIGHT_WAIT_SECONDS,
+    DEFAULT_LISTEN_HOST,
+    SessionCommonMixin,
+)
+
+logger = logging.getLogger(__name__)
+SESSION_RETRY_LOG_INTERVAL_SECONDS = 5.0
+SESSION_REQUEUE_MAX_DELAY_SECONDS = 30.0
+SESSION_REQUEUE_MIN_DELAY_SECONDS = 2.0
+_SESSION_RETRY_LOG_STATE_MAX_SIZE = 500
+
+
+class MessageRequeueReason(str, Enum):
+    NO_OPEN_CHANNEL = "no_open_channel"
+    NO_DESTINATION = "no_destination"
+    SESSION_UNAVAILABLE = "session_unavailable"
+    SESSION_DISAPPEARED = "session_disappeared"
+
+
+class SessionWorkerMixin(SessionCommonMixin):
+    def _track_pending_requeue_task(self, task: asyncio.Task[None]) -> None:
+        self._pending_requeue_tasks.add(task)
+
+        def _discard(completed_task: asyncio.Task[None]) -> None:
+            self._pending_requeue_tasks.discard(completed_task)
+
+        task.add_done_callback(_discard)
+
+    def _log_session_retry_event(
+        self,
+        event: str,
+        relayer: str,
+        payload: dict[str, object],
+    ) -> None:
+        now = time.monotonic()
+        key = (event, relayer)
+        previous = self._session_retry_log_state.get(key)
+        if previous is None:
+            if len(self._session_retry_log_state) >= _SESSION_RETRY_LOG_STATE_MAX_SIZE:
+                stale = [
+                    k
+                    for k, (t, _) in self._session_retry_log_state.items()
+                    if now - t >= SESSION_RETRY_LOG_INTERVAL_SECONDS
+                ]
+                for k in stale:
+                    del self._session_retry_log_state[k]
+                if len(self._session_retry_log_state) >= _SESSION_RETRY_LOG_STATE_MAX_SIZE:
+                    self._session_retry_log_state.clear()
+            self._session_retry_log_state[key] = (now, 0)
+            logger.debug(event, payload)
+            return
+
+        last_logged_at, suppressed = previous
+        if now - last_logged_at >= SESSION_RETRY_LOG_INTERVAL_SECONDS:
+            updated_payload = dict(payload)
+            if suppressed > 0:
+                updated_payload["suppressed"] = suppressed
+            self._session_retry_log_state[key] = (now, 0)
+            logger.debug(event, updated_payload)
+            return
+
+        self._session_retry_log_state[key] = (last_logged_at, suppressed + 1)
+
+    def _track_in_flight_message_task(self, session: "Session", task: asyncio.Task) -> None:
+        self._in_flight_message_tasks.add(task)
+        port_tasks = self._in_flight_tasks_by_session_port.setdefault(session.port, set())
+        port_tasks.add(task)
+
+        def _discard(completed_task: asyncio.Task) -> None:
+            self._in_flight_message_tasks.discard(completed_task)
+            tracked_tasks = self._in_flight_tasks_by_session_port.get(session.port)
+            if tracked_tasks is None:
+                return
+            tracked_tasks.discard(completed_task)
+            if not tracked_tasks:
+                self._in_flight_tasks_by_session_port.pop(session.port, None)
+
+        task.add_done_callback(_discard)
+
+    def _session_has_in_flight_tasks(self, session: "Session") -> bool:
+        return bool(self._in_flight_tasks_by_session_port.get(session.port))
+
+    async def _wait_for_session_tasks(
+        self,
+        session: "Session",
+        timeout: float = DEFAULT_IN_FLIGHT_WAIT_SECONDS,
+    ) -> None:
+        tasks = list(self._in_flight_tasks_by_session_port.get(session.port, set()))
+        if not tasks:
+            return
+
+        try:
+            await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=timeout)
+        except asyncio.TimeoutError:
+            logger.warning(
+                "Timed out waiting for in-flight session tasks",
+                {"port": session.port, "task_count": len(tasks), "timeout_seconds": timeout},
+            )
+
+    async def wait_for_in_flight_messages(
+        self,
+        timeout: float = DEFAULT_IN_FLIGHT_WAIT_SECONDS,
+    ) -> None:
+        tasks = list(self._in_flight_message_tasks)
+        if not tasks:
+            return
+
+        try:
+            await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=timeout)
+        except asyncio.TimeoutError:
+            logger.warning(
+                "Timed out waiting for in-flight message tasks",
+                {"task_count": len(tasks), "timeout_seconds": timeout},
+            )
+
+    async def _retire_session(
+        self,
+        relayer: str,
+        session: "Session",
+        reason: str,
+        wait_for_in_flight: bool = True,
+    ) -> bool:
+        if wait_for_in_flight:
+            await self._wait_for_session_tasks(session)
+
+        self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.RETIRE_REQUESTED)
+        close_ok = await NodeHelper.close_session(self.api, session, relayer)
+        if not close_ok:
+            self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.RETIRE_FAILED)
+            logger.warning(
+                "Failed to close session while retiring local cache entry",
+                {"relayer": relayer, "port": session.port, "reason": reason},
+            )
+            return False
+
+        current_session = self.sessions.get(relayer)
+        if current_session and current_session.port == session.port:
+            self.sessions.pop(relayer, None)
+
+        session.close_socket()
+        self.session_close_grace_period.pop(relayer, None)
+        self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.RETIRED)
+        return True
+
+    async def _get_or_create_session(
+        self,
+        relayer: str,
+        destination: str,
+    ) -> "Session" | None:
+        session = self.sessions.get(relayer)
+        if session:
+            SESSION_OPEN_EVENTS.labels(result=SessionOpenResult.REUSED_EXISTING.value).inc()
+            return session
+
+        pending_session = self._pending_session_creations.get(relayer)
+        if pending_session is not None:
+            return await pending_session
+
+        async def open_session() -> "Session" | None:
+            self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.OPEN_REQUESTED)
+            can_attempt, wait_time = self.session_rate_limiter.can_attempt(relayer)
+            if not can_attempt and wait_time:
+                self._session_retry_wait_seconds[relayer] = wait_time
+                self._log_session_retry_event(
+                    "Session opening rate-limited",
+                    relayer,
+                    {"relayer": relayer, "wait_time_seconds": round(wait_time, 2)},
+                )
+                SESSION_OPEN_EVENTS.labels(result=SessionOpenResult.RATE_LIMITED.value).inc()
+                self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.OPEN_RATE_LIMITED)
+                return None
+            self._session_retry_wait_seconds.pop(relayer, None)
+
+            self.session_rate_limiter.record_attempt(relayer)
+
+            session = await NodeHelper.open_session(
+                self.api,
+                destination,
+                relayer,
+                DEFAULT_LISTEN_HOST,
+            )
+            if not session:
+                self.session_rate_limiter.record_failure(relayer)
+                # Immediately capture the wait time so the first requeue after a failure
+                # gets a proper delay — without this, _session_retry_wait_seconds is empty
+                # and messages cycle through at full speed until can_attempt() fires again.
+                _, next_wait = self.session_rate_limiter.can_attempt(relayer)
+                if next_wait is not None:
+                    self._session_retry_wait_seconds[relayer] = next_wait
+                logger.debug("Failed to open session")
+                SESSION_OPEN_EVENTS.labels(result=SessionOpenResult.FAILED.value).inc()
+                self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.OPEN_FAILED)
+                return None
+
+            self.session_rate_limiter.record_success(relayer)
+            self._session_retry_wait_seconds.pop(relayer, None)
+            SESSION_OPEN_EVENTS.labels(result=SessionOpenResult.OPENED.value).inc()
+            self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.OPENED)
+
+            session.create_socket()
+            logger.debug("Created socket", {"ip": session.ip, "port": session.port})
+
+            if relayer not in self.sessions:
+                self.sessions[relayer] = session
+                return session
+
+            session.close_socket()
+            logger.debug("Session created by another coroutine, using existing")
+            self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.OPEN_RACE_REUSED)
+            return self.sessions[relayer]
+
+        task = asyncio.create_task(open_session())
+        self._pending_session_creations[relayer] = task
+        try:
+            return await task
+        finally:
+            if self._pending_session_creations.get(relayer) is task:
+                self._pending_session_creations.pop(relayer, None)
+
+    def _schedule_message_batch(
+        self,
+        message: MessageFormat,
+        relayer: str,
+    ) -> bool:
+        message.sender = self.address.native
+        session_ref = self.sessions.get(relayer)
+        if session_ref:
+            message.packet_size = session_ref.payload
+            MESSAGES_SCHEDULED.inc()
+
+            task = AsyncLoop.add(
+                NodeHelper.send_batch_messages,
+                session_ref,
+                message,
+                publish_to_task_set=False,
+            )
+            if task is None:
+                logger.debug("Failed to schedule message batch", {"relayer": relayer})
+                BATCH_SCHEDULE_FAILURES.inc()
+                return False
+            self._track_in_flight_message_task(session_ref, task)
+            return True
+
+        logger.debug("Session disappeared before sending")
+        return False
+
+    async def _requeue_message(
+        self,
+        message: MessageFormat,
+        reason: MessageRequeueReason,
+        delay_seconds: float = 0.0,
+    ) -> bool:
+        MESSAGE_REQUEUES.labels(reason=reason.value).inc()
+        log_payload: dict[str, object] = {"relayer": message.relayer, "reason": reason.value}
+        if delay_seconds > 0:
+            log_payload["retry_in_seconds"] = round(delay_seconds, 2)
+            self._log_session_retry_event(
+                "Requeueing message for retry", message.relayer, log_payload
+            )
+
+            async def delayed_requeue() -> None:
+                await asyncio.sleep(delay_seconds)
+                await MessageQueue().put(message)
+
+            self._track_pending_requeue_task(asyncio.create_task(delayed_requeue()))
+            return False
+
+        logger.debug("Requeueing message for retry", log_payload)
+        await MessageQueue().put(message)
+        return False
+
+    def _drop_message(
+        self,
+        message: MessageFormat,
+        reason: MessageRequeueReason,
+    ) -> bool:
+        MESSAGE_DROPS.labels(reason=reason.value).inc()
+        logger.info(
+            "Dropping unsendable message",
+            {"relayer": message.relayer, "reason": reason.value},
+        )
+        return False
+
+    async def _process_message(self, message: MessageFormat, worker_id: int) -> bool:
+        if not self.channels or message.relayer not in self.address_to_open_channel:
+            return self._drop_message(message, MessageRequeueReason.NO_OPEN_CHANNEL)
+
+        destination = self._select_session_destination(
+            message, list(self.address_to_open_channel.keys())
+        )
+        if not destination:
+            return self._drop_message(message, MessageRequeueReason.NO_DESTINATION)
+
+        session: Session | None = await self._get_or_create_session(message.relayer, destination)
+        if not session:
+            wait_time = self._session_retry_wait_seconds.get(message.relayer)
+            if wait_time is None:
+                retry_delay = SESSION_REQUEUE_MIN_DELAY_SECONDS
+            else:
+                retry_delay = min(
+                    max(wait_time, SESSION_REQUEUE_MIN_DELAY_SECONDS),
+                    SESSION_REQUEUE_MAX_DELAY_SECONDS,
+                )
+
+            return await self._requeue_message(
+                message,
+                MessageRequeueReason.SESSION_UNAVAILABLE,
+                delay_seconds=retry_delay,
+            )
+
+        if not self._schedule_message_batch(message, message.relayer):
+            return self._drop_message(message, MessageRequeueReason.SESSION_DISAPPEARED)
+
+        MESSAGES_PROCESSED.inc()
+        WORKER_MESSAGES.labels(worker_id=worker_id).inc()
+
+        return True
+
+    async def _message_worker(self, worker_id: int) -> None:
+        logger.debug("Message worker started", {"worker_id": worker_id})
+
+        while self.running:
+            try:
+                message: MessageFormat = await asyncio.wait_for(MessageQueue().get(), timeout=30.0)
+                await self._process_message(message, worker_id)
+            except asyncio.CancelledError:
+                logger.debug("Message worker cancelled", {"worker_id": worker_id})
+                raise
+            except asyncio.TimeoutError:
+                WORKER_LOOP_EVENTS.labels(event="timeout").inc()
+                logger.debug("Message worker %s timed out waiting for work", worker_id)
+                continue
+            except Exception as err:
+                logger.error(
+                    "Message worker failed while processing queue item",
+                    {
+                        "worker_id": worker_id,
+                        "error": str(err),
+                    },
+                    exc_info=True,
+                )
+                continue
+
+        logger.debug("Message worker stopped", {"worker_id": worker_id})
+
+    @master(keepalive, connectguard)
+    async def observe_message_queue(self) -> None:
+        worker_count = getattr(self.params.sessions, "message_worker_count", 10)
+        ACTIVE_WORKERS.set(worker_count)
+
+        logger.info("Starting message processing workers", {"worker_count": worker_count})
+        workers = [
+            asyncio.create_task(self._message_worker(worker_id))
+            for worker_id in range(worker_count)
+        ]
+
+        try:
+            await asyncio.gather(*workers, return_exceptions=True)
+        finally:
+            ACTIVE_WORKERS.set(0)
+            logger.info("All message workers stopped", {"worker_count": worker_count})
