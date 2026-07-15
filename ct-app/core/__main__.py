@@ -26,6 +26,9 @@ def main(configfile: str):
     params.subgraph.set_attribute_from_env("api_key", "SUBGRAPH_API_KEY")
     params.rpc.set_attribute_from_env("gnosis", "RPC_GNOSIS")
     params.rpc.set_attribute_from_env("mainnet", "RPC_MAINNET")
+    # Allow excluding misbehaving nodes at deploy time (comma/space separated native
+    # addresses), merged on top of peer.excluded_peers from the config file.
+    params.peer.extend_list_from_env("excluded_peers", "CT_EXCLUDED_PEERS")
 
     # start the prometheus client
     prometheus_server_port = 8081
