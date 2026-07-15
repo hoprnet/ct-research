@@ -11,7 +11,7 @@ async def test_eoa_balance_provider():
     contract: RPCQueryProvider = wxHOPRBalance(GNOSIS_RPC_URL)
 
     balance = await contract.balance_of(
-        address="0x89c9f05E92Dfb65282Fb4569367b6d33166411C9",
+        address="0xf6A78083ca3e2a662D6dd1703c939c8aCE2e268d",
     )
     assert isinstance(balance, ExternalBalance)
     assert balance is not None
