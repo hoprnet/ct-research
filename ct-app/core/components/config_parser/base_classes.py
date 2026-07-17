@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from dataclasses import fields, is_dataclass
 from decimal import Decimal
 from typing import Optional
@@ -79,6 +80,44 @@ class ExplicitParams:
                     f"{env_var} key not found, using default value for {cls_name}.{attribute}"
                 )
             return False
+
+    def extend_list_from_env(self, attribute: str, env_var: str) -> bool:
+        """
+        Extend a list attribute with entries parsed from an environment variable.
+
+        The variable is split on commas and/or whitespace, each entry is stripped and
+        lowercased (to match the native address format used by Address.native), then the
+        entries are merged into the existing list, preserving the config-defined ones and
+        de-duplicating. Intended for populating a list such as `excluded_peers` at deploy
+        time (e.g. to exclude a misbehaving node) without editing the config file.
+        """
+        cls_name = self.__class__.__name__
+        if not hasattr(self, attribute):
+            # allow env-only population even if the key is absent from the config
+            setattr(self, attribute, [])
+
+        current = getattr(self, attribute)
+        if not isinstance(current, list):
+            raise TypeError(f"{cls_name}.{attribute} is not a list, cannot extend it from env")
+
+        raw = os.getenv(env_var)
+        if not raw or not raw.strip():
+            logger.debug(f"{env_var} key not found, leaving {cls_name}.{attribute} unchanged")
+            return False
+
+        additions = [item.strip().lower() for item in re.split(r"[\s,]+", raw) if item.strip()]
+
+        merged = list(current)
+        for item in additions:
+            if item not in merged:
+                merged.append(item)
+
+        setattr(self, attribute, merged)
+        logger.info(
+            f"{env_var} merged into {cls_name}.{attribute}",
+            {"added": len(merged) - len(current), "total": len(merged)},
+        )
+        return True
 
     @classmethod
     def verify(cls, data: dict) -> bool:

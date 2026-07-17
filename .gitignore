@@ -68,3 +68,4 @@ run_*.sh
 Thumbs.db
 
 ct-app/test/benchmarks/results/
+.pre-commit-config.yaml
