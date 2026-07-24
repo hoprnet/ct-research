@@ -28,7 +28,7 @@ jobs:
   validate-pr-title:
     name: Validate title
     if: github.event_name == 'pull_request'
-    runs-on: depot-ubuntu-24.04
+    runs-on: depot-ubuntu-24.04-2
     permissions:
       pull-requests: read
     steps:
@@ -54,7 +54,7 @@ jobs:
   label:
     name: Add labels
     if: github.event_name == 'pull_request'
-    runs-on: depot-ubuntu-24.04
+    runs-on: depot-ubuntu-24.04-2
     permissions:
       contents: read
       issues: write
@@ -88,7 +88,7 @@ jobs:
 
   build-docker:
     name: Docker
-    uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@5b0f0e6c7e3a02e30a33b9f5150fb5b118676e58 # 0.11.0
+    uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@25898d13dab1b3fbf4c33c394e7c581578a2b0d7 # build-docker-v3.2.0
     permissions:
       contents: read
       pull-requests: write
@@ -107,21 +107,19 @@ jobs:
       cachix_cache_name: ct-dapp
       build_file: ct-app/pyproject.toml
       docker_image_name: cover-traffic
-      deployment_namespace: ctdapp
-      deployment_label_selector: "hoprds.hoprnet.org/cluster=${{ vars.CTDAPP_STAGING_DEPLOYMENT_CLUSTER }}"
       fail_on_scan_vulnerabilities: ${{ vars.FAIL_ON_SCAN_VULNERABILITIES }}
     secrets:
       cachix_auth_token: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
   checks:
     name: Lint and Test
-    runs-on: depot-ubuntu-24.04
+    runs-on: depot-ubuntu-24.04-2
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Nix
-        uses: hoprnet/hopr-workflows/actions/setup-nix@5477bd53d62ac15c4804b31fbd55966b29a43997 # setup-nix-v2
+        uses: hoprnet/hopr-workflows/actions/setup-nix@ade4bbd75f7204255c61d19c23f67d3da221e7d2 # setup-nix-v2.0.2
         with:
           cachix_cache_name: ct-dapp
           cachix_auth_token: ${{ secrets.CACHIX_AUTH_TOKEN }}
