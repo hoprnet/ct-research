@@ -21,7 +21,7 @@ permissions:
 jobs:
   build-docker:
     name: Docker
-    uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@5b0f0e6c7e3a02e30a33b9f5150fb5b118676e58 # 0.11.0
+    uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@25898d13dab1b3fbf4c33c394e7c581578a2b0d7 # build-docker-v3.2.0
     permissions:
       contents: read
       pull-requests: write
@@ -47,13 +47,13 @@ jobs:
     name: Close release
     needs:
       - build-docker
-    runs-on: depot-ubuntu-24.04
+    runs-on: depot-ubuntu-24.04-2
     permissions:
       contents: write
       id-token: write
     steps:
       - name: Release version
-        uses: hoprnet/hopr-workflows/actions/release-version@5b0f0e6c7e3a02e30a33b9f5150fb5b118676e58 # 0.11.0
+        uses: hoprnet/hopr-workflows/actions/release-version@ade4bbd75f7204255c61d19c23f67d3da221e7d2 # release-version-v5.1.1
         with:
           source_branch: ${{ github.ref_name }}
           file: ct-app/pyproject.toml
