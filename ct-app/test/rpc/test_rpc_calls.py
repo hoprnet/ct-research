@@ -1,5 +1,5 @@
 from core.components.balance import Balance
-from core.rpc.entries import Allocation, ExternalBalance
+from core.rpc.entries import Allocation
 from core.rpc.providers import MainnetDistributor, wxHOPRBalance
 from core.rpc.query_provider import RPCQueryProvider
 
