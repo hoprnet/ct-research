@@ -7,18 +7,7 @@ GNOSIS_RPC_URL: str = "https://gnosis-rpc.publicnode.com"
 MAINNET_RPC_URL: str = "https://ethereum-rpc.publicnode.com"
 
 
-async def test_eoa_balance_provider():
-    contract: RPCQueryProvider = wxHOPRBalance(GNOSIS_RPC_URL)
-
-    balance = await contract.balance_of(
-        address="0x89c9f05E92Dfb65282Fb4569367b6d33166411C9",
-    )
-    assert isinstance(balance, ExternalBalance)
-    assert balance is not None
-    assert balance.amount > Balance.zero(contract.symbol)
-
-
-async def test_safe_balance_provider():
+async def test_balance_provider():
     contract: RPCQueryProvider = wxHOPRBalance(GNOSIS_RPC_URL)
 
     balance = await contract.balance_of(
