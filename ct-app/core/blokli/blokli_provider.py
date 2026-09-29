@@ -52,7 +52,6 @@ TBlokliResponse = TypeVar(
 )
 
 
-
 class BlokliProvider(Generic[TBlokliResponse]):
     query_file: str
     _return_type: type[JsonResponse] = JsonResponse

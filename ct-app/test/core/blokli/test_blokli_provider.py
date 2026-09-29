@@ -63,7 +63,10 @@ def test_request_headers_include_authorization_when_token_present():
 
 def test_provider_normalizes_root_url_to_graphql_path():
     assert TicketParametersSubscription("http://blokli.local").url == "http://blokli.local/graphql"
-    assert TicketParametersSubscription("http://blokli.local/graphql").url == "http://blokli.local/graphql"
+    assert (
+        TicketParametersSubscription("http://blokli.local/graphql").url
+        == "http://blokli.local/graphql"
+    )
 
 
 @pytest.mark.asyncio
