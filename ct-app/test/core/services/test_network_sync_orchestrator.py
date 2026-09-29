@@ -10,7 +10,7 @@ from core.blokli.blokli_provider import ProviderError
 from core.services.link_state_store import LinkStateStore
 from core.services.network_sync_orchestrator import NetworkSyncOrchestrator
 from core.types.balance import Balance
-from core.types.network_models import NodeSafeLink, SafeBalanceSnapshot
+from core.types.network_models import ChannelGraphUpdate, NodeSafeLink, SafeBalanceSnapshot
 from core.types.network_state import NetworkState
 from core.types.network_updates import LinkUpdate
 
@@ -31,6 +31,9 @@ class RetryThenEmitRepository:
         return _stream()
 
     def stream_ticket_parameters(self) -> AsyncIterator[BlokliTicketParameters]:
+        raise NotImplementedError
+
+    def stream_channel_graph(self, on_connect=None) -> AsyncIterator[ChannelGraphUpdate]:
         raise NotImplementedError
 
     async def get_safe_balances(self, safe_addresses: list[str]) -> list[SafeBalanceSnapshot]:
