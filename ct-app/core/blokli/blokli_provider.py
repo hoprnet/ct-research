@@ -1,12 +1,10 @@
 import asyncio
 import json
 import logging
-import re
 import sys
 import time
 from pathlib import Path
 from typing import (
-    Any,
     AsyncIterator,
     Callable,
     Generic,
@@ -21,7 +19,6 @@ from urllib.parse import urlsplit, urlunsplit
 
 import aiohttp
 from api_lib.objects import JsonResponse
-from multidict import CIMultiDictProxy
 from prometheus_client import Counter, Gauge
 
 BLOKLI_CALLS = Counter(
@@ -49,32 +46,16 @@ class ProviderError(Exception):
 
 TBlokliResponse = TypeVar(
     "TBlokliResponse",
-    bound=JsonResponse | list[Any],
+    bound=JsonResponse,
     covariant=True,
     default=JsonResponse,
 )
 
 
-def _field_selection(query: str, field: str) -> str:
-    """Returns the `{ ... }` selection set that follows `field(...)` in a query."""
-    start = query.index("{", query.index(field))
-    depth = 0
-    for index in range(start, len(query)):
-        if query[index] == "{":
-            depth += 1
-        elif query[index] == "}":
-            depth -= 1
-            if depth == 0:
-                return query[start : index + 1]
-    raise ValueError(f"Unbalanced selection for {field}")
-
 
 class BlokliProvider(Generic[TBlokliResponse]):
     query_file: str
-    params: list[str] = []
-    _return_type: type[JsonResponse] | type[list[Any]] = JsonResponse
-    _return_list_item_type: Optional[type[JsonResponse]] = None
-    _query_session: Optional[aiohttp.ClientSession] = None
+    _return_type: type[JsonResponse] = JsonResponse
     _subscription_session: Optional[aiohttp.ClientSession] = None
 
     def __init__(self, url: str, token: Optional[str] = None):
@@ -82,8 +63,7 @@ class BlokliProvider(Generic[TBlokliResponse]):
         self.token = token
         self.pwd = Path(str(sys.modules[self.__class__.__module__].__file__)).parent
         self._operation_name = Path(self.query_file).stem
-        self._initialize_query(self.query_file, self.params)
-        self._timeout = aiohttp.ClientTimeout(total=30)
+        self._sku_subscription = self._load_query(self.query_file)
 
     def _normalize_graphql_url(self, url: str) -> str:
         parsed = urlsplit(url)
@@ -93,11 +73,8 @@ class BlokliProvider(Generic[TBlokliResponse]):
         return urlunsplit((parsed.scheme, parsed.netloc, "/graphql", parsed.query, parsed.fragment))
 
     async def __aexit__(self, exc_type, exc, tb):
-        if self._query_session is not None and not self._query_session.closed:
-            await self._query_session.close()
         if self._subscription_session is not None and not self._subscription_session.closed:
             await self._subscription_session.close()
-        self._query_session = None
         self._subscription_session = None
 
     async def __aenter__(self) -> Self:
@@ -110,63 +87,15 @@ class BlokliProvider(Generic[TBlokliResponse]):
                 args = get_args(base)
                 if args:
                     return_type = args[0]
-                    origin = get_origin(return_type)
-                    if origin is list:
-                        element_type = get_args(return_type)[0]
-                        if isinstance(element_type, type) and issubclass(
-                            element_type, JsonResponse
-                        ):
-                            cls._return_type = list
-                            cls._return_list_item_type = element_type
-                        else:
-                            raise TypeError(
-                                "BlokliProvider list return type must contain "
-                                "JsonResponse subclasses"
-                            )
-                    elif isinstance(return_type, type) and issubclass(return_type, JsonResponse):
+                    if isinstance(return_type, type) and issubclass(return_type, JsonResponse):
                         cls._return_type = return_type
-                        cls._return_list_item_type = None
                     else:
                         raise TypeError(
-                            "BlokliProvider return type must be a JsonResponse "
-                            "subclass or list[JsonResponse]"
+                            "BlokliProvider return type must be a JsonResponse subclass"
                         )
                 break
 
-    def _extract_list_payload(self, response: dict) -> list[dict]:
-        payload = self._find_first_list(response)
-        if payload is None:
-            raise ProviderError("Expected a list in blokli response payload")
-
-        result: list[dict] = []
-        for entry in payload:
-            if not isinstance(entry, dict):
-                raise ProviderError("Expected list entries to be dictionaries")
-            result.append(entry)
-        return result
-
-    def _find_first_list(self, payload: object) -> Optional[list[Any]]:
-        if isinstance(payload, list):
-            return payload
-
-        if isinstance(payload, dict):
-            for value in payload.values():
-                result = self._find_first_list(value)
-                if result is not None:
-                    return result
-
-        return None
-
     #### PRIVATE METHODS ####
-    def _initialize_query(self, query_file: str, extra_inputs: Optional[list[str]] = None):
-        if extra_inputs is None:
-            extra_inputs = []
-
-        self._sku_query = self._load_query(query_file, extra_inputs, operation="query")
-        self._sku_subscription = self._load_query(
-            query_file, extra_inputs, operation="subscription"
-        )
-
     def _request_headers(self, sse: bool = False) -> dict[str, str]:
         # Pin the schema version so a new server default can't silently change response shapes.
         headers: dict[str, str] = {"X-Blokli-Schema-Version": "1"}
@@ -191,165 +120,20 @@ class BlokliProvider(Generic[TBlokliResponse]):
         )
         return self._subscription_session
 
-    def _load_query(
-        self,
-        path: str | Path,
-        extra_inputs: Optional[list[str]] = None,
-        operation: str = "query",
-    ) -> str:
+    def _load_query(self, path: str | Path) -> str:
         """
-        Loads a graphql query from a file.
-        :param path: Path to the file. The path must be relative to the ct-app folder.
-        :return: The query as a string.
+        Loads a graphql subscription from a file.
+        :param path: Path to the file, relative to the provider's module.
+        :return: The subscription as a string.
         """
-        if extra_inputs is None:
-            extra_inputs = []
-
-        inputs = [*extra_inputs]
-
         with open(self.pwd.joinpath(path)) as f:
             body = f.read().strip()
 
-        lowered = body.lower()
-        if lowered.startswith("query ") or lowered.startswith("query{"):
+        if body.lower().startswith("subscription"):
             return body
-        if lowered.startswith("mutation ") or lowered.startswith("mutation{"):
-            return body
-        if lowered.startswith("subscription ") or lowered.startswith("subscription{"):
-            return body
-        if re.match(r"^[A-Za-z_][A-Za-z0-9_]*\s*\{", body):
-            return f"{operation} {body}"
-
-        if len(inputs) > 0:
-            header = operation + " (" + ",".join(inputs) + ") {"
-        else:
-            header = operation + " {"
-
-        footer = "}"
-
-        return "\n".join([header, body, footer])
-
-    async def _execute(
-        self, query: str, variable_values: dict
-    ) -> tuple[dict, Optional[CIMultiDictProxy]]:
-        """
-        Executes a graphql query.
-        :param query: The query to execute.
-        :param variable_values: The variables to use in the query (dict)"""
-
-        try:
-            logger.debug(
-                "Executing blokli query",
-                {
-                    "url": self.url,
-                    "query_preview": query[:120],
-                    "variables": variable_values,
-                },
-            )
-            if self._query_session is None or self._query_session.closed:
-                self._query_session = aiohttp.ClientSession(timeout=self._timeout)
-
-            async with self._query_session.post(
-                self.url,
-                json={"query": query, "variables": variable_values},
-                headers=self._request_headers(),
-            ) as response:
-                outcome = "success" if response.status < 400 else "http_error"
-                BLOKLI_CALLS.labels(
-                    "query",
-                    self._operation_name,
-                    outcome,
-                ).inc()
-                logger.debug(
-                    "Blokli response received",
-                    {
-                        "status": response.status,
-                        "body": await response.text(),
-                    },
-                )
-                if response.status >= 400:
-                    logger.error(
-                        "Blokli request failed",
-                        {"status": response.status, "url": self.url},
-                    )
-
-                return await response.json(), response.headers
-
-        except TimeoutError as err:
-            BLOKLI_CALLS.labels(
-                "query",
-                self._operation_name,
-                "timeout",
-            ).inc()
-            logger.error("Timeout error", {"error": str(err)})
-        except Exception as err:
-            BLOKLI_CALLS.labels(
-                "query",
-                self._operation_name,
-                "exception",
-            ).inc()
-            logger.error("Unknown error", {"error": str(err)})
-        return {}, None
-
-    async def _get(self, **kwargs) -> dict:
-        """
-        Gets the data from a blokli query.
-        :param kwargs: The variables to use in the query (dict).
-        :return: The data from the query.
-        """
-        return await self._get_data(self._sku_query, kwargs)
-
-    async def _get_aliased(
-        self, field: str, argument: str, argument_type: str, values: list[Any]
-    ) -> list[dict]:
-        """
-        Runs this provider's `field` query once per value in a single request, under aliases, and
-        returns each result in order (an empty dict when missing). Callers keep `values` short
-        enough to stay under Blokli's query complexity limit.
-        """
-        selection = _field_selection(self._sku_query, field)
-        header = ", ".join(f"$v{i}: {argument_type}" for i in range(len(values)))
-        body = " ".join(f"r{i}: {field}({argument}: $v{i}) {selection}" for i in range(len(values)))
-        variables = {f"v{i}": value for i, value in enumerate(values)}
-        data = await self._get_data(f"query ({header}) {{ {body} }}", variables)
-        return [data.get(f"r{i}") or {} for i in range(len(values))]
-
-    async def _get_data(self, query: str, variables: dict) -> dict:
-        try:
-            response, headers = await self._execute(query, variables)
-        except ProviderError:
-            logger.exception("ProviderError error")
-            return {}
-
-        if response is None:
-            return {}
-
-        if "errors" in response:
-            logger.error(f"Internal error: {response.get('errors')}")
-
-        try:
-            content = response.get("data", dict())
-        except Exception:
-            logger.exception(
-                "Error while fetching data from blokli",
-                {"data": response},
-            )
-            return {}
-
-        return content
+        return f"subscription {{\n{body}\n}}"
 
     def _convert_response(self, response: dict) -> TBlokliResponse:
-        if self._return_list_item_type is not None:
-            if not response:
-                return cast(TBlokliResponse, [])
-            return cast(
-                TBlokliResponse,
-                [
-                    self._return_list_item_type(entry)
-                    for entry in self._extract_list_payload(response)
-                ],
-            )
-
         return cast(TBlokliResponse, self._return_type(response))
 
     def _parse_sse_event_data(self, event_lines: list[str]) -> Optional[dict]:
@@ -383,28 +167,6 @@ class BlokliProvider(Generic[TBlokliResponse]):
             return None
 
         return data
-
-    #### DEFAULT PUBLIC METHODS ####
-    async def get(self, **kwargs) -> TBlokliResponse:
-        """
-        Gets the data from a blokli query.
-        :param kwargs: The variables to use in the query (dict).
-        :return: The data from the query.
-        """
-
-        response: dict = await self._get(**kwargs)
-
-        if response is None:
-            response = {}
-
-        try:
-            return self._convert_response(response)
-        except Exception:
-            logger.exception(
-                "Error while converting response to return type",
-                {"response": response, "return_type": self._return_type},
-            )
-            raise ProviderError("Error while converting response to return type")
 
     async def subscribe(
         self, on_connect: Optional[Callable[[], None]] = None, **kwargs

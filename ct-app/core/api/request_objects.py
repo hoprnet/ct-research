@@ -5,11 +5,6 @@ from api_lib.objects.request import APIfield, RequestData
 
 
 @dataclass
-class GetPeersBody(RequestData):
-    quality: float
-
-
-@dataclass
 class CreateSessionBody(RequestData):
     capabilities: list[Any]
     destination: str
@@ -31,11 +26,6 @@ class SessionCapabilitiesBody(RequestData):
 @dataclass
 class SessionPathBodyRelayers(RequestData):
     relayers: list[str]
-
-
-@dataclass
-class SessionPathBodyHops(RequestData):
-    hops: int = APIfield("Hops", 0)
 
 
 @dataclass

@@ -232,28 +232,6 @@ class ExplicitParams:
                 result[f.name] = self._coerce_value(v, f.type)
         return result
 
-    def set_attribute_from_env(self, attribute: str, env_var: str) -> bool:
-        """
-        Set the value of an attribute from an environment variable.
-        """
-        cls_name = self.__class__.__name__
-        if not hasattr(self, attribute):
-            raise AttributeError(f"{cls_name} has no attribute '{attribute}'")
-
-        if value := os.getenv(env_var):
-            setattr(self, attribute, value)
-            logger.debug(f"{env_var} key loaded to {cls_name}.{attribute}")
-
-            return True
-        else:
-            if getattr(self, attribute) == "None":
-                raise AttributeError(f"{cls_name}.{attribute} not set and {env_var} key not found.")
-            else:
-                logger.warning(
-                    f"{env_var} key not found, using default value for {cls_name}.{attribute}"
-                )
-            return False
-
     @classmethod
     def verify(cls, data: dict) -> bool:
         instance = cls(data)

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+from dataclasses import dataclass
 from typing import Optional
 
 from prometheus_client import Counter
@@ -14,11 +15,21 @@ from ..messages.message_metrics import (
     MESSAGES_SENT_FAILED,
     MESSAGES_SENT_SUCCESS,
 )
+from ..services.burst_plan import packets_per_burst, send_rate
 from ..types.message_format import MessageFormat
 
 SESSION_OPS = Counter("ct_session_operation", "Session operation", ["relayer", "op", "success"])
 
 logger = logging.getLogger(__name__)
+
+# How often the burst sender wakes up to send the packets that became due.
+BURST_PACING_TICK_SECONDS = 0.005
+
+
+@dataclass(frozen=True)
+class BurstResult:
+    sent: int
+    echoed: int
 
 
 class NodeHelper:
@@ -71,7 +82,6 @@ class NodeHelper:
         session = await api.post_udp_session(destination, relayer=relayer, listen_host=listen_host)
         match session:
             case Session():
-                session.requested_destination = destination
                 logger.info("Opened session", session.as_dict)
                 SESSION_OPS.labels(relayer, "opened", "yes").inc()
                 return session
@@ -142,71 +152,62 @@ class NodeHelper:
         return ok
 
     @classmethod
-    async def send_batch_messages(
+    async def send_burst(
         cls,
         session: Session,
         message: MessageFormat,
+        burst_rate: float,
+        burst_duration: float,
         receive_timeout: float = DEFAULT_RECEIVE_TIMEOUT_SECONDS,
-    ):
+    ) -> BurstResult:
         """
-        Send a batch of messages and wait for responses.
+        Send one burst through a session and count the packets echoed back.
 
-        Sends multiple copies of the same message through a session and waits
-        for all responses. This is typically called as a background task via
-        AsyncLoop.add() with publish_to_task_set=False.
+        `burst_rate` (Mbit/s) is what the relayer forwards: every packet crosses it twice, out and
+        back as its echo, so packets are paced evenly at half that rate over `burst_duration`
+        seconds. The rate counts whole packets of `session.mtu` bytes, because the SURB rides in
+        every packet, while each packet carries `message.packet_size` (MTU minus SURB) bytes of
+        generated data.
 
-        Args:
-            session: Active session to send messages through
-            message: MessageFormat object containing message data and batch settings
+        Echoes are received while sending, up to `receive_timeout` after the last packet. A
+        packet counts as relayed, in both directions, when its echo came back.
 
-        Behavior:
-            1. Sends message.batch_size copies of the message
-            2. Waits to receive responses (total size = batch_size * packet_size)
-            3. Handles timeouts and partial receives gracefully
-            4. Records end-to-end delivery metrics (success/failure, latency)
-
-        Background Task Pattern:
-            This method is designed to run as a fire-and-forget background task:
-            >>> AsyncLoop.add(
-            ...     NodeHelper.send_batch_messages,
-            ...     session_ref,
-            ...     message,
-            ...     publish_to_task_set=False
-            ... )
-
-            Using publish_to_task_set=False prevents the main loop from waiting
-            on these operations, allowing concurrent message sending.
-
-        Thread Safety:
-            Safe to call concurrently for different sessions. Each session has
-            its own socket, and we use session_ref from observe_message_queue()
-            to avoid accessing the shared sessions dict during background execution.
-
-        Metrics:
-            Tracks end-to-end delivery success/failure and latency from queue
-            entry to send completion.
-
-        Note:
-            Exceptions are logged by AsyncLoop but don't crash the main process.
+        Designed to run as a fire-and-forget background task (see `AsyncLoop.add`).
         """
         failure_reason: MessageSendFailureReason | None = None
+        rate = send_rate(burst_rate, session.mtu)
+        total = packets_per_burst(burst_rate, burst_duration, session.mtu)
+        message.batch_size = total
+        receiver: asyncio.Task[int] | None = None
+        sent = 0
 
         try:
-            # Send batch
-            for _ in range(message.batch_size):
-                session.send(message)
-
-            # Wait for responses
-            await session.receive(
-                message.packet_size,
-                message.batch_size * message.packet_size,
-                timeout=receive_timeout,
+            receiver = asyncio.create_task(
+                session.receive(
+                    message.packet_size,
+                    total * message.packet_size,
+                    timeout=burst_duration + receive_timeout,
+                )
             )
 
-            # Success - record metrics
+            started_at = time.monotonic()
+            attempted = 0
+            while attempted < total:
+                due = min(total, int((time.monotonic() - started_at) * rate) + 1)
+                while attempted < due:
+                    message.update_timestamp()
+                    if session.send(message):
+                        sent += 1
+                    attempted += 1
+                if attempted < total:
+                    await asyncio.sleep(BURST_PACING_TICK_SECONDS)
+
+            received_bytes = await receiver
+            echoed = min(sent, received_bytes // message.packet_size)
+
             MESSAGES_SENT_SUCCESS.inc()
-            e2e_latency = time.time() - message.queued_at
-            MESSAGE_E2E_LATENCY.observe(e2e_latency)
+            MESSAGE_E2E_LATENCY.observe(time.time() - message.queued_at)
+            return BurstResult(sent=sent, echoed=echoed)
 
         except asyncio.TimeoutError:
             failure_reason = MessageSendFailureReason.TIMEOUT
@@ -226,6 +227,7 @@ class NodeHelper:
             failure_reason = MessageSendFailureReason.UNKNOWN
             raise
         finally:
-            # Track failures
+            if receiver is not None and not receiver.done():
+                receiver.cancel()
             if failure_reason:
                 MESSAGES_SENT_FAILED.labels(reason=failure_reason.value).inc()

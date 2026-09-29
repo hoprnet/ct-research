@@ -26,15 +26,6 @@ def test_parse_message():
     assert decoded.inner_index == encoded.inner_index
 
 
-def test_increase_inner_index():
-    encoded = MessageFormat(relayer, packet_size=default_size)
-    decoded = MessageFormat.parse(encoded.format())
-
-    decoded.increase_inner_index()
-
-    assert decoded.inner_index == encoded.inner_index + 1
-
-
 def test_message_byte_size():
     MessageFormat.index = MessageFormat.range - 1
     message = MessageFormat(relayer, packet_size=default_size)

@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from core.services.economic_model_refresh_coordinator import EconomicModelRefreshCoordinator
+from core.services.eligibility_refresh_coordinator import EligibilityRefreshCoordinator
 
 
 @pytest.mark.asyncio
@@ -19,7 +19,7 @@ async def test_request_coalesces_multiple_signals_into_sequential_refreshes():
         if run_count == 2:
             second_run.set()
 
-    coordinator = EconomicModelRefreshCoordinator(refresh_callback)
+    coordinator = EligibilityRefreshCoordinator(refresh_callback)
     coordinator._debounce_seconds = 0.01
 
     coordinator.request()
@@ -39,7 +39,7 @@ async def test_refresh_now_runs_callback_once():
         nonlocal run_count
         run_count += 1
 
-    coordinator = EconomicModelRefreshCoordinator(refresh_callback)
+    coordinator = EligibilityRefreshCoordinator(refresh_callback)
     await coordinator.refresh_now()
 
     assert run_count == 1

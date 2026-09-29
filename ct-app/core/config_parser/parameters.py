@@ -2,9 +2,9 @@ from dataclasses import dataclass, field, fields
 
 from .base_classes import ExplicitParams
 from .blokli import BlokliParams
-from .economic_model import EconomicModelParams
 from .flags import FlagParams
 from .host import HostParams
+from .incentive import IncentiveParams
 from .peer import PeerParams
 from .sessions import SessionsParams
 
@@ -13,7 +13,7 @@ from .sessions import SessionsParams
 class Parameters(ExplicitParams):
     environment: str
     flags: FlagParams
-    economic_model: EconomicModelParams
+    incentive: IncentiveParams
     peer: PeerParams
     sessions: SessionsParams
     blokli: BlokliParams = field(metadata={"hidden": True})

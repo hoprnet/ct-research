@@ -121,17 +121,6 @@ class TestChannelCaching:
     """Test channel caching optimization in ChannelMixin."""
 
     @pytest.mark.asyncio
-    async def test_outgoing_open_channels_returns_correct_list(self, node: Node):
-        """Test that outgoing_open_channels property returns correct filtered list."""
-        await node.rebuild_channel_views()
-
-        cached_channels = node.outgoing_open_channels
-        expected_channels = [c for c in node.channels.outgoing if c.status.is_open]
-
-        assert len(cached_channels) == len(expected_channels)
-        assert all(c.status.is_open for c in cached_channels)
-
-    @pytest.mark.asyncio
     async def test_address_to_open_channel_returns_correct_dict(self, node: Node):
         """Test that address_to_open_channel property returns correct dict mapping."""
         await node.rebuild_channel_views()
@@ -151,12 +140,10 @@ class TestChannelCaching:
         """Test that cached channel values are reused on subsequent accesses."""
         await node.rebuild_channel_views()
 
-        # First access populates caches
-        first_outgoing = node.outgoing_open_channels
+        # First access populates the cache
         first_by_address = node.address_to_open_channel
 
-        # Second access should return same cached objects
-        assert node.outgoing_open_channels is first_outgoing
+        # Second access should return the same cached object
         assert node.address_to_open_channel is first_by_address
 
     @pytest.mark.asyncio
@@ -164,19 +151,14 @@ class TestChannelCaching:
         """Test that channel caches are invalidated when channels are retrieved."""
         await node.rebuild_channel_views()
 
-        # Populate all caches
-        _ = node.outgoing_open_channels
+        # Populate the cache
         _ = node.address_to_open_channel
-
-        # All caches should be populated
-        assert node._cached_outgoing_open is not None
         assert node._cached_address_to_open_channel is not None
 
         # Retrieve channels again
         await node.rebuild_channel_views()
 
-        # All caches should be invalidated
-        assert node._cached_outgoing_open is None
+        # The cache should be invalidated
         assert node._cached_address_to_open_channel is None
 
 

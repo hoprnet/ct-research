@@ -13,11 +13,11 @@ async def test_requests_are_coalesced_and_execute_callbacks_in_order():
     def reconcile_callback():
         calls.append("reconcile")
 
-    def economic_refresh_callback():
+    def eligibility_refresh_callback():
         calls.append("refresh")
         finished.set()
 
-    coordinator = NetworkUpdateCoordinator(reconcile_callback, economic_refresh_callback)
+    coordinator = NetworkUpdateCoordinator(reconcile_callback, eligibility_refresh_callback)
     coordinator._debounce_seconds = 0.01
 
     coordinator.request("a")
@@ -37,10 +37,10 @@ async def test_close_waits_for_inflight_drain():
         nonlocal calls
         calls += 1
 
-    def economic_refresh_callback():
+    def eligibility_refresh_callback():
         gate.set()
 
-    coordinator = NetworkUpdateCoordinator(reconcile_callback, economic_refresh_callback)
+    coordinator = NetworkUpdateCoordinator(reconcile_callback, eligibility_refresh_callback)
     coordinator.request("x")
     await gate.wait()
     await coordinator.close()

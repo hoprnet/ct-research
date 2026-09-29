@@ -15,7 +15,7 @@ from core.api.response_objects import (
 )
 from core.types.peer import Peer
 from core.types.network_models import ChannelGraphUpdate
-from core.config_parser import LegacyParams, Parameters
+from core.config_parser import Parameters
 from core.node import Node
 from core.services.channel_graph_store import ChannelGraphStore
 
@@ -48,22 +48,6 @@ class SideEffect:
 
     def node_balance(self, *args, **kwargs):
         return next(self.it_node_balance)
-
-
-@pytest.fixture
-def economic_model() -> LegacyParams:
-    return LegacyParams(
-        {
-            "proportion": 1,
-            "apr": 15,
-            "coefficients": {
-                "a": 1,
-                "b": 1,
-                "upperbound": "3 wxHOPR",
-                "lowerbound": "0 wxHOPR",
-            },
-        }
-    )
 
 
 @pytest.fixture

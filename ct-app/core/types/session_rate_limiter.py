@@ -153,25 +153,3 @@ class SessionRateLimiter:
         else:
             self._failure_count.clear()
             self._last_attempt.clear()
-
-    def get_stats(self, relayer: str) -> dict:
-        """
-        Get current rate limiting stats for a relayer.
-
-        Args:
-            relayer: Peer address to query
-
-        Returns:
-            dict with keys: failures, last_attempt_age_seconds, can_attempt, wait_time
-        """
-        failure_count = self._failure_count.get(relayer, 0)
-        last_attempt = self._last_attempt.get(relayer)
-
-        can_attempt, wait_time = self.can_attempt(relayer)
-
-        return {
-            "failures": failure_count,
-            "last_attempt_age_seconds": (time.monotonic() - last_attempt if last_attempt else None),
-            "can_attempt": can_attempt,
-            "wait_time_seconds": wait_time,
-        }

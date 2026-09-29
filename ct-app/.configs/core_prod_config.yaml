@@ -8,8 +8,6 @@ flags:
   node:
     healthcheck: 15s
     retrieve_peers: 1m
-    refresh_balances: 5m
-    refresh_redeemed: 5m
     relay_messages: On
     retrieve_balances: 5m
     
@@ -19,44 +17,19 @@ flags:
 # =============================================================================
 # 
 # =============================================================================
-economic_model:
-  legacy:
-    proportion: 1.0
-    apr: 12.5
-
-    coefficients:
-      a: 1
-      b: 1.4
-      upperbound: "75000 wxHOPR"
-      lowerbound: "30000 wxHOPR"
-
-  sigmoid:
-    proportion: 0
-    max_apr: 15
-    network_capacity: 2000
-    total_token_supply: "450000000 wxHOPR"
-
-    offset: -0.9
-    buckets:
-      economic_security:
-        flatness: 1.8
-        skewness: 1.52
-        upperbound: 0.4
-        offset: 3.14
-
-      network_capacity:
-        flatness: 2.97
-        skewness: 0.72
-        upperbound: 1.0
-        offset: 4.08
+incentive:
+  min_outgoing_channels: 5
+  min_channel_balance: "50 wxHOPR"
+  burst_rate: 8                   # Mbit/s
+  burst_duration: 10s
+  target_relayer_interval: 600s   # average time between two bursts to the same relayer, across all CT nodes
+  max_concurrent_bursts_per_ct: 0 # 0 = no limit
+  ct_node_count: 5                # CT nodes in the deployment
 
 # =============================================================================
 # 
 # =============================================================================
 peer:
-  minimum_delay_between_batches: 60s
-  sleep_mean_time: 30s
-  sleep_std_time: 2s
   excluded_peers: []
   
 # =============================================================================

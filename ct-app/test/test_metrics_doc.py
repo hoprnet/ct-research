@@ -9,7 +9,7 @@ def test_collect_metrics_finds_known_metric_definitions():
 
     assert "ct_messages_processed_total" in names
     assert "ct_channel_funds" in names
-    assert "ct_peer_delay" in names
+    assert "ct_bursts_total" in names
 
 
 def test_render_metrics_markdown_includes_table_and_labels(tmp_path: Path):

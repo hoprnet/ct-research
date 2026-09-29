@@ -23,11 +23,11 @@ class NetworkUpdateCoordinator(BaseDrainCoordinator):
     def __init__(
         self,
         reconcile_callback: Callable[[], None],
-        economic_refresh_callback: Callable[[], None],
+        eligibility_refresh_callback: Callable[[], None],
     ):
         super().__init__(debounce_seconds=0.2)
         self.reconcile_callback = reconcile_callback
-        self.economic_refresh_callback = economic_refresh_callback
+        self.eligibility_refresh_callback = eligibility_refresh_callback
 
     def request(self, source: str | None = None) -> None:
         super().request(source)
@@ -44,5 +44,5 @@ class NetworkUpdateCoordinator(BaseDrainCoordinator):
 
     async def run_once(self) -> None:
         self.reconcile_callback()
-        self.economic_refresh_callback()
+        self.eligibility_refresh_callback()
         NETWORK_UPDATE_DRAINS.inc()

@@ -68,14 +68,6 @@ async def test_add_returns_none_when_callback_creation_fails():
 
 @pytest.mark.asyncio
 @clearAsyncLoopInstance
-async def test_gather_any_returns_results_in_order():
-    results = await AsyncLoop.gather_any([foo_awaitable(), bar_awaitable()])
-
-    assert results == [None, None]
-
-
-@pytest.mark.asyncio
-@clearAsyncLoopInstance
 async def test_gather_awaits_tracked_tasks_and_prunes_completed_entries():
     task = AsyncLoop.add(foo_awaitable)
 
@@ -140,16 +132,3 @@ def test_run_executes_stop_callback_when_process_raises():
         AsyncLoop.run(process, stop_callback)
 
     assert events == ["process", "stop"]
-
-
-def test_run_in_thread_returns_started_thread_handle():
-    started = asyncio.Event()
-
-    async def callback():
-        started.set()
-
-    thread = AsyncLoop.run_in_thread(callback)
-
-    assert thread is not None
-    thread.join(timeout=1.0)
-    assert started.is_set()

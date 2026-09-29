@@ -4,12 +4,6 @@ from ..runtime_state import NodeRuntimeState
 
 class ChannelCacheMixin(NodeRuntimeState):
     @property
-    def outgoing_open_channels(self) -> list[Channel]:
-        if self._cached_outgoing_open is None and self.channels:
-            self._cached_outgoing_open = [c for c in self.channels.outgoing if c.status.is_open]
-        return self._cached_outgoing_open or []
-
-    @property
     def address_to_open_channel(self) -> dict[str, Channel]:
         if self._cached_address_to_open_channel is None and self.channels:
             self._cached_address_to_open_channel = {
@@ -20,5 +14,4 @@ class ChannelCacheMixin(NodeRuntimeState):
         return self._cached_address_to_open_channel or {}
 
     def invalidate_channel_cache(self) -> None:
-        self._cached_outgoing_open = None
         self._cached_address_to_open_channel = None

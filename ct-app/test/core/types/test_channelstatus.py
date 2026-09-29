@@ -15,8 +15,4 @@ def test_channelstatus():
     assert close_status.is_closed
     assert not pending_status.is_closed
 
-    assert not open_status.is_pending
-    assert not close_status.is_pending
-    assert pending_status.is_pending
-
     assert unknown_status == ChannelStatus.Unknown

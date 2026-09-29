@@ -1,8 +1,7 @@
-import aiohttp
 import pytest
 
-from core.blokli.entries import BlokliRedemptionStats
-from core.blokli.providers import Redemptions, TicketParametersSubscription
+from core.blokli.entries import BlokliTicketParameters
+from core.blokli.providers import TicketParametersSubscription
 
 
 def test_subscription_query_uses_explicit_subscription_document_when_provided():
@@ -13,19 +12,17 @@ def test_subscription_query_uses_explicit_subscription_document_when_provided():
 
 
 def test_parse_sse_event_data_returns_payload_dict():
-    provider = Redemptions("http://blokli.local")
-    payload = (
-        '{"data":{"ticketRedemptionStats":{' '"redeemedAmount":"3 wxHOPR","redemptionCount":2}}}'
-    )
+    provider = TicketParametersSubscription("http://blokli.local")
+    payload = '{"data":{"ticketParametersUpdated":{"ticketPrice":"3 wxHOPR"}}}'
 
     parsed = provider._parse_sse_event_data(["event: next", f"data: {payload}"])
 
     assert parsed is not None
-    assert parsed["ticketRedemptionStats"]["redeemedAmount"] == "3 wxHOPR"
+    assert parsed["ticketParametersUpdated"]["ticketPrice"] == "3 wxHOPR"
 
 
 def test_parse_sse_event_data_returns_none_for_invalid_json():
-    provider = Redemptions("http://blokli.local")
+    provider = TicketParametersSubscription("http://blokli.local")
 
     parsed = provider._parse_sse_event_data(["data: {invalid-json"])
 
@@ -33,23 +30,23 @@ def test_parse_sse_event_data_returns_none_for_invalid_json():
 
 
 def test_subscription_payload_is_converted_to_typed_response():
-    provider = Redemptions("http://blokli.local")
+    provider = TicketParametersSubscription("http://blokli.local")
     response = {
-        "ticketRedemptionStats": {
-            "redeemedAmount": "5 wxHOPR",
-            "redemptionCount": 1,
+        "ticketParametersUpdated": {
+            "ticketPrice": "5 wxHOPR",
+            "minTicketWinningProbability": 0.5,
         }
     }
 
     converted = provider._convert_response(response)
 
-    assert isinstance(converted, BlokliRedemptionStats)
-    assert converted.redeemed_amount is not None
-    assert converted.redeemed_amount.as_str == "5 wxHOPR"
+    assert isinstance(converted, BlokliTicketParameters)
+    assert converted.ticket_price.as_str == "5 wxHOPR"
+    assert converted.min_ticket_winning_probability == 0.5
 
 
 def test_request_headers_do_not_include_authorization_when_token_empty():
-    provider = Redemptions("http://blokli.local", token="")
+    provider = TicketParametersSubscription("http://blokli.local", token="")
 
     headers = provider._request_headers()
 
@@ -57,7 +54,7 @@ def test_request_headers_do_not_include_authorization_when_token_empty():
 
 
 def test_request_headers_include_authorization_when_token_present():
-    provider = Redemptions("http://blokli.local", token="secret")
+    provider = TicketParametersSubscription("http://blokli.local", token="secret")
 
     headers = provider._request_headers()
 
@@ -65,8 +62,8 @@ def test_request_headers_include_authorization_when_token_present():
 
 
 def test_provider_normalizes_root_url_to_graphql_path():
-    assert Redemptions("http://blokli.local").url == "http://blokli.local/graphql"
-    assert Redemptions("http://blokli.local/graphql").url == "http://blokli.local/graphql"
+    assert TicketParametersSubscription("http://blokli.local").url == "http://blokli.local/graphql"
+    assert TicketParametersSubscription("http://blokli.local/graphql").url == "http://blokli.local/graphql"
 
 
 @pytest.mark.asyncio
@@ -91,30 +88,14 @@ async def test_subscription_session_reuses_open_session():
 
 
 @pytest.mark.asyncio
-async def test_subscription_session_does_not_reuse_query_session():
-    provider = TicketParametersSubscription("http://blokli.local")
-
-    provider._query_session = aiohttp.ClientSession(timeout=provider._timeout)
-
-    session = await provider._ensure_subscription_session()
-
-    assert session is not provider._query_session
-    assert session.timeout.total is None
-    await provider._query_session.close()
-    await session.close()
-
-
-@pytest.mark.asyncio
 async def test_context_manager_keeps_sessions_lazy_until_operation():
     provider = TicketParametersSubscription("http://blokli.local")
 
     async with provider as client:
-        assert client._query_session is None
         assert client._subscription_session is None
 
         session = await client._ensure_subscription_session()
 
-        assert client._query_session is None
         assert client._subscription_session == session
 
 

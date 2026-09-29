@@ -11,12 +11,17 @@ from ...components.decorators import connectguard, keepalive, master
 from ...components.node_helper import NodeHelper
 from ...constants.labels import SessionLifecycleEvent, SessionOpenResult
 from ...messages.message_metrics import (
+    ACTIVE_BURSTS,
     ACTIVE_WORKERS,
     BATCH_SCHEDULE_FAILURES,
+    BURST_PACKETS_ECHOED,
+    BURST_PACKETS_SENT,
     MESSAGE_DROPS,
     MESSAGE_REQUEUES,
     MESSAGES_PROCESSED,
     MESSAGES_SCHEDULED,
+    MONTH_TO_DATE_COST,
+    RELAYED_VALUE,
     SESSION_OPEN_EVENTS,
     WORKER_LOOP_EVENTS,
     WORKER_MESSAGES,
@@ -107,23 +112,6 @@ class SessionWorkerMixin(SessionCommonMixin):
     def _session_has_in_flight_tasks(self, session: "Session") -> bool:
         return bool(self._in_flight_tasks_by_session_port.get(session.port))
 
-    async def _wait_for_session_tasks(
-        self,
-        session: "Session",
-        timeout: float = DEFAULT_IN_FLIGHT_WAIT_SECONDS,
-    ) -> None:
-        tasks = list(self._in_flight_tasks_by_session_port.get(session.port, set()))
-        if not tasks:
-            return
-
-        try:
-            await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=timeout)
-        except asyncio.TimeoutError:
-            logger.warning(
-                "Timed out waiting for in-flight session tasks",
-                {"port": session.port, "task_count": len(tasks), "timeout_seconds": timeout},
-            )
-
     async def wait_for_in_flight_messages(
         self,
         timeout: float = DEFAULT_IN_FLIGHT_WAIT_SECONDS,
@@ -139,35 +127,6 @@ class SessionWorkerMixin(SessionCommonMixin):
                 "Timed out waiting for in-flight message tasks",
                 {"task_count": len(tasks), "timeout_seconds": timeout},
             )
-
-    async def _retire_session(
-        self,
-        relayer: str,
-        session: "Session",
-        reason: str,
-        wait_for_in_flight: bool = True,
-    ) -> bool:
-        if wait_for_in_flight:
-            await self._wait_for_session_tasks(session)
-
-        self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.RETIRE_REQUESTED)
-        close_ok = await NodeHelper.close_session(self.api, session, relayer)
-        if not close_ok:
-            self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.RETIRE_FAILED)
-            logger.warning(
-                "Failed to close session while retiring local cache entry",
-                {"relayer": relayer, "port": session.port, "reason": reason},
-            )
-            return False
-
-        current_session = self.sessions.get(relayer)
-        if current_session and current_session.port == session.port:
-            self.sessions.pop(relayer, None)
-
-        session.close_socket()
-        self.session_close_grace_period.pop(relayer, None)
-        self.session_lifecycle_coordinator.mark(SessionLifecycleEvent.RETIRED)
-        return True
 
     async def _get_or_create_session(
         self,
@@ -249,7 +208,36 @@ class SessionWorkerMixin(SessionCommonMixin):
         # A missing setting parses as 0s, which would count every echo as lost.
         return configured if configured > 0 else DEFAULT_RECEIVE_TIMEOUT_SECONDS
 
-    def _schedule_message_batch(
+    async def _run_burst(self, session: "Session", message: MessageFormat) -> None:
+        incentive = self.params.incentive
+        ACTIVE_BURSTS.inc()
+        try:
+            result = await NodeHelper.send_burst(
+                session,
+                message,
+                incentive.burst_rate,
+                incentive.burst_duration.value,
+                self._receive_timeout_seconds(),
+            )
+        finally:
+            ACTIVE_BURSTS.dec()
+
+        BURST_PACKETS_SENT.labels(message.relayer).inc(result.sent)
+        BURST_PACKETS_ECHOED.labels(message.relayer).inc(result.echoed)
+
+        ticket_price = self.ticket_price.value if self.ticket_price else None
+        burst_cost = self.relayed_cost_tracker.add(result.sent, result.echoed, ticket_price)
+        if burst_cost is not None:
+            RELAYED_VALUE.inc(float(burst_cost.value))
+        if self.relayed_cost_tracker.cost is not None:
+            MONTH_TO_DATE_COST.set(float(self.relayed_cost_tracker.cost.value))
+
+        logger.debug(
+            "Burst completed",
+            {"relayer": message.relayer, "sent": result.sent, "echoed": result.echoed},
+        )
+
+    def _schedule_burst(
         self,
         message: MessageFormat,
         relayer: str,
@@ -261,14 +249,13 @@ class SessionWorkerMixin(SessionCommonMixin):
             MESSAGES_SCHEDULED.inc()
 
             task = AsyncLoop.add(
-                NodeHelper.send_batch_messages,
+                self._run_burst,
                 session_ref,
                 message,
-                self._receive_timeout_seconds(),
                 publish_to_task_set=False,
             )
             if task is None:
-                logger.debug("Failed to schedule message batch", {"relayer": relayer})
+                logger.debug("Failed to schedule burst", {"relayer": relayer})
                 BATCH_SCHEDULE_FAILURES.inc()
                 return False
             self._track_in_flight_message_task(session_ref, task)
@@ -341,7 +328,7 @@ class SessionWorkerMixin(SessionCommonMixin):
                 delay_seconds=retry_delay,
             )
 
-        if not self._schedule_message_batch(message, message.relayer):
+        if not self._schedule_burst(message, message.relayer):
             return self._drop_message(message, MessageRequeueReason.SESSION_DISAPPEARED)
 
         MESSAGES_PROCESSED.inc()

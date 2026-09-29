@@ -18,10 +18,6 @@ class SessionCommonMixin(NodeRuntimeState):
     def _session_has_in_flight_tasks(self, session: "Session") -> bool:
         return bool(self._in_flight_tasks_by_session_port.get(session.port))
 
-    @staticmethod
-    def _normalize_destination(destination: str | None) -> str:
-        return destination.lower() if destination else ""
-
     @property
     def peer_addresses(self) -> set[str]:
         if self._cached_peer_addresses is None:
@@ -80,9 +76,3 @@ class SessionCommonMixin(NodeRuntimeState):
             return None
 
         return random.choice(candidates)
-
-    def _session_matches_destination(self, session: "Session", destination: str) -> bool:
-        session_destination = session.requested_destination or session.target
-        return self._normalize_destination(session_destination) == self._normalize_destination(
-            destination
-        )

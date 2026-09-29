@@ -18,6 +18,7 @@ from core.config_parser import Parameters
 from core.types.message_format import MessageFormat
 from core.types.message_queue import MessageQueue
 from core.types.singleton import Singleton
+from test.queue_utils import reset_queue_size
 from core.node import Node
 
 from .metrics_collector import MetricsCollector
@@ -29,10 +30,12 @@ def clear_message_queue():
     # Clear the singleton instance if it exists
     if MessageQueue in Singleton._instances:
         del Singleton._instances[MessageQueue]
+    reset_queue_size()
     yield
     # Clear after test as well
     if MessageQueue in Singleton._instances:
         del Singleton._instances[MessageQueue]
+    reset_queue_size()
 
 
 @pytest.fixture

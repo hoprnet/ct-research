@@ -60,7 +60,6 @@ def test_channel_graph_store_sweeps_channels_missing_from_new_snapshot():
 
 @pytest.mark.asyncio
 async def test_rebuild_channel_views_filters_node_links_and_invalidates_cache(node: Node, mocker):
-    node._cached_outgoing_open = []
     node._cached_address_to_open_channel = {}
     load_channels(
         node,
@@ -83,8 +82,6 @@ async def test_rebuild_channel_views_filters_node_links_and_invalidates_cache(no
     assert [channel.source for channel in node.channels.incoming] == ["peer_c"]
     assert len(node.channels.all) == 3
     assert node.outgoing_channel_balances == topology
-    assert node.network_state.outgoing_channel_balances == topology
-    assert node._cached_outgoing_open is None
     assert node._cached_address_to_open_channel is None
     assert set(node.address_to_open_channel) == {"peer_a"}
     network_update_request.assert_called_once()
