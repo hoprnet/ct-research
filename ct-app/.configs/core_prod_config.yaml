@@ -6,8 +6,6 @@ environment: prod
 
 flags:
   node:
-    outgoing_channels_balances: 30s
-    
     healthcheck: 15s
     retrieve_peers: 1m
     refresh_balances: 5m
@@ -62,15 +60,6 @@ peer:
   excluded_peers: []
   
 # =============================================================================
-# 
-# =============================================================================
-channel:
-  min_balance: "20 wxHOPR"
-  funding_amount: "30 wxHOPR"
-  funding_cooldown: 180s
-  max_age: 2d
-
-# =============================================================================
 #
 # =============================================================================
 sessions:
@@ -90,6 +79,7 @@ sessions:
   session_retry_max_delay: 60s
   message_worker_count: 10
   message_queue_maxsize: 10000
+  receive_timeout: 5s
 
 # =============================================================================
 #

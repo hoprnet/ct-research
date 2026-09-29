@@ -4,7 +4,18 @@ import logging
 import re
 import sys
 from pathlib import Path
-from typing import Any, AsyncIterator, Generic, Optional, Self, TypeVar, cast, get_args, get_origin
+from typing import (
+    Any,
+    AsyncIterator,
+    Callable,
+    Generic,
+    Optional,
+    Self,
+    TypeVar,
+    cast,
+    get_args,
+    get_origin,
+)
 from urllib.parse import urlsplit, urlunsplit
 
 import aiohttp
@@ -132,7 +143,8 @@ class BlokliProvider(Generic[TBlokliResponse]):
         )
 
     def _request_headers(self, sse: bool = False) -> dict[str, str]:
-        headers: dict[str, str] = {}
+        # Pin the schema version so a new server default can't silently change response shapes.
+        headers: dict[str, str] = {"X-Blokli-Schema-Version": "1"}
         token = (self.token or "").strip()
         if token:
             headers["Authorization"] = f"Bearer {token}"
@@ -260,9 +272,11 @@ class BlokliProvider(Generic[TBlokliResponse]):
         :param kwargs: The variables to use in the query (dict).
         :return: The data from the query.
         """
+        return await self._get_data(self._sku_query, kwargs)
 
+    async def _get_data(self, query: str, variables: dict) -> dict:
         try:
-            response, headers = await self._execute(self._sku_query, kwargs)
+            response, headers = await self._execute(query, variables)
         except ProviderError:
             logger.exception("ProviderError error")
             return {}
@@ -352,7 +366,15 @@ class BlokliProvider(Generic[TBlokliResponse]):
             )
             raise ProviderError("Error while converting response to return type")
 
-    async def subscribe(self, **kwargs) -> AsyncIterator[TBlokliResponse]:
+    async def subscribe(
+        self, on_connect: Optional[Callable[[], None]] = None, **kwargs
+    ) -> AsyncIterator[TBlokliResponse]:
+        """
+        Streams a blokli subscription, reconnecting on failure.
+        :param on_connect: Called each time a connection is (re)established, before its first
+            event. Subscriptions that start with a full snapshot resend it on every connection.
+        :param kwargs: The variables to use in the subscription.
+        """
         logger.debug(
             "Opening blokli SSE subscription",
             {"url": self.url, "query": self._sku_subscription, "variables": kwargs},
@@ -382,6 +404,8 @@ class BlokliProvider(Generic[TBlokliResponse]):
                         raise ProviderError(f"Subscription failed with status {response.status}")
 
                     reconnect_delay_seconds = 1.0
+                    if on_connect is not None:
+                        on_connect()
                     event_lines: list[str] = []
                     while not response.content.at_eof():
                         raw_line = await response.content.readline()

@@ -1,24 +1,29 @@
 import logging
 from typing import Tuple
 
-from core.api import HoprdAPI
-from core.components import EnvironmentUtils
+from api_lib.headers.authorization import Bearer
 
-from . import EnduranceTest, Metric
+from core.api import HoprdAPI
+
+from . import EnduranceTest, EnvironmentUtils, Metric
 
 logger = logging.getLogger(__name__)
 
 
-class GetChannels(EnduranceTest):
+class GetPeers(EnduranceTest):
     async def on_start(self):
         self.results = []
 
-        self.api = HoprdAPI(EnvironmentUtils.envvar("API_URL"), EnvironmentUtils.envvar("API_KEY"))
+        self.api = HoprdAPI(
+            EnvironmentUtils.envvar("API_URL"),
+            Bearer(EnvironmentUtils.envvar("API_KEY")),
+            "/api/v4",
+        )
         self.recipient = await self.api.address()
         logger.info(f"Connected to node {self.recipient.native}")
 
     async def task(self):
-        success = await self.api.channels() is not None
+        success = await self.api.peers() is not None
 
         self.results.append(success)
 

@@ -6,6 +6,7 @@ import time
 from enum import Enum
 
 from ...api.response_objects import Session
+from ...api.session import DEFAULT_RECEIVE_TIMEOUT_SECONDS
 from ...components.decorators import connectguard, keepalive, master
 from ...components.node_helper import NodeHelper
 from ...constants.labels import SessionLifecycleEvent, SessionOpenResult
@@ -243,6 +244,11 @@ class SessionWorkerMixin(SessionCommonMixin):
             if self._pending_session_creations.get(relayer) is task:
                 self._pending_session_creations.pop(relayer, None)
 
+    def _receive_timeout_seconds(self) -> float:
+        configured = self.params.sessions.receive_timeout.value
+        # A missing setting parses as 0s, which would count every echo as lost.
+        return configured if configured > 0 else DEFAULT_RECEIVE_TIMEOUT_SECONDS
+
     def _schedule_message_batch(
         self,
         message: MessageFormat,
@@ -258,6 +264,7 @@ class SessionWorkerMixin(SessionCommonMixin):
                 NodeHelper.send_batch_messages,
                 session_ref,
                 message,
+                self._receive_timeout_seconds(),
                 publish_to_task_set=False,
             )
             if task is None:

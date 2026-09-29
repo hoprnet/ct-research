@@ -5,7 +5,6 @@ from api_lib import ApiLib
 from api_lib.method import Method
 from api_lib.objects import RequestData, Response
 
-from ..types.balance import Balance
 from . import request_objects as req
 from . import response_objects as resp
 
@@ -120,56 +119,6 @@ class HoprdAPI(ApiLib):
         :return: balances: Balances | undefined
         """
         return await self.try_req(Method.GET, "/account/balances", resp.Balances)
-
-    async def open_channel(
-        self, peer_address: str, amount: Balance
-    ) -> Optional[resp.OpenedChannel]:
-        """
-        Opens a channel with the given peer_address and amount.
-        :param: peer_address: str
-        :param: amount: Balance
-        :return: channel: OpenedChannel | undefined
-        """
-        data = req.OpenChannelBody(amount.as_str, peer_address)
-        return await self.try_req(Method.POST, "/channels", resp.OpenedChannel, data)
-
-    async def fund_channel(self, peer_address: str, amount: Balance) -> bool:
-        """
-        Funds a given channel.
-        :param: peer_address: str
-        :param: amount: Balance
-        :return: bool
-        """
-        data = req.FundChannelBody(amount.as_str)
-        return bool(
-            await self.try_req(
-                Method.POST, f"/channels/{peer_address}/fund", data=data, return_state=True
-            )
-        )
-
-    async def close_channel(self, peer_address: str, direction: str = "outgoing") -> bool:
-        """
-        Closes a given channel.
-        :param: peer_address: str
-        :param: direction: str = "outgoing"
-        :return: bool
-        """
-        data = req.CloseChannelBody(direction=direction)
-        return bool(
-            await self.try_req(
-                Method.DELETE,
-                f"/channels/{peer_address}{data.as_query_parameters}",
-                return_state=True,
-            )
-        )
-
-    async def channels(self, full_topology: bool = True) -> Optional[resp.Channels]:
-        """
-        Returns all channels.
-        :return: channels: list
-        """
-        header = req.GetChannelsBody(full_topology, False)
-        return await self.try_req(Method.GET, f"/channels?{header.as_header_string}", resp.Channels)
 
     async def peers(
         self,

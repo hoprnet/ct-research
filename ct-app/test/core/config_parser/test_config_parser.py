@@ -190,7 +190,6 @@ def test_parameters_repr_renders_flag_values_without_object_addresses():
     rendered = repr(params)
 
     assert "flags=FlagParams(" in rendered
-    assert "outgoing_channels_balances=30.0" in rendered
     assert "healthcheck=10.0" in rendered
     assert "refresh_balances=False" in rendered
     assert "observe_message_queue=True" in rendered

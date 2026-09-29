@@ -5,28 +5,6 @@ from api_lib.objects.request import APIfield, RequestData
 
 
 @dataclass
-class OpenChannelBody(RequestData):
-    amount: str
-    destination: str
-
-
-@dataclass
-class FundChannelBody(RequestData):
-    amount: str
-
-
-@dataclass
-class GetChannelsBody(RequestData):
-    full_topology: bool = APIfield("fullTopology", False)
-    including_closed: bool = APIfield("includingClosed", False)
-
-
-@dataclass
-class CloseChannelBody(RequestData):
-    direction: str
-
-
-@dataclass
 class GetPeersBody(RequestData):
     quality: float
 

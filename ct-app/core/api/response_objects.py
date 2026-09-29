@@ -18,7 +18,6 @@ __all__ = [
     "ConnectedPeer",
     "Channel",
     "TicketPrice",
-    "OpenedChannel",
     "Channels",
     "Session",
     "SessionFailure",
@@ -68,11 +67,6 @@ class Channel(JsonResponse):
 @APIobject
 class TicketPrice(JsonResponse):
     value: Balance = APIfield("price")
-
-
-@APIobject
-class OpenedChannel(JsonResponse):
-    channel_id: str = APIfield("channelId")
 
 
 @APIobject

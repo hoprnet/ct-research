@@ -14,8 +14,19 @@ from core.api.response_objects import (
     ConnectedPeer,
 )
 from core.types.peer import Peer
+from core.types.network_models import ChannelGraphUpdate
 from core.config_parser import LegacyParams, Parameters
 from core.node import Node
+from core.services.channel_graph_store import ChannelGraphStore
+
+
+def load_channels(node: Node, channels: list[Channel]) -> None:
+    """Replace the node's channel graph, as the Blokli channel graph subscription would."""
+    node.channel_graph = ChannelGraphStore()
+    for index, channel in enumerate(channels):
+        node.channel_graph.apply(
+            ChannelGraphUpdate(channel_id=f"0xchannel{index}", channel=channel)
+        )
 
 
 class SideEffect:
@@ -100,7 +111,7 @@ async def nodes(
     ]
     for idx, node in enumerate(nodes):
         mocker.patch.object(node.api, "address", return_value=Addresses(addresses[idx]))
-        mocker.patch.object(node.api, "channels", return_value=channels)
+        load_channels(node, channels.all)
         mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
         mocker.patch.object(
             node.api,
@@ -152,7 +163,7 @@ async def node(
 ) -> Node:
     node = Node("localhost", "random_key", Parameters())
 
-    mocker.patch.object(node.api, "channels", return_value=channels)
+    load_channels(node, channels.all)
     mocker.patch.object(
         node.api, "peers", return_value=[ConnectedPeer(peer) for peer in peers_raw[1:]]
     )

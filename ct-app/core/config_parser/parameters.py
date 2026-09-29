@@ -2,7 +2,6 @@ from dataclasses import dataclass, field, fields
 
 from .base_classes import ExplicitParams
 from .blokli import BlokliParams
-from .channel import ChannelParams
 from .economic_model import EconomicModelParams
 from .flags import FlagParams
 from .host import HostParams
@@ -16,7 +15,6 @@ class Parameters(ExplicitParams):
     flags: FlagParams
     economic_model: EconomicModelParams
     peer: PeerParams
-    channel: ChannelParams
     sessions: SessionsParams
     blokli: BlokliParams = field(metadata={"hidden": True})
     host: HostParams = field(metadata={"hidden": True})

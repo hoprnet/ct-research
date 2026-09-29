@@ -35,6 +35,13 @@ class StateMixin(NodeRuntimeState):
                     return nested
         return None
 
+    # TODO: check, then fix or remove. The keys looked up below (ticket_price / ticketPrice,
+    # min_ticket_winning_probability / minTicketWinningProbability) do not exist in the hoprd v5
+    # `/node/configuration` payload, so this never loads anything and Blokli values are always used.
+    # hoprd only exposes `hopr.network.outgoing_ticket_winning_prob` (win prob of tickets this node
+    # issues) and has no outgoing ticket price override (`hopr.network.min_incoming_ticket_price`
+    # only applies to tickets it receives). If Blokli values are enough, remove this method and the
+    # both-or-neither check in `Node.start()`.
     async def load_static_ticket_parameters_from_node_configuration(self) -> tuple[bool, bool]:
         configuration = await self.api.configuration()
         if not isinstance(configuration, dict):

@@ -411,3 +411,27 @@ async def test_concurrent_session_access_race_condition(
         f"Errors: {runtime_errors[:3]}. "
         "Need to add locking to protect concurrent access to self.sessions"
     )
+
+
+@pytest.mark.parametrize("configured, expected", [(5.0, 5.0), (0.0, 2.0)])
+def test_receive_timeout_falls_back_to_default_when_unset(
+    session_node: Node, mocker: MockerFixture, configured: float, expected: float
+):
+    mocker.patch.object(session_node.params.sessions.receive_timeout, "value", configured)
+
+    assert session_node._receive_timeout_seconds() == expected
+
+
+@pytest.mark.asyncio
+async def test_schedule_message_batch_passes_receive_timeout(
+    session_node: Node, mock_sessions, mocker: MockerFixture
+):
+    relayer = "peer_4"
+    session_node.address = MagicMock(native="node_address")
+    session_node.sessions[relayer] = mock_sessions(relayer, port=9202)
+    mocker.patch.object(session_node.params.sessions.receive_timeout, "value", 4.0)
+    add_mock = mocker.patch.object(AsyncLoop, "add", return_value=None)
+
+    session_node._schedule_message_batch(MessageFormat(relayer, "sender", 500, 1), relayer)
+
+    assert add_mock.call_args.args[3] == 4.0

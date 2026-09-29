@@ -1,0 +1,15 @@
+subscription {
+    openedChannelGraphUpdated {
+        channel {
+            concreteChannelId
+            balance
+            status
+        }
+        source {
+            chainKey
+        }
+        destination {
+            chainKey
+        }
+    }
+}

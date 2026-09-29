@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime
 from typing import Optional
 
 from ..api.hoprd_api import HoprdAPI
 from ..api.response_objects import Channel, Channels, Session, TicketPrice
 from ..config_parser.parameters import Parameters
 from ..services.blokli_repository import NetworkRepository
-from ..services.channel_lifecycle_coordinator import ChannelLifecycleCoordinator
+from ..services.channel_graph_store import ChannelGraphStore
+from ..services.channel_view_coordinator import ChannelViewCoordinator
 from ..services.economic_model_refresh_coordinator import EconomicModelRefreshCoordinator
 from ..services.network_update_coordinator import NetworkUpdateCoordinator
 from ..services.send_plan_coordinator import SendPlanCoordinator
@@ -34,11 +34,12 @@ class NodeRuntimeState:
     min_ticket_winning_probability: Optional[float]
 
     channels: Optional[Channels]
+    channel_graph: ChannelGraphStore
+    channel_view_coordinator: ChannelViewCoordinator
+    _channel_graph_sweep_task: Optional[asyncio.Task[None]]
     outgoing_channel_balances: dict[str, Balance]
 
     peers: dict[str, Peer]
-    peer_history: dict[str, datetime]
-    channel_funding_cooldowns: dict[str, datetime]
     network_state: NetworkState
 
     sessions: dict[str, Session]
@@ -59,7 +60,6 @@ class NodeRuntimeState:
     network_state_service: NetworkStateService
     network_sync_orchestrator: NetworkSyncOrchestrator
     network_update_coordinator: NetworkUpdateCoordinator
-    channel_lifecycle_coordinator: ChannelLifecycleCoordinator
     send_plan_coordinator: SendPlanCoordinator
     relay_pacer: RelayPacer
     session_lifecycle_coordinator: SessionLifecycleCoordinator
@@ -68,11 +68,7 @@ class NodeRuntimeState:
     _cached_peer_addresses: set[str] | None
     _cached_reachable_destinations: set[str] | None
     _cached_outgoing_open: list[Channel] | None
-    _cached_incoming_open: list[Channel] | None
-    _cached_outgoing_pending: list[Channel] | None
-    _cached_outgoing_not_closed: list[Channel] | None
     _cached_address_to_open_channel: dict[str, Channel] | None
-    _pending_channel_reclose_tasks: dict[str, asyncio.Task[None]]
 
     @property
     def address_to_open_channel(self) -> dict[str, Channel]: ...

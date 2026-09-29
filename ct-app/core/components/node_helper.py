@@ -7,16 +7,15 @@ from prometheus_client import Counter
 
 from ..api.hoprd_api import HoprdAPI
 from ..api.response_objects import Session, SessionFailure
+from ..api.session import DEFAULT_RECEIVE_TIMEOUT_SECONDS
 from ..constants.labels import MessageSendFailureReason
 from ..messages.message_metrics import (
     MESSAGE_E2E_LATENCY,
     MESSAGES_SENT_FAILED,
     MESSAGES_SENT_SUCCESS,
 )
-from ..types.balance import Balance
 from ..types.message_format import MessageFormat
 
-CHANNELS_OPS = Counter("ct_channel_operation", "Channel operation", ["op", "success"])
 SESSION_OPS = Counter("ct_session_operation", "Session operation", ["relayer", "op", "success"])
 
 logger = logging.getLogger(__name__)
@@ -26,47 +25,6 @@ class NodeHelper:
     @staticmethod
     def _success_label(value) -> str:
         return "yes" if value else "no"
-
-    @classmethod
-    def _log_channel_operation(cls, action: str, success, params: dict, metric_op: str) -> None:
-        if success:
-            logger.info(action, params)
-        else:
-            logger.warning(action, params)
-        CHANNELS_OPS.labels(metric_op, cls._success_label(success)).inc()
-
-    @classmethod
-    async def open_channel(cls, api: HoprdAPI, address: str, amount: Balance):
-        log_params = {"to": address, "amount": amount.as_str}
-        logger.debug("Opening channel", log_params)
-
-        channel = await api.open_channel(address, amount)
-        action = "Opened channel" if channel else f"Failed to open channel to {address}"
-        cls._log_channel_operation(action, channel, log_params, "opened")
-
-    @classmethod
-    async def close_channel(cls, api: HoprdAPI, address: str, type: str):
-        logs_params = {"to": address}
-        logger.debug(f"Closing {type} channel", logs_params)
-
-        direction = "incoming" if "incoming" in type.lower() else "outgoing"
-        ok = await api.close_channel(address, direction)
-        cls._log_channel_operation(
-            f"Closed {type} channel" if ok else f"Failed to close {type}",
-            ok,
-            logs_params,
-            type,
-        )
-
-    @classmethod
-    async def fund_channel(cls, api: HoprdAPI, address: str, amount: Balance):
-        logs_params = {"to": address, "amount": amount.as_str}
-        logger.debug("Funding channel", logs_params)
-
-        ok = await api.fund_channel(address, amount)
-        action = "Fund channel" if ok else "Failed to fund channel"
-        cls._log_channel_operation(action, ok, logs_params, "fund")
-        return ok
 
     @classmethod
     async def open_session(
@@ -184,7 +142,12 @@ class NodeHelper:
         return ok
 
     @classmethod
-    async def send_batch_messages(cls, session: Session, message: MessageFormat):
+    async def send_batch_messages(
+        cls,
+        session: Session,
+        message: MessageFormat,
+        receive_timeout: float = DEFAULT_RECEIVE_TIMEOUT_SECONDS,
+    ):
         """
         Send a batch of messages and wait for responses.
 
@@ -234,7 +197,11 @@ class NodeHelper:
                 session.send(message)
 
             # Wait for responses
-            await session.receive(message.packet_size, message.batch_size * message.packet_size)
+            await session.receive(
+                message.packet_size,
+                message.batch_size * message.packet_size,
+                timeout=receive_timeout,
+            )
 
             # Success - record metrics
             MESSAGES_SENT_SUCCESS.inc()

@@ -5,9 +5,9 @@ import pprint
 import time
 from datetime import timedelta
 
-from core.components import EnvironmentUtils
 from core.components.logs import configure_logging
 
+from .environment import EnvironmentUtils
 from .metric import Metric
 
 configure_logging()

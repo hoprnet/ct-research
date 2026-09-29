@@ -11,3 +11,5 @@ class SessionsParams(ExplicitParams):
     session_retry_max_delay: Duration
     message_worker_count: int
     message_queue_maxsize: int
+    # How long to wait for a batch's echo before counting the missing messages as lost.
+    receive_timeout: Duration

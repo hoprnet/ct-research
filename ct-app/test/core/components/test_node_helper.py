@@ -6,42 +6,7 @@ import pytest
 
 from core.api.response_objects import Session, SessionFailure
 from core.components.node_helper import NodeHelper
-from core.types.balance import Balance
 from core.types.message_format import MessageFormat
-
-
-@pytest.mark.asyncio
-async def test_open_channel_calls_api_with_requested_amount():
-    api = MagicMock()
-    api.open_channel = AsyncMock(return_value=object())
-    amount = Balance("1 wxHOPR")
-
-    await NodeHelper.open_channel(api, "0xpeer", amount)
-
-    api.open_channel.assert_awaited_once_with("0xpeer", amount)
-
-
-@pytest.mark.asyncio
-async def test_close_channel_returns_api_status():
-    api = MagicMock()
-    api.close_channel = AsyncMock(return_value=True)
-    address = "peer-1"
-
-    await NodeHelper.close_channel(api, address, "old_closed")
-
-    api.close_channel.assert_awaited_once_with(address, "outgoing")
-
-
-@pytest.mark.asyncio
-async def test_fund_channel_calls_api_with_requested_amount():
-    api = MagicMock()
-    api.fund_channel = AsyncMock(return_value=True)
-    address = "peer-1"
-    amount = Balance("2 wxHOPR")
-
-    await NodeHelper.fund_channel(api, address, amount)
-
-    api.fund_channel.assert_awaited_once_with(address, amount)
 
 
 @pytest.mark.asyncio
@@ -117,12 +82,13 @@ async def test_send_batch_messages_sends_full_batch_and_receives():
     message = MessageFormat("peer_1", "sender", 100, 3)
     message.queued_at = time.time() - 0.01
 
-    await NodeHelper.send_batch_messages(session, message)
+    await NodeHelper.send_batch_messages(session, message, receive_timeout=7.5)
 
     assert session.send.call_count == message.batch_size
     session.receive.assert_awaited_once_with(
         message.packet_size,
         message.batch_size * message.packet_size,
+        timeout=7.5,
     )
 
 

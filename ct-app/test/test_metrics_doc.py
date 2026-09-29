@@ -8,7 +8,7 @@ def test_collect_metrics_finds_known_metric_definitions():
     names = {metric.metric_name for metric in metrics}
 
     assert "ct_messages_processed_total" in names
-    assert "ct_channel_operation" in names
+    assert "ct_channel_funds" in names
     assert "ct_peer_delay" in names
 
 

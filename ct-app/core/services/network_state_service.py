@@ -16,7 +16,7 @@ class NetworkStateService:
         self.repository = repository
         self.link_state_store = LinkStateStore(state)
 
-    def make_link_update(self, node_address: str, safe_address: str) -> LinkUpdate:
+    def make_link_update(self, node_address: str, safe_address: str | None) -> LinkUpdate:
         return LinkUpdate(node_address=node_address, safe_address=safe_address)
 
     def make_balance_update(self, safe_address: str, balance) -> BalanceUpdate:
@@ -39,6 +39,15 @@ class NetworkStateService:
     def apply_link_updates(self, updates: list[LinkUpdate]) -> None:
         self.link_state_store.apply_link_updates(updates)
         logger.debug("Applied link updates", {"count": len(updates)})
+
+    def start_link_generation(self) -> None:
+        self.link_state_store.start_generation()
+
+    def sweep_links(self) -> int:
+        dropped = self.link_state_store.sweep()
+        if dropped:
+            logger.info("Dropped node-safe links missing from the new snapshot", {"count": dropped})
+        return dropped
 
     def apply_balance_updates(self, updates: list[BalanceUpdate]) -> None:
         for update in updates:

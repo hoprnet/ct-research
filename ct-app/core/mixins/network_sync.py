@@ -10,7 +10,6 @@ REDEEMED_REWARDS = Gauge("ct_redeemed_rewards", "Redeemed rewards", ["address"])
 class NetworkSyncMixin(PeerAllocationMixin):
     def _on_link_update(self) -> None:
         self.network_update_coordinator.request(NetworkUpdateSource.ACCOUNT_LINK_SUBSCRIPTION)
-        self.channel_lifecycle_coordinator.request("account_link_subscription")
 
     async def subscribe_accounts(self):
         await self.network_sync_orchestrator.stream_link_updates(self._on_link_update)

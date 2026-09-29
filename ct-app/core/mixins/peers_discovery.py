@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 
 from prometheus_client import Gauge
 
@@ -17,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 class PeerDiscoveryMixin(PeerAllocationMixin):
     api: HoprdAPI
-    peer_history: dict[str, datetime]
     _cached_peer_addresses: set[str] | None
     _cached_reachable_destinations: set[str] | None
 
@@ -28,8 +26,6 @@ class PeerDiscoveryMixin(PeerAllocationMixin):
         if len(visible_peers) == 0:
             logger.warning("No results while retrieving peers")
             return
-
-        self.peer_history.update({item.address.native: datetime.now() for item in visible_peers})
 
         counts = {"new": 0, "known": 0, "unreachable": 0}
 
@@ -51,7 +47,6 @@ class PeerDiscoveryMixin(PeerAllocationMixin):
                 counts["new"] += 1
 
         self.network_update_coordinator.request(NetworkUpdateSource.PEER_DISCOVERY_REFRESH)
-        self.channel_lifecycle_coordinator.request("peer_discovery_refresh")
 
         if counts["new"] > 0 or counts["unreachable"] > 0:
             self.invalidate_peer_cache()

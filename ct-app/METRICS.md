@@ -10,7 +10,6 @@ Generated from `core/` metric definitions by `scripts/generate_metrics_doc.py`.
 | `ct_batch_schedule_failures_total` | `Counter` | `-` | Total batch send scheduling failures in the message workers | `core/messages/message_metrics.py` |
 | `ct_blokli_calls` | `Counter` | `type, target, result` | Total Blokli API calls | `core/blokli/blokli_provider.py` |
 | `ct_channel_funds` | `Gauge` | `-` | Total funds in out. channels | `core/mixins/channel/actions.py` |
-| `ct_channel_operation` | `Counter` | `op, success` | Channel operation | `core/components/node_helper.py` |
 | `ct_channels` | `Gauge` | `direction` | Node channels | `core/mixins/channel/actions.py` |
 | `ct_eligible_peers` | `Gauge` | `-` | # of eligible peers for rewards | `core/mixins/economic_system.py` |
 | `ct_message_count` | `Gauge` | `address, model` | messages one should receive / year | `core/mixins/economic_system.py` |

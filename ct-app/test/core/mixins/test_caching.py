@@ -10,7 +10,7 @@ Tests cover:
 
 import pytest
 
-from core.api.response_objects import Channel, Channels, ConnectedPeer
+from core.api.response_objects import ConnectedPeer
 from core.types.message_format import MessageFormat
 from core.node import Node
 
@@ -123,7 +123,7 @@ class TestChannelCaching:
     @pytest.mark.asyncio
     async def test_outgoing_open_channels_returns_correct_list(self, node: Node):
         """Test that outgoing_open_channels property returns correct filtered list."""
-        await node.retrieve_channels()
+        await node.rebuild_channel_views()
 
         cached_channels = node.outgoing_open_channels
         expected_channels = [c for c in node.channels.outgoing if c.status.is_open]
@@ -132,59 +132,9 @@ class TestChannelCaching:
         assert all(c.status.is_open for c in cached_channels)
 
     @pytest.mark.asyncio
-    async def test_incoming_open_channels_returns_correct_list(self, node: Node):
-        """Test that incoming_open_channels property returns correct filtered list."""
-        await node.retrieve_channels()
-
-        cached_channels = node.incoming_open_channels
-        expected_channels = [c for c in node.channels.incoming if c.status.is_open]
-
-        assert len(cached_channels) == len(expected_channels)
-        assert all(c.status.is_open for c in cached_channels)
-
-    @pytest.mark.asyncio
-    async def test_outgoing_pending_channels_returns_correct_list(self, node: Node, mocker):
-        """Test that outgoing_pending_channels property returns correct filtered list."""
-        # Create channels with pending status
-        pending_channels = [
-            Channel(
-                {
-                    "balance": "1 wxHOPR",
-                    "destination": "dest_1",
-                    "source": "address_0",
-                    "status": "PendingToClose",
-                }
-            )
-        ]
-
-        channels = Channels({})
-        channels.all = pending_channels
-        channels.outgoing = pending_channels
-        channels.incoming = []
-
-        mocker.patch.object(node.api, "channels", return_value=channels)
-        await node.retrieve_channels()
-
-        cached_channels = node.outgoing_pending_channels
-
-        assert len(cached_channels) == 1
-        assert all(c.status.is_pending for c in cached_channels)
-
-    @pytest.mark.asyncio
-    async def test_outgoing_not_closed_channels_returns_correct_list(self, node: Node):
-        """Test that outgoing_not_closed_channels property returns correct filtered list."""
-        await node.retrieve_channels()
-
-        cached_channels = node.outgoing_not_closed_channels
-        expected_channels = [c for c in node.channels.outgoing if not c.status.is_closed]
-
-        assert len(cached_channels) == len(expected_channels)
-        assert all(not c.status.is_closed for c in cached_channels)
-
-    @pytest.mark.asyncio
     async def test_address_to_open_channel_returns_correct_dict(self, node: Node):
         """Test that address_to_open_channel property returns correct dict mapping."""
-        await node.retrieve_channels()
+        await node.rebuild_channel_views()
 
         cached_dict = node.address_to_open_channel
         expected_dict = {c.destination: c for c in node.channels.outgoing if c.status.is_open}
@@ -199,43 +149,34 @@ class TestChannelCaching:
     @pytest.mark.asyncio
     async def test_channel_caches_are_reused(self, node: Node):
         """Test that cached channel values are reused on subsequent accesses."""
-        await node.retrieve_channels()
+        await node.rebuild_channel_views()
 
         # First access populates caches
         first_outgoing = node.outgoing_open_channels
-        first_incoming = node.incoming_open_channels
+        first_by_address = node.address_to_open_channel
 
         # Second access should return same cached objects
-        second_outgoing = node.outgoing_open_channels
-        second_incoming = node.incoming_open_channels
-
-        assert first_outgoing is second_outgoing
-        assert first_incoming is second_incoming
+        assert node.outgoing_open_channels is first_outgoing
+        assert node.address_to_open_channel is first_by_address
 
     @pytest.mark.asyncio
     async def test_channel_cache_invalidation_on_retrieve(self, node: Node, mocker):
         """Test that channel caches are invalidated when channels are retrieved."""
-        await node.retrieve_channels()
+        await node.rebuild_channel_views()
 
         # Populate all caches
         _ = node.outgoing_open_channels
-        _ = node.incoming_open_channels
-        _ = node.outgoing_pending_channels
-        _ = node.outgoing_not_closed_channels
         _ = node.address_to_open_channel
 
         # All caches should be populated
         assert node._cached_outgoing_open is not None
-        assert node._cached_incoming_open is not None
+        assert node._cached_address_to_open_channel is not None
 
         # Retrieve channels again
-        await node.retrieve_channels()
+        await node.rebuild_channel_views()
 
         # All caches should be invalidated
         assert node._cached_outgoing_open is None
-        assert node._cached_incoming_open is None
-        assert node._cached_outgoing_pending is None
-        assert node._cached_outgoing_not_closed is None
         assert node._cached_address_to_open_channel is None
 
 
@@ -307,7 +248,7 @@ class TestSessionDestinationSelection:
     async def test_select_destination_uses_cached_properties(self, node: Node):
         """Test that _select_session_destination uses cached reachable_destinations."""
         await node.retrieve_peers()
-        await node.retrieve_channels()
+        await node.rebuild_channel_views()
 
         node.session_destinations = ["address_1", "address_2", "address_3"]
 
@@ -334,7 +275,7 @@ class TestSessionDestinationSelection:
     async def test_select_destination_filters_relayer_correctly(self, node: Node):
         """Test that destination selection correctly filters out the relayer."""
         await node.retrieve_peers()
-        await node.retrieve_channels()
+        await node.rebuild_channel_views()
 
         node.session_destinations = ["address_1", "address_2", "address_3", "address_4"]
 

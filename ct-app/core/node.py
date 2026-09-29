@@ -20,7 +20,6 @@ Thread Safety:
 
 import asyncio
 import logging
-from datetime import datetime
 from collections.abc import Sequence
 from typing import Optional
 
@@ -40,8 +39,9 @@ from .types.network_state import NetworkState
 from .types.session_rate_limiter import SessionRateLimiter
 from .components.decorators import get_keepalive_methods
 from .services.node_runtime_factory import NodeRuntimeFactory
+from .services.channel_graph_store import ChannelGraphStore
+from .services.channel_view_coordinator import ChannelViewCoordinator
 from .services.economic_model_refresh_coordinator import EconomicModelRefreshCoordinator
-from .services.channel_lifecycle_coordinator import ChannelLifecycleCoordinator
 from .services.network_update_coordinator import NetworkUpdateCoordinator
 from .services.send_plan_coordinator import SendPlanCoordinator
 from .services.session_lifecycle_coordinator import SessionLifecycleCoordinator
@@ -87,8 +87,6 @@ class Node(
         self.url = url
 
         self.peers = dict[str, Peer]()
-        self.peer_history = dict[str, datetime]()
-        self.channel_funding_cooldowns = dict[str, datetime]()
         self.network_state = NetworkState()
         self._session_destinations = list[str]()
         self.sessions = dict[str, Session]()
@@ -118,15 +116,15 @@ class Node(
 
         self.address: Optional[Address] = None
         self.channels: Optional[Channels] = None
+        self.channel_graph = ChannelGraphStore()
+        self.channel_view_coordinator = ChannelViewCoordinator(self.rebuild_channel_views)
+        self._channel_graph_sweep_task: Optional[asyncio.Task[None]] = None
 
         self.outgoing_channel_balances = dict[str, Balance]()
         self.ticket_price: Optional[TicketPrice] = None
         self.min_ticket_winning_probability: Optional[float] = None
         self.economic_model_refresh_coordinator = EconomicModelRefreshCoordinator(
             self._apply_economic_model_once
-        )
-        self.channel_lifecycle_coordinator = ChannelLifecycleCoordinator(
-            self.reconcile_channels_once
         )
         self.network_update_coordinator = NetworkUpdateCoordinator(
             self.reconcile_peer_allocations,
@@ -144,12 +142,16 @@ class Node(
             self.network_update_coordinator.close,
         )
         self.shutdown_coordinator.register_async(
-            "channel_lifecycle_coordinator",
-            self.channel_lifecycle_coordinator.close,
+            "channel_view_coordinator",
+            self.channel_view_coordinator.close,
         )
         self.shutdown_coordinator.register_async(
-            "channel_reclose_tasks",
-            self.close_channel_reclose_tasks,
+            "channel_graph_sweep",
+            self.close_channel_graph_sweep,
+        )
+        self.shutdown_coordinator.register_async(
+            "account_link_sweep",
+            self.network_sync_orchestrator.close,
         )
 
         self.connected = False
@@ -162,11 +164,7 @@ class Node(
 
         # Channel caching (ChannelMixin)
         self._cached_outgoing_open: list[Channel] | None = None
-        self._cached_incoming_open: list[Channel] | None = None
-        self._cached_outgoing_pending: list[Channel] | None = None
-        self._cached_outgoing_not_closed: list[Channel] | None = None
         self._cached_address_to_open_channel: dict[str, Channel] | None = None
-        self._pending_channel_reclose_tasks = dict[str, asyncio.Task[None]]()
 
         BALANCE_MULTIPLIER.set(1.0)
 
@@ -182,6 +180,8 @@ class Node(
     async def start(self):
         await self.retrieve_address()
 
+        # TODO: see `load_static_ticket_parameters_from_node_configuration`; the static path
+        # currently never triggers with hoprd v5, so the Blokli subscription is always used.
         static_ticket_price, static_winning_probability = (
             await self.load_static_ticket_parameters_from_node_configuration()
         )
@@ -193,7 +193,7 @@ class Node(
         should_subscribe_ticket_parameters = not (
             static_ticket_price and static_winning_probability
         )
-        scheduled_subscription_methods = ["subscribe_accounts"]
+        scheduled_subscription_methods = ["subscribe_accounts", "subscribe_channels"]
         if should_subscribe_ticket_parameters:
             scheduled_subscription_methods.append("ticket_parameters")
 
@@ -202,9 +202,9 @@ class Node(
             {"methods": scheduled_subscription_methods},
         )
         AsyncLoop.add(self.subscribe_accounts)
+        AsyncLoop.add(self.subscribe_channels)
         if should_subscribe_ticket_parameters:
             AsyncLoop.add(self.ticket_parameters)
-        self.channel_lifecycle_coordinator.request("startup")
 
         keepalive_methods = get_keepalive_methods(self)
         logger.info(

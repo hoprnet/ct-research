@@ -5,7 +5,6 @@ from .base_classes import ExplicitParams, Flag
 
 @dataclass(init=False, repr=False)
 class FlagNodeParams(ExplicitParams):
-    outgoing_channels_balances: Flag
 
     healthcheck: Flag
     retrieve_peers: Flag

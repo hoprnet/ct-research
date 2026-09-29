@@ -103,7 +103,6 @@ async def test_start_skips_ticket_parameters_subscription_when_both_static_value
         "load_static_ticket_parameters_from_node_configuration",
         new=AsyncMock(return_value=(True, True)),
     )
-    mocker.patch.object(node.channel_lifecycle_coordinator, "request")
     add_mock = mocker.patch("core.node.AsyncLoop.add")
     gather_mock = mocker.patch("core.node.AsyncLoop.gather", new=AsyncMock())
     update_mock = mocker.patch("core.node.AsyncLoop.update")
@@ -112,7 +111,8 @@ async def test_start_skips_ticket_parameters_subscription_when_both_static_value
     await node.start()
 
     add_mock.assert_any_call(node.subscribe_accounts)
-    assert add_mock.call_count == 1
+    add_mock.assert_any_call(node.subscribe_channels)
+    assert add_mock.call_count == 2
     update_mock.assert_called_once_with([])
     keepalive_mock.assert_called_once_with(node)
     gather_mock.assert_awaited_once()
@@ -154,7 +154,6 @@ async def test_start_subscribes_to_ticket_parameters_when_neither_static_value_i
         "load_static_ticket_parameters_from_node_configuration",
         new=AsyncMock(return_value=(False, False)),
     )
-    mocker.patch.object(node.channel_lifecycle_coordinator, "request")
     add_mock = mocker.patch("core.node.AsyncLoop.add")
     gather_mock = mocker.patch("core.node.AsyncLoop.gather", new=AsyncMock())
     update_mock = mocker.patch("core.node.AsyncLoop.update")
@@ -163,8 +162,9 @@ async def test_start_subscribes_to_ticket_parameters_when_neither_static_value_i
     await node.start()
 
     add_mock.assert_any_call(node.subscribe_accounts)
+    add_mock.assert_any_call(node.subscribe_channels)
     add_mock.assert_any_call(node.ticket_parameters)
-    assert add_mock.call_count == 2
+    assert add_mock.call_count == 3
     update_mock.assert_called_once_with([])
     gather_mock.assert_awaited_once()
 
@@ -190,27 +190,19 @@ async def test_retrieve_balances(node: Node):
 @pytest.mark.asyncio
 async def test_retrieve_peers(node: Node, peers: list[Peer]):
     node.peers = {}
-    node.peer_history = dict()
     await node.retrieve_peers()
 
     assert len(node.peers) == len(peers) - 1
-    assert node.peer_history != dict()
 
 
 @pytest.mark.asyncio
-async def test_retrieve_channels(node: Node, channels: Channels):
+async def test_rebuild_channel_views_from_channel_graph(node: Node, channels: Channels):
     assert node.channels is None
 
-    await node.retrieve_channels()
+    await node.rebuild_channel_views()
 
-    assert node.channels == channels
-
-
-@pytest.mark.asyncio
-async def test_get_total_channel_funds(node: Node, channels: Channels):
-    await node.retrieve_channels()
-
-    total_funds_from_node = await node.get_total_channel_funds()
-    total_funds_from_fixture = sum([c.balance for c in channels.outgoing], Balance.zero("wxHOPR"))
-
-    assert total_funds_from_fixture == total_funds_from_node
+    assert node.channels is not None
+    assert len(node.channels.all) == len(channels.all)
+    own = node.address.native
+    assert node.channels.outgoing == [c for c in channels.all if c.source == own]
+    assert node.channels.incoming == [c for c in channels.all if c.destination == own]

@@ -49,12 +49,31 @@ through:
 
 There is no free-form formula language in the config anymore.
 
-Relevant channel controls under `channel`:
+### Channels
 
-- `min_balance`
-- `funding_amount`
-- `funding_cooldown`
-- `max_age`
+CT does not open, fund or close channels. The hoprd node it talks to does, through its `ChannelLifecycle` strategy. CT only follows the channels through Blokli's `openedChannelGraphUpdated` subscription, to know which relays it can send through and how much stake sits in the network.
+
+Every CT node needs a channel to every relay it uses, because messages go `A -> relay -> B` and come back `B -> relay -> A`. A starting point for the CT nodes' hoprd config, which opens a channel to every connected peer, tops it up, and closes it only when the peer has been unseen for a while:
+
+```yaml
+strategy:
+  strategies:
+    - ChannelLifecycle:
+        population:
+          target_open_channels: 10000  # above the network size: open to every eligible peer
+        eligibility:
+          require_currently_connected: true
+          min_peer_quality_score: 0.0
+          demote_non_forwarding_peers: false
+        funding:
+          initial_capacity: "64 MiB"  # size to CT's traffic; the default 1 GiB locks ~3k wxHOPR per channel
+          topup_capacity: "64 MiB"
+          lower_capacity_threshold: "16 MiB"
+        closure:
+          close_below_quality_score: 0.0
+          close_after_disconnected_ticks: 1000
+          close_when_peer_unseen_for: "3d"
+```
 
 
 ### Metrics

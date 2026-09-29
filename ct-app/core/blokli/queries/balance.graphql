@@ -1,8 +1,17 @@
 query ($address: String!) {
     hoprBalance(address: $address) {
+        __typename
         ... on HoprBalance {
             address
             balance
+        }
+        ... on InvalidAddressError {
+            code
+            message
+        }
+        ... on QueryFailedError {
+            code
+            message
         }
     }
 }

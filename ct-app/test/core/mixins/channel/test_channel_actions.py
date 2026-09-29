@@ -1,13 +1,16 @@
-from datetime import datetime, timedelta
+import asyncio
 from unittest.mock import AsyncMock
 
 import pytest
 
-from core.api.response_objects import Channel, Channels
-from core.types.peer import Peer
-from core.types.balance import Balance
-from core.components.node_helper import NodeHelper
+from core.api.response_objects import Channel
+from core.mixins.channel.actions import CHANNEL_FUNDS
 from core.node import Node
+from core.services.channel_graph_store import ChannelGraphStore
+from core.types.balance import Balance
+from core.types.network_models import ChannelGraphUpdate
+
+from test.conftest import load_channels
 
 
 def build_channel(
@@ -26,272 +29,121 @@ def build_channel(
     )
 
 
+def update(channel_id: str, channel: Channel) -> ChannelGraphUpdate:
+    return ChannelGraphUpdate(channel_id=channel_id, channel=channel)
+
+
+def test_channel_graph_store_removes_closed_channels():
+    store = ChannelGraphStore()
+    store.apply(update("0x1", build_channel("a", "b")))
+    store.apply(update("0x2", build_channel("a", "c", "PendingToClose")))
+
+    store.apply(update("0x1", build_channel("a", "b", "Closed")))
+
+    assert [c.destination for c in store.channels()] == ["c"]
+
+
+def test_channel_graph_store_sweeps_channels_missing_from_new_snapshot():
+    store = ChannelGraphStore()
+    store.start_generation()
+    store.apply(update("0x1", build_channel("a", "b")))
+    store.apply(update("0x2", build_channel("a", "c")))
+
+    # Reconnect: the new snapshot no longer contains 0x2, which closed while disconnected.
+    store.start_generation()
+    store.apply(update("0x1", build_channel("a", "b", balance="2 wxHOPR")))
+
+    assert len(store) == 2  # kept until the sweep, so the view never empties mid-snapshot
+    assert store.sweep() == 1
+    assert [(c.destination, c.balance) for c in store.channels()] == [("b", Balance("2 wxHOPR"))]
+
+
 @pytest.mark.asyncio
-async def test_get_total_channel_funds_uses_outgoing_balance_sum(node: Node, mocker):
-    await node.retrieve_channels()
-    expected = Balance("7 wxHOPR")
-    mocker.patch(
-        "core.mixins.channel.actions.Utils.balanceInChannels",
-        new=AsyncMock(return_value={node.address.native: expected}),
-    )
-
-    balance = await node.get_total_channel_funds()
-
-    assert balance == expected
-
-
-@pytest.mark.asyncio
-async def test_retrieve_channels_filters_node_links_and_invalidates_cache(node: Node, mocker):
+async def test_rebuild_channel_views_filters_node_links_and_invalidates_cache(node: Node, mocker):
     node._cached_outgoing_open = []
-    node._cached_incoming_open = []
-    node._cached_outgoing_pending = []
-    node._cached_outgoing_not_closed = []
     node._cached_address_to_open_channel = {}
-
-    all_channels = [
-        build_channel(node.address.native, "peer_a", "Open"),
-        build_channel(node.address.native, "peer_b", "Closed"),
-        build_channel("peer_c", node.address.native, "Open"),
-        build_channel("peer_d", "peer_e", "Open"),
-    ]
-    channels = Channels({})
-    channels.all = all_channels
-    channels.outgoing = []
-    channels.incoming = []
-
+    load_channels(
+        node,
+        [
+            build_channel(node.address.native, "peer_a", "Open"),
+            build_channel("peer_c", node.address.native, "Open"),
+            build_channel("peer_d", "peer_e", "Open"),
+        ],
+    )
     topology = {"peer_a": Balance("1 wxHOPR")}
-    mocker.patch.object(node.api, "channels", new=AsyncMock(return_value=channels))
     mocker.patch(
         "core.mixins.channel.actions.Utils.balanceInChannels",
         new=AsyncMock(return_value=topology),
     )
+    network_update_request = mocker.patch.object(node.network_update_coordinator, "request")
 
-    await node.retrieve_channels()
+    await node.rebuild_channel_views()
 
     assert [channel.destination for channel in node.channels.outgoing] == ["peer_a"]
     assert [channel.source for channel in node.channels.incoming] == ["peer_c"]
+    assert len(node.channels.all) == 3
     assert node.outgoing_channel_balances == topology
     assert node.network_state.outgoing_channel_balances == topology
     assert node._cached_outgoing_open is None
-    assert node._cached_incoming_open is None
-    assert node._cached_outgoing_pending is None
-    assert node._cached_outgoing_not_closed is None
     assert node._cached_address_to_open_channel is None
+    assert set(node.address_to_open_channel) == {"peer_a"}
+    network_update_request.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_fund_channels_schedules_only_low_balance_known_peer_channels(node: Node, mocker):
-    node.peers = {"peer_low": Peer("peer_low"), "peer_other": Peer("peer_other")}
-    node.channels = Channels({})
-    node.channels.outgoing = [
-        build_channel(node.address.native, "peer_low", balance="0.01 wxHOPR"),
-        build_channel(node.address.native, "peer_unknown", balance="0.01 wxHOPR"),
-        build_channel(node.address.native, "peer_other", balance="5 wxHOPR"),
-    ]
-    node.channels.incoming = []
-    node.invalidate_channel_cache()
+async def test_rebuild_channel_views_reports_own_open_channel_funds(node: Node):
+    load_channels(
+        node,
+        [
+            build_channel(node.address.native, "peer_a", "Open", "3 wxHOPR"),
+            build_channel(node.address.native, "peer_b", "Open", "4 wxHOPR"),
+            build_channel(node.address.native, "peer_c", "PendingToClose", "100 wxHOPR"),
+            build_channel("peer_d", "peer_e", "Open", "50 wxHOPR"),
+        ],
+    )
 
-    scheduled: list[tuple] = []
-    fund_mock = mocker.patch.object(NodeHelper, "fund_channel", new=AsyncMock())
-    lifecycle_request = mocker.patch.object(node.channel_lifecycle_coordinator, "request")
+    await node.rebuild_channel_views()
+
+    assert CHANNEL_FUNDS._value.get() == 7.0
+
+
+@pytest.mark.asyncio
+async def test_apply_channel_update_requests_view_rebuild(node: Node, mocker):
+    rebuild_request = mocker.patch.object(node.channel_view_coordinator, "request")
+
+    node.apply_channel_update(update("0x1", build_channel(node.address.native, "peer_a")))
+
+    assert len(node.channel_graph) == len(node.channel_graph.channels())
+    assert any(c.destination == "peer_a" for c in node.channel_graph.channels())
+    rebuild_request.assert_called_once_with("channel_graph_update")
+
+
+@pytest.mark.asyncio
+async def test_subscribe_channels_starts_generation_and_applies_updates(node: Node, mocker):
+    node.channel_graph = ChannelGraphStore()
+    mocker.patch.object(node.channel_view_coordinator, "request")
+    scheduled: list = []
     mocker.patch(
         "core.mixins.channel.actions.AsyncLoop.add",
-        side_effect=lambda callback, *args, **kwargs: scheduled.append((callback, args, kwargs)),
+        side_effect=lambda callback, *args, **kwargs: scheduled.append(callback),
     )
 
-    await node.fund_channels()
+    def stream_channel_graph(on_connect=None):
+        async def _stream():
+            on_connect()
+            yield update("0x1", build_channel(node.address.native, "peer_a"))
+            yield update("0x1", build_channel(node.address.native, "peer_a", "Closed"))
+            yield update("0x2", build_channel(node.address.native, "peer_b"))
+            raise asyncio.CancelledError
 
-    assert len(scheduled) == 1
-    callback, args, kwargs = scheduled[0]
-    assert callback.__name__ == "_execute"
-    assert args == ()
-    assert kwargs == {"publish_to_task_set": False}
-    await callback()
-    fund_mock.assert_awaited_once_with(
-        node.api,
-        "peer_low",
-        node.params.channel.funding_amount,
-    )
-    lifecycle_request.assert_called_once_with("fund_channel")
-    assert "peer_low" in node.channel_funding_cooldowns
+        return _stream()
 
-
-@pytest.mark.asyncio
-async def test_fund_channels_skips_peers_in_funding_cooldown(node: Node, mocker):
-    node.peers = {"peer_low": Peer("peer_low")}
-    node.channels = Channels({})
-    node.channels.outgoing = [
-        build_channel(node.address.native, "peer_low", balance="0.01 wxHOPR"),
-    ]
-    node.channels.incoming = []
-    node.invalidate_channel_cache()
-    node.channel_funding_cooldowns["peer_low"] = datetime.now()
-
-    fund_mock = mocker.patch.object(NodeHelper, "fund_channel", new=AsyncMock())
-    add_mock = mocker.patch("core.mixins.channel.actions.AsyncLoop.add")
-
-    await node.fund_channels()
-
-    add_mock.assert_not_called()
-    fund_mock.assert_not_awaited()
-
-
-@pytest.mark.asyncio
-async def test_fund_channels_clears_cooldown_when_funding_fails(node: Node, mocker):
-    node.peers = {"peer_low": Peer("peer_low")}
-    node.channels = Channels({})
-    node.channels.outgoing = [
-        build_channel(node.address.native, "peer_low", balance="0.01 wxHOPR"),
-    ]
-    node.channels.incoming = []
-    node.invalidate_channel_cache()
-
-    scheduled: list[tuple] = []
-    fund_mock = mocker.patch.object(NodeHelper, "fund_channel", new=AsyncMock(return_value=False))
-    lifecycle_request = mocker.patch.object(node.channel_lifecycle_coordinator, "request")
-    mocker.patch(
-        "core.mixins.channel.actions.AsyncLoop.add",
-        side_effect=lambda callback, *args, **kwargs: scheduled.append((callback, args, kwargs)),
+    mocker.patch.object(
+        node.blokli_repository, "stream_channel_graph", side_effect=stream_channel_graph
     )
 
-    await node.fund_channels()
+    with pytest.raises(asyncio.CancelledError):
+        await node.subscribe_channels()
 
-    assert "peer_low" in node.channel_funding_cooldowns
-    callback, _args, _kwargs = scheduled[0]
-    await callback()
-    fund_mock.assert_awaited_once_with(
-        node.api,
-        "peer_low",
-        node.params.channel.funding_amount,
-    )
-    assert "peer_low" not in node.channel_funding_cooldowns
-    lifecycle_request.assert_called_once_with("fund_channel")
-
-
-@pytest.mark.asyncio
-async def test_close_old_channels_tracks_new_peers_and_closes_only_stale_channels(
-    node: Node, mocker
-):
-    stale_time = datetime.now() - timedelta(seconds=node.params.channel.max_age.value + 5)
-    recent_time = datetime.now() - timedelta(seconds=node.params.channel.max_age.value / 2)
-
-    node.channels = Channels({})
-    node.channels.outgoing = [
-        build_channel(node.address.native, "peer_stale"),
-        build_channel(node.address.native, "peer_recent"),
-        build_channel(node.address.native, "peer_new"),
-    ]
-    node.channels.incoming = []
-    node.peer_history = {"peer_stale": stale_time, "peer_recent": recent_time}
-    node.invalidate_channel_cache()
-
-    scheduled: list[tuple] = []
-    close_mock = mocker.patch.object(NodeHelper, "close_channel", new=AsyncMock())
-    lifecycle_request = mocker.patch.object(node.channel_lifecycle_coordinator, "request")
-    mocker.patch(
-        "core.mixins.channel.actions.AsyncLoop.add",
-        side_effect=lambda callback, *args, **kwargs: scheduled.append((callback, args, kwargs)),
-    )
-
-    await node.close_old_channels()
-
-    assert len(scheduled) == 1
-    callback, args, kwargs = scheduled[0]
-    assert callback.__name__ == "_execute"
-    assert args == ()
-    assert kwargs == {"publish_to_task_set": False}
-    await callback()
-    close_mock.assert_awaited_once_with(node.api, "peer_stale", "old_closed")
-    lifecycle_request.assert_called_once_with("close_old_channel")
-    assert "peer_new" in node.peer_history
-    assert node.peer_history["peer_new"] >= stale_time
-
-
-@pytest.mark.asyncio
-async def test_close_pending_channels_schedules_pending_only(node: Node, mocker):
-    node.channels = Channels({})
-    node.channels.outgoing = [
-        build_channel(node.address.native, "peer_pending", "PendingToClose"),
-        build_channel(node.address.native, "peer_open", "Open"),
-    ]
-    node.channels.incoming = []
-    node.invalidate_channel_cache()
-
-    scheduled: list[tuple] = []
-    mocker.patch(
-        "core.mixins.channel.actions.AsyncLoop.add",
-        side_effect=lambda callback, *args, **kwargs: scheduled.append((callback, args, kwargs)),
-    )
-
-    await node.close_pending_channels()
-
-    assert len(scheduled) == 1
-    assert scheduled[0][0].__name__ == "_reclose"
-
-
-@pytest.mark.asyncio
-async def test_close_incoming_channels_schedules_all_incoming_open(node: Node, mocker):
-    node.channels = Channels({})
-    node.channels.outgoing = []
-    node.channels.incoming = [
-        build_channel("peer_a", node.address.native, "Open"),
-        build_channel("peer_b", node.address.native, "Open"),
-    ]
-    node.invalidate_channel_cache()
-
-    scheduled: list[tuple] = []
-    close_mock = mocker.patch.object(NodeHelper, "close_channel", new=AsyncMock())
-    lifecycle_request = mocker.patch.object(node.channel_lifecycle_coordinator, "request")
-    mocker.patch(
-        "core.mixins.channel.actions.AsyncLoop.add",
-        side_effect=lambda callback, *args, **kwargs: scheduled.append((callback, args, kwargs)),
-    )
-
-    await node.close_incoming_channels()
-
-    assert [item[0].__name__ for item in scheduled] == ["_execute", "_execute"]
-    for callback, _args, _kwargs in scheduled:
-        await callback()
-    assert close_mock.await_count == 2
-    close_mock.assert_any_await(node.api, "peer_a", "incoming_closed")
-    close_mock.assert_any_await(node.api, "peer_b", "incoming_closed")
-    assert lifecycle_request.call_count == 2
-
-
-@pytest.mark.asyncio
-async def test_open_channels_skips_peers_with_open_or_pending_channels(node: Node, mocker):
-    node.peers = {
-        "peer_open": Peer("peer_open"),
-        "peer_pending": Peer("peer_pending"),
-        "peer_missing": Peer("peer_missing"),
-    }
-    node.channels = Channels({})
-    node.channels.outgoing = [
-        build_channel(node.address.native, "peer_open", "Open"),
-        build_channel(node.address.native, "peer_pending", "PendingToClose"),
-    ]
-    node.channels.incoming = []
-    node.invalidate_channel_cache()
-
-    scheduled: list[tuple] = []
-    open_mock = mocker.patch.object(NodeHelper, "open_channel", new=AsyncMock())
-    lifecycle_request = mocker.patch.object(node.channel_lifecycle_coordinator, "request")
-    mocker.patch(
-        "core.mixins.channel.actions.AsyncLoop.add",
-        side_effect=lambda callback, *args, **kwargs: scheduled.append((callback, args, kwargs)),
-    )
-
-    await node.open_channels()
-
-    assert len(scheduled) == 1
-    callback, args, kwargs = scheduled[0]
-    assert callback.__name__ == "_execute"
-    assert args == ()
-    assert kwargs == {"publish_to_task_set": False}
-    await callback()
-    open_mock.assert_awaited_once_with(
-        node.api,
-        "peer_missing",
-        node.params.channel.funding_amount,
-    )
-    lifecycle_request.assert_called_once_with("open_channel")
+    assert [c.destination for c in node.channel_graph.channels()] == ["peer_b"]
+    assert [callback.__name__ for callback in scheduled] == ["_sweep"]

@@ -6,7 +6,7 @@ from .balance import Balance
 @dataclass(frozen=True)
 class LinkUpdate:
     node_address: str
-    safe_address: str
+    safe_address: str | None
 
 
 @dataclass(frozen=True)

@@ -1,8 +1,21 @@
 query ($filter: RedeemedStatsFilter!) {
     ticketRedemptionStats(filter: $filter) {
+        __typename
         ... on RedeemedStats {
             redeemedAmount
             redemptionCount
+        }
+        ... on MissingFilterError {
+            code
+            message
+        }
+        ... on InvalidAddressError {
+            code
+            message
+        }
+        ... on QueryFailedError {
+            code
+            message
         }
     }
 }
