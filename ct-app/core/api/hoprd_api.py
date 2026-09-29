@@ -113,6 +113,31 @@ class HoprdAPI(ApiLib):
             timeout=timeout,
         )
 
+    async def _call_api_with_timeout(
+        self,
+        method: Method,
+        path: str,
+        data: Optional[RequestData] = None,
+        timeout: int = 90,
+        use_api_prefix: bool = True,
+    ) -> tuple[Optional[int], Optional[object]]:
+        status, body = await super()._call_api_with_timeout(
+            method, path, data, timeout=timeout, use_api_prefix=use_api_prefix
+        )
+        # The base client turns any non-2xx answer into `None` and drops hoprd's error body
+        # (e.g. `{"status": "INVALID_INPUT", "error": ...}`); log it so failures are diagnosable.
+        if status is not None and status // 100 != 2:
+            logger.warning(
+                "hoprd API returned an error",
+                {
+                    "method": method.value,
+                    "path": path,
+                    "status": status,
+                    "body": str(body)[:500],
+                },
+            )
+        return status, body
+
     async def balances(self) -> Optional[resp.Balances]:
         """
         Returns the balance of the node.

@@ -130,6 +130,7 @@ async def test_subscribe_channels_starts_generation_and_applies_updates(node: No
 
     def stream_channel_graph(on_connect=None):
         async def _stream():
+            assert on_connect is not None, "the subscription should pass a connect hook"
             on_connect()
             yield update("0x1", build_channel(node.address.native, "peer_a"))
             yield update("0x1", build_channel(node.address.native, "peer_a", "Closed"))

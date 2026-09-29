@@ -15,6 +15,7 @@ from .cache import ChannelCacheMixin
 CHANNELS = Gauge("ct_channels", "Node channels", ["direction"])
 CHANNEL_FUNDS = Gauge("ct_channel_funds", "Total funds in out. channels")
 TOPOLOGY_SIZE = Gauge("ct_topology_size", "Size of the topology")
+CHANNEL_GRAPH_SIZE = Gauge("ct_channel_graph_channels", "Non-closed channels in the channel graph")
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,7 @@ class ChannelActionMixin(ChannelCacheMixin):
 
     async def rebuild_channel_views(self) -> None:
         all_channels = self.channel_graph.channels()
+        CHANNEL_GRAPH_SIZE.set(len(all_channels))
         channels = Channels({})
         channels.all = all_channels
 

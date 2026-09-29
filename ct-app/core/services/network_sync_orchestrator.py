@@ -71,40 +71,39 @@ class NetworkSyncOrchestrator:
             logger.debug("Skipping redeemed refresh: no peers available")
             return
 
-        semaphore = asyncio.Semaphore(5)
+        linked = [
+            (peer, safe) for peer in peers.values() if (safe := peer.safe_address) is not None
+        ]
+        pairs = sorted({(safe, peer.node_address) for peer, safe in linked})
+        try:
+            stats = await self.repository.get_redeemed_amounts(pairs)
+        except Exception as error:
+            logger.warning(
+                "Failed to fetch redeemed amounts; keeping previous values", {"error": str(error)}
+            )
+            return
 
-        async def fetch_one(peer: Peer) -> None:
-            if peer.safe_address is None:
-                return
-            async with semaphore:
-                try:
-                    redemption = await self.repository.get_redeemed_amount(
-                        safe_address=peer.safe_address,
-                        node_address=peer.node_address,
-                    )
-                except Exception as error:
-                    logger.warning(
-                        "Failed to fetch redeemed amount; keeping previous value",
-                        {"peer": peer.address.native, "error": str(error)},
-                    )
-                    return
-                # An error variant or a failed request must not overwrite the known value.
-                if redemption is None or not redemption.is_valid:
-                    logger.warning(
-                        "Blokli returned no redeemed amount; keeping previous value",
-                        {
-                            "peer": peer.address.native,
-                            "error": getattr(redemption, "error", None),
-                        },
-                    )
-                    return
-                update = self.state_service.make_redeemed_update(
+        updates = []
+        missing = 0
+        for peer, safe in linked:
+            redemption = stats.get((safe, peer.node_address))
+            # An error variant or a failed request must not overwrite the known value.
+            if redemption is None or not redemption.is_valid:
+                missing += 1
+                continue
+            updates.append(
+                self.state_service.make_redeemed_update(
                     peer.address.native,
-                    peer.safe_address,
+                    safe,
                     peer.node_address,
                     redemption.redeemed_amount,
                 )
-                self.state_service.apply_redeemed_updates([update], peers)
-
-        await asyncio.gather(*(fetch_one(peer) for peer in peers.values()))
+            )
+        if missing:
+            logger.warning(
+                "Blokli returned no redeemed amount for some peers; keeping previous values",
+                {"missing": missing, "requested": len(linked)},
+            )
+        if updates:
+            self.state_service.apply_redeemed_updates(updates, peers)
         logger.debug("Refreshed redeemed amounts", {"peer_count": len(peers)})

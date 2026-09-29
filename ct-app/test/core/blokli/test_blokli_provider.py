@@ -116,3 +116,75 @@ async def test_context_manager_keeps_sessions_lazy_until_operation():
 
         assert client._query_session is None
         assert client._subscription_session == session
+
+
+class _FakeContent:
+    def __init__(self, lines: list[bytes]):
+        self._lines = list(lines)
+
+    def at_eof(self) -> bool:
+        return not self._lines
+
+    async def readline(self) -> bytes:
+        return self._lines.pop(0) if self._lines else b""
+
+
+class _FakeResponse:
+    status = 200
+
+    def __init__(self, lines: list[bytes]):
+        self.content = _FakeContent(lines)
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        return False
+
+
+class _FakeSession:
+    closed = False
+
+    def __init__(self, lines: list[bytes]):
+        self._lines = lines
+
+    def post(self, *args, **kwargs):
+        return _FakeResponse(self._lines)
+
+
+@pytest.mark.asyncio
+async def test_subscription_reports_connection_and_last_event(mocker):
+    import asyncio
+    from unittest.mock import AsyncMock
+
+    from core.blokli.blokli_provider import SUBSCRIPTION_CONNECTED, SUBSCRIPTION_LAST_EVENT
+
+    payload = (
+        b'data: {"data":{"ticketParametersUpdated":'
+        b'{"minTicketWinningProbability":0.5,"ticketPrice":"1 wxHOPR"}}}\n'
+    )
+    provider = TicketParametersSubscription("http://blokli.local")
+    mocker.patch.object(
+        provider,
+        "_ensure_subscription_session",
+        new=AsyncMock(return_value=_FakeSession([b"event: next\n", payload, b"\n"])),
+    )
+    # Stop the reconnect loop once the stream has ended.
+    mocker.patch(
+        "core.blokli.blokli_provider.asyncio.sleep",
+        new=AsyncMock(side_effect=asyncio.CancelledError),
+    )
+    connected = SUBSCRIPTION_CONNECTED.labels(provider._operation_name)
+    connects: list[int] = []
+
+    stream = provider.subscribe(on_connect=lambda: connects.append(1))
+    event = await stream.__anext__()
+
+    assert event.min_ticket_winning_probability == 0.5
+    assert connects == [1]
+    assert connected._value.get() == 1
+    assert SUBSCRIPTION_LAST_EVENT.labels(provider._operation_name)._value.get() > 0
+
+    with pytest.raises(asyncio.CancelledError):
+        await stream.__anext__()
+    assert connected._value.get() == 0

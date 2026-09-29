@@ -8,9 +8,6 @@
     };
     pre-commit.url = "github:cachix/git-hooks.nix";
     pre-commit.inputs.nixpkgs.follows = "nixpkgs";
-    # Only used for the pinact hook. pinact 4 rejects the per-action tags hoprnet/hopr-workflows
-    # uses as version comments (e.g. `setup-nix-v2.0.2`); nixos-26.05 ships pinact 3.9.2, which
-    # accepts them.
     nixpkgs-pinact = {
       url = "github:nixos/nixpkgs/nixos-26.05";
     };

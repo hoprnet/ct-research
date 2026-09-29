@@ -1,39 +1,41 @@
 from datetime import datetime
 
+from prometheus_client import Gauge
+
 from ..types.network_state import NetworkState
 from ..types.network_updates import LinkUpdate
+from .snapshot_generations import SnapshotGenerations
+
+NODE_SAFE_LINKS = Gauge("ct_node_safe_links", "Number of nodes linked to a safe")
 
 
 class LinkStateStore:
     """
-    Node-to-safe links built from the Blokli account subscription.
-
-    Each (re)connection resends a snapshot of all accounts but never mentions nodes that
-    disappeared while disconnected. Every connection therefore starts a new generation; once its
-    snapshot has been received, `sweep()` drops the links it did not resend.
+    Node-to-safe links built from the Blokli account subscription. `sweep()` drops the links the
+    latest connection's snapshot did not resend.
     """
 
     def __init__(self, state: NetworkState):
         self.state = state
-        self._generation = 0
-        self._generation_of: dict[str, int] = {}
+        self._generations = SnapshotGenerations[str]()
 
     def start_generation(self) -> None:
-        self._generation += 1
+        self._generations.start()
 
     def apply_link_updates(self, updates: list[LinkUpdate]) -> None:
         for update in updates:
             if update.safe_address is None:
                 self.state.node_to_safe.pop(update.node_address, None)
-                self._generation_of.pop(update.node_address, None)
+                self._generations.forget(update.node_address)
             else:
                 self.state.node_to_safe[update.node_address] = update.safe_address
-                self._generation_of[update.node_address] = self._generation
+                self._generations.touch(update.node_address)
         self.state.last_links_refresh_at = datetime.now()
+        NODE_SAFE_LINKS.set(len(self.state.node_to_safe))
 
     def sweep(self) -> int:
-        stale = [node for node, gen in self._generation_of.items() if gen < self._generation]
+        stale = self._generations.pop_stale()
         for node_address in stale:
             self.state.node_to_safe.pop(node_address, None)
-            self._generation_of.pop(node_address, None)
+        NODE_SAFE_LINKS.set(len(self.state.node_to_safe))
         return len(stale)

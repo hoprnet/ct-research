@@ -153,6 +153,10 @@ class Node(
             "account_link_sweep",
             self.network_sync_orchestrator.close,
         )
+        self.shutdown_coordinator.register_async(
+            "blokli_repository",
+            self.blokli_repository.close,
+        )
 
         self.connected = False
         self.running = True

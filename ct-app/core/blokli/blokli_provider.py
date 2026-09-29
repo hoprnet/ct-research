@@ -3,6 +3,7 @@ import json
 import logging
 import re
 import sys
+import time
 from pathlib import Path
 from typing import (
     Any,
@@ -21,12 +22,22 @@ from urllib.parse import urlsplit, urlunsplit
 import aiohttp
 from api_lib.objects import JsonResponse
 from multidict import CIMultiDictProxy
-from prometheus_client import Counter
+from prometheus_client import Counter, Gauge
 
 BLOKLI_CALLS = Counter(
     "ct_blokli_calls",
     "Total Blokli API calls",
     ["type", "target", "result"],
+)
+SUBSCRIPTION_CONNECTED = Gauge(
+    "ct_blokli_subscription_connected",
+    "1 while the Blokli subscription stream is connected",
+    ["subscription"],
+)
+SUBSCRIPTION_LAST_EVENT = Gauge(
+    "ct_blokli_subscription_last_event_timestamp",
+    "Unix time of the last event received on the Blokli subscription",
+    ["subscription"],
 )
 
 logger = logging.getLogger(__name__)
@@ -42,6 +53,20 @@ TBlokliResponse = TypeVar(
     covariant=True,
     default=JsonResponse,
 )
+
+
+def _field_selection(query: str, field: str) -> str:
+    """Returns the `{ ... }` selection set that follows `field(...)` in a query."""
+    start = query.index("{", query.index(field))
+    depth = 0
+    for index in range(start, len(query)):
+        if query[index] == "{":
+            depth += 1
+        elif query[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return query[start : index + 1]
+    raise ValueError(f"Unbalanced selection for {field}")
 
 
 class BlokliProvider(Generic[TBlokliResponse]):
@@ -274,6 +299,21 @@ class BlokliProvider(Generic[TBlokliResponse]):
         """
         return await self._get_data(self._sku_query, kwargs)
 
+    async def _get_aliased(
+        self, field: str, argument: str, argument_type: str, values: list[Any]
+    ) -> list[dict]:
+        """
+        Runs this provider's `field` query once per value in a single request, under aliases, and
+        returns each result in order (an empty dict when missing). Callers keep `values` short
+        enough to stay under Blokli's query complexity limit.
+        """
+        selection = _field_selection(self._sku_query, field)
+        header = ", ".join(f"$v{i}: {argument_type}" for i in range(len(values)))
+        body = " ".join(f"r{i}: {field}({argument}: $v{i}) {selection}" for i in range(len(values)))
+        variables = {f"v{i}": value for i, value in enumerate(values)}
+        data = await self._get_data(f"query ({header}) {{ {body} }}", variables)
+        return [data.get(f"r{i}") or {} for i in range(len(values))]
+
     async def _get_data(self, query: str, variables: dict) -> dict:
         try:
             response, headers = await self._execute(query, variables)
@@ -404,6 +444,7 @@ class BlokliProvider(Generic[TBlokliResponse]):
                         raise ProviderError(f"Subscription failed with status {response.status}")
 
                     reconnect_delay_seconds = 1.0
+                    SUBSCRIPTION_CONNECTED.labels(self._operation_name).set(1)
                     if on_connect is not None:
                         on_connect()
                     event_lines: list[str] = []
@@ -422,6 +463,7 @@ class BlokliProvider(Generic[TBlokliResponse]):
                             event_lines = []
                             if parsed is None:
                                 continue
+                            SUBSCRIPTION_LAST_EVENT.labels(self._operation_name).set(time.time())
                             try:
                                 yield self._convert_response(parsed)
                             except Exception:
@@ -442,6 +484,7 @@ class BlokliProvider(Generic[TBlokliResponse]):
                         {"url": self.url, "retry_in_seconds": reconnect_delay_seconds},
                     )
             except asyncio.CancelledError:
+                SUBSCRIPTION_CONNECTED.labels(self._operation_name).set(0)
                 raise
             except Exception as error:
                 BLOKLI_CALLS.labels(
@@ -459,6 +502,7 @@ class BlokliProvider(Generic[TBlokliResponse]):
                     },
                 )
 
+            SUBSCRIPTION_CONNECTED.labels(self._operation_name).set(0)
             await asyncio.sleep(reconnect_delay_seconds)
             reconnect_delay_seconds = min(
                 reconnect_delay_seconds * 2,

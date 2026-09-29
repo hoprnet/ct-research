@@ -9,7 +9,10 @@ Generated from `core/` metric definitions by `scripts/generate_metrics_doc.py`.
 | `ct_balance_multiplier` | `Gauge` | `-` | factor to multiply the balance by | `core/node.py` |
 | `ct_batch_schedule_failures_total` | `Counter` | `-` | Total batch send scheduling failures in the message workers | `core/messages/message_metrics.py` |
 | `ct_blokli_calls` | `Counter` | `type, target, result` | Total Blokli API calls | `core/blokli/blokli_provider.py` |
+| `ct_blokli_subscription_connected` | `Gauge` | `subscription` | 1 while the Blokli subscription stream is connected | `core/blokli/blokli_provider.py` |
+| `ct_blokli_subscription_last_event_timestamp` | `Gauge` | `subscription` | Unix time of the last event received on the Blokli subscription | `core/blokli/blokli_provider.py` |
 | `ct_channel_funds` | `Gauge` | `-` | Total funds in out. channels | `core/mixins/channel/actions.py` |
+| `ct_channel_graph_channels` | `Gauge` | `-` | Non-closed channels in the channel graph | `core/mixins/channel/actions.py` |
 | `ct_channels` | `Gauge` | `direction` | Node channels | `core/mixins/channel/actions.py` |
 | `ct_eligible_peers` | `Gauge` | `-` | # of eligible peers for rewards | `core/mixins/economic_system.py` |
 | `ct_message_count` | `Gauge` | `address, model` | messages one should receive / year | `core/mixins/economic_system.py` |
@@ -28,6 +31,7 @@ Generated from `core/` metric definitions by `scripts/generate_metrics_doc.py`.
 | `ct_network_update_pending` | `Gauge` | `-` | Whether a network update refresh is pending | `core/services/network_update_coordinator.py` |
 | `ct_network_update_requests_total` | `Counter` | `source` | Network update refresh requests | `core/services/network_update_coordinator.py` |
 | `ct_node_health` | `Gauge` | `-` | Node health | `core/mixins/state.py` |
+| `ct_node_safe_links` | `Gauge` | `-` | Number of nodes linked to a safe | `core/services/link_state_store.py` |
 | `ct_peer_channels_balance` | `Gauge` | `address` | Balance in outgoing channels | `core/types/peer.py` |
 | `ct_peer_delay` | `Gauge` | `address` | Delay between two messages | `core/types/peer.py` |
 | `ct_peer_safe_count` | `Gauge` | `address, safe` | Number of nodes linked to the safes | `core/types/peer.py` |

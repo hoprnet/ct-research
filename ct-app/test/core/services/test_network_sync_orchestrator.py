@@ -5,17 +5,20 @@ from collections.abc import AsyncIterator
 
 import pytest
 
-from core.blokli.entries import BlokliRedemptionStats, BlokliTicketParameters
+from core.blokli.entries import BlokliRedemptionStats
 from core.blokli.blokli_provider import ProviderError
+from core.blokli.providers import HoprBalance, Redemptions
+from core.services.blokli_repository import GraphqlNetworkRepository
 from core.services.link_state_store import LinkStateStore
 from core.services.network_sync_orchestrator import NetworkSyncOrchestrator
 from core.types.balance import Balance
-from core.types.network_models import ChannelGraphUpdate, NodeSafeLink, SafeBalanceSnapshot
+from core.types.network_models import NodeSafeLink
 from core.types.network_state import NetworkState
 from core.types.network_updates import LinkUpdate
+from test.fakes import FakeNetworkRepository
 
 
-class RetryThenEmitRepository:
+class RetryThenEmitRepository(FakeNetworkRepository):
     def __init__(self):
         self.calls = 0
 
@@ -29,18 +32,6 @@ class RetryThenEmitRepository:
                 raise asyncio.CancelledError
 
         return _stream()
-
-    def stream_ticket_parameters(self) -> AsyncIterator[BlokliTicketParameters]:
-        raise NotImplementedError
-
-    def stream_channel_graph(self, on_connect=None) -> AsyncIterator[ChannelGraphUpdate]:
-        raise NotImplementedError
-
-    async def get_safe_balances(self, safe_addresses: list[str]) -> list[SafeBalanceSnapshot]:
-        raise NotImplementedError
-
-    async def get_redeemed_amount(self, safe_address: str, node_address: str):
-        raise NotImplementedError
 
 
 @pytest.mark.asyncio
@@ -61,15 +52,16 @@ async def test_stream_link_updates_retries_after_provider_error():
     on_update.assert_called_once_with()
 
 
-class RedemptionRepository(RetryThenEmitRepository):
+class RedemptionRepository(FakeNetworkRepository):
     def __init__(self, result):
-        super().__init__()
         self.result = result
 
-    async def get_redeemed_amount(self, safe_address: str, node_address: str):
+    async def get_redeemed_amounts(self, pairs):
         if isinstance(self.result, Exception):
             raise self.result
-        return self.result
+        if self.result is None:
+            return {}
+        return {pair: self.result for pair in pairs}
 
 
 def _peer(address: str):
@@ -160,6 +152,7 @@ def test_link_state_store_sweeps_links_missing_from_new_snapshot():
 class ConnectThenEmitRepository(RetryThenEmitRepository):
     def stream_node_safe_links(self, on_connect=None) -> AsyncIterator[NodeSafeLink]:
         async def _stream():
+            assert on_connect is not None, "the orchestrator should pass a connect hook"
             on_connect()
             yield NodeSafeLink(node_address="0xnode", safe_address="0xsafe")
             raise asyncio.CancelledError
@@ -184,7 +177,9 @@ async def test_stream_link_updates_sweeps_after_each_connection(mocker):
         await orchestrator.stream_link_updates(on_update)
 
     state_service.start_link_generation.assert_called_once_with()
-    await orchestrator._link_sweep_task  # let the scheduled sweep run
+    sweep_task = orchestrator._link_sweep_task
+    assert sweep_task is not None, "connecting should schedule a sweep"
+    await sweep_task  # let the scheduled sweep run
     state_service.sweep_links.assert_called_once_with()
     assert state.node_to_safe == {"0xnode": "0xsafe"}
     await orchestrator.close()
@@ -192,15 +187,12 @@ async def test_stream_link_updates_sweeps_after_each_connection(mocker):
 
 @pytest.mark.asyncio
 async def test_get_safe_balances_batches_lookups(mocker):
-    from core.blokli.providers import HoprBalance
-    from core.services.blokli_repository import GraphqlNetworkRepository
-
     sent: list[dict] = []
 
     async def fake_get_data(self, query, variables):
         sent.append(variables)
         return {
-            f"b{i}": (
+            f"r{i}": (
                 {"__typename": "HoprBalance", "address": address, "balance": "5 wxHOPR"}
                 if address != "0xsafe3"
                 else {"__typename": "QueryFailedError", "code": "X", "message": "boom"}
@@ -215,3 +207,45 @@ async def test_get_safe_balances_batches_lookups(mocker):
 
     assert sorted(len(batch) for batch in sent) == [2, 8]
     assert sorted(b.safe_address for b in balances) == sorted(s for s in safes if s != "0xsafe3")
+
+
+@pytest.mark.asyncio
+async def test_get_redeemed_amounts_batches_lookups(mocker):
+    sent: list[dict] = []
+
+    async def fake_get_data(self, query, variables):
+        assert "ticketRedemptionStats(filter: $v0)" in query
+        sent.append(variables)
+        return {
+            f"r{i}": {"__typename": "RedeemedStats", "redeemedAmount": f"{i} wxHOPR"}
+            for i in range(len(variables))
+        }
+
+    mocker.patch.object(Redemptions, "_get_data", fake_get_data)
+    pairs = [(f"0xsafe{i}", f"0xnode{i}") for i in range(6)]
+
+    stats = await GraphqlNetworkRepository("http://blokli/graphql").get_redeemed_amounts(pairs)
+
+    assert sorted(len(batch) for batch in sent) == [2, 4]
+    assert sent[0]["v0"] == {"safeAddress": "0xsafe0", "nodeAddress": "0xnode0"}
+    assert set(stats) == set(pairs)
+    assert all(s.is_valid for s in stats.values())
+
+
+@pytest.mark.asyncio
+async def test_repository_reuses_and_closes_query_providers(mocker):
+    exits: list[type] = []
+
+    async def fake_exit(self, *args):
+        exits.append(type(self))
+
+    mocker.patch.object(HoprBalance, "__aexit__", fake_exit)
+    mocker.patch.object(Redemptions, "__aexit__", fake_exit)
+    repository = GraphqlNetworkRepository("http://blokli/graphql")
+
+    assert repository._balances_client() is repository._balances_client()
+    assert repository._redemptions_client() is repository._redemptions_client()
+    await repository.close()
+
+    assert sorted(t.__name__ for t in exits) == ["HoprBalance", "Redemptions"]
+    assert repository._balances is None and repository._redemptions is None
