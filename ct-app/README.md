@@ -39,7 +39,7 @@ The repo-owned config files live under `.configs/`. The parser shape is also ref
 
 ### Incentive model
 
-CT uses the burst model described in [PROTOCOL_v2.md](../PROTOCOL_v2.md). Each CT node runs rounds
+CT uses a burst model. Each CT node runs rounds
 on its own. At the start of a round it shuffles the relayers it considers eligible. It then starts
 a burst to each of them every `step = ct_node_count × target_relayer_interval / N` seconds, without
 waiting for earlier bursts to finish.
