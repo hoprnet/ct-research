@@ -40,6 +40,22 @@ def _count_invalid_message_fragments(parts: list[str]) -> int:
     return invalid_fragments
 
 
+def _record_echoes(data: bytes, port: int) -> None:
+    """
+    Parse the `\\0`-separated messages in `data` and record their stats, RTT included. Called as
+    echoes arrive, so the RTT is measured when each message comes back.
+    """
+    try:
+        parts = [item for item in data.decode().split("\0") if item]
+    except UnicodeDecodeError as err:
+        logger.warning("Failed to decode %s bytes received on port %s: %s", len(data), port, err)
+        return
+
+    invalid_fragments = _count_invalid_message_fragments(parts)
+    if invalid_fragments:
+        logger.debug("Skipped %s invalid message fragments on port %s", invalid_fragments, port)
+
+
 @APIobject
 class Session(JsonResponse):
     ip: str
@@ -117,51 +133,41 @@ class Session(JsonResponse):
             return 0
 
         loop = asyncio.get_running_loop()
-        recv_data = bytearray()
+        recv_size = 0
+        # Bytes of a message that is not complete yet: it ends at its `\0` padding.
+        pending = bytearray()
 
         try:
             async with asyncio.timeout(timeout):
-                while len(recv_data) < total_size:
-                    to_read = min(chunk_size, total_size - len(recv_data))
+                while recv_size < total_size:
+                    to_read = min(chunk_size, total_size - recv_size)
                     if to_read <= 0:
                         break
                     data, _ = await loop.sock_recvfrom(self.socket, to_read)
                     if not data:
                         break
-                    recv_data += data
+                    recv_size += len(data)
+                    pending += data
+                    end = pending.rfind(b"\0")
+                    if end >= 0:
+                        _record_echoes(bytes(pending[:end]), self.port)
+                        del pending[: end + 1]
         except ConnectionResetError as err:
             logger.warning(
                 "Receive reset on port %s after %s bytes: %s",
                 self.port,
-                len(recv_data),
+                recv_size,
                 err,
             )
         except asyncio.TimeoutError:
             logger.debug(
                 "Receive timed out on port %s after %s/%s bytes",
                 self.port,
-                len(recv_data),
+                recv_size,
                 total_size,
             )
 
-        recv_size = len(recv_data)
-        try:
-            parts: list[str] = [item for item in recv_data.decode().split("\0") if item]
-        except UnicodeDecodeError as err:
-            logger.warning(
-                "Failed to decode %s bytes received on port %s: %s",
-                recv_size,
-                self.port,
-                err,
-            )
-            return recv_size
-
-        invalid_fragments = _count_invalid_message_fragments(parts)
-        if invalid_fragments:
-            logger.debug(
-                "Skipped %s invalid message fragments on port %s",
-                invalid_fragments,
-                self.port,
-            )
+        if pending:
+            _record_echoes(bytes(pending), self.port)
 
         return recv_size
