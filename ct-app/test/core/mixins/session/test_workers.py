@@ -432,6 +432,7 @@ async def test_run_burst_uses_incentive_parameters_and_records_cost(
     send_burst = mocker.patch.object(
         NodeHelper, "send_burst", new=AsyncMock(return_value=BurstResult(sent=10, echoed=8))
     )
+    mocker.patch.object(NodeHelper, "close_session", new=AsyncMock(return_value=True))
 
     await session_node._run_burst(session, MessageFormat(relayer))
 
@@ -444,3 +445,86 @@ async def test_run_burst_uses_incentive_parameters_and_records_cost(
     assert session_node.relayed_cost_tracker.packets_echoed == 8
     # Each echoed packet crossed the relayer twice: 8 x 2 tickets.
     assert session_node.relayed_cost_tracker.cost == Balance("0.00016 wxHOPR")
+
+
+@pytest.mark.asyncio
+async def test_run_burst_closes_the_session_afterwards(
+    session_node: Node, mock_sessions, mocker: MockerFixture
+):
+    relayer = "peer_6"
+    session = mock_sessions(relayer, port=9204)
+    session_node.sessions[relayer] = session
+    mocker.patch.object(
+        NodeHelper, "send_burst", new=AsyncMock(return_value=BurstResult(sent=10, echoed=10))
+    )
+    close_session = mocker.patch.object(
+        NodeHelper, "close_session", new=AsyncMock(return_value=True)
+    )
+    close_socket = mocker.patch.object(session, "close_socket")
+
+    await session_node._run_burst(session, MessageFormat(relayer))
+
+    assert relayer not in session_node.sessions
+    close_socket.assert_called_once_with()
+    close_session.assert_awaited_once_with(session_node.api, session, relayer)
+
+
+@pytest.mark.asyncio
+async def test_run_burst_closes_the_session_when_the_burst_fails(
+    session_node: Node, mock_sessions, mocker: MockerFixture
+):
+    relayer = "peer_7"
+    session = mock_sessions(relayer, port=9205)
+    session_node.sessions[relayer] = session
+    mocker.patch.object(NodeHelper, "send_burst", new=AsyncMock(side_effect=asyncio.TimeoutError))
+    close_session = mocker.patch.object(
+        NodeHelper, "close_session", new=AsyncMock(return_value=True)
+    )
+
+    with pytest.raises(asyncio.TimeoutError):
+        await session_node._run_burst(session, MessageFormat(relayer))
+
+    assert relayer not in session_node.sessions
+    close_session.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_run_burst_keeps_the_session_while_another_burst_uses_it(
+    session_node: Node, mock_sessions, mocker: MockerFixture
+):
+    relayer = "peer_8"
+    session = mock_sessions(relayer, port=9206)
+    session_node.sessions[relayer] = session
+    other_burst = asyncio.create_task(asyncio.sleep(3600))
+    session_node._in_flight_tasks_by_session_port[session.port] = {other_burst}
+    mocker.patch.object(
+        NodeHelper, "send_burst", new=AsyncMock(return_value=BurstResult(sent=1, echoed=1))
+    )
+    close_session = mocker.patch.object(
+        NodeHelper, "close_session", new=AsyncMock(return_value=True)
+    )
+
+    await session_node._run_burst(session, MessageFormat(relayer))
+
+    assert session_node.sessions[relayer] is session
+    close_session.assert_not_awaited()
+    other_burst.cancel()
+
+
+@pytest.mark.asyncio
+async def test_run_burst_logs_when_closing_the_session_fails(
+    session_node: Node, mock_sessions, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+):
+    relayer = "peer_9"
+    session = mock_sessions(relayer, port=9207)
+    session_node.sessions[relayer] = session
+    mocker.patch.object(
+        NodeHelper, "send_burst", new=AsyncMock(return_value=BurstResult(sent=1, echoed=1))
+    )
+    mocker.patch.object(NodeHelper, "close_session", new=AsyncMock(return_value=False))
+
+    with caplog.at_level("WARNING"):
+        await session_node._run_burst(session, MessageFormat(relayer))
+
+    assert relayer not in session_node.sessions
+    assert "Failed to close session after burst" in caplog.text

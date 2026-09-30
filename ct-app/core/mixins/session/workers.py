@@ -208,6 +208,27 @@ class SessionWorkerMixin(SessionCommonMixin):
         # A missing setting parses as 0s, which would count every echo as lost.
         return configured if configured > 0 else DEFAULT_RECEIVE_TIMEOUT_SECONDS
 
+    async def _close_session_after_burst(self, relayer: str, session: "Session") -> None:
+        """
+        Close the relayer's session once its burst is done, so exit nodes only hold sessions
+        for bursts in progress. The next burst to that relayer opens a fresh session, which also
+        keeps late echoes from being counted by a later burst; echoes still in flight are lost.
+        """
+        current = asyncio.current_task()
+        others = self._in_flight_tasks_by_session_port.get(session.port, set()) - {current}
+        if others:
+            # Another burst still uses this session; the last one to finish closes it.
+            return
+
+        if self.sessions.get(relayer) is session:
+            self.sessions.pop(relayer, None)
+        session.close_socket()
+        if not await NodeHelper.close_session(self.api, session, relayer):
+            logger.warning(
+                "Failed to close session after burst; hoprd drops it once idle",
+                {"relayer": relayer, "port": session.port},
+            )
+
     async def _run_burst(self, session: "Session", message: MessageFormat) -> None:
         incentive = self.params.incentive
         ACTIVE_BURSTS.inc()
@@ -221,6 +242,7 @@ class SessionWorkerMixin(SessionCommonMixin):
             )
         finally:
             ACTIVE_BURSTS.dec()
+            await self._close_session_after_burst(message.relayer, session)
 
         BURST_PACKETS_SENT.labels(message.relayer).inc(result.sent)
         BURST_PACKETS_ECHOED.labels(message.relayer).inc(result.echoed)

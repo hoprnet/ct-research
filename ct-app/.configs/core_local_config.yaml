@@ -7,7 +7,7 @@ environment: local
 flags:
   node:
     healthcheck: 15s
-    retrieve_peers: 1m
+    retrieve_peers: 30s
     relay_messages: On
     retrieve_balances: 1m
 
@@ -18,11 +18,11 @@ flags:
 # 
 # =============================================================================
 incentive:
-  min_outgoing_channels: 5
-  min_channel_balance: "50 wxHOPR"
-  burst_rate: 8                   # Mbit/s
-  burst_duration: 10s
-  target_relayer_interval: 600s   # average time between two bursts to the same relayer, across all CT nodes
+  min_outgoing_channels: 2
+  min_channel_balance: "1 wxHOPR"
+  burst_rate: 1                   # Mbit/s
+  burst_duration: 5s
+  target_relayer_interval: 30s   # average time between two bursts to the same relayer, across all CT nodes
   max_concurrent_bursts_per_ct: 0 # 0 = no limit
   ct_node_count: 2                # CT nodes in the deployment
 
@@ -37,8 +37,8 @@ peer:
 # =============================================================================
 sessions:
   green_destinations: 
-    - "0x7b5b01b199c7c5080b247e5eb12e66a5d842ccb2"
-    - "0xc87a9057730d4ec347da9b0662c2b1eb3d3983f2"
+    - "0x24bb711c1612f57d03b4504c78241b3bd597e9fc"
+    - "0x5b1514a79b61bfa0ebb78ec90283c6a356f3146b"
   blue_destinations: []
   session_retry_base_delay: 2s
   session_retry_max_delay: 60s
