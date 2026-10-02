@@ -24,7 +24,7 @@ class ChannelActionMixin(ChannelCacheMixin):
     """
     Read-only view of the channels, fed by the Blokli channel graph subscription. Opening,
     funding and closing channels is left to the node's own channel strategy; CT only needs to
-    know which relays it can use and how much stake sits in the network.
+    know which relays it can use and which relayers have enough funded outgoing channels.
     """
 
     async def subscribe_channels(self) -> None:
@@ -79,7 +79,6 @@ class ChannelActionMixin(ChannelCacheMixin):
         CHANNEL_FUNDS.set(float(own_funds.value))
 
         self.outgoing_channel_balances = await Utils.balanceInChannels(all_channels)
-        self.network_state.outgoing_channel_balances = dict(self.outgoing_channel_balances)
         TOPOLOGY_SIZE.set(len(self.outgoing_channel_balances))
         self.network_update_coordinator.request(NetworkUpdateSource.CHANNEL_TOPOLOGY_REFRESH)
 

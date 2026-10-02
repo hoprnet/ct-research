@@ -8,8 +8,6 @@ class FlagNodeParams(ExplicitParams):
 
     healthcheck: Flag
     retrieve_peers: Flag
-    refresh_balances: Flag
-    refresh_redeemed: Flag
     relay_messages: Flag
     retrieve_balances: Flag
 

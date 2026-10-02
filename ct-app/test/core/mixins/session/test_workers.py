@@ -5,8 +5,8 @@ import pytest
 from pytest_mock import MockerFixture
 
 import core.mixins.session.workers as workers_mod
-from core.api.response_objects import Session
-from core.components.node_helper import NodeHelper
+from core.api.response_objects import Session, TicketPrice
+from core.components.node_helper import BurstResult, NodeHelper
 from core.messages.message_metrics import (
     BATCH_SCHEDULE_FAILURES,
     MESSAGE_DROPS,
@@ -16,9 +16,11 @@ from core.messages.message_metrics import (
 )
 from core.node import Node
 from core.types.asyncloop import AsyncLoop
+from core.types.balance import Balance
 from core.types.message_format import MessageFormat
 from core.types.message_queue import MessageQueue
 from core.types.peer import Peer
+from test.queue_utils import queue_size
 
 
 def _counter_value(metric, **labels) -> float:
@@ -69,9 +71,9 @@ async def test_message_is_requeued_when_session_creation_fails(
         scheduled = await session_node._process_message(message, worker_id=0)
 
     assert not scheduled
-    assert MessageQueue().buffer.qsize() == 0
+    assert queue_size() == 0
     await asyncio.sleep(0.07)
-    assert MessageQueue().buffer.qsize() == 1
+    assert queue_size() == 1
     queued_message = await MessageQueue().get()
     assert queued_message is message
     assert _counter_value(MESSAGE_REQUEUES, reason="session_unavailable") == before + 1
@@ -98,7 +100,7 @@ async def test_message_is_requeued_when_no_destination_is_available(
 
     assert not scheduled
     create_session.assert_not_called()
-    assert MessageQueue().buffer.qsize() == 0
+    assert queue_size() == 0
     assert _counter_value(MESSAGE_DROPS, reason="no_destination") == before + 1
 
 
@@ -110,7 +112,7 @@ async def test_message_is_dropped_when_no_open_channel_is_available(session_node
     scheduled = await session_node._process_message(message, worker_id=0)
 
     assert not scheduled
-    assert MessageQueue().buffer.qsize() == 0
+    assert queue_size() == 0
     assert _counter_value(MESSAGE_DROPS, reason="no_open_channel") == before + 1
 
 
@@ -166,28 +168,6 @@ async def test_destination_change_does_not_attempt_retire_or_reopen(
 
 
 @pytest.mark.asyncio
-async def test_retire_session_removes_cached_session_and_grace_period_on_success(
-    session_node: Node, mock_sessions, mocker: MockerFixture
-):
-    relayer = "peer_5"
-    session = mock_sessions(relayer, port=9402)
-    session.create_socket()
-    session_node.sessions[relayer] = session
-    session_node.session_close_grace_period[relayer] = 123.0
-
-    mocker.patch.object(NodeHelper, "close_session", new=AsyncMock(return_value=True))
-
-    retired = await session_node._retire_session(
-        relayer, session, reason="test", wait_for_in_flight=False
-    )
-
-    assert retired
-    assert relayer not in session_node.sessions
-    assert relayer not in session_node.session_close_grace_period
-    assert session.socket is None
-
-
-@pytest.mark.asyncio
 async def test_get_or_create_session_respects_rate_limiter(
     session_node: Node, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ):
@@ -229,7 +209,7 @@ async def test_get_or_create_session_reuses_existing_matching_session(
 
 
 @pytest.mark.asyncio
-async def test_schedule_message_batch_requeues_when_async_task_creation_fails(
+async def test_schedule_burst_fails_when_async_task_creation_fails(
     session_node: Node, mock_sessions, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ):
     relayer = "peer_3"
@@ -241,12 +221,12 @@ async def test_schedule_message_batch_requeues_when_async_task_creation_fails(
     mocker.patch.object(AsyncLoop, "add", return_value=None)
 
     with caplog.at_level("DEBUG"):
-        scheduled = session_node._schedule_message_batch(message, relayer)
+        scheduled = session_node._schedule_burst(message, relayer)
 
     assert not scheduled
     assert len(session_node._in_flight_message_tasks) == 0
     assert _counter_value(BATCH_SCHEDULE_FAILURES) == before + 1
-    assert "Failed to schedule message batch" in caplog.text
+    assert "Failed to schedule burst" in caplog.text
 
 
 @pytest.mark.asyncio
@@ -264,12 +244,12 @@ async def test_process_message_requeues_when_batch_scheduling_fails(
     before = _counter_value(MESSAGE_DROPS, reason="session_disappeared")
 
     mocker.patch.object(session_node, "_get_or_create_session", new=AsyncMock(return_value=session))
-    mocker.patch.object(session_node, "_schedule_message_batch", return_value=False)
+    mocker.patch.object(session_node, "_schedule_burst", return_value=False)
 
     scheduled = await session_node._process_message(message, worker_id=0)
 
     assert not scheduled
-    assert MessageQueue().buffer.qsize() == 0
+    assert queue_size() == 0
     assert _counter_value(MESSAGE_DROPS, reason="session_disappeared") == before + 1
 
 
@@ -292,9 +272,9 @@ async def test_process_message_requeues_after_rate_limit_delay(
     scheduled = await session_node._process_message(message, worker_id=0)
 
     assert not scheduled
-    assert MessageQueue().buffer.qsize() == 0
+    assert queue_size() == 0
     await asyncio.sleep(0.07)
-    assert MessageQueue().buffer.qsize() == 1
+    assert queue_size() == 1
     queued_message = await MessageQueue().get()
     assert queued_message is message
 
@@ -377,7 +357,7 @@ async def test_concurrent_session_access_race_condition(
     )
     mocker.patch.object(session_node.api, "close_session", new=AsyncMock(return_value=True))
     mocker.patch.object(session_node, "_get_or_create_session", new=AsyncMock(return_value=session))
-    mocker.patch.object(session_node, "_schedule_message_batch", return_value=True)
+    mocker.patch.object(session_node, "_schedule_burst", return_value=True)
 
     for _ in range(40):
         await queue.put(MessageFormat(relayer, "test_sender", 500, 10))
@@ -423,15 +403,128 @@ def test_receive_timeout_falls_back_to_default_when_unset(
 
 
 @pytest.mark.asyncio
-async def test_schedule_message_batch_passes_receive_timeout(
+async def test_schedule_burst_uses_session_payload(
     session_node: Node, mock_sessions, mocker: MockerFixture
 ):
     relayer = "peer_4"
     session_node.address = MagicMock(native="node_address")
-    session_node.sessions[relayer] = mock_sessions(relayer, port=9202)
-    mocker.patch.object(session_node.params.sessions.receive_timeout, "value", 4.0)
+    session = mock_sessions(relayer, port=9202)
+    session_node.sessions[relayer] = session
     add_mock = mocker.patch.object(AsyncLoop, "add", return_value=None)
+    message = MessageFormat(relayer)
 
-    session_node._schedule_message_batch(MessageFormat(relayer, "sender", 500, 1), relayer)
+    session_node._schedule_burst(message, relayer)
 
-    assert add_mock.call_args.args[3] == 4.0
+    assert add_mock.call_args.args[0] == session_node._run_burst
+    assert add_mock.call_args.args[1] is session
+    # Generated data is the MTU minus the SURB.
+    assert message.packet_size == session.mtu - session.surb_size
+
+
+@pytest.mark.asyncio
+async def test_run_burst_uses_incentive_parameters_and_records_cost(
+    session_node: Node, mock_sessions, mocker: MockerFixture
+):
+    relayer = "peer_5"
+    session = mock_sessions(relayer, port=9203)
+    mocker.patch.object(session_node.params.sessions.receive_timeout, "value", 4.0)
+    session_node.ticket_price = TicketPrice({"price": "0.00001 wxHOPR"})
+    send_burst = mocker.patch.object(
+        NodeHelper, "send_burst", new=AsyncMock(return_value=BurstResult(sent=10, echoed=8))
+    )
+    mocker.patch.object(NodeHelper, "close_session", new=AsyncMock(return_value=True))
+
+    await session_node._run_burst(session, MessageFormat(relayer))
+
+    incentive = session_node.params.incentive
+    assert send_burst.await_args.args[2:] == (
+        incentive.burst_rate,
+        incentive.burst_duration.value,
+        4.0,
+    )
+    assert session_node.relayed_cost_tracker.packets_echoed == 8
+    # Each echoed packet crossed the relayer twice: 8 x 2 tickets.
+    assert session_node.relayed_cost_tracker.cost == Balance("0.00016 wxHOPR")
+
+
+@pytest.mark.asyncio
+async def test_run_burst_closes_the_session_afterwards(
+    session_node: Node, mock_sessions, mocker: MockerFixture
+):
+    relayer = "peer_6"
+    session = mock_sessions(relayer, port=9204)
+    session_node.sessions[relayer] = session
+    mocker.patch.object(
+        NodeHelper, "send_burst", new=AsyncMock(return_value=BurstResult(sent=10, echoed=10))
+    )
+    close_session = mocker.patch.object(
+        NodeHelper, "close_session", new=AsyncMock(return_value=True)
+    )
+    close_socket = mocker.patch.object(session, "close_socket")
+
+    await session_node._run_burst(session, MessageFormat(relayer))
+
+    assert relayer not in session_node.sessions
+    close_socket.assert_called_once_with()
+    close_session.assert_awaited_once_with(session_node.api, session, relayer)
+
+
+@pytest.mark.asyncio
+async def test_run_burst_closes_the_session_when_the_burst_fails(
+    session_node: Node, mock_sessions, mocker: MockerFixture
+):
+    relayer = "peer_7"
+    session = mock_sessions(relayer, port=9205)
+    session_node.sessions[relayer] = session
+    mocker.patch.object(NodeHelper, "send_burst", new=AsyncMock(side_effect=asyncio.TimeoutError))
+    close_session = mocker.patch.object(
+        NodeHelper, "close_session", new=AsyncMock(return_value=True)
+    )
+
+    with pytest.raises(asyncio.TimeoutError):
+        await session_node._run_burst(session, MessageFormat(relayer))
+
+    assert relayer not in session_node.sessions
+    close_session.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_run_burst_keeps_the_session_while_another_burst_uses_it(
+    session_node: Node, mock_sessions, mocker: MockerFixture
+):
+    relayer = "peer_8"
+    session = mock_sessions(relayer, port=9206)
+    session_node.sessions[relayer] = session
+    other_burst = asyncio.create_task(asyncio.sleep(3600))
+    session_node._in_flight_tasks_by_session_port[session.port] = {other_burst}
+    mocker.patch.object(
+        NodeHelper, "send_burst", new=AsyncMock(return_value=BurstResult(sent=1, echoed=1))
+    )
+    close_session = mocker.patch.object(
+        NodeHelper, "close_session", new=AsyncMock(return_value=True)
+    )
+
+    await session_node._run_burst(session, MessageFormat(relayer))
+
+    assert session_node.sessions[relayer] is session
+    close_session.assert_not_awaited()
+    other_burst.cancel()
+
+
+@pytest.mark.asyncio
+async def test_run_burst_logs_when_closing_the_session_fails(
+    session_node: Node, mock_sessions, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+):
+    relayer = "peer_9"
+    session = mock_sessions(relayer, port=9207)
+    session_node.sessions[relayer] = session
+    mocker.patch.object(
+        NodeHelper, "send_burst", new=AsyncMock(return_value=BurstResult(sent=1, echoed=1))
+    )
+    mocker.patch.object(NodeHelper, "close_session", new=AsyncMock(return_value=False))
+
+    with caplog.at_level("WARNING"):
+        await session_node._run_burst(session, MessageFormat(relayer))
+
+    assert relayer not in session_node.sessions
+    assert "Failed to close session after burst" in caplog.text

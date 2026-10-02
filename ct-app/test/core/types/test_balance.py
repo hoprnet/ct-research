@@ -25,14 +25,6 @@ def test_read_balance():
         Balance("Not_A_Decimal wxHOPR")
 
 
-def test_from_float():
-    assert Balance.from_float(42.314, "wxHOPR").value == Decimal("42.314")
-    assert Balance.from_float(42.314, "wxHOPR").unit == "wxHOPR"
-
-    assert Balance.from_float(42.314, "wei wxHOPR").value == Decimal("42.314") / WEI_TO_READABLE
-    assert Balance.from_float(42.314, "wei wxHOPR").unit == "wxHOPR"
-
-
 def test_comparison():
     assert Balance("1.1 unit") < Balance("1.2 unit")
     assert Balance("1.1 unit") < Balance("1200000000000000000 wei unit")

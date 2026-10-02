@@ -110,9 +110,8 @@ async def test_start_skips_ticket_parameters_subscription_when_both_static_value
 
     await node.start()
 
-    add_mock.assert_any_call(node.subscribe_accounts)
     add_mock.assert_any_call(node.subscribe_channels)
-    assert add_mock.call_count == 2
+    assert add_mock.call_count == 1
     update_mock.assert_called_once_with([])
     keepalive_mock.assert_called_once_with(node)
     gather_mock.assert_awaited_once()
@@ -161,10 +160,9 @@ async def test_start_subscribes_to_ticket_parameters_when_neither_static_value_i
 
     await node.start()
 
-    add_mock.assert_any_call(node.subscribe_accounts)
     add_mock.assert_any_call(node.subscribe_channels)
     add_mock.assert_any_call(node.ticket_parameters)
-    assert add_mock.call_count == 3
+    assert add_mock.call_count == 2
     update_mock.assert_called_once_with([])
     gather_mock.assert_awaited_once()
 

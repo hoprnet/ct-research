@@ -5,12 +5,8 @@ import core.__main__ as app_main
 
 class DummySection:
     def __init__(self, **attrs):
-        self.calls: list[tuple[str, str]] = []
         for key, value in attrs.items():
             setattr(self, key, value)
-
-    def set_attribute_from_env(self, attr: str, env_name: str) -> None:
-        self.calls.append((attr, env_name))
 
 
 class DummyNode:

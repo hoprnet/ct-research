@@ -5,7 +5,7 @@ This module provides the Node class which manages the complete lifecycle of a HO
 including:
 - Session management with grace periods and parallel cleanup
 - Peer discovery and channel management
-- Balance and economic model tracking
+- Relayer eligibility and burst scheduling
 - Network topology and blokli data
 
 Session Management:
@@ -26,7 +26,7 @@ from typing import Optional
 from api_lib.headers.authorization import Bearer
 from prometheus_client import Gauge
 
-from .mixins import ChannelMixin, EconomicSystemMixin, PeersMixin, SessionMixin, StateMixin
+from .mixins import ChannelMixin, EligibilityMixin, PeersMixin, SessionMixin, StateMixin
 from .api.hoprd_api import HoprdAPI
 from .api.response_objects import Channel, Channels, Session, TicketPrice
 from .types.address import Address
@@ -35,15 +35,14 @@ from .types.balance import Balance
 from .config_parser import Parameters
 from .components.node_helper import NodeHelper
 from .types.peer import Peer
-from .types.network_state import NetworkState
 from .types.session_rate_limiter import SessionRateLimiter
 from .components.decorators import get_keepalive_methods
 from .services.node_runtime_factory import NodeRuntimeFactory
 from .services.channel_graph_store import ChannelGraphStore
 from .services.channel_view_coordinator import ChannelViewCoordinator
-from .services.economic_model_refresh_coordinator import EconomicModelRefreshCoordinator
+from .services.burst_plan import RelayedCostTracker
+from .services.eligibility_refresh_coordinator import EligibilityRefreshCoordinator
 from .services.network_update_coordinator import NetworkUpdateCoordinator
-from .services.send_plan_coordinator import SendPlanCoordinator
 from .services.session_lifecycle_coordinator import SessionLifecycleCoordinator
 from .services.shutdown_coordinator import ShutdownCoordinator
 
@@ -54,7 +53,7 @@ logger = logging.getLogger(__name__)
 
 class Node(
     ChannelMixin,
-    EconomicSystemMixin,
+    EligibilityMixin,
     PeersMixin,
     SessionMixin,
     StateMixin,
@@ -64,7 +63,7 @@ class Node(
         Create a new Node with the specified url and key.
 
         Initializes all state tracking for the node including session management,
-        peer connections, and economic model data.
+        peer connections, and relayer eligibility.
 
         Session State Attributes:
             sessions (dict[str, Session]): Active sessions indexed by relayer address.
@@ -87,7 +86,7 @@ class Node(
         self.url = url
 
         self.peers = dict[str, Peer]()
-        self.network_state = NetworkState()
+        self.eligible_relayers = set[str]()
         self._session_destinations = list[str]()
         self.sessions = dict[str, Session]()
         # relayer -> timestamp when grace period started
@@ -123,19 +122,19 @@ class Node(
         self.outgoing_channel_balances = dict[str, Balance]()
         self.ticket_price: Optional[TicketPrice] = None
         self.min_ticket_winning_probability: Optional[float] = None
-        self.economic_model_refresh_coordinator = EconomicModelRefreshCoordinator(
-            self._apply_economic_model_once
+        self.relayed_cost_tracker = RelayedCostTracker()
+        self.eligibility_refresh_coordinator = EligibilityRefreshCoordinator(
+            self._refresh_eligibility_once
         )
         self.network_update_coordinator = NetworkUpdateCoordinator(
-            self.reconcile_peer_allocations,
-            self.trigger_economic_model_refresh,
+            self.reconcile_peer_channels,
+            self.trigger_eligibility_refresh,
         )
-        self.send_plan_coordinator = SendPlanCoordinator()
         self.session_lifecycle_coordinator = SessionLifecycleCoordinator()
         self.shutdown_coordinator = ShutdownCoordinator()
         self.shutdown_coordinator.register_async(
-            "economic_model_refresh_coordinator",
-            self.economic_model_refresh_coordinator.close,
+            "eligibility_refresh_coordinator",
+            self.eligibility_refresh_coordinator.close,
         )
         self.shutdown_coordinator.register_async(
             "network_update_coordinator",
@@ -149,14 +148,6 @@ class Node(
             "channel_graph_sweep",
             self.close_channel_graph_sweep,
         )
-        self.shutdown_coordinator.register_async(
-            "account_link_sweep",
-            self.network_sync_orchestrator.close,
-        )
-        self.shutdown_coordinator.register_async(
-            "blokli_repository",
-            self.blokli_repository.close,
-        )
 
         self.connected = False
         self.running = True
@@ -167,7 +158,6 @@ class Node(
         self._cached_reachable_destinations: set[str] | None = None
 
         # Channel caching (ChannelMixin)
-        self._cached_outgoing_open: list[Channel] | None = None
         self._cached_address_to_open_channel: dict[str, Channel] | None = None
 
         BALANCE_MULTIPLIER.set(1.0)
@@ -197,7 +187,7 @@ class Node(
         should_subscribe_ticket_parameters = not (
             static_ticket_price and static_winning_probability
         )
-        scheduled_subscription_methods = ["subscribe_accounts", "subscribe_channels"]
+        scheduled_subscription_methods = ["subscribe_channels"]
         if should_subscribe_ticket_parameters:
             scheduled_subscription_methods.append("ticket_parameters")
 
@@ -205,7 +195,6 @@ class Node(
             "Scheduling subscription methods",
             {"methods": scheduled_subscription_methods},
         )
-        AsyncLoop.add(self.subscribe_accounts)
         AsyncLoop.add(self.subscribe_channels)
         if should_subscribe_ticket_parameters:
             AsyncLoop.add(self.ticket_parameters)

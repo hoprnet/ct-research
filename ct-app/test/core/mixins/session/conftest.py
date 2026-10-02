@@ -12,6 +12,7 @@ from core.config_parser import Parameters
 from core.types.message_queue import MessageQueue
 from core.types.singleton import Singleton
 from core.node import Node
+from test.queue_utils import reset_queue_size
 
 
 @pytest.fixture
@@ -74,9 +75,11 @@ async def session_node(mocker: MockerFixture) -> Node:
 def clear_message_queue():
     if MessageQueue in Singleton._instances:
         del Singleton._instances[MessageQueue]
+    reset_queue_size()
     yield
     if MessageQueue in Singleton._instances:
         del Singleton._instances[MessageQueue]
+    reset_queue_size()
 
 
 @pytest.fixture

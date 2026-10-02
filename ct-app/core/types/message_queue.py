@@ -29,8 +29,3 @@ class MessageQueue(metaclass=Singleton):
         """Put message in queue and update gauge after operation completes."""
         await self._buffer.put(item)
         QUEUE_SIZE.set(self._buffer.qsize())
-
-    @property
-    def buffer(self) -> Queue[MessageFormat]:
-        """Direct access to buffer (used for qsize checks in tests)."""
-        return self._buffer

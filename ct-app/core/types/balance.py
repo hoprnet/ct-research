@@ -50,13 +50,6 @@ class Balance:
     def zero(cls, unit: str):
         return cls(f"0 {unit}")
 
-    @classmethod
-    def from_float(cls, value: Optional[float], unit: str):
-        if value is None:
-            value = 0.0
-
-        return cls(f"{value} {unit}")
-
     def __eq__(self, other):
         if not isinstance(other, Balance):
             return False

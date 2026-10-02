@@ -76,9 +76,6 @@ class MessageFormat:
             timestamp=match.group("timestamp"),
         )
 
-    def increase_inner_index(self):
-        self.inner_index += 1
-
     def format(self):
         return self.pattern().format_map(self.__dict__)
 

@@ -168,7 +168,7 @@ class StateMixin(NodeRuntimeState):
     async def ticket_parameters(self):
         """
         Subscribes to Blokli ticket parameter updates.
-        They are used in the economic model to calculate the number of messages to send to a peer.
+        The ticket price is used to report the projected and month-to-date cost of the bursts.
         """
         while True:
             try:

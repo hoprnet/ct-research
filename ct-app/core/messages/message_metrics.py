@@ -55,14 +55,6 @@ ACTIVE_WORKERS = Gauge(
 # Session count
 SESSION_COUNT = Gauge("ct_session_count", "Number of active sessions")
 
-# Message processing latency
-MESSAGE_LATENCY = Histogram(
-    "ct_message_latency_seconds",
-    "Message processing latency",
-    ["phase"],  # phases: queue_wait, session, send, total
-    buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0),
-)
-
 # End-to-end delivery metrics
 MESSAGES_SCHEDULED = Counter(
     "ct_messages_scheduled_total",
@@ -100,7 +92,7 @@ WORKER_LOOP_EVENTS = Counter(
 
 MESSAGES_SENT_SUCCESS = Counter(
     "ct_messages_sent_success_total",
-    "Total messages successfully sent (batch send completed)",
+    "Total bursts successfully sent (burst send completed)",
 )
 
 MESSAGES_SENT_FAILED = Counter(
@@ -112,16 +104,41 @@ MESSAGES_SENT_FAILED = Counter(
 MESSAGE_E2E_LATENCY = Histogram(
     "ct_message_e2e_latency_seconds",
     "End-to-end message latency from queue entry to send completion",
-    buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0),
+    buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 15.0, 30.0, 60.0),
 )
 
-
-def record_message_latency(phase: str, duration_seconds: float):
-    """
-    Record message processing latency for a specific phase.
-
-    Args:
-        phase: Processing phase (queue_wait, session, send, total)
-        duration_seconds: Duration in seconds
-    """
-    MESSAGE_LATENCY.labels(phase=phase).observe(duration_seconds)
+# Burst incentive model
+BURSTS = Counter(
+    "ct_bursts_total",
+    "Bursts handled by the round scheduler",
+    ["result"],  # results: queued, skipped_ineligible
+)
+ACTIVE_BURSTS = Gauge("ct_active_bursts", "Bursts currently being sent")
+BURST_PACKETS_SENT = Counter(
+    "ct_burst_packets_sent_total",
+    "Packets sent in bursts",
+    ["relayer"],
+)
+BURST_PACKETS_ECHOED = Counter(
+    "ct_burst_packets_echoed_total",
+    "Burst packets echoed back, each relayed twice (out and back)",
+    ["relayer"],
+)
+RELAYED_VALUE = Counter(
+    "ct_relayed_value_total",
+    "Expected wxHOPR paid for relayed burst packets (2 tickets per echoed packet)",
+)
+MONTH_TO_DATE_COST = Gauge(
+    "ct_month_to_date_cost",
+    "Expected wxHOPR paid for relayed burst packets since the start of the UTC month",
+)
+ROUND_RELAYERS = Gauge("ct_round_relayers", "Relayers in the current round")
+ROUND_DURATION = Gauge("ct_round_duration_seconds", "Length of the current round")
+ROUND_STEP = Gauge("ct_round_step_seconds", "Time between two burst starts in the current round")
+ROUND_CONCURRENCY = Gauge(
+    "ct_round_concurrency", "Average bursts running at once in the current round"
+)
+PROJECTED_MONTHLY_COST = Gauge(
+    "ct_projected_max_monthly_cost",
+    "Projected maximum monthly cost of the network at 100% relay, from the current round",
+)

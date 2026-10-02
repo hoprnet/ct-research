@@ -2,9 +2,6 @@ from enum import Enum
 
 
 class SessionLifecycleEvent(str, Enum):
-    RETIRE_REQUESTED = "retire_requested"
-    RETIRE_FAILED = "retire_failed"
-    RETIRED = "retired"
     OPEN_REQUESTED = "open_requested"
     OPEN_RATE_LIMITED = "open_rate_limited"
     OPEN_FAILED = "open_failed"
@@ -16,9 +13,6 @@ class SessionLifecycleEvent(str, Enum):
 
 
 class NetworkUpdateSource(str, Enum):
-    ACCOUNT_LINK_SUBSCRIPTION = "account_link_subscription"
-    SAFE_BALANCE_REFRESH = "safe_balance_refresh"
-    REDEEMED_REFRESH = "redeemed_refresh"
     PEER_DISCOVERY_REFRESH = "peer_discovery_refresh"
     CHANNEL_TOPOLOGY_REFRESH = "channel_topology_refresh"
     TICKET_PARAMETERS_CONFIGURATION = "ticket_parameters_configuration"

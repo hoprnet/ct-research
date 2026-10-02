@@ -123,18 +123,6 @@ def test_optional_union_and_special_types_are_coerced():
     assert params.enabled.value is True
 
 
-def test_set_attribute_from_env_uses_environment_value(monkeypatch):
-    @dataclass(init=False)
-    class EnvParameters(ExplicitParams):
-        token: str
-
-    params = EnvParameters({"token": "default"})
-    monkeypatch.setenv("ENV_TOKEN", "from-env")
-
-    assert params.set_attribute_from_env("token", "ENV_TOKEN") is True
-    assert params.token == "from-env"
-
-
 def test_hidden_fields_are_not_required_in_verification():
     @dataclass(init=False)
     class HiddenSection(ExplicitParams):
@@ -191,6 +179,6 @@ def test_parameters_repr_renders_flag_values_without_object_addresses():
 
     assert "flags=FlagParams(" in rendered
     assert "healthcheck=10.0" in rendered
-    assert "refresh_balances=False" in rendered
+    assert "relay_messages=False" in rendered
     assert "observe_message_queue=True" in rendered
     assert "core.config_parser.base_classes.Flag object at" not in rendered

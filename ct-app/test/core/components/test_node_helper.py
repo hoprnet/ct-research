@@ -27,7 +27,6 @@ async def test_open_session_returns_session_on_success():
     opened = await NodeHelper.open_session(api, "0xdestination", "0xrelayer", "127.0.0.1")
 
     assert opened is session
-    assert opened.requested_destination == "0xdestination"
     api.post_udp_session.assert_awaited_once_with(
         "0xdestination", relayer="0xrelayer", listen_host="127.0.0.1"
     )
@@ -73,62 +72,75 @@ async def test_close_session_returns_api_result():
     api.close_session.assert_awaited_once_with(session)
 
 
-@pytest.mark.asyncio
-async def test_send_batch_messages_sends_full_batch_and_receives():
+def _burst_session(mtu: int = 1000, received: int | Exception = 0) -> MagicMock:
     session = MagicMock()
-    session.send = MagicMock()
-    session.receive = AsyncMock(return_value=300)
-
-    message = MessageFormat("peer_1", "sender", 100, 3)
-    message.queued_at = time.time() - 0.01
-
-    await NodeHelper.send_batch_messages(session, message, receive_timeout=7.5)
-
-    assert session.send.call_count == message.batch_size
-    session.receive.assert_awaited_once_with(
-        message.packet_size,
-        message.batch_size * message.packet_size,
-        timeout=7.5,
-    )
+    session.mtu = mtu
+    session.send = MagicMock(return_value=mtu)
+    if isinstance(received, Exception):
+        session.receive = AsyncMock(side_effect=received)
+    else:
+        session.receive = AsyncMock(return_value=received)
+    return session
 
 
 @pytest.mark.asyncio
-async def test_send_batch_messages_raises_session_closed():
-    session = MagicMock()
+async def test_send_burst_paces_packets_from_the_mtu_and_counts_echoes():
+    # 0.16 Mbit/s over 1000-byte packets = 20 packets/s through the relayer, both directions
+    # together, so the CT node sends 10 packets/s: 3 packets in 0.3 s.
+    session = _burst_session(mtu=1000, received=2 * 600)
+    message = MessageFormat("peer_1", "sender", 600)
+
+    started_at = time.monotonic()
+    result = await NodeHelper.send_burst(session, message, 0.16, 0.3, receive_timeout=7.5)
+    elapsed = time.monotonic() - started_at
+
+    assert session.send.call_count == 3
+    assert result.sent == 3
+    assert result.echoed == 2
+    assert message.batch_size == 3
+    # Packets are spread over the burst, not sent at once: the last one leaves at 0.2 s.
+    assert elapsed >= 0.19
+    session.receive.assert_awaited_once_with(600, 3 * 600, timeout=0.3 + 7.5)
+
+
+@pytest.mark.asyncio
+async def test_send_burst_does_not_count_unsent_packets_as_relayed():
+    session = _burst_session(mtu=1000, received=10 * 600)
+    session.send = MagicMock(side_effect=[1000, 0, 1000])
+    message = MessageFormat("peer_1", "sender", 600)
+
+    result = await NodeHelper.send_burst(session, message, 0.16, 0.3)
+
+    assert result.sent == 2
+    assert result.echoed == 2
+
+
+@pytest.mark.asyncio
+async def test_send_burst_raises_session_closed():
+    session = _burst_session()
     session.send = MagicMock(side_effect=AttributeError("Socket is None for session on port 1"))
-    session.receive = AsyncMock()
-
-    message = MessageFormat("peer_1", "sender", 100, 3)
+    message = MessageFormat("peer_1", "sender", 600)
 
     with pytest.raises(AttributeError):
-        await NodeHelper.send_batch_messages(session, message)
-
-    session.receive.assert_not_called()
+        await NodeHelper.send_burst(session, message, 0.16, 0.3)
 
 
 @pytest.mark.asyncio
-async def test_send_batch_messages_raises_timeout():
-    session = MagicMock()
-    session.send = MagicMock()
-    session.receive = AsyncMock(side_effect=asyncio.TimeoutError())
-
-    message = MessageFormat("peer_1", "sender", 100, 2)
+async def test_send_burst_raises_timeout():
+    session = _burst_session(received=asyncio.TimeoutError())
+    message = MessageFormat("peer_1", "sender", 600)
 
     with pytest.raises(asyncio.TimeoutError):
-        await NodeHelper.send_batch_messages(session, message)
+        await NodeHelper.send_burst(session, message, 0.16, 0.1)
 
-    assert session.send.call_count == message.batch_size
+    assert session.send.call_count == 1
 
 
 @pytest.mark.asyncio
-async def test_send_batch_messages_raises_socket_error():
-    session = MagicMock()
+async def test_send_burst_raises_socket_error():
+    session = _burst_session()
     session.send = MagicMock(side_effect=OSError("socket exploded"))
-    session.receive = AsyncMock()
-
-    message = MessageFormat("peer_1", "sender", 100, 2)
+    message = MessageFormat("peer_1", "sender", 600)
 
     with pytest.raises(OSError):
-        await NodeHelper.send_batch_messages(session, message)
-
-    session.receive.assert_not_called()
+        await NodeHelper.send_burst(session, message, 0.16, 0.3)

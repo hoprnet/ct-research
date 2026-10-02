@@ -4,7 +4,9 @@ from unittest.mock import Mock
 
 import pytest
 
+from core.api import session as session_module
 from core.api.response_objects import Session
+from core.types.message_format import MessageFormat
 
 
 class FakeLoop:
@@ -91,6 +93,55 @@ async def test_receive_returns_size_for_undecodable_payload(monkeypatch):
     received = await session.receive(chunk_size=8, total_size=3)
 
     assert received == 3
+
+
+class ClockedLoop:
+    """Returns each datagram at its own time, moving the clock `receive` reads the RTT from."""
+
+    def __init__(self, datagrams: list[tuple[float, bytes]], monkeypatch):
+        self._datagrams = iter(datagrams)
+        self._now = 0.0
+        monkeypatch.setattr(session_module.time, "time", lambda: self._now)
+
+    async def sock_recvfrom(self, sock, size):
+        self._now, data = next(self._datagrams)
+        return data, ("127.0.0.1", 9100)
+
+
+def echo(timestamp_ms: int) -> bytes:
+    return MessageFormat("0xrelayer", "0xsender", packet_size=200, timestamp=timestamp_ms).bytes()
+
+
+@pytest.mark.asyncio
+async def test_receive_measures_rtt_when_each_echo_arrives(monkeypatch):
+    session = build_session()
+    session.socket = cast(Any, object())
+    first, second = echo(1000), echo(1000)
+    loop = ClockedLoop([(2.0, first), (5.0, second)], monkeypatch)
+    monkeypatch.setattr(asyncio, "get_running_loop", lambda: loop)
+    rtt = Mock()
+    monkeypatch.setattr(session_module, "MESSAGES_RTT", rtt)
+
+    received = await session.receive(chunk_size=200, total_size=len(first) + len(second))
+
+    assert received == len(first) + len(second)
+    assert [c.args[0] for c in rtt.labels.return_value.observe.call_args_list] == [1.0, 4.0]
+
+
+@pytest.mark.asyncio
+async def test_receive_records_a_message_split_across_datagrams_once(monkeypatch):
+    session = build_session()
+    session.socket = cast(Any, object())
+    payload = echo(1000)
+    loop = ClockedLoop([(2.0, payload[:10]), (3.0, payload[10:])], monkeypatch)
+    monkeypatch.setattr(asyncio, "get_running_loop", lambda: loop)
+    rtt = Mock()
+    monkeypatch.setattr(session_module, "MESSAGES_RTT", rtt)
+
+    received = await session.receive(chunk_size=200, total_size=len(payload))
+
+    assert received == len(payload)
+    assert [c.args[0] for c in rtt.labels.return_value.observe.call_args_list] == [2.0]
 
 
 @pytest.mark.asyncio

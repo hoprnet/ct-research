@@ -4,9 +4,9 @@ from collections.abc import Awaitable, Callable
 from .base_drain_coordinator import BaseDrainCoordinator
 
 
-class EconomicModelRefreshCoordinator(BaseDrainCoordinator):
+class EligibilityRefreshCoordinator(BaseDrainCoordinator):
     def __init__(self, refresh_callback: Callable[[], Awaitable[None]]):
-        super().__init__(error_message="Economic model refresh failed", debounce_seconds=0.5)
+        super().__init__(error_message="Eligibility refresh failed", debounce_seconds=0.5)
         self.refresh_callback = refresh_callback
         self._lock = asyncio.Lock()
 

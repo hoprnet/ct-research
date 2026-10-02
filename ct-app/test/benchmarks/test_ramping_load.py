@@ -16,6 +16,7 @@ from pytest_mock import MockerFixture
 from core.types.message_format import MessageFormat
 from core.types.message_queue import MessageQueue
 from core.node import Node
+from test.queue_utils import queue_size as current_queue_size
 
 from .metrics_collector import MetricsCollector
 
@@ -96,7 +97,7 @@ async def test_ramping_load_find_limit(
                 messages_sent += 1
                 await asyncio.sleep(interval)
 
-            queue_size = queue.buffer.qsize()
+            queue_size = current_queue_size()
             print(f"  -> Queue depth: {queue_size}")
 
             if queue_size > QUEUE_THRESHOLD:

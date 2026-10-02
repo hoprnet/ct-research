@@ -1,9 +1,8 @@
 import asyncio
 import inspect
 import logging
-import threading
 from signal import SIGINT, SIGTERM
-from typing import Any, Callable, Iterable
+from typing import Callable, Iterable
 
 from .singleton import Singleton
 
@@ -111,21 +110,6 @@ class AsyncLoop(metaclass=Singleton):
         return task
 
     @classmethod
-    def run_in_thread(cls, callback: Callable, *args):
-        def sync_wrapper(callback, *args):
-            try:
-                asyncio.run(callback(*args))
-            except Exception as err:
-                logger.error(
-                    "Failed to run task",
-                    {"task": callback.__name__, "error": str(err)},
-                )
-
-        thread = threading.Thread(target=sync_wrapper, args=(callback, *args), daemon=True)
-        thread.start()
-        return thread
-
-    @classmethod
     async def gather(cls):
         tasks = tuple(cls().tasks)
         if not tasks:
@@ -135,19 +119,6 @@ class AsyncLoop(metaclass=Singleton):
             await asyncio.gather(*tasks)
         finally:
             cls().tasks.difference_update(task for task in tasks if task.done())
-
-    @classmethod
-    async def gather_any(cls, futures: list[asyncio.Future]) -> list[Any]:
-        """
-        Gather multiple futures and return their results.
-
-        Args:
-            futures: List of asyncio futures to gather
-
-        Returns:
-            list[Any]: Results from all futures (asyncio.gather returns a list)
-        """
-        return await asyncio.gather(*futures)
 
     @classmethod
     def stop(cls):
