@@ -30,7 +30,7 @@ dev = [
     "mypy>=1.18.2",
 ]
 lint = [
-    "black==25.1.0",
+    "black==26.5.1",
 ]
 typecheck = [
     "mypy>=1.18.2",
