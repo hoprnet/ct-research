@@ -18,6 +18,7 @@
 #
 # Environment Variables (required in .env file for non-local environments):
 #   HOST_FORMAT      - URL format string for remote hosts
+#   BLOKLI_URL       - Blokli GraphQL endpoint URL
 #   PROD_TOKEN       - API token for production environment
 #   STAGING_TOKEN    - API token for staging environment
 #
@@ -71,8 +72,20 @@ check_deployment() {
 
 
 get_local_node_address() {
-    port=$((3000 + $1 * 3))
-    echo "http://localhost:$port"
+    local start_port=3000
+    local end_port="${LOCAL_NODE_PORT_MAX:-3999}"
+    local port candidate
+
+    for ((port=start_port; port<=end_port; port++)); do
+        candidate="http://localhost:$port"
+        if [[ "$(healthyz "$candidate")" -eq 200 ]]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+
+    echo "Error: No healthy local node found between ports ${start_port}-${end_port}" >&2
+    return 1
 }
 
 # Function to display help
@@ -83,7 +96,7 @@ CT Application Runner
 Usage: $0 [OPTIONS]
 
 Options:
-  -e, --env=ENV              Environment to run (local, staging, prod) [default: local]
+  -e, --env=ENV              Environment to run (local, staging, jura, prod) [default: local]
   -d, --deployment=DEPLOY    Deployment color (blue, green, auto) [default: auto]
   -l, --log-folder=PATH      Directory for log files [default: .logs]
   -n, --no-log-file          Run without logging to file (stdout only)
@@ -91,7 +104,9 @@ Options:
 
 Environment Variables (required in .env file for non-local environments):
   HOST_FORMAT      - URL format string for remote hosts
+  BLOKLI_URL       - Blokli GraphQL endpoint URL
   PROD_TOKEN       - API token for production environment
+  JURA_TOKEN       - API token for Jura environment
   STAGING_TOKEN    - API token for staging environment
 
 Examples:
@@ -147,8 +162,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Validate environment value
-if [[ ! "$env" =~ ^(local|staging|prod)$ ]]; then
-    echo "Error: Invalid environment '$env'. Must be one of: local, staging, prod" >&2
+if [[ ! "$env" =~ ^(local|staging|jura|prod)$ ]]; then
+    echo "Error: Invalid environment '$env'. Must be one of: local, staging, jura, prod" >&2
     exit 1
 fi
 
@@ -159,9 +174,10 @@ if [[ ! "$deployment" =~ ^(auto|blue|green)$ ]]; then
 fi
 
 if [[ "$env" == "local" ]]; then
-    HOPRD_API_HOST=$(get_local_node_address 1)
+    HOPRD_API_HOST=$(get_local_node_address)
     export HOPRD_API_HOST
     export HOPRD_API_TOKEN="e2e-API-token^^"
+    export BLOKLI_URL="${BLOKLI_URL:-http://localhost:8080}"
 
 else
     # Setup HOPRD API configuration if HOST_FORMAT is provided
@@ -189,7 +205,20 @@ else
                 exit 1
             fi
             export HOPRD_API_TOKEN="$STAGING_TOKEN"
+        elif [[ "$env" == "jura" ]]; then
+            if [[ -z "${JURA_TOKEN:-}" ]]; then
+                echo "Error: JURA_TOKEN environment variable is required for Jura environment" >&2
+                echo "Please check your .env file." >&2
+                exit 1
+            fi
+            export HOPRD_API_TOKEN="$JURA_TOKEN"
         fi
+    fi
+
+    if [[ -z "${BLOKLI_URL:-}" ]]; then
+        echo "Error: BLOKLI_URL environment variable is required" >&2
+        echo "Please check your .env file." >&2
+        exit 1
     fi
 fi
 

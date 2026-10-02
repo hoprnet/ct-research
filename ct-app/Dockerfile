@@ -2,10 +2,10 @@
 # Uses slim base image and layer caching for faster builds and smaller image size
 
 # Stage 1: Builder - Install dependencies
-FROM python:3.14-slim AS builder
+FROM python:3.14.6-slim AS builder
 
-# Install uv package manager (0.9.x+ supports Python 3.14)
-COPY --from=ghcr.io/astral-sh/uv:0.9 /uv /uvx /bin/
+# Install uv package manager
+COPY --from=ghcr.io/astral-sh/uv:0.11.25 /uv /uvx /bin/
 
 # Set working directory
 WORKDIR /code
@@ -15,10 +15,12 @@ WORKDIR /code
 COPY pyproject.toml uv.lock .python-version ./
 COPY core/pyproject.toml ./core/
 COPY core/api/pyproject.toml ./core/api/
+COPY core/blokli/pyproject.toml ./core/blokli/
 COPY core/components/pyproject.toml ./core/components/
-COPY core/subgraph/pyproject.toml ./core/subgraph/
-COPY core/rpc/pyproject.toml ./core/rpc/
-COPY test/pyproject.toml ./test/
+COPY core/config_parser/pyproject.toml ./core/config_parser/
+COPY core/messages/pyproject.toml ./core/messages/
+COPY core/mixins/pyproject.toml ./core/mixins/
+COPY core/types/pyproject.toml ./core/types/
 COPY .configs ./.configs/
 COPY scripts ./scripts/
 
@@ -26,12 +28,15 @@ COPY scripts ./scripts/
 COPY core/__init__.py ./core/
 COPY core/__main__.py ./core/
 COPY core/node.py ./core/
-COPY core/mixins ./core/mixins/
-COPY core/rpc ./core/rpc/
 COPY core/api ./core/api/
+COPY core/blokli ./core/blokli/
 COPY core/components ./core/components/
-COPY core/subgraph ./core/subgraph/
-COPY test ./test/
+COPY core/config_parser ./core/config_parser/
+COPY core/constants ./core/constants/
+COPY core/messages ./core/messages/
+COPY core/mixins ./core/mixins/
+COPY core/services ./core/services/
+COPY core/types ./core/types/
 
 # Install production dependencies only (no dev dependencies)
 RUN uv sync --frozen --no-dev
@@ -44,11 +49,16 @@ RUN uv pip install --no-cache-dir ./core
 RUN uv pip install --no-cache-dir .
 
 # Stage 2: Runtime - Minimal production image
-FROM python:3.14-slim AS runtime
+FROM python:3.14.6-slim AS runtime
 
 # Add metadata labels
 LABEL maintainer="HOPR Team"
 LABEL description="CT-App - HOPR Cover Traffic Application"
+
+# Apply latest Debian security updates in the runtime image.
+RUN apt-get update \
+    && apt-get dist-upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
@@ -61,7 +71,6 @@ COPY --from=builder /code/.venv /code/.venv
 
 # Copy application source code and scripts
 COPY --from=builder --chown=appuser:appuser /code/core ./core
-COPY --from=builder --chown=appuser:appuser /code/test ./test
 COPY --from=builder --chown=appuser:appuser /code/scripts ./scripts
 COPY --from=builder --chown=appuser:appuser /code/.configs ./.configs
 

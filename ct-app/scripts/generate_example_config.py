@@ -5,7 +5,7 @@ import yaml
 
 sys.path.insert(1, "./")
 
-from core.components.config_parser import Parameters
+from core.config_parser import Parameters
 
 
 @click.command()

@@ -4,15 +4,34 @@ version = "3.11.0"
 requires-python = ">=3.14"
 dependencies = [
     "click>=8.1.8",
+    "pyyaml>=6.0.1",
     "core-api",
+    "core-blokli",
     "core-components",
-    "core-subgraph",
+    "core-config-parser",
+    "core-messages",
+    "core-mixins",
+    "core-types"
 ]
 
 [tool.setuptools]
-packages = ["api", "components", "mixins", "rpc", "subgraph"]
+packages = [
+    "core",
+    "core.api",
+    "core.blokli",
+    "core.components",
+    "core.config_parser",
+    "core.messages",
+    "core.mixins",
+    "core.types",
+]
+package-dir = {"core" = "."}
 
 [tool.uv.sources]
 core-api = { workspace = true }
 core-components = { workspace = true }
-core-subgraph = { workspace = true }
+core-blokli = { workspace = true }
+core-config-parser = { workspace = true }
+core-messages = { workspace = true }
+core-mixins = { workspace = true }
+core-types = { workspace = true }

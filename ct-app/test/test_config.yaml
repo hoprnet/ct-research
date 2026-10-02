@@ -6,145 +6,46 @@ environment: test
 
 flags:
   node: 
-    apply_economic_model: 30
-    ticket_parameters: 30
-
-    # connected_peers: 30
-    outgoing_channels_balances: 30
-
-    rotate_subgraphs: 30
-
-    # through subgraph queries
-    peers_rewards: 30
-    registered_nodes: 30
-
-    # through rpc calls
-    allocations: 30
-    eoa_balances: 30
     
-    healthcheck: 10
-    retrieve_peers: 30
-    retrieve_channels: 30
-    retrieve_balances: 30
-
-    open_channels: Off
-    fund_channels: Off
-    close_old_channels: Off
-    close_pending_channels: Off
-    close_incoming_channels: Off
-
-    get_total_channel_funds: Off
+    healthcheck: 10s
+    retrieve_peers: 30s
+    relay_messages: Off
+    retrieve_balances: 30s
     
     observe_message_queue: On
-    maintain_sessions: 10
-
-  peer:
-    message_relay_request: Off
+    maintain_sessions: 10s
 
 # =============================================================================
 # 
 # =============================================================================
-economic_model:
-  min_safe_allowance: "0 wxHOPR"
-  nft_threshold: "0 wxHOPR"
+incentive:
+  min_outgoing_channels: 5
+  min_channel_balance: "50 wxHOPR"
+  burst_rate: 8                   # Mbit/s
+  burst_duration: 10s
+  target_relayer_interval: 600s   # average time between two bursts to the same relayer, across all CT nodes
+  max_concurrent_bursts_per_ct: 0 # 0 = no limit
+  ct_node_count: 1                # CT nodes in the deployment
 
-  legacy:
-    proportion: 0.9
-    apr: 12.0
-
-    coefficients:
-      a: 1
-      b: 2
-      upperbound: "3 wxHOPR"
-      lowerbound: "0.000001 wxHOPR"
-    
-    equations: 
-      fx: 
-        formula: "a * x"
-        condition: "lowerbound <= x <= upperbound"
-      gx:
-        formula: "a * upperbound + (x - upperbound) ** (1 / b)"
-        condition: "x > upperbound"
-
-  sigmoid:
-    proportion: 0.1
-    max_apr: 15
-    network_capacity: 2000
-    total_token_supply: "450000000 wxHOPR"
-
-    offset: -0.9
-    buckets:
-      economic_security:
-        flatness: 1.8
-        skewness: 1.52
-        upperbound: 0.4
-        offset: 3.14
-
-      network_capacity:
-        flatness: 2.97
-        skewness: 0.72
-        upperbound: 1.0
-        offset: 4.08
-        
 # =============================================================================
 # 
 # =============================================================================
 peer:
-  minimum_delay_between_batches: 2
-  sleep_mean_time: 30
-  sleep_std_time: 2
   excluded_peers: []
 
-# =============================================================================
-# 
-# =============================================================================
-channel:
-  min_balance: "0.05 wxHOPR"
-  funding_amount: "0.2 wxHOPR"
-  max_age_seconds: 60
-  
 # =============================================================================
 #
 # =============================================================================
 sessions:
   green_destinations: []
   blue_destinations: []
-  session_retry_base_delay_seconds: 2.0
-  session_retry_max_delay_seconds: 60.0
+  session_retry_base_delay: 2s
+  session_retry_max_delay: 60s
   message_worker_count: 10
-  
-# =============================================================================
-# 
-# =============================================================================
-investors:
-  schedule: 
-  addresses: []
+  message_queue_maxsize: 10000
+  receive_timeout: 2s
 
 # =============================================================================
-# 
+#
 # =============================================================================
-nft_holders:
-  filepath: ".configs/nft_holders.txt"
-
-# =============================================================================
-# 
-# =============================================================================
-rpc:
-  gnosis:   
-  mainnet: 
-
-# =============================================================================
-# 
-# =============================================================================
-subgraph:
-  type: auto # auto | default | backup
-  user_id: 1000
-  api_key: 
-
-  rewards:
-    query_id: ~
-    slug: rewards_backup_url
-  safes_balance:
-    query_id: query-id-safes
-    slug: safes_backup_url
 ...
