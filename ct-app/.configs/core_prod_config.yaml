@@ -36,7 +36,12 @@ peer:
 #
 # =============================================================================
 sessions:
-  green_destinations: []
+  green_destinations: 
+    - "0x51624c828c175cc81d6a7dd22a9a30d68c6a1ae0"
+    - "0xa64109ed980c902ac554662b9d569a6a3f71e7a7"
+    - "0x02d7d9ca7788e674676f809ac984cbf59e4b6099"
+    - "0x50eac8e328847e5389aabb267398386db7225644"
+    - "0x991a376c646274d74adb3b25ccc292a775f352f1"
   blue_destinations: []
   session_retry_base_delay: 2s
   session_retry_max_delay: 60s
