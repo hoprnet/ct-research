@@ -20,7 +20,7 @@ flags:
 incentive:
   min_outgoing_channels: 5
   min_channel_balance: "100 wxHOPR"
-  burst_rate: 8                   # Mbit/s
+  burst_rate: 10                  # Mbit/s
   burst_duration: 10s
   target_relayer_interval: 600s   # average time between two bursts to the same relayer, across all CT nodes
   max_concurrent_bursts_per_ct: 0 # 0 = no limit
