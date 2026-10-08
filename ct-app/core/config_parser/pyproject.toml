@@ -1,0 +1,9 @@
+[project]
+name = "core-config-parser"
+version = "1.0.0"
+requires-python = ">=3.14"
+dependencies = []
+
+[tool.setuptools]
+packages = ["core.config_parser"]
+package-dir = {"core.config_parser" = "."}
