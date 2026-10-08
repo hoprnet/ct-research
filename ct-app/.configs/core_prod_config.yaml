@@ -22,7 +22,7 @@ incentive:
   min_channel_balance: "100 wxHOPR"
   burst_rate: 30                  # Mbit/s
   burst_duration: 10s
-  target_relayer_interval: 600s   # average time between two bursts to the same relayer, across all CT nodes
+  target_relayer_interval: 1200s  # average time between two bursts to the same relayer, across all CT nodes
   max_concurrent_bursts_per_ct: 0 # 0 = no limit
   ct_node_count: 5                # CT nodes in the deployment
 
