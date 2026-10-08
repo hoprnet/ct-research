@@ -7,8 +7,10 @@ from pytest_mock import MockerFixture
 import core.mixins.session.workers as workers_mod
 from core.api.response_objects import Session, TicketPrice
 from core.components.node_helper import BurstResult, NodeHelper
+from core.constants.labels import MessageSendFailureReason
 from core.messages.message_metrics import (
     BATCH_SCHEDULE_FAILURES,
+    BURST_PACKETS_SENT,
     MESSAGE_DROPS,
     MESSAGE_REQUEUES,
     SESSION_OPEN_EVENTS,
@@ -476,16 +478,43 @@ async def test_run_burst_closes_the_session_when_the_burst_fails(
     relayer = "peer_7"
     session = mock_sessions(relayer, port=9205)
     session_node.sessions[relayer] = session
-    mocker.patch.object(NodeHelper, "send_burst", new=AsyncMock(side_effect=asyncio.TimeoutError))
+    mocker.patch.object(NodeHelper, "send_burst", new=AsyncMock(side_effect=asyncio.CancelledError))
     close_session = mocker.patch.object(
         NodeHelper, "close_session", new=AsyncMock(return_value=True)
     )
 
-    with pytest.raises(asyncio.TimeoutError):
+    with pytest.raises(asyncio.CancelledError):
         await session_node._run_burst(session, MessageFormat(relayer))
 
     assert relayer not in session_node.sessions
     close_session.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_run_burst_records_the_packets_of_a_failed_burst(
+    session_node: Node, mock_sessions, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+):
+    relayer = "peer_10"
+    session = mock_sessions(relayer, port=9208)
+    session_node.sessions[relayer] = session
+    mocker.patch.object(
+        NodeHelper,
+        "send_burst",
+        new=AsyncMock(
+            return_value=BurstResult(
+                sent=7, echoed=0, failure=MessageSendFailureReason.SESSION_CLOSED
+            )
+        ),
+    )
+    mocker.patch.object(NodeHelper, "close_session", new=AsyncMock(return_value=True))
+    sent_before = BURST_PACKETS_SENT.labels(relayer)._value.get()
+
+    with caplog.at_level("WARNING"):
+        await session_node._run_burst(session, MessageFormat(relayer))
+
+    assert BURST_PACKETS_SENT.labels(relayer)._value.get() - sent_before == 7
+    assert session_node.relayed_cost_tracker.packets_sent == 7
+    assert relayer not in session_node.sessions
 
 
 @pytest.mark.asyncio

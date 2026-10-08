@@ -76,9 +76,9 @@ async def test_ramping_load_find_limit(
         else:
             await benchmark_node.observe_message_queue()
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("Ramping Load Benchmark")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     workers_task = asyncio.create_task(run_workers())
 
@@ -123,7 +123,7 @@ async def test_ramping_load_find_limit(
     )
     if breaking_point:
         print(f"System limit: ~{breaking_point} msg/sec")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     # Save results
     results_dir = Path(__file__).parent / "results"

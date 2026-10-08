@@ -254,10 +254,22 @@ class SessionWorkerMixin(SessionCommonMixin):
         if self.relayed_cost_tracker.cost is not None:
             MONTH_TO_DATE_COST.set(float(self.relayed_cost_tracker.cost.value))
 
-        logger.debug(
-            "Burst completed",
-            {"relayer": message.relayer, "sent": result.sent, "echoed": result.echoed},
-        )
+        if result.failure:
+            logger.warning(
+                "Burst completed",
+                {
+                    "relayer": message.relayer,
+                    "sent": result.sent,
+                    "echoed": result.echoed,
+                    "reason": result.failure.value,
+                    "error": result.error,
+                },
+            )
+        else:
+            logger.debug(
+                "Burst completed",
+                {"relayer": message.relayer, "sent": result.sent, "echoed": result.echoed},
+            )
 
     def _schedule_burst(
         self,

@@ -30,6 +30,9 @@ BURST_PACING_TICK_SECONDS = 0.005
 class BurstResult:
     sent: int
     echoed: int
+    # Set when the burst stopped early; `sent` still counts the packets that left.
+    failure: Optional[MessageSendFailureReason] = None
+    error: Optional[str] = None
 
 
 class NodeHelper:
@@ -172,9 +175,11 @@ class NodeHelper:
         Echoes are received while sending, up to `receive_timeout` after the last packet. A
         packet counts as relayed, in both directions, when its echo came back.
 
+        A failure does not raise: the result carries its reason and the packets sent until then,
+        so the caller can still account for them.
+
         Designed to run as a fire-and-forget background task (see `AsyncLoop.add`).
         """
-        failure_reason: MessageSendFailureReason | None = None
         rate = send_rate(burst_rate, session.mtu)
         total = packets_per_burst(burst_rate, burst_duration, session.mtu)
         message.batch_size = total
@@ -209,25 +214,29 @@ class NodeHelper:
             MESSAGE_E2E_LATENCY.observe(time.time() - message.queued_at)
             return BurstResult(sent=sent, echoed=echoed)
 
-        except asyncio.TimeoutError:
-            failure_reason = MessageSendFailureReason.TIMEOUT
-            raise
-        except AttributeError as e:
-            # Session socket is None (session closed)
-            if "socket is None" in str(e).lower():
-                failure_reason = MessageSendFailureReason.SESSION_CLOSED
-            else:
-                failure_reason = MessageSendFailureReason.UNKNOWN
-            raise
-        except OSError:
-            # Socket errors (rare for UDP but can happen)
-            failure_reason = MessageSendFailureReason.SOCKET_ERROR
-            raise
-        except Exception:
-            failure_reason = MessageSendFailureReason.UNKNOWN
-            raise
+        except Exception as err:
+            failure_reason = cls._burst_failure_reason(err)
+            MESSAGES_SENT_FAILED.labels(reason=failure_reason.value).inc()
+            if failure_reason is MessageSendFailureReason.UNKNOWN:
+                logger.debug("Unexpected burst error", {"relayer": message.relayer}, exc_info=True)
+            # The packets already sent were relayed (and paid for) even though their echoes are
+            # no longer counted, so they are still reported.
+            return BurstResult(sent=sent, echoed=0, failure=failure_reason, error=repr(err))
+
         finally:
             if receiver is not None and not receiver.done():
                 receiver.cancel()
-            if failure_reason:
-                MESSAGES_SENT_FAILED.labels(reason=failure_reason.value).inc()
+
+    @staticmethod
+    def _burst_failure_reason(err: Exception) -> MessageSendFailureReason:
+        if isinstance(err, asyncio.TimeoutError):
+            return MessageSendFailureReason.TIMEOUT
+        if isinstance(err, AttributeError):
+            # Session socket is None (session closed)
+            if "socket is none" in str(err).lower():
+                return MessageSendFailureReason.SESSION_CLOSED
+            return MessageSendFailureReason.UNKNOWN
+        if isinstance(err, OSError):
+            # Socket errors (rare for UDP but can happen)
+            return MessageSendFailureReason.SOCKET_ERROR
+        return MessageSendFailureReason.UNKNOWN

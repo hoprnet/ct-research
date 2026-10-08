@@ -6,6 +6,7 @@ import pytest
 
 from core.api.response_objects import Session, SessionFailure
 from core.components.node_helper import NodeHelper
+from core.constants.labels import MessageSendFailureReason
 from core.types.message_format import MessageFormat
 
 
@@ -116,31 +117,41 @@ async def test_send_burst_does_not_count_unsent_packets_as_relayed():
 
 
 @pytest.mark.asyncio
-async def test_send_burst_raises_session_closed():
+async def test_send_burst_reports_session_closed():
     session = _burst_session()
     session.send = MagicMock(side_effect=AttributeError("Socket is None for session on port 1"))
     message = MessageFormat("peer_1", "sender", 600)
 
-    with pytest.raises(AttributeError):
-        await NodeHelper.send_burst(session, message, 0.16, 0.3)
+    result = await NodeHelper.send_burst(session, message, 0.16, 0.3)
+
+    assert (result.sent, result.echoed, result.failure) == (
+        0,
+        0,
+        MessageSendFailureReason.SESSION_CLOSED,
+    )
 
 
 @pytest.mark.asyncio
-async def test_send_burst_raises_timeout():
+async def test_send_burst_reports_timeout_with_the_packets_already_sent():
     session = _burst_session(received=asyncio.TimeoutError())
     message = MessageFormat("peer_1", "sender", 600)
 
-    with pytest.raises(asyncio.TimeoutError):
-        await NodeHelper.send_burst(session, message, 0.16, 0.1)
+    result = await NodeHelper.send_burst(session, message, 0.16, 0.1)
 
     assert session.send.call_count == 1
+    assert (result.sent, result.echoed, result.failure) == (1, 0, MessageSendFailureReason.TIMEOUT)
 
 
 @pytest.mark.asyncio
-async def test_send_burst_raises_socket_error():
+async def test_send_burst_reports_socket_error_with_the_packets_already_sent():
     session = _burst_session()
-    session.send = MagicMock(side_effect=OSError("socket exploded"))
+    session.send = MagicMock(side_effect=[1000, OSError("socket exploded")])
     message = MessageFormat("peer_1", "sender", 600)
 
-    with pytest.raises(OSError):
-        await NodeHelper.send_burst(session, message, 0.16, 0.3)
+    result = await NodeHelper.send_burst(session, message, 0.16, 0.3)
+
+    assert (result.sent, result.echoed, result.failure) == (
+        1,
+        0,
+        MessageSendFailureReason.SOCKET_ERROR,
+    )

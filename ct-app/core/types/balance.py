@@ -129,7 +129,7 @@ class Balance:
         if not isinstance(power, (int, float, Decimal)):
             raise TypeError("Power must be an integer or float")
         if isinstance(power, Decimal):
-            return Balance(f"{self.value ** power} {self.unit}")
+            return Balance(f"{self.value**power} {self.unit}")
         else:
             return Balance(f"{self.value ** Decimal(power)} {self.unit}")
 

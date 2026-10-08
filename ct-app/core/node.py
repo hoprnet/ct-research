@@ -176,9 +176,10 @@ class Node(
 
         # TODO: see `load_static_ticket_parameters_from_node_configuration`; the static path
         # currently never triggers with hoprd v5, so the Blokli subscription is always used.
-        static_ticket_price, static_winning_probability = (
-            await self.load_static_ticket_parameters_from_node_configuration()
-        )
+        (
+            static_ticket_price,
+            static_winning_probability,
+        ) = await self.load_static_ticket_parameters_from_node_configuration()
         if static_ticket_price != static_winning_probability:
             raise ValueError(
                 "Ticket price and winning probability must both be hardcoded in node "

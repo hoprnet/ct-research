@@ -57,9 +57,9 @@ async def test_throughput_ceiling(
         ),
     )
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("Throughput Ceiling Benchmark")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     results = {}
 
@@ -149,9 +149,9 @@ async def test_throughput_ceiling(
         benchmark_node.running = True
 
     # Summary
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("Throughput Ceiling Results")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     for rate, data in results.items():
         status = "PASS ✓" if data["passed"] else "FAIL ✗"
         throughput = data["throughput"]
@@ -161,7 +161,7 @@ async def test_throughput_ceiling(
     # Find maximum sustainable rate
     max_rate = max([rate for rate, data in results.items() if data["passed"]], default=0)
     print(f"\nMaximum sustainable throughput: {max_rate} msg/sec")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     # Save results
     _save_ceiling_results(results, max_rate)
@@ -194,7 +194,7 @@ def _save_ceiling_results(results: dict, max_rate: int):
 
     with open(results_dir / f"ceiling_{timestamp}.txt", "w") as f:
         f.write("Throughput Ceiling Benchmark Results\n")
-        f.write(f"{'='*60}\n\n")
+        f.write(f"{'=' * 60}\n\n")
         f.write(f"Maximum sustainable rate: {max_rate} msg/sec\n\n")
         f.write("Detailed results:\n")
         for rate, data in results.items():
