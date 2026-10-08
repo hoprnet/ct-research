@@ -150,9 +150,9 @@ async def test_sustained_100_msg_per_sec(
     print(f"{'=' * 60}\n")
 
     # Assertions (80% tolerance accounts for test overhead and async scheduling)
-    assert avg_throughput >= TARGET_RATE * 0.80, (
-        f"Throughput {avg_throughput:.1f} is below 80% of target {TARGET_RATE}"
-    )
+    assert (
+        avg_throughput >= TARGET_RATE * 0.80
+    ), f"Throughput {avg_throughput:.1f} is below 80% of target {TARGET_RATE}"
     assert max_queue < 500, f"Max queue depth {max_queue} indicates backpressure"
 
     # Delivery assertions (allow some overhead/async tasks to still be in flight)
@@ -301,13 +301,13 @@ async def test_sustained_130_msg_per_sec(
 
     # Critical assertions for 130 msg/sec target
     # (80% tolerance accounts for test overhead and async scheduling)
-    assert avg_throughput >= TARGET_RATE * 0.80, (
-        f"Throughput {avg_throughput:.1f} is below 80% of target {TARGET_RATE}"
-    )
+    assert (
+        avg_throughput >= TARGET_RATE * 0.80
+    ), f"Throughput {avg_throughput:.1f} is below 80% of target {TARGET_RATE}"
     assert max_queue < 100, f"Max queue depth {max_queue} indicates backpressure at 130 msg/sec"
-    assert queue_growth < 1.0, (
-        f"Queue growing at {queue_growth:.2f} msg/sec - system cannot sustain rate"
-    )
+    assert (
+        queue_growth < 1.0
+    ), f"Queue growing at {queue_growth:.2f} msg/sec - system cannot sustain rate"
 
     # Delivery assertions
     if scheduled > 0:

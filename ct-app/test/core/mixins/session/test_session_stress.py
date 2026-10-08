@@ -163,9 +163,9 @@ async def test_high_session_count_parallel_close(
     # Verify all sessions were closed
     assert len(stress_node.sessions) == 0, "All sessions should be cleared from cache"
     assert len(stress_node.session_close_grace_period) == 0, "Grace period cache should be cleared"
-    assert close_call_count == SESSION_COUNT, (
-        f"All {SESSION_COUNT} sessions should be closed at API"
-    )
+    assert (
+        close_call_count == SESSION_COUNT
+    ), f"All {SESSION_COUNT} sessions should be closed at API"
 
     # Verify performance (parallel execution should be much faster than sequential)
     # Sequential would take: 200 * 0.01s = 2s
@@ -229,14 +229,14 @@ async def test_grace_period_under_load(
         await stress_node.maintain_sessions()
 
         # Verify grace periods started for unreachable peers
-        assert len(stress_node.session_close_grace_period) == flapping_peer_count, (
-            f"Iteration {iteration}: Grace periods should be started for {flapping_peer_count} peers"
-        )
+        assert (
+            len(stress_node.session_close_grace_period) == flapping_peer_count
+        ), f"Iteration {iteration}: Grace periods should be started for {flapping_peer_count} peers"
 
         # Verify sessions are NOT closed (grace period active)
-        assert len(stress_node.sessions) == SESSION_COUNT, (
-            f"Iteration {iteration}: No sessions should be closed during grace period"
-        )
+        assert (
+            len(stress_node.sessions) == SESSION_COUNT
+        ), f"Iteration {iteration}: No sessions should be closed during grace period"
 
         # Make peers reachable again
         stress_node.peers = dict(peers)
@@ -244,14 +244,14 @@ async def test_grace_period_under_load(
         await stress_node.maintain_sessions()
 
         # Verify grace periods cancelled
-        assert len(stress_node.session_close_grace_period) == 0, (
-            f"Iteration {iteration}: Grace periods should be cancelled when peers return"
-        )
+        assert (
+            len(stress_node.session_close_grace_period) == 0
+        ), f"Iteration {iteration}: Grace periods should be cancelled when peers return"
 
         # Verify all sessions still present
-        assert len(stress_node.sessions) == SESSION_COUNT, (
-            f"Iteration {iteration}: All sessions should be preserved"
-        )
+        assert (
+            len(stress_node.sessions) == SESSION_COUNT
+        ), f"Iteration {iteration}: All sessions should be preserved"
 
     print(
         f"✓ Grace period handled {FLAP_ITERATIONS} iterations "
@@ -331,9 +331,9 @@ async def test_concurrent_session_creation_race(
     await asyncio.gather(*tasks)
 
     # Verify only one session per relayer
-    assert len(stress_node.sessions) == UNIQUE_RELAYERS, (
-        f"Should have exactly {UNIQUE_RELAYERS} sessions, not {len(stress_node.sessions)}"
-    )
+    assert (
+        len(stress_node.sessions) == UNIQUE_RELAYERS
+    ), f"Should have exactly {UNIQUE_RELAYERS} sessions, not {len(stress_node.sessions)}"
 
     # Verify each relayer has exactly one session
     for i in range(UNIQUE_RELAYERS):
@@ -417,9 +417,9 @@ async def test_concurrent_maintenance_and_message_sending(
 
     # Verify state is consistent
     assert isinstance(stress_node.sessions, dict), "Sessions dict should still be a dict"
-    assert isinstance(stress_node.session_close_grace_period, dict), (
-        "Grace period dict should still be a dict"
-    )
+    assert isinstance(
+        stress_node.session_close_grace_period, dict
+    ), "Grace period dict should still be a dict"
 
     print(
         f"✓ Ran {MAINTENANCE_ITERATIONS} maintenance + "
@@ -458,9 +458,9 @@ async def test_memory_usage_with_many_sessions(
 
     # Verify sessions created
     assert len(stress_node.sessions) == SESSION_COUNT, f"Should have {SESSION_COUNT} sessions"
-    assert all(session.socket is not None for session in stress_node.sessions.values()), (
-        "All sessions should have sockets"
-    )
+    assert all(
+        session.socket is not None for session in stress_node.sessions.values()
+    ), "All sessions should have sockets"
 
     # Mock API close
     close_calls = []
@@ -477,20 +477,20 @@ async def test_memory_usage_with_many_sessions(
     # Verify complete cleanup
     assert len(stress_node.sessions) == 0, "All sessions should be removed from cache"
     assert len(stress_node.session_close_grace_period) == 0, "Grace period cache should be cleared"
-    assert len(close_calls) == SESSION_COUNT, (
-        f"All {SESSION_COUNT} sessions should be closed at API"
-    )
+    assert (
+        len(close_calls) == SESSION_COUNT
+    ), f"All {SESSION_COUNT} sessions should be closed at API"
 
     # Verify all sockets are closed
     for session in close_calls:
         assert session.socket is None, "Socket should be None after close_socket()"
 
     # Verify we're back to initial state
-    assert len(stress_node.sessions) == initial_session_count, (
-        "Should return to initial session count"
-    )
-    assert len(stress_node.session_close_grace_period) == initial_grace_count, (
-        "Should return to initial grace period count"
-    )
+    assert (
+        len(stress_node.sessions) == initial_session_count
+    ), "Should return to initial session count"
+    assert (
+        len(stress_node.session_close_grace_period) == initial_grace_count
+    ), "Should return to initial grace period count"
 
     print(f"✓ Created and cleaned up {SESSION_COUNT} sessions completely")
