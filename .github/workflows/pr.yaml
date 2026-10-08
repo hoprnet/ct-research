@@ -88,7 +88,7 @@ jobs:
 
   build-docker:
     name: Docker
-    uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@5b0f0e6c7e3a02e30a33b9f5150fb5b118676e58 # 0.11.0
+    uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@45221eb1aadfc5c46751306c5c7d6d291c8a24b3 # build-docker-v3.1.3
     permissions:
       contents: read
       pull-requests: write
@@ -118,7 +118,9 @@ jobs:
     runs-on: depot-ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
 
       - name: Setup Nix
         uses: hoprnet/hopr-workflows/actions/setup-nix@5477bd53d62ac15c4804b31fbd55966b29a43997 # setup-nix-v2

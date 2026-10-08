@@ -1,3 +1,4 @@
+import pytest
 from core.components.balance import Balance
 from core.rpc.entries import Allocation, ExternalBalance
 from core.rpc.providers import MainnetDistributor, wxHOPRBalance
@@ -7,6 +8,9 @@ GNOSIS_RPC_URL: str = "https://gnosis-rpc.publicnode.com"
 MAINNET_RPC_URL: str = "https://ethereum-rpc.publicnode.com"
 
 
+@pytest.mark.skip(
+    reason="Skipping this test for now, as it depends on a EOA. Test removed in next version"
+)
 async def test_eoa_balance_provider():
     contract: RPCQueryProvider = wxHOPRBalance(GNOSIS_RPC_URL)
 
