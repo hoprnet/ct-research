@@ -1,4 +1,5 @@
 import pytest
+from prometheus_client import REGISTRY
 
 from core.node import Node
 from core.types.balance import Balance
@@ -58,3 +59,13 @@ async def test_unreachable_peers_are_ineligible(node: Node, incentive, mocker):
     await node._refresh_eligibility_once()
 
     assert "address_1" not in node.eligible_relayers
+
+
+@pytest.mark.asyncio
+async def test_burst_counters_are_exported_when_a_relayer_becomes_eligible(node: Node, incentive):
+    # A relayer's first burst comes up to a round later; `rate()` ignores a series' first
+    # sample, so the series must already exist at 0 for that burst to show.
+    await _refresh(node)
+
+    for metric in ("ct_burst_packets_sent_total", "ct_burst_packets_echoed_total"):
+        assert REGISTRY.get_sample_value(metric, {"relayer": "address_1"}) is not None

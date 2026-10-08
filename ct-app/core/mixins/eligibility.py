@@ -3,6 +3,7 @@ from typing import Any
 
 from prometheus_client import Gauge
 
+from ..messages.message_metrics import BURST_PACKETS_ECHOED, BURST_PACKETS_SENT
 from ..services.eligibility import is_eligible
 from .runtime_state import NodeRuntimeState
 
@@ -45,6 +46,13 @@ class EligibilityMixin(NodeRuntimeState):
         left = self.eligible_relayers - eligible
         self.eligible_relayers = eligible
         ELIGIBLE_PEERS.set(len(eligible))
+
+        # Export the per-relayer burst counters at 0 before the relayer's first burst. A relayer
+        # gets one burst per round (~50 min), and `rate()` ignores a series' first sample, so a
+        # series created by that burst would hide it.
+        for relayer in joined:
+            BURST_PACKETS_SENT.labels(relayer)
+            BURST_PACKETS_ECHOED.labels(relayer)
 
         if joined or left:
             logger.info(
