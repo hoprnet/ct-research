@@ -59,13 +59,22 @@ class PeerRelayMixin(NodeRuntimeState):
     async def _sleep_until(self, deadline: float, plan: RoundPlan) -> bool:
         """
         Sleep until `deadline`, waking up periodically to check that the plan is still valid.
-        Returns False if the round should be abandoned and planned again.
+        Returns False if the round should be abandoned: the node stopped, or the eligible
+        set outgrew the plan and a new round must be planned.
         """
         while self.running and not self._outgrew_plan(plan):
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 return True
             await asyncio.sleep(min(remaining, REPLAN_CHECK_INTERVAL_SECONDS))
+        if self.running:
+            logger.info(
+                "Abandoning burst round, eligible relayers outgrew the plan",
+                {
+                    "planned_relayers": plan.relayer_count,
+                    "eligible_relayers": len(self.eligible_relayers),
+                },
+            )
         return False
 
     async def _run_round(self) -> None:

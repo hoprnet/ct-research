@@ -7,6 +7,7 @@ from core.config_parser.incentive import IncentiveParams
 from core.mixins import peer_relay
 from core.mixins.peer_relay import PeerRelayMixin
 from core.services.burst_plan import RelayedCostTracker
+from core.types.message_queue import MessageQueue
 from test.queue_utils import drain_queue
 
 
@@ -65,16 +66,25 @@ def clock(mocker) -> FakeClock:
 
 
 @pytest.mark.asyncio
-async def test_round_bursts_every_eligible_relayer_once_spaced_by_step(clock: FakeClock):
+async def test_round_bursts_every_eligible_relayer_once_spaced_by_step(clock: FakeClock, mocker):
     await _drain_queue()
     relayers = {f"relayer_{i}" for i in range(4)}
     node = _node(relayers)
+    queued_at: list[float] = []
+    original_put = MessageQueue().put
+
+    async def record_put(message):
+        queued_at.append(clock.now)
+        await original_put(message)
+
+    mocker.patch.object(MessageQueue(), "put", side_effect=record_put)
 
     await node._run_round()
 
     assert sorted(await _drain_queue()) == sorted(relayers)
     # T_round = 5 x 600 s = 3000 s, step = 3000 / 4 = 750 s; the round waits for its end.
-    assert sum(clock.sleeps) == pytest.approx(3000.0)
+    assert queued_at == [100.0, 850.0, 1600.0, 2350.0]
+    assert clock.now == pytest.approx(100.0 + 3000.0)
     assert clock.now == pytest.approx(100.0 + 3000.0)
 
 
