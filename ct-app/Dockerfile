@@ -60,6 +60,10 @@ RUN apt-get update \
     && apt-get dist-upgrade -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
+# pip is not needed at runtime (the app starts with `uv run`) and its vendored dependencies
+# (msgpack, urllib3, pkg_resources) are flagged by vulnerability scanners.
+RUN python -m pip uninstall -y pip
+
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 
