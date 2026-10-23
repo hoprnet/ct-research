@@ -19,6 +19,12 @@ from ..types.message_queue import MessageQueue
 from .runtime_state import NodeRuntimeState
 
 IDLE_NO_WORK_SLEEP_SECONDS = 1.0
+# How often a sleeping round checks whether the eligible set outgrew the one it was planned with.
+REPLAN_CHECK_INTERVAL_SECONDS = 60.0
+# The eligible set is still filling up right after startup: a round planned from a handful of
+# relayers would otherwise stay near-idle for its whole duration (round_duration = ct_node_count
+# x target_relayer_interval). Replan once the set exceeds this multiple of the planned count.
+REPLAN_GROWTH_FACTOR = 2
 
 logger = logging.getLogger(__name__)
 
@@ -47,16 +53,35 @@ class PeerRelayMixin(NodeRuntimeState):
         if mtu and ticket_price is not None:
             PROJECTED_MONTHLY_COST.set(float(plan.max_monthly_cost(mtu, ticket_price).value))
 
-    async def _sleep_until(self, deadline: float) -> None:
-        remaining = deadline - time.monotonic()
-        if remaining > 0:
-            await asyncio.sleep(remaining)
+    def _outgrew_plan(self, plan: RoundPlan) -> bool:
+        return len(self.eligible_relayers) > REPLAN_GROWTH_FACTOR * plan.relayer_count
+
+    async def _sleep_until(self, deadline: float, plan: RoundPlan) -> bool:
+        """
+        Sleep until `deadline`, waking up periodically to check that the plan is still valid.
+        Returns False if the round should be abandoned: the node stopped, or the eligible
+        set outgrew the plan and a new round must be planned.
+        """
+        while self.running and not self._outgrew_plan(plan):
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return True
+            await asyncio.sleep(min(remaining, REPLAN_CHECK_INTERVAL_SECONDS))
+        if self.running:
+            logger.info(
+                "Abandoning burst round, eligible relayers outgrew the plan",
+                {
+                    "planned_relayers": plan.relayer_count,
+                    "eligible_relayers": len(self.eligible_relayers),
+                },
+            )
+        return False
 
     async def _run_round(self) -> None:
         """
         One pass over the relayers this CT node considers eligible: shuffle them, then start a
         burst to each one every `step` seconds, without waiting for earlier bursts to finish.
-        The next round starts when this one ends.
+        The next round starts when this one ends, or earlier if the eligible set outgrew the plan.
         """
         relayers = sorted(self.eligible_relayers)
         if not relayers:
@@ -75,8 +100,7 @@ class PeerRelayMixin(NodeRuntimeState):
 
         round_start = time.monotonic()
         for index, relayer in enumerate(relayers):
-            await self._sleep_until(round_start + index * plan.step)
-            if not self.running:
+            if not await self._sleep_until(round_start + index * plan.step, plan):
                 return
 
             # A relayer that became ineligible during the round is skipped for the rest of it.
@@ -87,7 +111,7 @@ class PeerRelayMixin(NodeRuntimeState):
             await MessageQueue().put(MessageFormat(relayer))
             BURSTS.labels(result="queued").inc()
 
-        await self._sleep_until(round_start + plan.round_duration)
+        await self._sleep_until(round_start + plan.round_duration, plan)
 
     @keepalive
     async def relay_messages(self):

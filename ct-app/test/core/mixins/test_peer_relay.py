@@ -7,6 +7,7 @@ from core.config_parser.incentive import IncentiveParams
 from core.mixins import peer_relay
 from core.mixins.peer_relay import PeerRelayMixin
 from core.services.burst_plan import RelayedCostTracker
+from core.types.message_queue import MessageQueue
 from test.queue_utils import drain_queue
 
 
@@ -65,16 +66,25 @@ def clock(mocker) -> FakeClock:
 
 
 @pytest.mark.asyncio
-async def test_round_bursts_every_eligible_relayer_once_spaced_by_step(clock: FakeClock):
+async def test_round_bursts_every_eligible_relayer_once_spaced_by_step(clock: FakeClock, mocker):
     await _drain_queue()
     relayers = {f"relayer_{i}" for i in range(4)}
     node = _node(relayers)
+    queued_at: list[float] = []
+    original_put = MessageQueue().put
+
+    async def record_put(message):
+        queued_at.append(clock.now)
+        await original_put(message)
+
+    mocker.patch.object(MessageQueue(), "put", side_effect=record_put)
 
     await node._run_round()
 
     assert sorted(await _drain_queue()) == sorted(relayers)
     # T_round = 5 x 600 s = 3000 s, step = 3000 / 4 = 750 s; the round waits for its end.
-    assert clock.sleeps == [750.0, 750.0, 750.0, 750.0]
+    assert queued_at == [100.0, 850.0, 1600.0, 2350.0]
+    assert clock.now == pytest.approx(100.0 + 3000.0)
     assert clock.now == pytest.approx(100.0 + 3000.0)
 
 
@@ -170,3 +180,27 @@ async def test_round_stops_when_node_stops(clock: FakeClock):
     await node._run_round()
 
     assert await _drain_queue() == []
+
+
+@pytest.mark.asyncio
+async def test_round_replans_when_eligible_set_outgrows_plan(clock: FakeClock, mocker):
+    await _drain_queue()
+    mocker.patch.object(peer_relay._secure_random, "shuffle", side_effect=lambda items: None)
+    node = _node({"a", "b"})
+    original_sleep = clock.sleep
+
+    async def sleep_and_fill_up(seconds: float) -> None:
+        await original_sleep(seconds)
+        node.eligible_relayers.update({f"r{i}" for i in range(97)})
+
+    mocker.patch.object(peer_relay.asyncio, "sleep", side_effect=sleep_and_fill_up)
+
+    await node._run_round()
+
+    # Only the first burst of the 2-relayer plan went out; the round ended long before 3000 s.
+    assert await _drain_queue() == ["a"]
+    assert clock.now < 100.0 + peer_relay.REPLAN_CHECK_INTERVAL_SECONDS + 1
+
+    mocker.patch.object(peer_relay.asyncio, "sleep", side_effect=original_sleep)
+    await node._run_round()
+    assert len(await _drain_queue()) == 99
