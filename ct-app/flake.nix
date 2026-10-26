@@ -77,8 +77,8 @@
 
         devShell = pkgs.mkShell {
           buildInputs = with pkgs; [
-            python314 # Python 3.15 to match Dockerfile
-            uv # supports Python 3.15
+            python314 # Python 3.14 to match Dockerfile
+            uv # supports Python 3.14
             ruff # Python linter and formatter
           ];
 
