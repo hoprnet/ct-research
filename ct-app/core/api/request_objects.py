@@ -5,35 +5,13 @@ from api_lib.objects.request import APIfield, RequestData
 
 
 @dataclass
-class OpenChannelBody(RequestData):
-    amount: str
-    destination: str
-
-
-@dataclass
-class FundChannelBody(RequestData):
-    amount: str
-
-
-@dataclass
-class GetChannelsBody(RequestData):
-    full_topology: bool = APIfield("fullTopology", False)
-    including_closed: bool = APIfield("includingClosed", False)
-
-
-@dataclass
-class GetPeersBody(RequestData):
-    quality: float
-
-
-@dataclass
 class CreateSessionBody(RequestData):
     capabilities: list[Any]
     destination: str
     target: Union[str, dict]
     listen_host: str = APIfield("listenHost")
-    forward_path: Union[str, dict] = APIfield("forwardPath")
-    return_path: Union[str, dict] = APIfield("returnPath")
+    forward_path: list[str] = APIfield("forwardPath")
+    return_path: list[str] = APIfield("returnPath")
     response_buffer: str = APIfield("responseBuffer")
 
 
@@ -47,7 +25,7 @@ class SessionCapabilitiesBody(RequestData):
 
 @dataclass
 class SessionPathBodyRelayers(RequestData):
-    relayers: list[str] = APIfield("IntermediatePath")
+    relayers: list[str]
 
 
 @dataclass

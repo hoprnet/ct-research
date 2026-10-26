@@ -8,10 +8,14 @@
     };
     pre-commit.url = "github:cachix/git-hooks.nix";
     pre-commit.inputs.nixpkgs.follows = "nixpkgs";
+    nixpkgs-pinact = {
+      url = "github:nixos/nixpkgs/nixos-26.05";
+    };
   };
   outputs =
     {
       nixpkgs,
+      nixpkgs-pinact,
       flake-utils,
       pre-commit,
       ...
@@ -20,6 +24,46 @@
       system:
       let
         pkgs = import nixpkgs { inherit system; };
+        pkgsPinact = import nixpkgs-pinact { inherit system; };
+        uvVersion = "0.11.25";
+        uvAssets = {
+          aarch64-darwin = {
+            asset = "uv-aarch64-apple-darwin.tar.gz";
+            hash = "sha256-YHrKKV2h9msGBt7/JLihVL1z7Lh8PQ0e2obHoyPw9zU=";
+          };
+          x86_64-darwin = {
+            asset = "uv-x86_64-apple-darwin.tar.gz";
+            hash = "sha256-8wasGmE8FverjODNqg20v+8n3FInDWfry+VWxoQyD60=";
+          };
+          aarch64-linux = {
+            asset = "uv-aarch64-unknown-linux-gnu.tar.gz";
+            hash = "sha256-CdHUtB7rPv7IkmZjgEl6KHFXf5wgkrxWYb4VAOjzjKI=";
+          };
+          x86_64-linux = {
+            asset = "uv-x86_64-unknown-linux-gnu.tar.gz";
+            hash = "sha256-NNjGcC9uoe/H8UGs3PaF9f01j6UNP93kS212q9wLkL8=";
+          };
+        };
+        uvAsset = uvAssets.${system};
+        uvRoot = builtins.replaceStrings [ ".tar.gz" ] [ "" ] uvAsset.asset;
+
+        uv-latest = pkgs.stdenvNoCC.mkDerivation {
+          pname = "uv";
+          version = uvVersion;
+
+          src = pkgs.fetchzip {
+            url = "https://github.com/astral-sh/uv/releases/download/${uvVersion}/${uvAsset.asset}";
+            hash = uvAsset.hash;
+            stripRoot = false;
+          };
+
+          installPhase = ''
+            runHook preInstall
+            install -Dm755 ${uvRoot}/uv $out/bin/uv
+            install -Dm755 ${uvRoot}/uvx $out/bin/uvx
+            runHook postInstall
+          '';
+        };
 
         dockerBuild = pkgs.writeShellApplication {
           name = "dockerBuild";
@@ -59,9 +103,19 @@
                   exit 0
                 fi
                 export GITHUB_TOKEN="$token"
-                exec ${pkgs.pinact}/bin/pinact run --check
+                exec ${pkgsPinact.pinact}/bin/pinact run --check
               ''}";
               files = "\\.ya?ml$";
+              language = "system";
+              pass_filenames = false;
+            };
+            generate-metrics-doc = {
+              enable = true;
+              name = "Check METRICS.md";
+              entry = "${pkgs.writeShellScript "generate-metrics-doc-check" ''
+                cd ct-app
+                exec ${uv-latest}/bin/uv run python scripts/generate_metrics_doc.py --check
+              ''}";
               language = "system";
               pass_filenames = false;
             };
@@ -77,8 +131,8 @@
 
         devShell = pkgs.mkShell {
           buildInputs = with pkgs; [
-            python314 # Python 3.14 to match Dockerfile
-            uv # supports Python 3.14
+            python314 # Bootstrap interpreter for uv-managed project Python
+            uv-latest # uv 0.11.25 pinned from upstream release binaries
             ruff # Python linter and formatter
           ];
 
@@ -90,6 +144,7 @@
             echo "  ruff: $(ruff --version)"
             echo ""
             uv sync
+            echo "  Project Python: $(uv run python --version)"
             ${pre-commit-check.shellHook}
             if [ -z "''${GITHUB_TOKEN:-}" ]; then
               export GITHUB_TOKEN="$(${pkgs.gh}/bin/gh auth token 2>/dev/null || true)"

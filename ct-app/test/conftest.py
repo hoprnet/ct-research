@@ -1,11 +1,11 @@
 from itertools import repeat
 from random import randint
-from test.decorators_patches import patches
 
 import pytest
 import yaml
 from pytest_mock import MockerFixture
 
+from . import decorators_patches  # noqa: F401
 from core.api.response_objects import (
     Addresses,
     Balances,
@@ -13,10 +13,20 @@ from core.api.response_objects import (
     Channels,
     ConnectedPeer,
 )
-from core.components import Peer
-from core.components.balance import Balance
-from core.components.config_parser import LegacyParams, Parameters
+from core.types.peer import Peer
+from core.types.network_models import ChannelGraphUpdate
+from core.config_parser import Parameters
 from core.node import Node
+from core.services.channel_graph_store import ChannelGraphStore
+
+
+def load_channels(node: Node, channels: list[Channel]) -> None:
+    """Replace the node's channel graph, as the Blokli channel graph subscription would."""
+    node.channel_graph = ChannelGraphStore()
+    for index, channel in enumerate(channels):
+        node.channel_graph.apply(
+            ChannelGraphUpdate(channel_id=f"0xchannel{index}", channel=channel)
+        )
 
 
 class SideEffect:
@@ -38,21 +48,6 @@ class SideEffect:
 
     def node_balance(self, *args, **kwargs):
         return next(self.it_node_balance)
-
-
-@pytest.fixture
-def economic_model() -> LegacyParams:
-    return LegacyParams(
-        {
-            "proportion": 1,
-            "apr": 15,
-            "coefficients": {"a": 1, "b": 1, "c": "3 wxHOPR", "l": "0 wxHOPR"},
-            "equations": {
-                "fx": {"formula": "a * x", "condition": "l <= x <= c"},
-                "gx": {"formula": "a * c + (x - c) ** (1 / b)", "condition": "x > c"},
-            },
-        }
-    )
 
 
 @pytest.fixture
@@ -92,15 +87,15 @@ async def nodes(
     channels: Channels,
 ) -> list[Node]:
     nodes = [
-        Node("localhost:9000", "random_key"),
-        Node("localhost:9001", "random_key"),
-        Node("localhost:9002", "random_key"),
-        Node("localhost:9003", "random_key"),
-        Node("localhost:9004", "random_key"),
+        Node("localhost:9000", "random_key", Parameters()),
+        Node("localhost:9001", "random_key", Parameters()),
+        Node("localhost:9002", "random_key", Parameters()),
+        Node("localhost:9003", "random_key", Parameters()),
+        Node("localhost:9004", "random_key", Parameters()),
     ]
     for idx, node in enumerate(nodes):
         mocker.patch.object(node.api, "address", return_value=Addresses(addresses[idx]))
-        mocker.patch.object(node.api, "channels", return_value=channels)
+        load_channels(node, channels.all)
         mocker.patch.object(node.api, "balances", side_effect=SideEffect().node_balance)
         mocker.patch.object(
             node.api,
@@ -109,7 +104,6 @@ async def nodes(
         )
 
         mocker.patch.object(node.api, "healthyz", return_value=True)
-        mocker.patch.object(node.api, "ticket_price", return_value=Balance("0.0001 wxHOPR"))
 
     return nodes
 
@@ -128,7 +122,6 @@ def channels(peers: set[Peer]) -> Channels:
                 Channel(
                     {
                         "balance": "1 wxHOPR",
-                        "id": f"channel_{index}",
                         "destination": dest.address.native,
                         "source": src.address.native,
                         "status": "Open",
@@ -152,9 +145,9 @@ async def node(
     channels: Channels,
     addresses: dict,
 ) -> Node:
-    node = Node("localhost", "random_key")
+    node = Node("localhost", "random_key", Parameters())
 
-    mocker.patch.object(node.api, "channels", return_value=channels)
+    load_channels(node, channels.all)
     mocker.patch.object(
         node.api, "peers", return_value=[ConnectedPeer(peer) for peer in peers_raw[1:]]
     )
@@ -164,7 +157,6 @@ async def node(
 
     with open("./test/test_config.yaml", "r") as file:
         params = Parameters(yaml.safe_load(file))
-    setattr(params.subgraph, "api_key", "foo_deployer_key")
 
     node.params = params
 
@@ -172,7 +164,3 @@ async def node(
     await node.healthcheck()
 
     return node
-
-
-for p in patches:
-    p.stop()

@@ -1,3 +1,4 @@
+import importlib
 import os
 from typing import Any
 
@@ -22,6 +23,24 @@ def del_envvars(names: str | list[str]):
 
     for name in names:
         del os.environ[name]
+
+
+def resolve_executor(name: str):
+    if not isinstance(name, str) or not name:
+        raise KeyError(f"Unknown executor: {name}")
+
+    suite = importlib.import_module(__package__)
+    executor = globals().get(name)
+    if executor is None:
+        executor = getattr(suite, name, None)
+
+    if executor is None:
+        raise KeyError(f"Unknown executor: {name}")
+
+    if not isinstance(executor, type) or not issubclass(executor, EnduranceTest):
+        raise TypeError(f"Executor {name} must inherit EnduranceTest")
+
+    return executor
 
 
 @click.command()
@@ -63,7 +82,7 @@ def main(configfile: str):
             EnduranceTest.bold(f"stage [{stage_idx}/{num_stages}]", prefix="\t")
 
             try:
-                success = eval(value.get("executor"))(**stage)()
+                success = resolve_executor(value.get("executor"))(**stage)()
             except Exception as e:
                 EnduranceTest.error(f"{e.__class__.__name__}: {str(e)}", prefix="\t")
                 success = (False, "Exception raised")

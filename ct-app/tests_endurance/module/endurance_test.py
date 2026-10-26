@@ -5,9 +5,9 @@ import pprint
 import time
 from datetime import timedelta
 
-from core.components import EnvironmentUtils
 from core.components.logs import configure_logging
 
+from .environment import EnvironmentUtils
 from .metric import Metric
 
 configure_logging()
@@ -29,7 +29,6 @@ class EnduranceTest(object):
         self.execution_time = None
         self.metric_list: list[Metric] = []
 
-        logger.setLevel(getattr(logging, EnvironmentUtils.envvar("LOG_LEVEL", default="INFO")))
         logger.disabled = not EnvironmentUtils.envvar("LOG_ENABLED", type=bool, default=True)
 
     async def progress_bar(self):

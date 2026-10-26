@@ -19,10 +19,6 @@ class ChannelStatus(Enum):
         return super()._missing_(value)
 
     @property
-    def is_pending(self):
-        return self == self.PendingToClose
-
-    @property
     def is_open(self):
         return self == self.Open
 

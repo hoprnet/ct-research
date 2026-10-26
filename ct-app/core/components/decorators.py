@@ -1,10 +1,8 @@
 import asyncio
 import functools
 import logging
+from collections.abc import Awaitable, Callable
 
-from ..components.logs import configure_logging
-
-configure_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -70,4 +68,19 @@ def keepalive(func):
 
             await asyncio.sleep(delay)
 
+    setattr(wrapper, "_is_keepalive", True)
     return wrapper
+
+
+def get_keepalive_methods(instance: object) -> list[Callable[[], Awaitable[None]]]:
+    methods: list[Callable[[], Awaitable[None]]] = []
+    for name in dir(instance):
+        if name.startswith("_"):
+            continue
+        method = getattr(instance, name, None)
+        if not callable(method):
+            continue
+        func = getattr(method, "__func__", method)
+        if getattr(method, "_is_keepalive", False) or getattr(func, "_is_keepalive", False):
+            methods.append(method)
+    return methods
