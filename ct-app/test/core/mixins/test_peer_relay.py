@@ -85,7 +85,6 @@ async def test_round_bursts_every_eligible_relayer_once_spaced_by_step(clock: Fa
     # T_round = 5 x 600 s = 3000 s, step = 3000 / 4 = 750 s; the round waits for its end.
     assert queued_at == [100.0, 850.0, 1600.0, 2350.0]
     assert clock.now == pytest.approx(100.0 + 3000.0)
-    assert clock.now == pytest.approx(100.0 + 3000.0)
 
 
 @pytest.mark.asyncio
