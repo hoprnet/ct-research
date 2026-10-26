@@ -1,7 +1,7 @@
 [project]
 name = "ct-app"
 version = "3.14.5"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = ["core"]
 
 [tool.setuptools]
@@ -23,17 +23,17 @@ members = [
 
 [dependency-groups]
 dev = [
-    "ruff>=0.11.4",
-    "dotenv>=0.9.9",
+    "ruff>=0.17.2",
+    "python-dotenv>=1.2.4",
     "test",
-    "pytest-cov>=6.2.1",
-    "mypy>=1.18.2",
+    "pytest-cov>=7.1.0",
+    "mypy>=2.4.0",
 ]
 lint = [
     "black==26.10.1",
 ]
 typecheck = [
-    "mypy>=1.18.2",
+    "mypy>=2.4.0",
 ]
 
 [tool.black]
