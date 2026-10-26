@@ -53,6 +53,9 @@ LABEL description="CT-App - HOPR Cover Traffic Application"
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 
+# Remove the base image's system pip (unused at runtime, and its vendored msgpack/urllib3/setuptools get flagged by scanners)
+RUN python -m pip uninstall -y pip
+
 # Set working directory
 WORKDIR /code
 
