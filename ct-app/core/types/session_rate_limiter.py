@@ -108,11 +108,14 @@ class SessionRateLimiter:
         """
         Record a failed session opening attempt.
 
-        Increments failure count for exponential backoff calculation.
+        Increments failure count for exponential backoff calculation, and restarts the backoff
+        from now. A session open can take as long as its API timeout, so measuring the backoff
+        from the start of the attempt would let the retry through as soon as the attempt fails.
 
         Args:
             relayer: Peer address that failed
         """
+        self._last_attempt[relayer] = time.monotonic()
         self._failure_count[relayer] = self._failure_count.get(relayer, 0) + 1
         failure_count = self._failure_count[relayer]
 

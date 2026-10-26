@@ -212,7 +212,7 @@ class HoprdAPI(ApiLib):
                 "/session/udp/explicit-path",
                 resp.Session,
                 data=data,
-                timeout=4,
+                timeout=70,
             )
             logger.debug(
                 "API response for session creation", {"response": r.as_dict if r else None}

@@ -36,3 +36,22 @@ def test_rate_limiter_record_success_clears_tracking(mocker):
     assert limiter._failure_count == {}
     assert limiter._last_attempt == {}
     assert limiter.can_attempt(relayer) == (True, None)
+
+
+def test_rate_limiter_backoff_starts_when_the_attempt_fails(mocker):
+    """A slow attempt must not use up the backoff that follows its failure."""
+    relayer = "peer_3"
+    limiter = SessionRateLimiter(base_delay=2.0, max_delay=60.0)
+
+    monotonic = mocker.patch("core.types.session_rate_limiter.time.monotonic")
+    monotonic.return_value = 100.0
+    limiter.record_attempt(relayer)
+
+    # The API call took 70s before failing.
+    monotonic.return_value = 170.0
+    limiter.record_failure(relayer)
+
+    can_attempt, wait_time = limiter.can_attempt(relayer)
+
+    assert not can_attempt
+    assert wait_time == 4.0
