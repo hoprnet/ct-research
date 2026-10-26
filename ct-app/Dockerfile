@@ -2,7 +2,7 @@
 # Uses slim base image and layer caching for faster builds and smaller image size
 
 # Stage 1: Builder - Install dependencies
-FROM python:3.14.6-slim AS builder
+FROM python:3.14.9-slim AS builder
 
 # Install uv package manager
 COPY --from=ghcr.io/astral-sh/uv:0.11.25 /uv /uvx /bin/
@@ -49,7 +49,7 @@ RUN uv pip install --no-cache-dir ./core
 RUN uv pip install --no-cache-dir .
 
 # Stage 2: Runtime - Minimal production image
-FROM python:3.14.6-slim AS runtime
+FROM python:3.14.9-slim AS runtime
 
 # Add metadata labels
 LABEL maintainer="HOPR Team"
@@ -59,6 +59,10 @@ LABEL description="CT-App - HOPR Cover Traffic Application"
 RUN apt-get update \
     && apt-get dist-upgrade -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
+
+# pip is not needed at runtime (the app starts with `uv run`) and its vendored dependencies
+# (msgpack, urllib3, pkg_resources) are flagged by vulnerability scanners.
+RUN python -m pip uninstall -y pip
 
 # Create non-root user
 RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
