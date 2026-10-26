@@ -255,7 +255,7 @@ class HoprdAPI(ApiLib):
         :param: session: Session
         """
         return bool(
-            await self.try_req(Method.DELETE, session.as_path, return_state=True, timeout=1)
+            await self.try_req(Method.DELETE, session.as_path, return_state=True, timeout=5)
         )
 
     async def healthyz(self, timeout: int = 20) -> bool:
