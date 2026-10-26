@@ -52,6 +52,14 @@ class SessionRateLimiter:
         # Track last attempt timestamp per relayer
         self._last_attempt: dict[str, float] = {}
 
+    def _backoff_delay(self, failure_count: int) -> float:
+        """
+        Compute the exponential backoff delay for a given failure count, capped at max_delay.
+
+        The exponent is bounded to avoid OverflowError when a relayer accumulates many failures.
+        """
+        return min(self.base_delay * (2 ** min(failure_count, 32)), self.max_delay)
+
     def can_attempt(self, relayer: str) -> tuple[bool, Optional[float]]:
         """
         Check if a session opening attempt is allowed for the relayer.
@@ -75,7 +83,7 @@ class SessionRateLimiter:
 
         # Calculate required delay based on failure count (exponential backoff)
         failure_count = self._failure_count.get(relayer, 0)
-        required_delay = min(self.base_delay * (2**failure_count), self.max_delay)
+        required_delay = self._backoff_delay(failure_count)
 
         if elapsed >= required_delay:
             # Enough time has passed
@@ -109,7 +117,7 @@ class SessionRateLimiter:
         failure_count = self._failure_count[relayer]
 
         # Calculate next backoff delay
-        next_delay = min(self.base_delay * (2**failure_count), self.max_delay)
+        next_delay = self._backoff_delay(failure_count)
 
         logger.debug(
             "Session opening failed, applying backoff",
