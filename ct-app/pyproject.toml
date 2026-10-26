@@ -4,8 +4,8 @@ version = "3.14.5"
 requires-python = ">=3.14"
 dependencies = [
     "core",
-    "pre-commit>=4.6.0",
-    "pyyaml>=6.0.1",
+    "pre-commit>=4.7.0",
+    "pyyaml>=6.0.3",
 ]
 
 [tool.setuptools]
@@ -28,21 +28,21 @@ members = [
 
 [dependency-groups]
 dev = [
-    "ruff>=0.11.4",
-    "dotenv>=0.9.9",
-    "pytest>=8.3.5",
-    "pytest-asyncio>=1.0.0",
-    "pytest-mock>=3.14.1",
-    "pytest-cov>=6.2.1",
-    "mypy>=1.18.2",
-    "types-pyyaml>=6.0.12.20250516",
+    "ruff>=0.17.2",
+    "python-dotenv>=1.2.4",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.1",
+    "pytest-mock>=3.17.0",
+    "pytest-cov>=7.1.0",
+    "mypy>=2.4.0",
+    "types-pyyaml>=6.0.12.20260906",
 ]
 lint = [
     "black==26.10.1",
 ]
 typecheck = [
-    "mypy>=1.18.2",
-    "types-pyyaml>=6.0.12.20250516",
+    "mypy>=2.4.0",
+    "types-pyyaml>=6.0.12.20260906",
 ]
 
 [tool.black]
