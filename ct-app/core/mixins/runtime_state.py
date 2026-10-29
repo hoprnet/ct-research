@@ -8,6 +8,7 @@ from ..api.response_objects import Channel, Channels, Session, TicketPrice
 from ..config_parser.parameters import Parameters
 from ..services.blokli_repository import NetworkRepository
 from ..services.channel_graph_store import ChannelGraphStore
+from ..services.node_address_store import NodeAddressStore
 from ..services.channel_view_coordinator import ChannelViewCoordinator
 from ..services.burst_plan import RelayedCostTracker
 from ..services.eligibility_refresh_coordinator import EligibilityRefreshCoordinator
@@ -37,6 +38,9 @@ class NodeRuntimeState:
 
     peers: dict[str, Peer]
     eligible_relayers: set[str]
+
+    node_address_store: NodeAddressStore
+    _node_address_sweep_task: Optional[asyncio.Task[None]]
 
     sessions: dict[str, Session]
     session_destinations: list[str]

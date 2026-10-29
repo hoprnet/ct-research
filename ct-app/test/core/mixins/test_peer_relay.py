@@ -45,6 +45,7 @@ def _incentive(**overrides) -> IncentiveParams:
 def _node(relayers: set[str], **overrides) -> DummyRelayNode:
     node = DummyRelayNode()
     node.eligible_relayers = set(relayers)
+    node.peers = {}
     node.params = cast(Any, SimpleNamespace(incentive=_incentive(**overrides)))
     node.sessions = {}
     node.ticket_price = None
@@ -203,3 +204,40 @@ async def test_round_replans_when_eligible_set_outgrows_plan(clock: FakeClock, m
     mocker.patch.object(peer_relay.asyncio, "sleep", side_effect=original_sleep)
     await node._run_round()
     assert len(await _drain_queue()) == 99
+
+
+def _peer_with_ip(address: str, ip):
+    return SimpleNamespace(address=SimpleNamespace(native=address), ip=ip)
+
+
+@pytest.mark.asyncio
+async def test_round_bursts_same_ip_relayers_together(clock: FakeClock, mocker):
+    await _drain_queue()
+    mocker.patch.object(peer_relay._secure_random, "shuffle", side_effect=lambda items: None)
+    node = _node({"a", "b", "c", "d"})
+    # a and b share an IP; c has its own IP; d has none.
+    node.peers = {
+        "a": _peer_with_ip("a", "1.1.1.1"),
+        "b": _peer_with_ip("b", "1.1.1.1"),
+        "c": _peer_with_ip("c", "2.2.2.2"),
+        "d": _peer_with_ip("d", None),
+    }
+
+    queued_at: dict[str, float] = {}
+    original_put = MessageQueue().put
+
+    async def record_put(message):
+        queued_at[message.relayer] = clock.now
+        await original_put(message)
+
+    mocker.patch.object(MessageQueue(), "put", side_effect=record_put)
+
+    await node._run_round()
+
+    assert sorted(await _drain_queue()) == ["a", "b", "c", "d"]
+    # 3 units (d singleton, {a,b}, c), T_round = 3000 s, unit_step = 1000 s.
+    assert queued_at["a"] == queued_at["b"]
+    assert len({queued_at["a"], queued_at["c"], queued_at["d"]}) == 3
+    assert peer_relay.ROUND_IP_GROUPS._value.get() == 3
+    assert peer_relay.ROUND_MAX_IP_GROUP_SIZE._value.get() == 2
+    assert peer_relay.ROUND_RELAYERS_WITH_KNOWN_IP._value.get() == 3
