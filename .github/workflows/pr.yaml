@@ -28,7 +28,7 @@ jobs:
   validate-pr-title:
     name: Validate title
     if: github.event_name == 'pull_request'
-    runs-on: depot-ubuntu-24.04-2
+    runs-on: depot-ubuntu-24.04
     permissions:
       pull-requests: read
     steps:
@@ -54,7 +54,7 @@ jobs:
   label:
     name: Add labels
     if: github.event_name == 'pull_request'
-    runs-on: depot-ubuntu-24.04-2
+    runs-on: depot-ubuntu-24.04
     permissions:
       contents: read
       issues: write
@@ -113,7 +113,7 @@ jobs:
 
   checks:
     name: Lint and Test
-    runs-on: depot-ubuntu-24.04-2
+    runs-on: depot-ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

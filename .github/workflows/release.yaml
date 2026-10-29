@@ -47,7 +47,7 @@ jobs:
     name: Close release
     needs:
       - build-docker
-    runs-on: depot-ubuntu-24.04-2
+    runs-on: depot-ubuntu-24.04
     permissions:
       contents: write
       id-token: write
