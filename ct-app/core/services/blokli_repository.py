@@ -67,8 +67,9 @@ class GraphqlNetworkRepository:
         self, on_connect: Callable[[], None] | None = None
     ) -> AsyncIterator[NodeAddressUpdate]:
         """
-        Streams each node's announced public IP: a full snapshot on every (re)connection, then
-        each change. Nodes not resent after a reconnection are swept by the consumer.
+        Streams each node's announced host (an IP or a DNS name, not resolved): a full snapshot
+        on every (re)connection, then each change. Nodes not resent after a reconnection are
+        swept by the consumer.
         """
 
         async def _stream() -> AsyncIterator[NodeAddressUpdate]:
@@ -76,7 +77,7 @@ class GraphqlNetworkRepository:
                 async for entry in client.subscribe(on_connect=on_connect):
                     pair = to_node_ip(entry)
                     if pair is None:
-                        logger.debug("Dropping incomplete node address entry")
+                        logger.debug("Dropping account entry without a usable announced address")
                         continue
                     address, ip = pair
                     yield NodeAddressUpdate(address=address, ip=ip)

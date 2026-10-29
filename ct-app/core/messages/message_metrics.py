@@ -139,13 +139,15 @@ ROUND_CONCURRENCY = Gauge(
     "ct_round_concurrency", "Average bursts running at once in the current round"
 )
 ROUND_IP_GROUPS = Gauge(
-    "ct_round_ip_groups", "Scheduling units (distinct IPs + unknown-IP singletons) in the round"
+    "ct_round_ip_groups",
+    "Scheduling units (distinct announced hosts + unknown-host singletons) in the round",
 )
 ROUND_MAX_IP_GROUP_SIZE = Gauge(
-    "ct_round_max_ip_group_size", "Largest number of relayers sharing one IP in the round"
+    "ct_round_max_ip_group_size",
+    "Largest number of relayers sharing one announced host in the round",
 )
 ROUND_RELAYERS_WITH_KNOWN_IP = Gauge(
-    "ct_round_relayers_with_known_ip", "Relayers in the round whose public IP is known"
+    "ct_round_relayers_with_known_ip", "Relayers in the round whose announced host is known"
 )
 PROJECTED_MONTHLY_COST = Gauge(
     "ct_projected_max_monthly_cost",

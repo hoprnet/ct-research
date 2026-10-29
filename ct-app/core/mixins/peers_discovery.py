@@ -15,7 +15,9 @@ from .runtime_state import NodeRuntimeState
 
 PEERS_COUNT = Gauge("ct_peers_count", "Node peers")
 UNIQUE_PEERS = Gauge("ct_unique_peers", "Unique peers", ["type"])
-NODE_ADDRESSES_KNOWN = Gauge("ct_node_addresses_known", "Nodes with a known public IP")
+NODE_ADDRESSES_KNOWN = Gauge(
+    "ct_node_addresses_known", "Nodes with a known announced host (IP or DNS name)"
+)
 
 logger = logging.getLogger(__name__)
 

@@ -241,3 +241,34 @@ async def test_round_bursts_same_ip_relayers_together(clock: FakeClock, mocker):
     assert peer_relay.ROUND_IP_GROUPS._value.get() == 3
     assert peer_relay.ROUND_MAX_IP_GROUP_SIZE._value.get() == 2
     assert peer_relay.ROUND_RELAYERS_WITH_KNOWN_IP._value.get() == 3
+
+
+@pytest.mark.asyncio
+async def test_large_host_group_is_split_into_waves_capped_by_concurrency(clock: FakeClock, mocker):
+    await _drain_queue()
+    mocker.patch.object(peer_relay._secure_random, "shuffle", side_effect=lambda items: None)
+    # 5 relayers on one host, cap of 2 -> waves of 2, 2, 1.
+    relayers = {f"r{i}" for i in range(5)}
+    node = _node(relayers, max_concurrent_bursts_per_ct=2)
+    node.peers = {r: _peer_with_ip(r, "1.1.1.1") for r in relayers}
+
+    queued_at: dict[str, float] = {}
+    original_put = MessageQueue().put
+
+    async def record_put(message):
+        queued_at[message.relayer] = clock.now
+        await original_put(message)
+
+    mocker.patch.object(MessageQueue(), "put", side_effect=record_put)
+
+    await node._run_round()
+
+    assert sorted(await _drain_queue()) == sorted(relayers)
+    # 3 waves; no wave fires more than the cap of 2 at the same offset.
+    waves: dict[float, int] = {}
+    for offset in queued_at.values():
+        waves[offset] = waves.get(offset, 0) + 1
+    assert len(waves) == 3
+    assert max(waves.values()) == 2
+    assert peer_relay.ROUND_IP_GROUPS._value.get() == 3
+    assert peer_relay.ROUND_MAX_IP_GROUP_SIZE._value.get() == 2
