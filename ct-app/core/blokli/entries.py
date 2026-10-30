@@ -18,6 +18,15 @@ class BlokliTicketParameters(JsonResponse):
 
 
 @APIobject
+class BlokliNodeAddressEntry(JsonResponse):
+    chain_key: str = APIfield(path="accountUpdated/chainKey")
+    multi_addresses: list[str] = APIfield(path="accountUpdated/multiAddresses")
+
+    def post_init(self):
+        self.chain_key = _lower(self.chain_key)
+
+
+@APIobject
 class BlokliChannelGraphEntry(JsonResponse):
     channel_id: str = APIfield(path="openedChannelGraphUpdated/channel/concreteChannelId")
     balance: Balance = APIfield(path="openedChannelGraphUpdated/channel/balance")

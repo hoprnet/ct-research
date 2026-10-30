@@ -2,10 +2,14 @@ import logging
 from collections.abc import Callable
 from typing import AsyncIterator, Protocol
 
-from ..blokli.adapters import to_channel
+from ..blokli.adapters import to_channel, to_node_ip
 from ..blokli.entries import BlokliTicketParameters
-from ..blokli.providers import ChannelGraphSubscription, TicketParametersSubscription
-from ..types.network_models import ChannelGraphUpdate
+from ..blokli.providers import (
+    ChannelGraphSubscription,
+    NodeAddressesSubscription,
+    TicketParametersSubscription,
+)
+from ..types.network_models import ChannelGraphUpdate, NodeAddressUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +19,9 @@ class NetworkRepository(Protocol):
     def stream_channel_graph(
         self, on_connect: Callable[[], None] | None = None
     ) -> AsyncIterator[ChannelGraphUpdate]: ...
+    def stream_node_addresses(
+        self, on_connect: Callable[[], None] | None = None
+    ) -> AsyncIterator[NodeAddressUpdate]: ...
 
 
 class GraphqlNetworkRepository:
@@ -53,5 +60,26 @@ class GraphqlNetworkRepository:
                         logger.debug("Dropping incomplete channel graph entry")
                         continue
                     yield ChannelGraphUpdate(channel_id=entry.channel_id, channel=channel)
+
+        return _stream()
+
+    def stream_node_addresses(
+        self, on_connect: Callable[[], None] | None = None
+    ) -> AsyncIterator[NodeAddressUpdate]:
+        """
+        Streams each node's announced host (an IP or a DNS name, not resolved): a full snapshot
+        on every (re)connection, then each change. Nodes not resent after a reconnection are
+        swept by the consumer.
+        """
+
+        async def _stream() -> AsyncIterator[NodeAddressUpdate]:
+            async with NodeAddressesSubscription(self.url, self.token) as client:
+                async for entry in client.subscribe(on_connect=on_connect):
+                    pair = to_node_ip(entry)
+                    if pair is None:
+                        logger.debug("Dropping account entry without a usable announced address")
+                        continue
+                    address, ip = pair
+                    yield NodeAddressUpdate(address=address, ip=ip)
 
         return _stream()

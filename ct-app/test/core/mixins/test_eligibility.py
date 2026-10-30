@@ -69,3 +69,14 @@ async def test_burst_counters_are_exported_when_a_relayer_becomes_eligible(node:
 
     for metric in ("ct_burst_packets_sent_total", "ct_burst_packets_echoed_total"):
         assert REGISTRY.get_sample_value(metric, {"relayer": "address_1"}) is not None
+
+
+@pytest.mark.asyncio
+async def test_reconcile_sets_peer_ip_from_node_address_store(node: Node, incentive):
+    await node.retrieve_peers()
+    node.node_address_store.apply("address_1", "1.2.3.4")
+
+    node.reconcile_peer_channels()
+
+    assert node.peers["address_1"].ip == "1.2.3.4"
+    assert node.peers["address_2"].ip is None

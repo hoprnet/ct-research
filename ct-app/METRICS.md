@@ -33,6 +33,7 @@ Generated from `core/` metric definitions by `scripts/generate_metrics_doc.py`.
 | `ct_network_update_drains_total` | `Counter` | `-` | Network update drain executions | `core/services/network_update_coordinator.py` |
 | `ct_network_update_pending` | `Gauge` | `-` | Whether a network update refresh is pending | `core/services/network_update_coordinator.py` |
 | `ct_network_update_requests_total` | `Counter` | `source` | Network update refresh requests | `core/services/network_update_coordinator.py` |
+| `ct_node_addresses_known` | `Gauge` | `-` | Nodes with a known announced host (IP or DNS name) | `core/mixins/peers_discovery.py` |
 | `ct_node_health` | `Gauge` | `-` | Node health | `core/mixins/state.py` |
 | `ct_peer_channels_balance` | `Gauge` | `address` | Balance in outgoing channels | `core/types/peer.py` |
 | `ct_peer_qualifying_channels` | `Gauge` | `address` | Open outgoing channels holding at least the minimum channel balance | `core/types/peer.py` |
@@ -42,7 +43,10 @@ Generated from `core/` metric definitions by `scripts/generate_metrics_doc.py`.
 | `ct_relayed_value_total` | `Counter` | `-` | Expected wxHOPR paid for relayed burst packets (2 tickets per echoed packet) | `core/messages/message_metrics.py` |
 | `ct_round_concurrency` | `Gauge` | `-` | Average bursts running at once in the current round | `core/messages/message_metrics.py` |
 | `ct_round_duration_seconds` | `Gauge` | `-` | Length of the current round | `core/messages/message_metrics.py` |
+| `ct_round_ip_groups` | `Gauge` | `-` | Scheduling units (distinct announced hosts + unknown-host singletons) in the round | `core/messages/message_metrics.py` |
+| `ct_round_max_ip_group_size` | `Gauge` | `-` | Largest number of relayers sharing one announced host in the round | `core/messages/message_metrics.py` |
 | `ct_round_relayers` | `Gauge` | `-` | Relayers in the current round | `core/messages/message_metrics.py` |
+| `ct_round_relayers_with_known_ip` | `Gauge` | `-` | Relayers in the round whose announced host is known | `core/messages/message_metrics.py` |
 | `ct_round_step_seconds` | `Gauge` | `-` | Time between two burst starts in the current round | `core/messages/message_metrics.py` |
 | `ct_session_count` | `Gauge` | `-` | Number of active sessions | `core/messages/message_metrics.py` |
 | `ct_session_lifecycle_transitions_total` | `Counter` | `event` | Session lifecycle transitions | `core/services/session_lifecycle_coordinator.py` |

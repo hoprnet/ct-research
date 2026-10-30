@@ -33,6 +33,10 @@ class Peer:
         # Whether this CT node currently sees the peer.
         self.reachable: bool = True
 
+        # The node's announced host (IP or DNS name), from the Blokli account subscription; None
+        # until known. Relayers sharing a host are bursted together (PeerRelayMixin._run_round).
+        self.ip: Optional[str] = None
+
     @property
     def channel_balance(self) -> Optional[Balance]:
         return self._channel_balance
