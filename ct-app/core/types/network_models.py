@@ -7,3 +7,9 @@ from ..api.response_objects import Channel
 class ChannelGraphUpdate:
     channel_id: str
     channel: Channel
+
+
+@dataclass(frozen=True)
+class NodeAddressUpdate:
+    address: str
+    ip: str

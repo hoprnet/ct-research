@@ -17,6 +17,7 @@ class NetworkUpdateSource(str, Enum):
     CHANNEL_TOPOLOGY_REFRESH = "channel_topology_refresh"
     TICKET_PARAMETERS_CONFIGURATION = "ticket_parameters_configuration"
     TICKET_PARAMETERS_SUBSCRIPTION = "ticket_parameters_subscription"
+    NODE_ADDRESSES_SUBSCRIPTION = "node_addresses_subscription"
 
 
 class SessionOpenResult(str, Enum):

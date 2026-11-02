@@ -10,7 +10,10 @@ from ..messages.message_metrics import (
     PROJECTED_MONTHLY_COST,
     ROUND_CONCURRENCY,
     ROUND_DURATION,
+    ROUND_IP_GROUPS,
+    ROUND_MAX_IP_GROUP_SIZE,
     ROUND_RELAYERS,
+    ROUND_RELAYERS_WITH_KNOWN_IP,
     ROUND_STEP,
 )
 from ..services.burst_plan import RoundPlan
@@ -77,11 +80,57 @@ class PeerRelayMixin(NodeRuntimeState):
             )
         return False
 
+    def _group_relayers_by_ip(self, relayers: list[str]) -> list[list[str]]:
+        """
+        Group relayers that share an announced host (IP or DNS name, not resolved) into one
+        scheduling unit, so they burst together. A relayer whose host is unknown is its own
+        singleton unit, preserving today's one-at-a-time behaviour for it.
+
+        A host with more relayers than `max_concurrent_bursts_per_ct` is split into consecutive
+        chunks of at most that many, so no single tick starts more than the cap's worth of bursts
+        to one host; the chunks stay adjacent so the host is still hit in back-to-back waves. A
+        cap of 0 means no limit and keeps the whole host in one unit. This bounds the per-wave
+        burst count, not total concurrency: a wave can still overlap the previous one while its
+        bursts are in flight.
+
+        The host order and each host's members are shuffled to keep the burst order unpredictable
+        to relayers.
+        """
+        cap = self.params.incentive.max_concurrent_bursts_per_ct
+
+        by_host: dict[str, list[str]] = {}
+        singletons: list[str] = []
+        for relayer in relayers:
+            peer = self.peers.get(relayer)
+            host = peer.ip if peer is not None else None
+            if host is None:
+                singletons.append(relayer)
+            else:
+                by_host.setdefault(host, []).append(relayer)
+
+        # A block is the consecutive unit(s) of one host (or a lone singleton). Shuffling blocks
+        # keeps a chunked host's waves together instead of scattering them across the round.
+        blocks: list[list[list[str]]] = [[[relayer]] for relayer in singletons]
+        for members in by_host.values():
+            if len(members) > 1:
+                _secure_random.shuffle(members)
+            if cap > 0 and len(members) > cap:
+                chunks = [members[i : i + cap] for i in range(0, len(members), cap)]
+            else:
+                chunks = [members]
+            blocks.append(chunks)
+
+        _secure_random.shuffle(blocks)
+        return [unit for block in blocks for unit in block]
+
     async def _run_round(self) -> None:
         """
-        One pass over the relayers this CT node considers eligible: shuffle them, then start a
-        burst to each one every `step` seconds, without waiting for earlier bursts to finish.
-        The next round starts when this one ends, or earlier if the eligible set outgrew the plan.
+        One pass over the relayers this CT node considers eligible: group those that share an
+        announced host (a host larger than the concurrency cap is split into consecutive waves),
+        then start a burst to each unit every `unit_step` seconds, without waiting for earlier
+        bursts to finish. Every relayer in a unit is queued at the same offset so co-located
+        nodes are hit simultaneously. The next round starts when this one ends, or earlier if the
+        eligible set outgrew the plan.
         """
         relayers = sorted(self.eligible_relayers)
         if not relayers:
@@ -95,23 +144,41 @@ class PeerRelayMixin(NodeRuntimeState):
             await asyncio.sleep(IDLE_NO_WORK_SLEEP_SECONDS)
             return
 
-        _secure_random.shuffle(relayers)
+        units = self._group_relayers_by_ip(relayers)
+        # Spread the units (not individual relayers) across the round; same-IP relayers in a unit
+        # fire together. round_duration keeps the per-relayer cadence and cost model intact.
+        unit_step = plan.round_duration / len(units)
+
         self._log_round_start(plan)
+        self._set_group_metrics(units, unit_step)
 
         round_start = time.monotonic()
-        for index, relayer in enumerate(relayers):
-            if not await self._sleep_until(round_start + index * plan.step, plan):
+        for index, unit in enumerate(units):
+            if not await self._sleep_until(round_start + index * unit_step, plan):
                 return
 
-            # A relayer that became ineligible during the round is skipped for the rest of it.
-            if relayer not in self.eligible_relayers:
-                BURSTS.labels(result="skipped_ineligible").inc()
-                continue
+            for relayer in unit:
+                # A relayer that became ineligible during the round is skipped for the rest of it.
+                if relayer not in self.eligible_relayers:
+                    BURSTS.labels(result="skipped_ineligible").inc()
+                    continue
 
-            await MessageQueue().put(MessageFormat(relayer))
-            BURSTS.labels(result="queued").inc()
+                await MessageQueue().put(MessageFormat(relayer))
+                BURSTS.labels(result="queued").inc()
 
         await self._sleep_until(round_start + plan.round_duration, plan)
+
+    def _set_group_metrics(self, units: list[list[str]], unit_step: float) -> None:
+        known_ip = sum(
+            1
+            for unit in units
+            for relayer in unit
+            if (peer := self.peers.get(relayer)) is not None and peer.ip is not None
+        )
+        ROUND_IP_GROUPS.set(len(units))
+        ROUND_MAX_IP_GROUP_SIZE.set(max((len(unit) for unit in units), default=0))
+        ROUND_RELAYERS_WITH_KNOWN_IP.set(known_ip)
+        ROUND_STEP.set(unit_step)
 
     @keepalive
     async def relay_messages(self):
