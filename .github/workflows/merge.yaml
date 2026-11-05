@@ -37,6 +37,45 @@ jobs:
       fail_on_scan_vulnerabilities: ${{ vars.FAIL_ON_SCAN_VULNERABILITIES }}
     secrets:
       cachix_auth_token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+  # Restores the staging restart that build-docker 0.11.0 ran after publishing
+  # (inputs deployment_namespace / deployment_label_selector, removed in v3.4.3).
+  restart-staging:
+    name: Restart staging
+    needs:
+      - build-docker
+    if: >-
+      vars.DEPLOY_STAGING_MERGED_PR == 'true' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: depot-ubuntu-22.04-4
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Setup GCP
+        uses: hoprnet/hopr-workflows/actions/setup-gcp@2ca6e5b55819505e4e304ed3b0ff62da01cc7c0e # setup-gcp-v4
+        with:
+          install_sdk: 'true'
+          login_gke: 'true'
+          gke_project: hopr-staging
+          gke_cluster_name: cluster-staging
+
+      - name: Restart staging deployment
+        env:
+          DEPLOYMENT_NAMESPACE: ctdapp
+          DEPLOYMENT_LABEL_SELECTOR: hoprds.hoprnet.org/cluster=${{ vars.CTDAPP_STAGING_DEPLOYMENT_CLUSTER }}
+        run: |
+          echo "Starting deployment restart"
+          if ! kubectl rollout restart deployments -n "$DEPLOYMENT_NAMESPACE" -l "$DEPLOYMENT_LABEL_SELECTOR"; then
+            echo "Failed to restart deployment"
+            exit 1
+          fi
+          if ! kubectl rollout status deployments -n "$DEPLOYMENT_NAMESPACE" -l "$DEPLOYMENT_LABEL_SELECTOR" --timeout=600s; then
+            echo "Deployment did not complete within the timeout period"
+            exit 1
+          fi
+          echo "Restart completed successfully"
+
   notify:
     name: Notify failure
     needs:
