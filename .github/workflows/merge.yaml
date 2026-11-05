@@ -10,8 +10,7 @@ on:
 concurrency:
   group: merge-${{ github.event.pull_request.base.ref }}
   cancel-in-progress: false
-permissions:
-  contents: read
+permissions: {}
 jobs:
   build-docker:
     name: Docker
@@ -46,6 +45,7 @@ jobs:
       - build-docker
     if: ${{ always() && failure() }}
     runs-on: depot-ubuntu-24.04
+    permissions: {}
     steps:
       - name: Notify failed merge pipeline
         uses: zulip/github-actions-zulip/send-message@e4c8f27c732ba9bd98ac6be0583096dea82feea5 # v1.0.2

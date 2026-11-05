@@ -15,11 +15,10 @@ on:
       - ready_for_review
 
 concurrency:
-  group: ${{ github.event.pull_request.head.ref || github.ref_name }}-pr
+  group: ${{ github.event.pull_request.number || github.ref }}-pr
   cancel-in-progress: true
 
-permissions:
-  contents: read
+permissions: {}
 
 env:
   CARGO_TERM_COLOR: always
@@ -46,6 +45,8 @@ jobs:
             refactor
             perf
             test
+            ci
+            revert
           requireScope: false
           ignoreLabels: |
             bot
@@ -116,6 +117,8 @@ jobs:
   checks:
     name: Lint and Test
     runs-on: depot-ubuntu-24.04
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -140,3 +143,24 @@ jobs:
         working-directory: ct-app
         run: |
           nix develop -c make stress
+
+  # Single aggregate merge gate: green only if every other job in this file
+  # succeeded. `if: always()` runs it even when a dependency fails; alls-green
+  # then reds the gate on any non-success (a failed job, or a disallowed skip).
+  merge-gate:
+    name: Merge gate
+    if: always()
+    needs:
+      - validate-pr-title
+      - label
+      - build-docker
+      - checks
+    runs-on: depot-ubuntu-24.04
+    permissions: {}
+    steps:
+      - name: Require all jobs to pass
+        uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
+        with:
+          jobs: ${{ toJSON(needs) }}
+          # validate-pr-title and label run on pull_request only.
+          allowed-skips: validate-pr-title, label
