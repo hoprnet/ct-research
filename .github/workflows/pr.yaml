@@ -90,7 +90,7 @@ jobs:
 
   build-docker:
     name: Docker
-    # Stage 3: build the image only after lint and tests are green.
+    # Runs after checks: build the image only after lint and tests are green.
     needs: [checks]
     uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@5be6fbca6ea8b13afa4d111724ff83c78456d13e # build-docker-v3.4.3
     permissions:

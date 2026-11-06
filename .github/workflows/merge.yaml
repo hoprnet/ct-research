@@ -38,7 +38,7 @@ jobs:
     secrets:
       cachix_auth_token: ${{ secrets.CACHIX_AUTH_TOKEN }}
   # Restores the staging restart that build-docker 0.11.0 ran after publishing
-  # (inputs deployment_namespace / deployment_label_selector, removed in v3.4.3).
+  # (inputs deployment_namespace / deployment_label_selector: absent from build-docker v3.3.0 and later, last present in v2.0.0).
   restart-staging:
     name: Restart staging
     needs:
