@@ -16,11 +16,14 @@
     "enabled": true,
     "labels": ["security"],
     "schedule": ["at any time"],
-    "automerge": true
+    "automerge": true,
+    "groupName": "security updates",
+    "commitMessageTopic": "security updates"
   },
   "packageRules": [
     {
       "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
       "groupName": "github-actions",
       "pinDigests": true,
       "commitMessageTopic": "GitHub Actions"

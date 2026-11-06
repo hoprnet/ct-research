@@ -15,11 +15,10 @@ on:
       - ready_for_review
 
 concurrency:
-  group: ${{ github.event.pull_request.head.ref || github.ref_name }}-pr
+  group: ${{ github.event.pull_request.number || github.ref }}-pr
   cancel-in-progress: true
 
-permissions:
-  contents: read
+permissions: {}
 
 env:
   CARGO_TERM_COLOR: always
@@ -46,6 +45,8 @@ jobs:
             refactor
             perf
             test
+            ci
+            revert
           requireScope: false
           ignoreLabels: |
             bot
@@ -55,6 +56,7 @@ jobs:
     name: Add labels
     if: github.event_name == 'pull_request'
     runs-on: depot-ubuntu-24.04
+    continue-on-error: true
     permissions:
       contents: read
       issues: write
@@ -88,7 +90,9 @@ jobs:
 
   build-docker:
     name: Docker
-    uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@6c75d422d4ca70e841a2f1a890155c1ce356a7c3 # build-docker-v3.4.1
+    # Runs after checks: build the image only after lint and tests are green.
+    needs: [checks]
+    uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@5be6fbca6ea8b13afa4d111724ff83c78456d13e # build-docker-v3.4.3
     permissions:
       contents: read
       pull-requests: write
@@ -96,6 +100,7 @@ jobs:
     with:
       source_branch: ${{ github.event.pull_request.head.ref || github.ref }}
       version_type: commit
+      concurrency_group_suffix: ${{ github.event.pull_request.number || github.ref_name }}
       build_matrix: >-
         [
           {
@@ -114,6 +119,8 @@ jobs:
   checks:
     name: Lint and Test
     runs-on: depot-ubuntu-24.04
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -138,3 +145,24 @@ jobs:
         working-directory: ct-app
         run: |
           nix develop -c make stress
+
+  # Single aggregate merge gate: green only if every other job in this file
+  # succeeded. `if: always()` runs it even when a dependency fails; alls-green
+  # then reds the gate on any non-success (a failed job, or a disallowed skip).
+  merge-gate:
+    name: Merge gate
+    if: always()
+    needs:
+      - validate-pr-title
+      - label
+      - build-docker
+      - checks
+    runs-on: depot-ubuntu-24.04
+    permissions: {}
+    steps:
+      - name: Require all jobs to pass
+        uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
+        with:
+          jobs: ${{ toJSON(needs) }}
+          # validate-pr-title and label run on pull_request only.
+          allowed-skips: validate-pr-title, label
