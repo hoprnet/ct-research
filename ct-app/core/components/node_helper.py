@@ -1,60 +1,44 @@
+import asyncio
 import logging
+import time
+from dataclasses import dataclass
 from typing import Optional
 
-from prometheus_client import Gauge
+from prometheus_client import Counter
 
 from ..api.hoprd_api import HoprdAPI
-from ..api.response_objects import Channel, Session, SessionFailure
-from ..components.messages.message_format import MessageFormat
-from .balance import Balance
-from .logs import configure_logging
+from ..api.response_objects import Session, SessionFailure
+from ..api.session import DEFAULT_RECEIVE_TIMEOUT_SECONDS
+from ..constants.labels import MessageSendFailureReason
+from ..messages.message_metrics import (
+    MESSAGE_E2E_LATENCY,
+    MESSAGES_SENT_FAILED,
+    MESSAGES_SENT_SUCCESS,
+)
+from ..services.burst_plan import packets_per_burst, send_rate
+from ..types.message_format import MessageFormat
 
-CHANNELS_OPS = Gauge("ct_channel_operation", "Channel operation", ["op", "success"])
-SESSION_OPS = Gauge("ct_session_operation", "Session operation", ["relayer", "op", "success"])
+SESSION_OPS = Counter("ct_session_operation", "Session operation", ["relayer", "op", "success"])
 
-
-configure_logging()
 logger = logging.getLogger(__name__)
+
+# How often the burst sender wakes up to send the packets that became due.
+BURST_PACING_TICK_SECONDS = 0.005
+
+
+@dataclass(frozen=True)
+class BurstResult:
+    sent: int
+    echoed: int
+    # Set when the burst stopped early; `sent` still counts the packets that left.
+    failure: Optional[MessageSendFailureReason] = None
+    error: Optional[str] = None
 
 
 class NodeHelper:
-    @classmethod
-    async def open_channel(cls, api: HoprdAPI, address: str, amount: Balance):
-        log_params = {"to": address, "amount": amount.as_str}
-        logger.debug("Opening channel", log_params)
-        channel = await api.open_channel(address, amount)
-
-        if channel is not None:
-            logger.info("Opened channel", log_params)
-        else:
-            logger.warning(f"Failed to open channel to {address}", log_params)
-        CHANNELS_OPS.labels("opened", "yes" if channel else "no").inc()
-
-    @classmethod
-    async def close_channel(cls, api: HoprdAPI, channel: Channel, type: str):
-        logs_params = {"channel": channel.id}
-        logger.debug(f"Closing {type} channel", logs_params)
-
-        ok = await api.close_channel(channel.id)
-
-        if ok:
-            logger.info(f"Closed {type} channel", logs_params)
-        else:
-            logger.warning(f"Failed to close {type}", logs_params)
-        CHANNELS_OPS.labels(type, "yes" if ok else "no").inc()
-
-    @classmethod
-    async def fund_channel(cls, api: HoprdAPI, channel: Channel, amount: Balance):
-        logs_params = {"channel": channel.id, "amount": amount.as_str}
-        logger.debug("Funding channel", logs_params)
-
-        ok = await api.fund_channel(channel.id, amount)
-
-        if ok:
-            logger.info("Fund channel", logs_params)
-        else:
-            logger.warning("Failed to fund channel", logs_params)
-        CHANNELS_OPS.labels("fund", "yes" if ok else "no").inc()
+    @staticmethod
+    def _success_label(value) -> str:
+        return "yes" if value else "no"
 
     @classmethod
     async def open_session(
@@ -98,14 +82,14 @@ class NodeHelper:
         }
         logger.debug("Opening session", logs_params)
 
-        session = await api.post_udp_session(destination, relayer, listen_host)
+        session = await api.post_udp_session(destination, relayer=relayer, listen_host=listen_host)
         match session:
             case Session():
-                logger.info("Opened session", {**logs_params, **session.as_dict})
+                logger.info("Opened session", session.as_dict)
                 SESSION_OPS.labels(relayer, "opened", "yes").inc()
                 return session
             case SessionFailure():
-                logger.warning("Failed to open a session", {**logs_params, **session.as_dict})
+                logger.warning("Failed to open a session", session.as_dict)
                 SESSION_OPS.labels(relayer, "opened", "no").inc()
                 return None
 
@@ -166,102 +150,93 @@ class NodeHelper:
             logger.warning("Failed to close the session", logs_params)
 
         if relayer:
-            SESSION_OPS.labels(relayer, "closed", "yes" if ok else "no").inc()
+            SESSION_OPS.labels(relayer, "closed", cls._success_label(ok)).inc()
 
         return ok
 
     @classmethod
-    async def send_batch_messages(cls, session: Session, message: MessageFormat):
+    async def send_burst(
+        cls,
+        session: Session,
+        message: MessageFormat,
+        burst_rate: float,
+        burst_duration: float,
+        receive_timeout: float = DEFAULT_RECEIVE_TIMEOUT_SECONDS,
+    ) -> BurstResult:
         """
-        Send a batch of messages and wait for responses.
+        Send one burst through a session and count the packets echoed back.
 
-        Sends multiple copies of the same message through a session and waits
-        for all responses. This is typically called as a background task via
-        AsyncLoop.add() with publish_to_task_set=False.
+        `burst_rate` (Mbit/s) is what the relayer forwards: every packet crosses it twice, out and
+        back as its echo, so packets are paced evenly at half that rate over `burst_duration`
+        seconds. The rate counts whole packets of `session.mtu` bytes, because the SURB rides in
+        every packet, while each packet carries `message.packet_size` (MTU minus SURB) bytes of
+        generated data.
 
-        Args:
-            session: Active session to send messages through
-            message: MessageFormat object containing message data and batch settings
+        Echoes are received while sending, up to `receive_timeout` after the last packet. A
+        packet counts as relayed, in both directions, when its echo came back.
 
-        Behavior:
-            1. Sends message.batch_size copies of the message
-            2. Waits to receive responses (total size = batch_size * packet_size)
-            3. Handles timeouts and partial receives gracefully
-            4. Records end-to-end delivery metrics (success/failure, latency)
+        A failure does not raise: the result carries its reason and the packets sent until then,
+        so the caller can still account for them.
 
-        Background Task Pattern:
-            This method is designed to run as a fire-and-forget background task:
-            >>> AsyncLoop.add(
-            ...     NodeHelper.send_batch_messages,
-            ...     session_ref,
-            ...     message,
-            ...     publish_to_task_set=False
-            ... )
-
-            Using publish_to_task_set=False prevents the main loop from waiting
-            on these operations, allowing concurrent message sending.
-
-        Thread Safety:
-            Safe to call concurrently for different sessions. Each session has
-            its own socket, and we use session_ref from observe_message_queue()
-            to avoid accessing the shared sessions dict during background execution.
-
-        Metrics:
-            Tracks end-to-end delivery success/failure and latency from queue
-            entry to send completion.
-
-        Note:
-            Exceptions are logged by AsyncLoop but don't crash the main process.
+        Designed to run as a fire-and-forget background task (see `AsyncLoop.add`).
         """
-        import asyncio
-        import time
+        rate = send_rate(burst_rate, session.mtu)
+        total = packets_per_burst(burst_rate, burst_duration, session.mtu)
+        message.batch_size = total
+        receiver: asyncio.Task[int] | None = None
+        sent = 0
 
-        # Import metrics (with graceful fallback for tests that don't have them)
         try:
-            from ..messages.message_metrics import (
-                MESSAGES_SENT_SUCCESS,
-                MESSAGES_SENT_FAILED,
-                MESSAGE_E2E_LATENCY,
+            receiver = asyncio.create_task(
+                session.receive(
+                    message.packet_size,
+                    total * message.packet_size,
+                    timeout=burst_duration + receive_timeout,
+                )
             )
 
-            metrics_available = True
-        except ImportError:
-            metrics_available = False
+            started_at = time.monotonic()
+            attempted = 0
+            while attempted < total:
+                due = min(total, int((time.monotonic() - started_at) * rate) + 1)
+                while attempted < due:
+                    message.update_timestamp()
+                    if session.send(message):
+                        sent += 1
+                    attempted += 1
+                if attempted < total:
+                    await asyncio.sleep(BURST_PACING_TICK_SECONDS)
 
-        failure_reason = None
+            received_bytes = await receiver
+            echoed = min(sent, received_bytes // message.packet_size)
 
-        try:
-            # Send batch
-            for _ in range(message.batch_size):
-                session.send(message)
+            MESSAGES_SENT_SUCCESS.inc()
+            MESSAGE_E2E_LATENCY.observe(time.time() - message.queued_at)
+            return BurstResult(sent=sent, echoed=echoed)
 
-            # Wait for responses
-            await session.receive(message.packet_size, message.batch_size * message.packet_size)
+        except Exception as err:
+            failure_reason = cls._burst_failure_reason(err)
+            MESSAGES_SENT_FAILED.labels(reason=failure_reason.value).inc()
+            if failure_reason is MessageSendFailureReason.UNKNOWN:
+                logger.debug("Unexpected burst error", {"relayer": message.relayer}, exc_info=True)
+            # The packets already sent were relayed (and paid for) even though their echoes are
+            # no longer counted, so they are still reported.
+            return BurstResult(sent=sent, echoed=0, failure=failure_reason, error=repr(err))
 
-            # Success - record metrics
-            if metrics_available:
-                MESSAGES_SENT_SUCCESS.inc()
-                e2e_latency = time.time() - message.queued_at
-                MESSAGE_E2E_LATENCY.observe(e2e_latency)
-
-        except asyncio.TimeoutError:
-            failure_reason = "timeout"
-            raise
-        except AttributeError as e:
-            # Session socket is None (session closed)
-            if "socket is None" in str(e).lower():
-                failure_reason = "session_closed"
-            else:
-                failure_reason = "unknown"
-            raise
-        except OSError:
-            # Socket errors (rare for UDP but can happen)
-            failure_reason = "socket_error"
-            raise
-        except Exception:
-            failure_reason = "unknown"
-            raise
         finally:
-            # Track failures
-            if failure_reason and metrics_available:
-                MESSAGES_SENT_FAILED.labels(reason=failure_reason).inc()
+            if receiver is not None and not receiver.done():
+                receiver.cancel()
+
+    @staticmethod
+    def _burst_failure_reason(err: Exception) -> MessageSendFailureReason:
+        if isinstance(err, asyncio.TimeoutError):
+            return MessageSendFailureReason.TIMEOUT
+        if isinstance(err, AttributeError):
+            # Session socket is None (session closed)
+            if "socket is none" in str(err).lower():
+                return MessageSendFailureReason.SESSION_CLOSED
+            return MessageSendFailureReason.UNKNOWN
+        if isinstance(err, OSError):
+            # Socket errors (rare for UDP but can happen)
+            return MessageSendFailureReason.SOCKET_ERROR
+        return MessageSendFailureReason.UNKNOWN
