@@ -1,0 +1,9 @@
+[project]
+name = "core-messages"
+version = "1.0.0"
+requires-python = ">=3.14"
+dependencies = ["prometheus_client>=0.22.0"]
+
+[tool.setuptools]
+packages = ["core.messages"]
+package-dir = {"core.messages" = "."}

@@ -11,11 +11,13 @@ Tests the system under continuous load for extended periods to:
 import asyncio
 import time
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 from pytest_mock import MockerFixture
 
-from core.components.messages import MessageFormat, MessageQueue
+from core.types.message_format import MessageFormat
+from core.types.message_queue import MessageQueue
 from core.node import Node
 
 from .metrics_collector import MetricsCollector
@@ -25,8 +27,8 @@ from .metrics_collector import MetricsCollector
 @pytest.mark.asyncio
 async def test_sustained_100_msg_per_sec(
     benchmark_node: Node,
-    mock_sessions_factory,
     mock_peers_factory,
+    setup_benchmark_network,
     mocker: MockerFixture,
 ):
     """
@@ -44,35 +46,7 @@ async def test_sustained_100_msg_per_sec(
 
     # Setup node with peers and sessions
     peers = mock_peers_factory(PEER_COUNT)
-    benchmark_node.peers = peers
-    benchmark_node.session_destinations = [f"peer_{i}" for i in range(PEER_COUNT)]
-
-    # Setup channels (required for message processing)
-    from core.api.response_objects import Channels, Channel
-
-    channels = Channels({})
-    channels.all = []
-    channels.incoming = []
-    channels.outgoing = [
-        Channel(
-            {
-                "id": f"channel_{i}",
-                "source": "bench_node",
-                "destination": f"peer_{i}",
-                "status": "Open",
-                "balance": "10 wxHOPR",
-            }
-        )
-        for i in range(PEER_COUNT)
-    ]
-    benchmark_node.channels = channels
-
-    # Create sessions for all peers
-    for i in range(PEER_COUNT):
-        relayer = f"peer_{i}"
-        session = mock_sessions_factory(relayer)
-        benchmark_node.sessions[relayer] = session
-        session.create_socket()
+    setup_benchmark_network(benchmark_node, peers)
 
     # Mock API
     mocker.patch.object(
@@ -81,6 +55,13 @@ async def test_sustained_100_msg_per_sec(
         return_value=[s for s in benchmark_node.sessions.values()],
     )
     mocker.patch.object(benchmark_node.api, "close_session", return_value=True)
+    mocker.patch.object(
+        benchmark_node,
+        "_get_or_create_session",
+        new=AsyncMock(
+            side_effect=lambda relayer, destination: benchmark_node.sessions.get(relayer)
+        ),
+    )
 
     # Start metrics collection
     collector = MetricsCollector(
@@ -151,9 +132,9 @@ async def test_sustained_100_msg_per_sec(
     success_rate = metrics.delivery_success_rate()
     e2e_p99 = metrics.avg_e2e_latency_p99()
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("Sustained Load Benchmark: 100 msg/sec")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Duration:          {duration:.1f}s")
     print(f"Messages sent:     {messages_sent}")
     print(f"Avg throughput:    {avg_throughput:.1f} msg/sec")
@@ -164,9 +145,9 @@ async def test_sustained_100_msg_per_sec(
     print(f"  Scheduled:       {scheduled}")
     print(f"  Success:         {success}")
     print(f"  Failed:          {failed}")
-    print(f"  Success rate:    {success_rate*100:.1f}%")
+    print(f"  Success rate:    {success_rate * 100:.1f}%")
     print(f"  E2E P99 latency: {e2e_p99:.3f}s")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     # Assertions (80% tolerance accounts for test overhead and async scheduling)
     assert (
@@ -176,8 +157,8 @@ async def test_sustained_100_msg_per_sec(
 
     # Delivery assertions (allow some overhead/async tasks to still be in flight)
     if scheduled > 0:
-        assert success_rate >= 0.90, f"Success rate {success_rate*100:.1f}% is below 90%"
-        assert e2e_p99 < 5.0, f"E2E P99 latency {e2e_p99:.3f}s exceeds 5s threshold"
+        assert success_rate >= 0.90, f"Success rate {success_rate * 100:.1f}% is below 90%"
+        assert e2e_p99 <= 5.0, f"E2E P99 latency {e2e_p99:.3f}s exceeds 5s threshold"
 
     # Save results
     results_dir = Path(__file__).parent / "results"
@@ -194,8 +175,8 @@ async def test_sustained_100_msg_per_sec(
 @pytest.mark.asyncio
 async def test_sustained_130_msg_per_sec(
     benchmark_node: Node,
-    mock_sessions_factory,
     mock_peers_factory,
+    setup_benchmark_network,
     mocker: MockerFixture,
 ):
     """
@@ -215,34 +196,7 @@ async def test_sustained_130_msg_per_sec(
 
     # Setup
     peers = mock_peers_factory(PEER_COUNT)
-    benchmark_node.peers = peers
-    benchmark_node.session_destinations = [f"peer_{i}" for i in range(PEER_COUNT)]
-
-    # Setup channels (required for message processing)
-    from core.api.response_objects import Channels, Channel
-
-    channels = Channels({})
-    channels.all = []
-    channels.incoming = []
-    channels.outgoing = [
-        Channel(
-            {
-                "id": f"channel_{i}",
-                "source": "bench_node",
-                "destination": f"peer_{i}",
-                "status": "Open",
-                "balance": "10 wxHOPR",
-            }
-        )
-        for i in range(PEER_COUNT)
-    ]
-    benchmark_node.channels = channels
-
-    for i in range(PEER_COUNT):
-        relayer = f"peer_{i}"
-        session = mock_sessions_factory(relayer)
-        benchmark_node.sessions[relayer] = session
-        session.create_socket()
+    setup_benchmark_network(benchmark_node, peers)
 
     mocker.patch.object(
         benchmark_node.api,
@@ -250,6 +204,13 @@ async def test_sustained_130_msg_per_sec(
         return_value=[s for s in benchmark_node.sessions.values()],
     )
     mocker.patch.object(benchmark_node.api, "close_session", return_value=True)
+    mocker.patch.object(
+        benchmark_node,
+        "_get_or_create_session",
+        new=AsyncMock(
+            side_effect=lambda relayer, destination: benchmark_node.sessions.get(relayer)
+        ),
+    )
 
     # Metrics collection
     collector = MetricsCollector(
@@ -317,10 +278,10 @@ async def test_sustained_130_msg_per_sec(
     success_rate = metrics.delivery_success_rate()
     e2e_p99 = metrics.avg_e2e_latency_p99()
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("Sustained Load Benchmark: 130 msg/sec (USER TARGET)")
-    print(f"{'='*60}")
-    print(f"Duration:          {duration:.1f}s ({duration/60:.1f} min)")
+    print(f"{'=' * 60}")
+    print(f"Duration:          {duration:.1f}s ({duration / 60:.1f} min)")
     print(f"Messages sent:     {messages_sent}")
     print(f"Avg throughput:    {avg_throughput:.1f} msg/sec")
     print(f"Max queue depth:   {max_queue}")
@@ -331,12 +292,12 @@ async def test_sustained_130_msg_per_sec(
     print(f"  Scheduled:       {scheduled}")
     print(f"  Success:         {success}")
     print(f"  Failed:          {failed}")
-    print(f"  Success rate:    {success_rate*100:.1f}%")
+    print(f"  Success rate:    {success_rate * 100:.1f}%")
     print(f"  E2E P99 latency: {e2e_p99:.3f}s")
     print("")
     status = "PASS" if max_queue < 100 and queue_growth < 1.0 else "FAIL - BACKPRESSURE DETECTED"
     print(f"Status: {status}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     # Critical assertions for 130 msg/sec target
     # (80% tolerance accounts for test overhead and async scheduling)
@@ -350,8 +311,8 @@ async def test_sustained_130_msg_per_sec(
 
     # Delivery assertions
     if scheduled > 0:
-        assert success_rate >= 0.90, f"Success rate {success_rate*100:.1f}% is below 90%"
-        assert e2e_p99 < 5.0, f"E2E P99 latency {e2e_p99:.3f}s exceeds 5s threshold"
+        assert success_rate >= 0.90, f"Success rate {success_rate * 100:.1f}% is below 90%"
+        assert e2e_p99 <= 5.0, f"E2E P99 latency {e2e_p99:.3f}s exceeds 5s threshold"
 
     # Save detailed results
     _save_results(metrics, "sustained_130", TARGET_RATE, duration, messages_sent)
