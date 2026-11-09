@@ -1,8 +1,8 @@
 [project]
 name = "core-types"
 version = "1.0.0"
-requires-python = ">=3.14"
-dependencies = ["prometheus_client>=0.22.0"]
+requires-python = ">=3.15.2"
+dependencies = ["prometheus_client>=0.26.0"]
 
 [tool.setuptools]
 packages = ["core.types"]
