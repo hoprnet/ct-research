@@ -54,7 +54,7 @@ jobs:
 
   label:
     name: Add labels
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: depot-ubuntu-24.04
     continue-on-error: true
     permissions:
@@ -92,13 +92,13 @@ jobs:
     name: Docker
     # Runs after checks: build the image only after lint and tests are green.
     needs: [checks]
-    uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@5be6fbca6ea8b13afa4d111724ff83c78456d13e # build-docker-v3.4.3
+    uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@3df1022f4b852f1b7acd064123ce819258a62fe3 # build-docker-v4.0.1
     permissions:
       contents: read
       pull-requests: write
       id-token: write
     with:
-      source_branch: ${{ github.event.pull_request.head.ref || github.ref }}
+      repo_sha: ${{ github.event.pull_request.head.sha || github.sha }}
       version_type: commit
       concurrency_group_suffix: ${{ github.event.pull_request.number || github.ref_name }}
       build_matrix: >-
