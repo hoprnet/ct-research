@@ -20,13 +20,13 @@ permissions: {}
 jobs:
   build-docker:
     name: Docker
-    uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@5be6fbca6ea8b13afa4d111724ff83c78456d13e # build-docker-v3.4.3
+    uses: hoprnet/hopr-workflows/.github/workflows/build-docker.yaml@43c833e72dffe4f2f3be60193733e5657f8aa0d7 # build-docker-v4.0.0
     permissions:
       contents: read
       pull-requests: write
       id-token: write
     with:
-      source_branch: ${{ github.ref_name }}
+      repo_sha: ${{ github.sha }}
       version_type: release
       build_matrix: >-
         [
