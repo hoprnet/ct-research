@@ -1,11 +1,11 @@
 [project]
 name = "ct-app"
 version = "3.14.5"
-requires-python = ">=3.14"
+requires-python = ">=3.15.2"
 dependencies = [
     "core",
     "pre-commit>=4.7.0",
-    "pyyaml>=6.0.3",
+    "pyyaml>=6.0.4",
 ]
 
 [tool.setuptools]
@@ -28,21 +28,21 @@ members = [
 
 [dependency-groups]
 dev = [
-    "ruff>=0.17.5",
+    "ruff>=0.17.6",
     "python-dotenv>=1.2.4",
     "pytest>=9.2.0",
     "pytest-asyncio>=1.5.0",
     "pytest-mock>=3.17.0",
     "pytest-cov>=7.1.0",
     "mypy>=2.4.1",
-    "types-pyyaml>=6.0.12.20261113",
+    "types-pyyaml>=6.0.12.20261122",
 ]
 lint = [
     "black==26.10.1",
 ]
 typecheck = [
     "mypy>=2.4.1",
-    "types-pyyaml>=6.0.12.20261113",
+    "types-pyyaml>=6.0.12.20261122",
 ]
 
 [tool.black]
